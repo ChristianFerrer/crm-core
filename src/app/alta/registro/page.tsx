@@ -3,11 +3,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
-import { Plus, X, Check, Download } from 'lucide-react'
+import { Plus, Minus, Check } from 'lucide-react'
 
 type MembershipType = { id: string; name: string; sessions: number | null; price: number; validity_days: number }
-
-type Child = { name: string; birth_date: string }
 
 export default function RegistroPage() {
   const [step, setStep] = useState<'form' | 'done'>('form')
@@ -20,7 +18,7 @@ export default function RegistroPage() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [selectedType, setSelectedType] = useState('')
-  const [children, setChildren] = useState<Child[]>([])
+  const [childrenCount, setChildrenCount] = useState(0)
 
   // Result
   const [qrCode, setQrCode] = useState('')
@@ -30,18 +28,6 @@ export default function RegistroPage() {
     supabase.from('membership_types').select('*').order('price')
       .then(({ data }) => setTypes((data as MembershipType[]) ?? []))
   }, [])
-
-  function addChild() {
-    setChildren(prev => [...prev, { name: '', birth_date: '' }])
-  }
-
-  function updateChild(i: number, field: keyof Child, value: string) {
-    setChildren(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
-  }
-
-  function removeChild(i: number) {
-    setChildren(prev => prev.filter((_, idx) => idx !== i))
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -58,8 +44,6 @@ export default function RegistroPage() {
         .single()
       if (fe) throw fe
 
-      // Create adult member with children as JSON
-      const validChildren = children.filter(c => c.name.trim()).map(c => ({ name: c.name.trim(), birth_date: c.birth_date || undefined }))
       const { data: member, error: me } = await supabase
         .from('members')
         .insert({
@@ -67,13 +51,11 @@ export default function RegistroPage() {
           phone: phone.trim(),
           email: email.trim() || null,
           family_id: family.id,
-          children: validChildren,
+          children_count: childrenCount,
         })
         .select('id, qr_code')
         .single()
       if (me) throw me
-
-      // Children stored as JSON on the parent member (already included in insert below)
 
       // Assign membership if selected
       if (selectedType) {
@@ -186,37 +168,24 @@ export default function RegistroPage() {
           </div>
 
           {/* Niños */}
-          <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
+          <div className="rounded-2xl border border-line bg-surface p-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Niños</p>
-              <button type="button" onClick={addChild} className="flex items-center gap-1 text-xs text-lime hover:text-lime-deep font-semibold">
-                <Plus size={13} /> Añadir niño/a
-              </button>
-            </div>
-            {children.length === 0 && (
-              <p className="text-xs text-mist py-1">Añade los niños que vendrán a jugar.</p>
-            )}
-            {children.map((c, i) => (
-              <div key={i} className="flex gap-2 items-start border-t border-line pt-3 first:border-0 first:pt-0">
-                <div className="flex-1 space-y-2">
-                  <input
-                    value={c.name}
-                    onChange={e => updateChild(i, 'name', e.target.value)}
-                    placeholder={`Nombre del niño/a ${i + 1}`}
-                    className={inputCls}
-                  />
-                  <input
-                    type="date"
-                    value={c.birth_date}
-                    onChange={e => updateChild(i, 'birth_date', e.target.value)}
-                    className={`${inputCls} text-fog`}
-                  />
-                </div>
-                <button type="button" onClick={() => removeChild(i)} className="mt-3.5 text-mist hover:text-rose transition-colors">
-                  <X size={16} />
+              <div>
+                <p className="text-xs font-semibold text-fog uppercase tracking-wide">Número de hijos</p>
+                <p className="text-xs text-mist mt-0.5">Opcional</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => setChildrenCount(c => Math.max(0, c - 1))}
+                  className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center hover:border-line2 transition-colors">
+                  <Minus size={14} className="text-fog" />
+                </button>
+                <span className="font-display text-2xl font-semibold text-snow w-6 text-center">{childrenCount}</span>
+                <button type="button" onClick={() => setChildrenCount(c => c + 1)}
+                  className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center hover:border-line2 transition-colors">
+                  <Plus size={14} className="text-fog" />
                 </button>
               </div>
-            ))}
+            </div>
           </div>
 
           {/* Membership type */}
