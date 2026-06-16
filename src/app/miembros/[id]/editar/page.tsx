@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Plus, Minus } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X } from 'lucide-react'
 import { use } from 'react'
 
 type Family = { id: string; name: string }
+type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
 
 export default function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -23,7 +24,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
   const [birthDate, setBirthDate] = useState('')
   const [notes, setNotes] = useState('')
   const [familyId, setFamilyId] = useState('')
-  const [childrenCount, setChildrenCount] = useState(0)
+  const [children, setChildren] = useState<Child[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -37,18 +38,26 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         setBirthDate(member.birth_date ?? '')
         setNotes(member.notes ?? '')
         setFamilyId(member.family_id ?? '')
-        setChildrenCount(member.children_count ?? 0)
+        setChildren((member.children as Child[]) ?? [])
       }
       setFamilies((fams as Family[]) ?? [])
       setLoading(false)
     })
   }, [id])
 
+  function addChild() { setChildren(cs => [...cs, { name: '', sex: '', birth_date: '' }]) }
+  function removeChild(i: number) { setChildren(cs => cs.filter((_, idx) => idx !== i)) }
+  function updateChild(i: number, field: keyof Child, value: string) {
+    setChildren(cs => cs.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
     setSaving(true)
     setError(null)
+
+    const cleanChildren = children.filter(c => c.name.trim())
 
     const { error: err } = await supabase.from('members').update({
       name: name.trim(),
@@ -57,7 +66,8 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
       birth_date: birthDate || null,
       notes: notes.trim() || null,
       family_id: familyId || null,
-      children_count: childrenCount,
+      children: cleanChildren,
+      children_count: cleanChildren.length,
     }).eq('id', id)
 
     if (err) { setError(err.message); setSaving(false) }
@@ -116,24 +126,35 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         </div>
 
         {/* Hijos */}
-        <div className="rounded-2xl border border-line bg-surface p-5">
+        <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Número de hijos</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos</p>
               <p className="text-xs text-mist mt-0.5">Opcional</p>
             </div>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setChildrenCount(c => Math.max(0, c - 1))}
-                className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center hover:border-line2 transition-colors">
-                <Minus size={14} className="text-fog" />
-              </button>
-              <span className="font-display text-2xl font-semibold text-snow w-6 text-center">{childrenCount}</span>
-              <button type="button" onClick={() => setChildrenCount(c => c + 1)}
-                className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center hover:border-line2 transition-colors">
-                <Plus size={14} className="text-fog" />
-              </button>
-            </div>
+            <button type="button" onClick={addChild}
+              className="flex items-center gap-1 text-xs font-semibold text-lime hover:text-lime-deep transition-colors">
+              <Plus size={13} /> Añadir hijo/a
+            </button>
           </div>
+          {children.length === 0 && <p className="text-xs text-mist">Añade los niños que vienen con este miembro.</p>}
+          {children.map((c, i) => (
+            <div key={i} className="border-t border-line pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-fog">Hijo/a {i + 1}</p>
+                <button type="button" onClick={() => removeChild(i)} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
+              </div>
+              <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder="Nombre" className={inputCls} />
+              <div className="grid grid-cols-2 gap-3">
+                <select value={c.sex} onChange={e => updateChild(i, 'sex', e.target.value)} className={inputCls}>
+                  <option value="">Sexo</option>
+                  <option value="M">Niño</option>
+                  <option value="F">Niña</option>
+                </select>
+                <input type="date" value={c.birth_date} onChange={e => updateChild(i, 'birth_date', e.target.value)} className={inputCls} />
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Familia */}

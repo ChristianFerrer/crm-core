@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
-import { Plus, Minus, Check } from 'lucide-react'
+import { Plus, Check, X } from 'lucide-react'
 
 type MembershipType = { id: string; name: string; sessions: number | null; price: number; validity_days: number }
+type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
 
 export default function RegistroPage() {
   const [step, setStep] = useState<'form' | 'done'>('form')
@@ -18,7 +19,7 @@ export default function RegistroPage() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [selectedType, setSelectedType] = useState('')
-  const [childrenCount, setChildrenCount] = useState(0)
+  const [children, setChildren] = useState<Child[]>([])
 
   // Result
   const [qrCode, setQrCode] = useState('')
@@ -44,6 +45,8 @@ export default function RegistroPage() {
         .single()
       if (fe) throw fe
 
+      const cleanChildren = children.filter(c => c.name.trim())
+
       const { data: member, error: me } = await supabase
         .from('members')
         .insert({
@@ -51,7 +54,8 @@ export default function RegistroPage() {
           phone: phone.trim(),
           email: email.trim() || null,
           family_id: family.id,
-          children_count: childrenCount,
+          children: cleanChildren,
+          children_count: cleanChildren.length,
         })
         .select('id, qr_code')
         .single()
@@ -168,24 +172,49 @@ export default function RegistroPage() {
           </div>
 
           {/* Niños */}
-          <div className="rounded-2xl border border-line bg-surface p-4">
+          <div className="rounded-2xl border border-line bg-surface p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-fog uppercase tracking-wide">Número de hijos</p>
+                <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos</p>
                 <p className="text-xs text-mist mt-0.5">Opcional</p>
               </div>
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={() => setChildrenCount(c => Math.max(0, c - 1))}
-                  className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center hover:border-line2 transition-colors">
-                  <Minus size={14} className="text-fog" />
-                </button>
-                <span className="font-display text-2xl font-semibold text-snow w-6 text-center">{childrenCount}</span>
-                <button type="button" onClick={() => setChildrenCount(c => c + 1)}
-                  className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center hover:border-line2 transition-colors">
-                  <Plus size={14} className="text-fog" />
-                </button>
-              </div>
+              <button type="button" onClick={() => setChildren(cs => [...cs, { name: '', sex: '', birth_date: '' }])}
+                className="flex items-center gap-1 text-xs font-semibold text-lime hover:text-lime-deep transition-colors">
+                <Plus size={13} /> Añadir hijo/a
+              </button>
             </div>
+            {children.length === 0 && <p className="text-xs text-mist">Añade los niños que vienen contigo.</p>}
+            {children.map((c, i) => (
+              <div key={i} className="border-t border-line pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-fog">Hijo/a {i + 1}</p>
+                  <button type="button" onClick={() => setChildren(cs => cs.filter((_, idx) => idx !== i))} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
+                </div>
+                <input
+                  value={c.name}
+                  onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, name: e.target.value } : ch))}
+                  placeholder="Nombre"
+                  className={inputCls}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <select
+                    value={c.sex}
+                    onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, sex: e.target.value as 'M' | 'F' | '' } : ch))}
+                    className={inputCls}
+                  >
+                    <option value="">Sexo</option>
+                    <option value="M">Niño</option>
+                    <option value="F">Niña</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={c.birth_date}
+                    onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, birth_date: e.target.value } : ch))}
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Membership type */}

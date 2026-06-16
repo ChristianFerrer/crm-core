@@ -24,7 +24,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const [{ data: member }, { data: visits }, { data: monthVisits }] = await Promise.all([
     supabase
       .from('members')
-      .select('id, name, phone, email, birth_date, notes, qr_code, created_at, children_count, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
+      .select('id, name, phone, email, birth_date, notes, qr_code, created_at, children, children_count, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
       .eq('id', id)
       .single(),
     supabase
@@ -64,7 +64,19 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     familyAdults = (data as any[]) ?? []
   }
 
-  const childrenCount: number = m.children_count ?? 0
+  type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
+  const childrenList: Child[] = Array.isArray(m.children) && m.children.length > 0
+    ? m.children
+    : []
+  const childrenCount: number = childrenList.length || (m.children_count ?? 0)
+
+  function calcChildAge(d: string) {
+    if (!d) return null
+    const b = new Date(d), now = new Date()
+    let age = now.getFullYear() - b.getFullYear()
+    if (now.getMonth() - b.getMonth() < 0 || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) age--
+    return age
+  }
 
   return (
     <div className="space-y-4 lg:max-w-2xl">
@@ -161,10 +173,27 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           {childrenCount > 0 && (
             <>
               {m.families && <div className="border-t border-line" />}
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos</p>
-                <span className="font-display text-2xl font-semibold text-iris">{childrenCount}</span>
-              </div>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos · {childrenCount}</p>
+              {childrenList.length > 0 ? (
+                <div className="space-y-2">
+                  {childrenList.map((child, i) => {
+                    const age = child.birth_date ? calcChildAge(child.birth_date) : null
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${child.sex === 'F' ? 'bg-iris/20 text-iris' : 'bg-lime/20 text-lime'}`}>
+                          {child.sex === 'F' ? '♀' : child.sex === 'M' ? '♂' : '?'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-snow">{child.name || `Hijo/a ${i + 1}`}</span>
+                          {age !== null && <span className="text-xs text-mist ml-2">{age} años</span>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-mist">{childrenCount} hijo{childrenCount !== 1 ? 's' : ''} registrado{childrenCount !== 1 ? 's' : ''}</p>
+              )}
             </>
           )}
         </div>
