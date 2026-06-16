@@ -1,157 +1,182 @@
 import { supabase } from '@/lib/supabase'
-import { notFound } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, FileText, Baby, Calendar, Clock } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import Link from 'next/link'
+import { ArrowLeft, Phone, Mail, FileText, Baby, CreditCard, Clock } from 'lucide-react'
+import { notFound } from 'next/navigation'
 
 export const revalidate = 0
 
-function getAge(birthDate: string) {
-  const diff = Date.now() - new Date(birthDate).getTime()
-  return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))
+function calcAge(birthDate: string): number {
+  const birth = new Date(birthDate)
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const m = now.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+  return age
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleDateString('es-ES', {
-    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-  })
-}
-
-export default async function FamilyDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-
-  const [familyRes, visitsRes] = await Promise.all([
-    supabase
-      .from('families')
-      .select(`
-        id, name, phone, email, notes,
-        children(id, name, birth_date),
-        memberships(id, sessions_remaining, expires_at, membership_types(name, sessions))
-      `)
-      .eq('id', id)
-      .single(),
-    supabase
-      .from('visits')
-      .select('id, checked_in_at')
-      .eq('family_id', id)
-      .order('checked_in_at', { ascending: false })
-      .limit(20),
+export default async function FamiliaDetailPage({ params }: { params: { id: string } }) {
+  const [
+    { data: family },
+    { data: children },
+    { data: memberships },
+    { data: visits },
+  ] = await Promise.all([
+    supabase.from('families').select('*').eq('id', params.id).single(),
+    supabase.from('children').select('*').eq('family_id', params.id).order('birth_date'),
+    supabase.from('memberships').select('*, membership_types(*)').eq('family_id', params.id).order('created_at', { ascending: false }).limit(1),
+    supabase.from('visits').select('*').eq('family_id', params.id).order('checked_in_at', { ascending: false }).limit(10),
   ])
 
-  if (!familyRes.data) notFound()
+  if (!family) notFound()
 
-  const family = familyRes.data as any
-  const visits = visitsRes.data ?? []
-  const membership = family.memberships?.[0]
-  const isUnlimited = membership?.membership_types?.name?.toLowerCase().includes('ilimitado')
-  const sessionsLeft = membership?.sessions_remaining
-  const isLow = !isUnlimited && sessionsLeft != null && sessionsLeft <= 2
-  const isExpiringSoon = membership?.expires_at &&
-    new Date(membership.expires_at) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  const membership = memberships?.[0]
+
+  const sessionsColor = membership?.sessions_remaining !== null && membership?.sessions_remaining !== undefined
+    ? membership.sessions_remaining <= 2 ? 'text-red-600 font-bold'
+    : membership.sessions_remaining <= 5 ? 'text-amber-600 font-semibold'
+    : 'text-green-600 font-semibold'
+    : 'text-gray-600'
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Link href="/familias" className="w-8 h-8 bg-white rounded-xl flex items-center justify-center shadow-sm border border-gray-100">
-          <ArrowLeft size={16} className="text-gray-600" />
+    <div className="p-4">
+      <div className="flex items-center gap-2 pt-4 mb-4">
+        <Link href="/familias">
+          <Button variant="ghost" size="sm" className="p-2">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
         </Link>
-        <h1 className="text-lg font-bold text-gray-900 truncate">{family.name}</h1>
+        <h1 className="text-xl font-bold text-gray-900">{family.name}</h1>
       </div>
 
-      {/* Contact */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
-        {family.phone && (
-          <div className="flex items-center gap-3">
-            <Phone size={15} className="text-gray-400 shrink-0" />
-            <a href={`tel:${family.phone}`} className="text-sm text-violet-600 font-medium">{family.phone}</a>
-          </div>
-        )}
-        {family.email && (
-          <div className="flex items-center gap-3">
-            <Mail size={15} className="text-gray-400 shrink-0" />
-            <span className="text-sm text-gray-700">{family.email}</span>
-          </div>
-        )}
-        {family.notes && (
-          <div className="flex items-start gap-3">
-            <FileText size={15} className="text-gray-400 shrink-0 mt-0.5" />
-            <span className="text-sm text-gray-600">{family.notes}</span>
-          </div>
-        )}
-      </div>
+      {/* Contact info */}
+      <Card className="mb-4">
+        <CardContent className="pt-4 space-y-2">
+          {family.phone && (
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="w-4 h-4 text-gray-400" />
+              <span>{family.phone}</span>
+            </div>
+          )}
+          {family.email && (
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="w-4 h-4 text-gray-400" />
+              <span className="text-gray-700">{family.email}</span>
+            </div>
+          )}
+          {family.notes && (
+            <div className="flex items-start gap-2 text-sm">
+              <FileText className="w-4 h-4 text-gray-400 mt-0.5" />
+              <span className="text-gray-600">{family.notes}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Children */}
-      {family.children?.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Niños</h2>
-          <div className="space-y-2">
-            {family.children.map((child: any) => (
-              <div key={child.id} className="flex items-center gap-3">
-                <div className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center">
-                  <Baby size={13} className="text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{child.name}</p>
-                  {child.birth_date && (
-                    <p className="text-xs text-gray-400">{getAge(child.birth_date)} años</p>
-                  )}
-                </div>
+      {children && children.length > 0 && (
+        <Card className="mb-4">
+          <CardHeader className="pb-2 pt-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+              <Baby className="w-4 h-4 text-violet-500" />
+              Niños
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {children.map((child: any) => (
+              <div key={child.id} className="flex justify-between text-sm">
+                <span className="text-gray-800">{child.name}</span>
+                {child.birth_date && (
+                  <span className="text-gray-400">{calcAge(child.birth_date)} años</span>
+                )}
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Membership */}
-      {membership && (
-        <div className={`rounded-2xl p-4 shadow-sm border ${isLow || isExpiringSoon ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Bono activo</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">{membership.membership_types?.name}</p>
+      <Card className="mb-4">
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+            <CreditCard className="w-4 h-4 text-violet-500" />
+            Bono actual
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {membership ? (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Tipo</span>
+                <Badge variant="secondary" className="bg-violet-100 text-violet-700">
+                  {(membership as any).membership_types?.name}
+                </Badge>
+              </div>
+              {membership.sessions_remaining !== null && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Sesiones restantes</span>
+                  <span className={`text-sm ${sessionsColor}`}>{membership.sessions_remaining}</span>
+                </div>
+              )}
+              {membership.sessions_remaining === null && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Sesiones</span>
+                  <span className="text-sm text-green-600 font-semibold">Ilimitadas</span>
+                </div>
+              )}
               {membership.expires_at && (
-                <div className="flex items-center gap-1 mt-1">
-                  <Calendar size={12} className="text-gray-400" />
-                  <p className="text-xs text-gray-500">Vence {formatDate(membership.expires_at)}</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Vence el</span>
+                  <span className="text-sm text-gray-700">
+                    {new Date(membership.expires_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+              )}
+              {membership.sessions_remaining !== null && membership.sessions_remaining <= 2 && (
+                <div className="mt-2 p-2 bg-red-50 rounded text-xs text-red-600 font-medium">
+                  Quedan pocas sesiones. Considera renovar el bono.
                 </div>
               )}
             </div>
-            {isUnlimited ? (
-              <span className="text-lg font-bold text-violet-600">∞</span>
-            ) : sessionsLeft != null ? (
-              <div className="text-right">
-                <p className={`text-2xl font-bold ${isLow ? 'text-amber-600' : 'text-violet-600'}`}>{sessionsLeft}</p>
-                <p className="text-xs text-gray-400">sesiones</p>
-              </div>
-            ) : null}
-          </div>
-          {isLow && (
-            <p className="text-xs text-amber-600 font-medium mt-2">⚠ Quedan pocas sesiones, avisa a la familia</p>
+          ) : (
+            <p className="text-sm text-gray-400">Sin bono activo</p>
           )}
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Visit history */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Historial de visitas ({visits.length})</h2>
-        {visits.length === 0 ? (
-          <div className="bg-white rounded-2xl p-4 text-center text-sm text-gray-400 border border-gray-100">
-            Sin visitas registradas
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {visits.map((visit: any) => (
-              <div key={visit.id} className="bg-white rounded-xl px-4 py-3 border border-gray-100 flex items-center gap-3">
-                <Clock size={14} className="text-gray-300 shrink-0" />
-                <p className="text-sm text-gray-700">{formatDateTime(visit.checked_in_at)}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <Card>
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-gray-700">
+            <Clock className="w-4 h-4 text-violet-500" />
+            Últimas visitas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {visits && visits.length > 0 ? (
+            <div className="space-y-2">
+              {visits.map((visit: any, i: number) => (
+                <div key={visit.id}>
+                  {i > 0 && <Separator className="my-2" />}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-700">
+                      {new Date(visit.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    </span>
+                    <span className="text-gray-400">
+                      {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">Sin visitas registradas</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
