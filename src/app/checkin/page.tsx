@@ -20,7 +20,7 @@ export default function CheckInPage() {
   const [loading, setLoading] = useState(false)
   const [registering, setRegistering] = useState(false)
   const [success, setSuccess] = useState<{ familyName: string; sessionsRemaining: number | null } | null>(null)
-  const debounceRef = useRef<NodeJS.Timeout>()
+  const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
     if (query.trim().length < 2) {
