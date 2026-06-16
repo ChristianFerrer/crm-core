@@ -1,19 +1,22 @@
 export interface Family {
   id: string
   name: string
-  phone: string | null
-  email: string | null
   notes: string | null
   created_at: string
-  children?: Child[]
-  memberships?: Membership[]
 }
 
-export interface Child {
+export interface Member {
   id: string
-  family_id: string
   name: string
+  phone: string | null
+  email: string | null
   birth_date: string | null
+  family_id: string | null
+  notes: string | null
+  qr_code: string
+  created_at: string
+  families?: Family
+  memberships?: Membership[]
 }
 
 export interface MembershipType {
@@ -26,7 +29,7 @@ export interface MembershipType {
 
 export interface Membership {
   id: string
-  family_id: string
+  member_id: string
   membership_type_id: string
   sessions_remaining: number | null
   expires_at: string
@@ -36,8 +39,8 @@ export interface Membership {
 
 export interface Visit {
   id: string
-  family_id: string
+  member_id: string
   membership_id: string | null
   checked_in_at: string
-  families?: Family
+  members?: Member
 }

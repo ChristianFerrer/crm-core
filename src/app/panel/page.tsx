@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, Baby } from 'lucide-react'
+import Link from 'next/link'
+import { Users, TrendingUp, AlertTriangle, UserMinus, Crown } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -54,27 +55,31 @@ export default async function PanelPage() {
   since7.setHours(0, 0, 0, 0)
   const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString()
 
+  const recentVisitedIds = (await supabase.from('visits').select('member_id').gte('checked_in_at', tenDaysAgo)).data?.map(v => v.member_id) ?? []
+
   const [
-    { data: allFamilies },
+    { count: totalMembers },
     { count: todayCount },
     { count: monthCount },
     { count: expiringCount },
     { data: recentVisits },
-    { data: atRiskFamilies },
-    { data: topFamilies },
+    { data: atRiskMembers },
+    { data: topVisits },
+    { data: lowBonoMembers },
   ] = await Promise.all([
-    supabase.from('families').select('id, name, children(name, birth_date), memberships(sessions_remaining, membership_types(name))'),
+    supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfMonth),
     supabase.from('memberships').select('id', { count: 'exact', head: true }).lte('sessions_remaining', 2).not('sessions_remaining', 'is', null),
     supabase.from('visits').select('checked_in_at').gte('checked_in_at', since7.toISOString()),
-    supabase.from('families').select('id, name, children(name)').not('id', 'in',
-      `(${(await supabase.from('visits').select('family_id').gte('checked_in_at', tenDaysAgo)).data?.map(v => `"${v.family_id}"`).join(',') || '"00000000-0000-0000-0000-000000000000"'})`
-    ).limit(5),
-    supabase.from('visits').select('family_id, families(name)').gte('checked_in_at', startOfMonth).limit(200),
+    recentVisitedIds.length > 0
+      ? supabase.from('members').select('id, name, families(name)').not('id', 'in', `(${recentVisitedIds.map(id => `"${id}"`).join(',')})`)
+          .limit(5)
+      : supabase.from('members').select('id, name, families(name)').limit(5),
+    supabase.from('visits').select('member_id, members(name)').gte('checked_in_at', startOfMonth).limit(200),
+    supabase.from('memberships').select('id, sessions_remaining, membership_types(name), members(id, name, families(name))').lte('sessions_remaining', 2).not('sessions_remaining', 'is', null).limit(10),
   ])
 
-  // Build 7-day chart
   const DAY = ['D','L','M','X','J','V','S']
   const buckets = [...Array(7)].map((_, i) => {
     const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (6 - i))
@@ -86,35 +91,30 @@ export default async function PanelPage() {
     if (b) b.v++
   })
 
-  // Top families by visits this month
   const tally: Record<string, { name: string; count: number }> = {}
-  ;(topFamilies as any[] ?? []).forEach((v: any) => {
-    const fid = v.family_id; const name = v.families?.name
-    if (!fid || !name) return
-    tally[fid] = { name, count: (tally[fid]?.count ?? 0) + 1 }
+  ;(topVisits as any[] ?? []).forEach((v: any) => {
+    const mid = v.member_id; const name = (v.members as any)?.name
+    if (!mid || !name) return
+    tally[mid] = { name, count: (tally[mid]?.count ?? 0) + 1 }
   })
   const top5 = Object.values(tally).sort((a, b) => b.count - a.count).slice(0, 5)
-
-  const totalFamilies = allFamilies?.length ?? 0
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-snow">Dashboard</h1>
+        <h1 className="font-display text-3xl font-semibold text-snow">Panel</h1>
         <p className="text-fog mt-1 text-sm">
           {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 
-      {/* Stats grid */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon={Users} label="Familias totales" value={totalFamilies} sub="registradas" accent="lime" />
+        <StatCard icon={Users} label="Miembros totales" value={totalMembers ?? 0} sub="registrados" accent="lime" />
         <StatCard icon={TrendingUp} label="Visitas hoy" value={todayCount ?? 0} sub="entradas registradas" accent="iris" />
-        <StatCard icon={Baby} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
+        <StatCard icon={TrendingUp} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
         <StatCard icon={AlertTriangle} label="Bonos bajos" value={expiringCount ?? 0} sub="≤2 sesiones restantes" accent="amber" />
       </div>
 
-      {/* Chart + At risk */}
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="rounded-2xl border border-line bg-surface p-5">
           <p className="text-sm font-semibold text-snow mb-5">Visitas · últimos 7 días</p>
@@ -125,65 +125,64 @@ export default async function PanelPage() {
           <div className="flex items-center gap-2 text-sm font-semibold text-snow mb-4">
             <UserMinus size={15} className="text-rose" /> Sin visitar en +10 días
           </div>
-          {!atRiskFamilies?.length ? (
-            <p className="text-sm text-mist py-4 text-center">Ninguna familia en riesgo</p>
+          {!atRiskMembers?.length ? (
+            <p className="text-sm text-mist py-4 text-center">Ningún miembro en riesgo</p>
           ) : (
             <div className="space-y-2">
-              {(atRiskFamilies as any[]).map((f) => (
-                <div key={f.id} className="flex items-center justify-between rounded-xl bg-surface2 px-3 py-2.5">
+              {(atRiskMembers as any[]).map((m) => (
+                <Link key={m.id} href={`/miembros/${m.id}`} className="flex items-center justify-between rounded-xl bg-surface2 px-3 py-2.5 hover:bg-line transition-colors">
                   <div>
-                    <p className="text-sm font-medium text-snow">{f.name}</p>
-                    <p className="text-xs text-mist">{f.children?.map((c: any) => c.name).join(', ')}</p>
+                    <p className="text-sm font-medium text-snow">{m.name}</p>
+                    {m.families && <p className="text-xs text-mist">{m.families.name}</p>}
                   </div>
-                  <a href={`/familias/${f.id}`} className="text-xs text-lime hover:underline shrink-0 ml-2">Ver →</a>
-                </div>
+                  <span className="text-xs text-lime shrink-0 ml-2">Ver →</span>
+                </Link>
               ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Top families */}
       <div className="rounded-2xl border border-line bg-surface p-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-snow mb-4">
-          <Crown size={15} className="text-lime" /> Familias más activas este mes
+          <Crown size={15} className="text-lime" /> Miembros más activos este mes
         </div>
         {!top5.length ? (
           <p className="text-sm text-mist text-center py-4">Sin datos este mes</p>
         ) : (
           <div className="space-y-2">
-            {top5.map((f, i) => (
-              <div key={f.name} className="flex items-center gap-3 rounded-xl bg-surface2 px-3 py-2.5">
+            {top5.map((m, i) => (
+              <div key={m.name} className="flex items-center gap-3 rounded-xl bg-surface2 px-3 py-2.5">
                 <span className="w-6 h-6 rounded-full bg-carbon border border-line flex items-center justify-center text-xs font-bold text-lime shrink-0">{i + 1}</span>
-                <span className="flex-1 text-sm text-snow font-medium">{f.name}</span>
-                <span className="text-sm font-semibold text-fog">{f.count} vis.</span>
+                <span className="flex-1 text-sm text-snow font-medium">{m.name}</span>
+                <span className="text-sm font-semibold text-fog">{m.count} vis.</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* All families with low bonos */}
       {(expiringCount ?? 0) > 0 && (
         <div className="rounded-2xl border border-amber/30 bg-surface p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-snow mb-4">
-            <AlertTriangle size={15} className="text-amber" /> Familias con bono bajo
+            <AlertTriangle size={15} className="text-amber" /> Miembros con bono bajo
           </div>
           <div className="space-y-2">
-            {(allFamilies as any[] ?? [])
-              .filter(f => f.memberships?.[0]?.sessions_remaining != null && f.memberships[0].sessions_remaining <= 2)
-              .map((f: any) => (
-                <div key={f.id} className="flex items-center justify-between rounded-xl bg-surface2 px-3 py-2.5">
+            {(lowBonoMembers as any[] ?? []).map((b: any) => {
+              const member = b.members
+              return (
+                <Link key={b.id} href={`/miembros/${member?.id}`} className="flex items-center justify-between rounded-xl bg-surface2 px-3 py-2.5 hover:bg-line transition-colors">
                   <div>
-                    <p className="text-sm font-medium text-snow">{f.name}</p>
-                    <p className="text-xs text-mist">{f.memberships[0].membership_types?.name}</p>
+                    <p className="text-sm font-medium text-snow">{member?.name}</p>
+                    <p className="text-xs text-mist">{b.membership_types?.name}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-amber">{f.memberships[0].sessions_remaining}</span>
-                    <a href={`/familias/${f.id}`} className="text-xs text-fog hover:text-snow">Ver →</a>
+                    <span className="text-lg font-bold text-amber">{b.sessions_remaining}</span>
+                    <span className="text-xs text-fog">Ver →</span>
                   </div>
-                </div>
-              ))}
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}
