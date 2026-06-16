@@ -1,39 +1,61 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Plus, X } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X, UserPlus, Check, Search, Loader2 } from 'lucide-react'
+import { ScrollDatePicker } from '@/components/ScrollDatePicker'
 
 type Family = { id: string; name: string }
 type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
+type PartnerResult = { id: string; name: string; phone: string } | null
 
 export default function NuevoMiembroPage() {
   const router = useRouter()
-  const [families, setFamilies] = useState<Family[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Primary member
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [birthDate, setBirthDate] = useState('')
-  const [notes, setNotes] = useState('')
-  const [familyId, setFamilyId] = useState('')
-  const [newFamilyName, setNewFamilyName] = useState('')
-  const [familyMode, setFamilyMode] = useState<'existing' | 'new' | 'none'>('none')
   const [children, setChildren] = useState<Child[]>([])
 
-  useEffect(() => {
-    supabase.from('families').select('id, name').order('name')
-      .then(({ data }) => setFamilies((data as Family[]) ?? []))
-  }, [])
+  // Partner section
+  const [showPartner, setShowPartner] = useState(false)
+  const [partnerPhone, setPartnerPhone] = useState('')
+  const [partnerSearching, setPartnerSearching] = useState(false)
+  const [partnerFound, setPartnerFound] = useState<PartnerResult>(undefined as any)
+  const [partnerConfirmed, setPartnerConfirmed] = useState(false)
+  const [partnerName, setPartnerName] = useState('')
+  const partnerTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   function addChild() { setChildren(cs => [...cs, { name: '', sex: '', birth_date: '' }]) }
   function removeChild(i: number) { setChildren(cs => cs.filter((_, idx) => idx !== i)) }
   function updateChild(i: number, field: keyof Child, value: string) {
     setChildren(cs => cs.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
+  }
+
+  function handlePartnerPhoneChange(val: string) {
+    setPartnerPhone(val)
+    setPartnerFound(undefined as any)
+    setPartnerConfirmed(false)
+    setPartnerName('')
+    clearTimeout(partnerTimer.current)
+    if (val.replace(/\s/g, '').length < 8) return
+    setPartnerSearching(true)
+    partnerTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('members')
+        .select('id, name, phone')
+        .or(`phone.eq.${val.trim()},phone.ilike.%${val.replace(/\s/g, '')}%`)
+        .limit(1)
+        .single()
+      setPartnerSearching(false)
+      setPartnerFound(data ?? null)
+    }, 400)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -43,26 +65,31 @@ export default function NuevoMiembroPage() {
     setError(null)
 
     try {
-      let fid: string | null = null
-      if (familyMode === 'existing' && familyId) {
-        fid = familyId
-      } else if (familyMode === 'new' && newFamilyName.trim()) {
-        const { data, error: fe } = await supabase.from('families').insert({ name: newFamilyName.trim() }).select('id').single()
+      const cleanChildren = children.filter(c => c.name.trim())
+      const hasPartner = showPartner && partnerPhone.trim() && (partnerConfirmed || partnerName.trim())
+
+      // Determine family
+      let familyId: string | null = null
+      if (hasPartner) {
+        const lastName = name.trim().split(' ').slice(1).join(' ') || name.trim().split(' ')[0]
+        const { data: fam, error: fe } = await supabase
+          .from('families')
+          .insert({ name: `Familia ${lastName}` })
+          .select('id')
+          .single()
         if (fe) throw fe
-        fid = data.id
+        familyId = fam.id
       }
 
-      const cleanChildren = children.filter(c => c.name.trim())
-
-      const { data, error: me } = await supabase
+      // Create primary member
+      const { data: member, error: me } = await supabase
         .from('members')
         .insert({
           name: name.trim(),
           phone: phone.trim() || null,
           email: email.trim() || null,
           birth_date: birthDate || null,
-          notes: notes.trim() || null,
-          family_id: fid,
+          family_id: familyId,
           children: cleanChildren,
           children_count: cleanChildren.length,
         })
@@ -70,7 +97,27 @@ export default function NuevoMiembroPage() {
         .single()
       if (me) throw me
 
-      router.push(`/miembros/${data.id}`)
+      // Handle partner
+      if (hasPartner && familyId) {
+        if (partnerFound && partnerConfirmed) {
+          // Link existing member
+          await supabase.from('members').update({
+            family_id: familyId,
+            ...(cleanChildren.length > 0 ? { children: cleanChildren, children_count: cleanChildren.length } : {}),
+          }).eq('id', partnerFound.id)
+        } else if (partnerName.trim()) {
+          // Create new partner
+          await supabase.from('members').insert({
+            name: partnerName.trim(),
+            phone: partnerPhone.trim(),
+            family_id: familyId,
+            children: cleanChildren,
+            children_count: cleanChildren.length,
+          })
+        }
+      }
+
+      router.push(`/miembros/${member.id}`)
     } catch (err: any) {
       setError(err.message ?? 'Error al guardar')
       setSaving(false)
@@ -79,6 +126,10 @@ export default function NuevoMiembroPage() {
 
   const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
   const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5'
+
+  // Partner search state display
+  const partnerNotFound = partnerFound === null
+  const partnerIsFound = partnerFound && !partnerNotFound
 
   return (
     <div className="space-y-5 lg:max-w-lg">
@@ -99,15 +150,9 @@ export default function NuevoMiembroPage() {
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre completo" required className={inputCls} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Teléfono</label>
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Fecha nacimiento</label>
-              <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className={inputCls} />
-            </div>
+          <div>
+            <label className={labelCls}>Teléfono</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
           </div>
 
           <div>
@@ -116,8 +161,8 @@ export default function NuevoMiembroPage() {
           </div>
 
           <div>
-            <label className={labelCls}>Notas</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Alergias, preferencias, horarios habituales..." rows={3} className={`${inputCls} resize-none`} />
+            <label className={labelCls}>Fecha de nacimiento</label>
+            <ScrollDatePicker value={birthDate} onChange={setBirthDate} />
           </div>
         </div>
 
@@ -141,42 +186,112 @@ export default function NuevoMiembroPage() {
                 <button type="button" onClick={() => removeChild(i)} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
               </div>
               <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder="Nombre" className={inputCls} />
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Sexo</label>
                 <select value={c.sex} onChange={e => updateChild(i, 'sex', e.target.value)} className={inputCls}>
-                  <option value="">Sexo</option>
+                  <option value="">Sin especificar</option>
                   <option value="M">Niño</option>
                   <option value="F">Niña</option>
                 </select>
-                <input type="date" value={c.birth_date} onChange={e => updateChild(i, 'birth_date', e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Fecha de nacimiento</label>
+                <ScrollDatePicker value={c.birth_date} onChange={v => updateChild(i, 'birth_date', v)} />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Familia */}
-        <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Familia (opcional)</p>
-          <p className="text-xs text-mist -mt-2">Vincula este miembro a una familia para asociarlo con otro padre/madre.</p>
+        {/* Pareja */}
+        {!showPartner ? (
+          <button
+            type="button"
+            onClick={() => setShowPartner(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors"
+          >
+            <UserPlus size={14} /> Agregar pareja / otro titular
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Pareja / otro titular</p>
+              <button type="button" onClick={() => { setShowPartner(false); setPartnerPhone(''); setPartnerFound(undefined as any); setPartnerConfirmed(false); setPartnerName('') }}
+                className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
+            </div>
+            <p className="text-xs text-mist">Introduce el teléfono de la pareja. Si ya está registrada la vincularemos automáticamente.</p>
 
-          <div className="flex rounded-xl border border-line overflow-hidden">
-            {(['none', 'existing', 'new'] as const).map((mode, i) => (
-              <button key={mode} type="button" onClick={() => setFamilyMode(mode)}
-                className={`flex-1 py-2 text-xs font-semibold transition-colors ${familyMode === mode ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'} ${i > 0 ? 'border-l border-line' : ''}`}>
-                {mode === 'none' ? 'Sin familia' : mode === 'existing' ? 'Familia existente' : 'Crear nueva'}
-              </button>
-            ))}
+            {/* Phone input with search */}
+            <div className="relative">
+              <label className={labelCls}>Teléfono de la pareja</label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={partnerPhone}
+                  onChange={e => handlePartnerPhoneChange(e.target.value)}
+                  placeholder="612 345 678"
+                  className={inputCls}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {partnerSearching && <Loader2 size={14} className="text-mist animate-spin" />}
+                  {!partnerSearching && partnerIsFound && !partnerConfirmed && <Search size={14} className="text-lime" />}
+                  {partnerConfirmed && <Check size={14} className="text-lime" />}
+                </div>
+              </div>
+            </div>
+
+            {/* Found: existing member */}
+            {partnerIsFound && !partnerConfirmed && (
+              <div className="rounded-xl border border-lime/20 bg-lime/5 p-4 space-y-3">
+                <p className="text-xs text-fog">Miembro encontrado</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-lime/20 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-lime">{(partnerFound as NonNullable<PartnerResult>).name[0]}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-snow">{(partnerFound as NonNullable<PartnerResult>).name}</p>
+                    <p className="text-xs text-mist">{(partnerFound as NonNullable<PartnerResult>).phone}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPartnerConfirmed(true)}
+                  className="w-full rounded-xl bg-lime/10 border border-lime/30 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors"
+                >
+                  Confirmar como pareja
+                </button>
+              </div>
+            )}
+
+            {/* Confirmed */}
+            {partnerConfirmed && partnerFound && (
+              <div className="flex items-center gap-3 rounded-xl border border-lime/20 bg-lime/5 px-4 py-3">
+                <Check size={14} className="text-lime shrink-0" />
+                <p className="text-sm text-snow">{(partnerFound as NonNullable<PartnerResult>).name} <span className="text-mist text-xs">— vinculado</span></p>
+                <button type="button" onClick={() => { setPartnerConfirmed(false); setPartnerFound(undefined as any); setPartnerPhone('') }} className="ml-auto text-mist hover:text-rose"><X size={13} /></button>
+              </div>
+            )}
+
+            {/* Not found: create new */}
+            {partnerNotFound && (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-amber/20 bg-amber/5 px-4 py-3">
+                  <p className="text-xs text-amber font-medium">Número no registrado — se creará un nuevo miembro</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Nombre de la pareja *</label>
+                  <input
+                    value={partnerName}
+                    onChange={e => setPartnerName(e.target.value)}
+                    placeholder="Nombre completo"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+            )}
+
+            <p className="text-[11px] text-mist">Se creará una familia compartida y los hijos se asignarán a ambos titulares.</p>
           </div>
-
-          {familyMode === 'existing' && (
-            <select value={familyId} onChange={e => setFamilyId(e.target.value)} className={inputCls}>
-              <option value="">Selecciona una familia</option>
-              {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          )}
-          {familyMode === 'new' && (
-            <input value={newFamilyName} onChange={e => setNewFamilyName(e.target.value)} placeholder="Nombre de la familia (ej. Família García)" className={inputCls} />
-          )}
-        </div>
+        )}
 
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 

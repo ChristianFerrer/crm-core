@@ -48,3 +48,6 @@ body {
 }
 *::-webkit-scrollbar { width: 6px; }
 *::-webkit-scrollbar-thumb { background: var(--color-line2); border-radius: 9999px; }
+
+.scrollbar-hide { scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
