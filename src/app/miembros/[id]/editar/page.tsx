@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X } from 'lucide-react'
 import { use } from 'react'
 
 type Family = { id: string; name: string }
+type Child = { name: string; birth_date: string }
 
 export default function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -23,6 +24,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
   const [birthDate, setBirthDate] = useState('')
   const [notes, setNotes] = useState('')
   const [familyId, setFamilyId] = useState('')
+  const [children, setChildren] = useState<Child[]>([])
 
   useEffect(() => {
     Promise.all([
@@ -36,11 +38,18 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         setBirthDate(member.birth_date ?? '')
         setNotes(member.notes ?? '')
         setFamilyId(member.family_id ?? '')
+        setChildren((member.children as Child[]) ?? [])
       }
       setFamilies((fams as Family[]) ?? [])
       setLoading(false)
     })
   }, [id])
+
+  function addChild() { setChildren(prev => [...prev, { name: '', birth_date: '' }]) }
+  function removeChild(i: number) { setChildren(prev => prev.filter((_, idx) => idx !== i)) }
+  function updateChild(i: number, field: keyof Child, value: string) {
+    setChildren(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -48,37 +57,31 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
     setSaving(true)
     setError(null)
 
-    const { error: err } = await supabase
-      .from('members')
-      .update({
-        name: name.trim(),
-        phone: phone.trim() || null,
-        email: email.trim() || null,
-        birth_date: birthDate || null,
-        notes: notes.trim() || null,
-        family_id: familyId || null,
-      })
-      .eq('id', id)
+    const validChildren = children.filter(c => c.name.trim()).map(c => ({ name: c.name.trim(), birth_date: c.birth_date || undefined }))
 
-    if (err) {
-      setError(err.message)
-      setSaving(false)
-    } else {
-      router.push(`/miembros/${id}`)
-    }
+    const { error: err } = await supabase.from('members').update({
+      name: name.trim(),
+      phone: phone.trim() || null,
+      email: email.trim() || null,
+      birth_date: birthDate || null,
+      notes: notes.trim() || null,
+      family_id: familyId || null,
+      children: validChildren,
+    }).eq('id', id)
+
+    if (err) { setError(err.message); setSaving(false) }
+    else router.push(`/miembros/${id}`)
   }
 
   const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
   const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5'
 
-  if (loading) {
-    return (
-      <div className="space-y-4 lg:max-w-lg pt-2">
-        <div className="h-8 w-40 bg-surface rounded-xl animate-pulse" />
-        <div className="h-64 bg-surface rounded-2xl animate-pulse" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="space-y-4 lg:max-w-lg pt-2">
+      <div className="h-8 w-40 bg-surface rounded-xl animate-pulse" />
+      <div className="h-64 bg-surface rounded-2xl animate-pulse" />
+    </div>
+  )
 
   return (
     <div className="space-y-5 lg:max-w-lg">
@@ -90,8 +93,9 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Datos personales */}
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Datos personales</p>
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Padre / Madre · titular</p>
 
           <div>
             <label className={labelCls}>Nombre *</label>
@@ -116,18 +120,35 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
           <div>
             <label className={labelCls}>Notas</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Alergias, preferencias, horarios habituales..."
-              rows={3}
-              className={`${inputCls} resize-none`}
-            />
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Alergias, preferencias, horarios habituales..." rows={3} className={`${inputCls} resize-none`} />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-line bg-surface p-5">
-          <label className={labelCls}>Familia</label>
+        {/* Hijos */}
+        <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos</p>
+            <button type="button" onClick={addChild} className="flex items-center gap-1 text-xs text-lime hover:text-lime-deep font-semibold">
+              <Plus size={13} /> Añadir hijo/a
+            </button>
+          </div>
+          {children.length === 0 && <p className="text-xs text-mist">Sin hijos registrados.</p>}
+          {children.map((c, i) => (
+            <div key={i} className="flex gap-2 items-start border-t border-line pt-3">
+              <div className="flex-1 space-y-2">
+                <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder={`Nombre del hijo/a ${i + 1}`} className={inputCls} />
+                <input type="date" value={c.birth_date} onChange={e => updateChild(i, 'birth_date', e.target.value)} className={`${inputCls} text-fog`} />
+              </div>
+              <button type="button" onClick={() => removeChild(i)} className="mt-3.5 text-mist hover:text-rose transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Familia */}
+        <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Familia</p>
           <select value={familyId} onChange={e => setFamilyId(e.target.value)} className={inputCls}>
             <option value="">Sin familia</option>
             {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
@@ -136,12 +157,9 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={saving || !name.trim()}
+        <button type="submit" disabled={saving || !name.trim()}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:bg-lime-deep active:scale-[0.99] disabled:opacity-60"
-          style={{ boxShadow: 'var(--shadow-lime)' }}
-        >
+          style={{ boxShadow: 'var(--shadow-lime)' }}>
           <Save size={17} strokeWidth={2.2} />
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>

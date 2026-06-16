@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X } from 'lucide-react'
 
 type Family = { id: string; name: string }
+type Child = { name: string; birth_date: string }
 
 export default function NuevoMiembroPage() {
   const router = useRouter()
@@ -21,12 +22,19 @@ export default function NuevoMiembroPage() {
   const [notes, setNotes] = useState('')
   const [familyId, setFamilyId] = useState('')
   const [newFamilyName, setNewFamilyName] = useState('')
-  const [familyMode, setFamilyMode] = useState<'existing' | 'new' | 'none'>('existing')
+  const [familyMode, setFamilyMode] = useState<'existing' | 'new' | 'none'>('none')
+  const [children, setChildren] = useState<Child[]>([])
 
   useEffect(() => {
     supabase.from('families').select('id, name').order('name')
       .then(({ data }) => setFamilies((data as Family[]) ?? []))
   }, [])
+
+  function addChild() { setChildren(prev => [...prev, { name: '', birth_date: '' }]) }
+  function removeChild(i: number) { setChildren(prev => prev.filter((_, idx) => idx !== i)) }
+  function updateChild(i: number, field: keyof Child, value: string) {
+    setChildren(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,7 +44,6 @@ export default function NuevoMiembroPage() {
 
     try {
       let fid: string | null = null
-
       if (familyMode === 'existing' && familyId) {
         fid = familyId
       } else if (familyMode === 'new' && newFamilyName.trim()) {
@@ -44,6 +51,8 @@ export default function NuevoMiembroPage() {
         if (fe) throw fe
         fid = data.id
       }
+
+      const validChildren = children.filter(c => c.name.trim()).map(c => ({ name: c.name.trim(), birth_date: c.birth_date || undefined }))
 
       const { data, error: me } = await supabase
         .from('members')
@@ -54,6 +63,7 @@ export default function NuevoMiembroPage() {
           birth_date: birthDate || null,
           notes: notes.trim() || null,
           family_id: fid,
+          children: validChildren,
         })
         .select('id')
         .single()
@@ -75,12 +85,13 @@ export default function NuevoMiembroPage() {
         <Link href="/miembros" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
           <ArrowLeft size={15} className="text-fog" />
         </Link>
-        <h1 className="font-display text-xl font-semibold text-snow">Nuevo cliente</h1>
+        <h1 className="font-display text-xl font-semibold text-snow">Nuevo miembro</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Datos del padre/madre */}
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Datos personales</p>
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Padre / Madre · titular</p>
 
           <div>
             <label className={labelCls}>Nombre *</label>
@@ -105,28 +116,44 @@ export default function NuevoMiembroPage() {
 
           <div>
             <label className={labelCls}>Notas</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Alergias, preferencias, horarios habituales..."
-              rows={3}
-              className={`${inputCls} resize-none`}
-            />
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Alergias, preferencias, horarios habituales..." rows={3} className={`${inputCls} resize-none`} />
           </div>
         </div>
 
+        {/* Hijos */}
+        <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos</p>
+            <button type="button" onClick={addChild} className="flex items-center gap-1 text-xs text-lime hover:text-lime-deep font-semibold">
+              <Plus size={13} /> Añadir hijo/a
+            </button>
+          </div>
+          {children.length === 0 && (
+            <p className="text-xs text-mist">Opcional — añade los niños vinculados a este padre/madre.</p>
+          )}
+          {children.map((c, i) => (
+            <div key={i} className="flex gap-2 items-start border-t border-line pt-3">
+              <div className="flex-1 space-y-2">
+                <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder={`Nombre del hijo/a ${i + 1}`} className={inputCls} />
+                <input type="date" value={c.birth_date} onChange={e => updateChild(i, 'birth_date', e.target.value)} className={`${inputCls} text-fog`} />
+              </div>
+              <button type="button" onClick={() => removeChild(i)} className="mt-3.5 text-mist hover:text-rose transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Familia */}
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Familia</p>
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Familia (opcional)</p>
+          <p className="text-xs text-mist -mt-2">Vincula este miembro a una familia para asociarlo con otro padre/madre.</p>
 
           <div className="flex rounded-xl border border-line overflow-hidden">
-            {(['existing', 'new', 'none'] as const).map((mode, i) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setFamilyMode(mode)}
-                className={`flex-1 py-2 text-xs font-semibold transition-colors ${familyMode === mode ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'} ${i > 0 ? 'border-l border-line' : ''}`}
-              >
-                {mode === 'existing' ? 'Familia existente' : mode === 'new' ? 'Crear nueva' : 'Sin familia'}
+            {(['none', 'existing', 'new'] as const).map((mode, i) => (
+              <button key={mode} type="button" onClick={() => setFamilyMode(mode)}
+                className={`flex-1 py-2 text-xs font-semibold transition-colors ${familyMode === mode ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'} ${i > 0 ? 'border-l border-line' : ''}`}>
+                {mode === 'none' ? 'Sin familia' : mode === 'existing' ? 'Familia existente' : 'Crear nueva'}
               </button>
             ))}
           </div>
@@ -137,7 +164,6 @@ export default function NuevoMiembroPage() {
               {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           )}
-
           {familyMode === 'new' && (
             <input value={newFamilyName} onChange={e => setNewFamilyName(e.target.value)} placeholder="Nombre de la familia (ej. Família García)" className={inputCls} />
           )}
@@ -145,14 +171,11 @@ export default function NuevoMiembroPage() {
 
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={saving || !name.trim()}
+        <button type="submit" disabled={saving || !name.trim()}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:bg-lime-deep active:scale-[0.99] disabled:opacity-60"
-          style={{ boxShadow: 'var(--shadow-lime)' }}
-        >
+          style={{ boxShadow: 'var(--shadow-lime)' }}>
           <Save size={17} strokeWidth={2.2} />
-          {saving ? 'Guardando...' : 'Guardar cliente'}
+          {saving ? 'Guardando...' : 'Guardar miembro'}
         </button>
       </form>
     </div>

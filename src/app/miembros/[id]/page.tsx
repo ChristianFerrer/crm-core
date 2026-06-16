@@ -24,7 +24,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const [{ data: member }, { data: visits }, { data: monthVisits }] = await Promise.all([
     supabase
       .from('members')
-      .select('id, name, phone, email, birth_date, notes, qr_code, created_at, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
+      .select('id, name, phone, email, birth_date, notes, qr_code, created_at, children, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
       .eq('id', id)
       .single(),
     supabase
@@ -53,20 +53,19 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
   const isExpiringSoon = daysLeft != null && daysLeft <= 7 && daysLeft >= 0
 
-  // Family members (other than this member)
-  let familyMembers: any[] = []
+  // Other adult members in the same family (papá + mamá)
+  let familyAdults: any[] = []
   if (m.families?.id) {
     const { data } = await supabase
       .from('members')
-      .select('id, name, birth_date')
+      .select('id, name')
       .eq('family_id', m.families.id)
       .neq('id', id)
-      .order('birth_date', { ascending: false })
-    familyMembers = (data as any[]) ?? []
+    familyAdults = (data as any[]) ?? []
   }
 
-  const children = familyMembers.filter(fm => fm.birth_date && calcAge(fm.birth_date) < 18)
-  const adults = familyMembers.filter(fm => !fm.birth_date || calcAge(fm.birth_date) >= 18)
+  // Children come from the JSON field on the member
+  const memberChildren: { name: string; birth_date?: string }[] = m.children ?? []
 
   return (
     <div className="space-y-4 lg:max-w-2xl">
@@ -129,33 +128,47 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             )}
           </div>
 
-          {/* Family box — always show if member belongs to a family */}
-          {m.families && (
-            <div className="rounded-2xl border border-line bg-surface p-4">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <Users size={12} className="text-iris" />
-                Familia · {m.families.name.replace(/^Familia(s)?\s*/i, '')}
-              </p>
-              {familyMembers.length > 0 ? (
-                <div className="space-y-1">
-                  {adults.map((a: any) => (
-                    <Link key={a.id} href={`/miembros/${a.id}`} className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-2 py-1.5 transition-colors">
-                      <span className="text-sm text-snow">{a.name}</span>
-                      <span className="text-xs text-mist">{a.birth_date ? `${calcAge(a.birth_date)} años` : 'adulto/a'}</span>
-                    </Link>
-                  ))}
-                  {children.length > 0 && adults.length > 0 && (
-                    <div className="border-t border-line my-1" />
+          {/* Family box */}
+          {(m.families || memberChildren.length > 0) && (
+            <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
+              {m.families && (
+                <>
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+                    <Users size={12} className="text-iris" />
+                    Familia · {m.families.name.replace(/^Familia(s)?\s*/i, '')}
+                  </p>
+                  {familyAdults.length > 0 ? (
+                    <div className="space-y-1">
+                      {familyAdults.map((a: any) => (
+                        <Link key={a.id} href={`/miembros/${a.id}`} className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-2 py-1.5 transition-colors">
+                          <span className="text-sm text-snow">{a.name}</span>
+                          <span className="text-xs text-mist">miembro</span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-mist">Único titular de la familia</p>
                   )}
-                  {children.map((c: any) => (
-                    <Link key={c.id} href={`/miembros/${c.id}`} className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-2 py-1.5 transition-colors">
-                      <span className="text-sm text-snow">{c.name}</span>
-                      <span className="text-xs text-mist">{calcAge(c.birth_date)} años · niño/a</span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-mist">Único miembro de la familia</p>
+                </>
+              )}
+
+              {memberChildren.length > 0 && (
+                <>
+                  {m.families && <div className="border-t border-line" />}
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+                    Hijos
+                  </p>
+                  <div className="space-y-1">
+                    {memberChildren.map((c, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-lg px-2 py-1.5">
+                        <span className="text-sm text-snow">{c.name}</span>
+                        <span className="text-xs text-mist">
+                          {c.birth_date ? `${calcAge(c.birth_date)} años` : 'niño/a'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           )}

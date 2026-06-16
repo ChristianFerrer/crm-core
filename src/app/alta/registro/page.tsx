@@ -58,7 +58,8 @@ export default function RegistroPage() {
         .single()
       if (fe) throw fe
 
-      // Create adult member
+      // Create adult member with children as JSON
+      const validChildren = children.filter(c => c.name.trim()).map(c => ({ name: c.name.trim(), birth_date: c.birth_date || undefined }))
       const { data: member, error: me } = await supabase
         .from('members')
         .insert({
@@ -66,24 +67,13 @@ export default function RegistroPage() {
           phone: phone.trim(),
           email: email.trim() || null,
           family_id: family.id,
+          children: validChildren,
         })
         .select('id, qr_code')
         .single()
       if (me) throw me
 
-      // Create child members
-      if (children.length > 0) {
-        const validChildren = children.filter(c => c.name.trim())
-        if (validChildren.length > 0) {
-          await supabase.from('members').insert(
-            validChildren.map(c => ({
-              name: c.name.trim(),
-              birth_date: c.birth_date || null,
-              family_id: family.id,
-            }))
-          )
-        }
-      }
+      // Children stored as JSON on the parent member (already included in insert below)
 
       // Assign membership if selected
       if (selectedType) {
