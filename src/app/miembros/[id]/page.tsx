@@ -76,11 +76,6 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="font-display text-xl font-semibold text-snow leading-tight truncate">{m.name}</h1>
-          {m.families && (
-            <Link href={`/familias/${m.families.id}`} className="text-xs text-mist hover:text-fog flex items-center gap-1 mt-0.5">
-              <Users size={10} /> Familia {m.families.name}
-            </Link>
-          )}
         </div>
         <Link
           href={`/miembros/${id}/editar`}
@@ -95,16 +90,15 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <div className="space-y-3">
           {/* Personal info */}
           <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
-            {m.birth_date && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-fog">Edad</span>
-                <span className="text-sm font-semibold text-snow">{calcAge(m.birth_date)} años</span>
-              </div>
-            )}
-            {m.phone && (
+            {m.phone ? (
               <div className="flex items-center gap-3">
                 <Phone size={14} className="text-mist shrink-0" />
                 <a href={`tel:${m.phone}`} className="text-sm text-lime font-medium">{m.phone}</a>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Phone size={14} className="text-mist shrink-0" />
+                <span className="text-sm text-mist italic">Sin teléfono</span>
               </div>
             )}
             {m.email && (
@@ -115,10 +109,18 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             )}
             <div className="flex items-center gap-3">
               <Calendar size={14} className="text-mist shrink-0" />
-              <span className="text-xs text-mist">
+              <span className="text-sm text-fog">
                 Alta: {new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             </div>
+            {m.birth_date && (
+              <div className="flex items-center gap-3">
+                <span className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                  <span className="text-mist text-xs">🎂</span>
+                </span>
+                <span className="text-sm text-fog">{calcAge(m.birth_date)} años</span>
+              </div>
+            )}
             {m.notes && (
               <div className="flex items-start gap-3 border-t border-line pt-3">
                 <FileText size={14} className="text-mist shrink-0 mt-0.5" />
@@ -127,26 +129,34 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             )}
           </div>
 
-          {/* Children / family members */}
-          {(children.length > 0 || adults.length > 0) && (
+          {/* Family box — always show if member belongs to a family */}
+          {m.families && (
             <div className="rounded-2xl border border-line bg-surface p-4">
               <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <Users size={12} className="text-iris" /> Familia
+                <Users size={12} className="text-iris" />
+                Familia · {m.families.name.replace(/^Familia(s)?\s*/i, '')}
               </p>
-              <div className="space-y-2">
-                {children.map((c: any) => (
-                  <Link key={c.id} href={`/miembros/${c.id}`} className="flex items-center justify-between hover:bg-surface2 -mx-1 px-1 py-1 rounded-lg transition-colors">
-                    <span className="text-sm text-snow">{c.name}</span>
-                    <span className="text-xs text-mist">{calcAge(c.birth_date)} años · niño/a</span>
-                  </Link>
-                ))}
-                {adults.map((a: any) => (
-                  <Link key={a.id} href={`/miembros/${a.id}`} className="flex items-center justify-between hover:bg-surface2 -mx-1 px-1 py-1 rounded-lg transition-colors">
-                    <span className="text-sm text-snow">{a.name}</span>
-                    <span className="text-xs text-mist">{a.birth_date ? `${calcAge(a.birth_date)} años` : 'adulto'}</span>
-                  </Link>
-                ))}
-              </div>
+              {familyMembers.length > 0 ? (
+                <div className="space-y-1">
+                  {adults.map((a: any) => (
+                    <Link key={a.id} href={`/miembros/${a.id}`} className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-2 py-1.5 transition-colors">
+                      <span className="text-sm text-snow">{a.name}</span>
+                      <span className="text-xs text-mist">{a.birth_date ? `${calcAge(a.birth_date)} años` : 'adulto/a'}</span>
+                    </Link>
+                  ))}
+                  {children.length > 0 && adults.length > 0 && (
+                    <div className="border-t border-line my-1" />
+                  )}
+                  {children.map((c: any) => (
+                    <Link key={c.id} href={`/miembros/${c.id}`} className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-2 py-1.5 transition-colors">
+                      <span className="text-sm text-snow">{c.name}</span>
+                      <span className="text-xs text-mist">{calcAge(c.birth_date)} años · niño/a</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-mist">Único miembro de la familia</p>
+              )}
             </div>
           )}
 
