@@ -45,8 +45,11 @@ export default function FamiliasPage() {
   )
 
   return (
-    <div className="space-y-4">
-      <h1 className="font-display text-2xl font-semibold text-snow pt-2">Familias</h1>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Familias</h1>
+        <span className="text-sm text-mist">{filtered.length} familias</span>
+      </div>
 
       <div className="relative">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist" />
@@ -60,11 +63,11 @@ export default function FamiliasPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          {[1,2,3,4,5].map(i => <div key={i} className="h-16 rounded-2xl bg-surface border border-line animate-pulse" />)}
+        <div className="grid gap-2 lg:grid-cols-2">
+          {[1,2,3,4,5,6].map(i => <div key={i} className="h-16 rounded-2xl bg-surface border border-line animate-pulse" />)}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2 lg:grid-cols-2">
           {filtered.map((family) => {
             const m = family.memberships?.[0]
             const isUnlimited = m?.membership_types?.name?.toLowerCase().includes('ilimitado')
@@ -89,7 +92,7 @@ export default function FamiliasPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-mist">
+                  <div className="flex items-center gap-2 text-xs text-mist flex-wrap">
                     {family.children?.slice(0, 2).map((c, i) => (
                       <span key={i} className="flex items-center gap-1">
                         <Baby size={10} />{c.name}{c.birth_date ? ` ${getAge(c.birth_date)}a` : ''}
@@ -103,7 +106,7 @@ export default function FamiliasPage() {
             )
           })}
           {filtered.length === 0 && (
-            <p className="text-center text-sm text-mist py-10">No se encontraron familias</p>
+            <p className="text-center text-sm text-mist py-10 col-span-2">No se encontraron familias</p>
           )}
         </div>
       )}

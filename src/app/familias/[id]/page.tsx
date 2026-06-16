@@ -30,7 +30,7 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
   const isLow = !isUnlimited && sessionsLeft != null && sessionsLeft <= 2
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:max-w-2xl">
       <div className="flex items-center gap-3 pt-2">
         <Link href="/familias" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
           <ArrowLeft size={15} className="text-fog" />
@@ -60,6 +60,7 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
         )}
       </div>
 
+      <div className="lg:grid lg:grid-cols-2 lg:gap-4 space-y-4 lg:space-y-0">
       {/* Children */}
       {(children as any[])?.length > 0 && (
         <div className="rounded-2xl border border-line bg-surface p-4">
@@ -102,6 +103,7 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
+      </div>
       {/* Visits */}
       <div>
         <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
