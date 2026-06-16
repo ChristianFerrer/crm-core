@@ -35,26 +35,37 @@ export function DatePickerModal({ value, onChange, placeholder = 'Seleccionar fe
         <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
-            className="relative w-full max-w-sm rounded-t-3xl border-t border-x border-line bg-surface p-5 space-y-4"
+            className="relative w-full max-w-sm rounded-t-3xl border-t border-x border-line bg-surface flex flex-col"
+            style={{ maxHeight: '85vh' }}
             onClick={e => e.stopPropagation()}
           >
-            {/* drag handle */}
-            <div className="mx-auto w-10 h-1 rounded-full bg-line2 -mt-1 mb-1" />
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-snow">Fecha de nacimiento</p>
-              <button type="button" onClick={() => setOpen(false)} className="text-mist hover:text-fog">
-                <X size={16} />
+            {/* Header */}
+            <div className="flex-none px-5 pt-4 pb-3">
+              <div className="mx-auto w-10 h-1 rounded-full bg-line2 mb-3" />
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-snow">Fecha de nacimiento</p>
+                <button type="button" onClick={() => setOpen(false)} className="text-mist hover:text-fog p-1">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Carousel */}
+            <div className="flex-none px-5">
+              <ScrollDatePicker value={draft || value} onChange={setDraft} />
+            </div>
+
+            {/* Confirm — always pinned at bottom */}
+            <div className="flex-none px-5 pt-3 pb-5">
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="w-full rounded-xl bg-lime py-3.5 text-sm font-semibold text-ink hover:bg-lime-deep transition-colors active:scale-[0.99]"
+                style={{ boxShadow: 'var(--shadow-lime)' }}
+              >
+                Confirmar
               </button>
             </div>
-            <ScrollDatePicker value={draft || value} onChange={setDraft} />
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="w-full rounded-xl bg-lime py-3 text-sm font-semibold text-ink hover:bg-lime-deep transition-colors"
-              style={{ boxShadow: 'var(--shadow-lime)' }}
-            >
-              Confirmar
-            </button>
           </div>
         </div>
       )}

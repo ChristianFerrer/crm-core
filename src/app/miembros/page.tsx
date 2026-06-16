@@ -58,7 +58,7 @@ export default function MiembrosPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Clientes</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Miembros</h1>
           <p className="text-sm text-fog mt-0.5">{filtered.length} miembros</p>
         </div>
         <Link

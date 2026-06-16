@@ -132,7 +132,7 @@ export default function NuevoMiembroPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Datos personales */}
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Padre / Madre · titular</p>
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular</p>
 
           <div>
             <label className={labelCls}>Nombre *</label>

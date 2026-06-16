@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Plus, X, UserPlus, Check, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X, UserPlus, Check, Loader2, UserX } from 'lucide-react'
 import { use } from 'react'
 import { DatePickerModal } from '@/components/DatePickerModal'
 
@@ -25,10 +25,10 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
   const [familyId, setFamilyId] = useState<string | null>(null)
   const [children, setChildren] = useState<Child[]>([])
 
-  // Existing partner(s) in family
   const [existingPartners, setExistingPartners] = useState<{ id: string; name: string }[]>([])
+  const [unlinkedIds, setUnlinkedIds] = useState<string[]>([])
 
-  // Add partner
+  // Add new partner flow
   const [showPartner, setShowPartner] = useState(false)
   const [partnerPhone, setPartnerPhone] = useState('')
   const [partnerSearching, setPartnerSearching] = useState(false)
@@ -47,8 +47,6 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         setBirthDate(member.birth_date ?? '')
         setFamilyId(member.family_id ?? null)
         setChildren((member.children as Child[]) ?? [])
-
-        // Load partners
         if (member.family_id) {
           const { data } = await supabase
             .from('members').select('id, name').eq('family_id', member.family_id).neq('id', id)
@@ -64,26 +62,26 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
     setChildren(cs => cs.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
   }
 
+  function unlinkPartner(partnerId: string) {
+    setExistingPartners(ps => ps.filter(p => p.id !== partnerId))
+    setUnlinkedIds(ids => [...ids, partnerId])
+  }
+
   function resetPartner() {
     setShowPartner(false); setPartnerPhone(''); setPartnerFound(undefined)
     setPartnerConfirmed(false); setPartnerName('')
   }
 
   function handlePartnerPhone(val: string) {
-    setPartnerPhone(val)
-    setPartnerFound(undefined)
-    setPartnerConfirmed(false)
-    setPartnerName('')
+    setPartnerPhone(val); setPartnerFound(undefined); setPartnerConfirmed(false); setPartnerName('')
     clearTimeout(partnerTimer.current)
     if (val.replace(/\s/g, '').length < 8) return
     setPartnerSearching(true)
     partnerTimer.current = setTimeout(async () => {
       const { data } = await supabase
-        .from('members')
-        .select('id, name, phone')
+        .from('members').select('id, name, phone')
         .or(`phone.eq.${val.trim()},phone.ilike.%${val.replace(/\s/g, '')}%`)
-        .limit(1)
-        .single()
+        .limit(1).single()
       setPartnerSearching(false)
       setPartnerFound(data ?? null)
     }, 400)
@@ -108,16 +106,18 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
       }
 
       const { error: err } = await supabase.from('members').update({
-        name: name.trim(),
-        phone: phone.trim() || null,
-        email: email.trim() || null,
-        birth_date: birthDate || null,
-        family_id: fid,
-        children: cleanChildren,
-        children_count: cleanChildren.length,
+        name: name.trim(), phone: phone.trim() || null, email: email.trim() || null,
+        birth_date: birthDate || null, family_id: fid,
+        children: cleanChildren, children_count: cleanChildren.length,
       }).eq('id', id)
       if (err) throw err
 
+      // Unlink removed partners
+      for (const pid of unlinkedIds) {
+        await supabase.from('members').update({ family_id: null }).eq('id', pid)
+      }
+
+      // Add new partner
       if (hasNewPartner && fid) {
         if (partnerFound && partnerConfirmed) {
           await supabase.from('members').update({
@@ -126,11 +126,8 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
           }).eq('id', partnerFound.id)
         } else if (partnerName.trim()) {
           await supabase.from('members').insert({
-            name: partnerName.trim(),
-            phone: partnerPhone.trim(),
-            family_id: fid,
-            children: cleanChildren,
-            children_count: cleanChildren.length,
+            name: partnerName.trim(), phone: partnerPhone.trim(), family_id: fid,
+            children: cleanChildren, children_count: cleanChildren.length,
           })
         }
       }
@@ -144,6 +141,9 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
   const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
   const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5'
+
+  const activePartners = existingPartners.filter(p => !unlinkedIds.includes(p.id))
+  const hasPartner = activePartners.length > 0
 
   if (loading) return (
     <div className="space-y-4 lg:max-w-lg pt-2">
@@ -164,23 +164,20 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Datos personales */}
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Padre / Madre · titular</p>
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular</p>
 
           <div>
             <label className={labelCls}>Nombre *</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre completo" required className={inputCls} />
           </div>
-
           <div>
             <label className={labelCls}>Teléfono</label>
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
           </div>
-
           <div>
             <label className={labelCls}>Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className={inputCls} />
           </div>
-
           <div>
             <label className={labelCls}>Fecha de nacimiento</label>
             <DatePickerModal value={birthDate} onChange={setBirthDate} />
@@ -223,37 +220,47 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
           ))}
         </div>
 
-        {/* Pareja */}
-        {existingPartners.length > 0 && !showPartner && (
+        {/* Pareja / titular vinculado */}
+        {hasPartner && (
           <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Pareja / otro titular</p>
-            {existingPartners.map(p => (
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular vinculado</p>
+            {activePartners.map(p => (
               <div key={p.id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-surface2 px-4 py-3">
                 <div className="w-7 h-7 rounded-full bg-iris/20 flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold text-iris">{p.name[0]}</span>
                 </div>
-                <span className="text-sm text-snow">{p.name}</span>
-                <Link href={`/miembros/${p.id}`} className="ml-auto text-xs text-lime hover:underline">Ver →</Link>
+                <span className="text-sm text-snow flex-1 min-w-0 truncate">{p.name}</span>
+                <button
+                  type="button"
+                  onClick={() => unlinkPartner(p.id)}
+                  className="flex items-center gap-1 text-xs text-mist hover:text-rose transition-colors shrink-0"
+                  title="Desvincular"
+                >
+                  <UserX size={14} /> Desvincular
+                </button>
               </div>
             ))}
           </div>
         )}
 
-        {!showPartner ? (
+        {/* Añadir titular — solo si no hay ninguno */}
+        {!hasPartner && !showPartner && (
           <button type="button" onClick={() => setShowPartner(true)}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
-            <UserPlus size={14} /> {existingPartners.length > 0 ? 'Agregar otro titular' : 'Agregar pareja / otro titular'}
+            <UserPlus size={14} /> Vincular otro titular
           </button>
-        ) : (
+        )}
+
+        {!hasPartner && showPartner && (
           <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Agregar pareja</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Vincular titular</p>
               <button type="button" onClick={resetPartner} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
             </div>
             <p className="text-xs text-mist">Introduce el teléfono. Si ya está registrado lo vinculamos automáticamente.</p>
 
             <div>
-              <label className={labelCls}>Teléfono de la pareja</label>
+              <label className={labelCls}>Teléfono</label>
               <div className="relative">
                 <input type="tel" value={partnerPhone} onChange={e => handlePartnerPhone(e.target.value)}
                   placeholder="612 345 678" className={inputCls} />
@@ -278,7 +285,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
                 </div>
                 <button type="button" onClick={() => setPartnerConfirmed(true)}
                   className="w-full rounded-xl bg-lime/10 border border-lime/30 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">
-                  Confirmar como pareja
+                  Confirmar como titular
                 </button>
               </div>
             )}
@@ -286,7 +293,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
             {partnerConfirmed && partnerFound && (
               <div className="flex items-center gap-3 rounded-xl border border-lime/20 bg-lime/5 px-4 py-3">
                 <Check size={14} className="text-lime shrink-0" />
-                <p className="text-sm text-snow">{partnerFound.name} <span className="text-mist text-xs">— vinculado</span></p>
+                <p className="text-sm text-snow">{partnerFound.name} <span className="text-mist text-xs">— se vinculará al guardar</span></p>
                 <button type="button" onClick={() => { setPartnerConfirmed(false); setPartnerFound(undefined); setPartnerPhone('') }}
                   className="ml-auto text-mist hover:text-rose"><X size={13} /></button>
               </div>
@@ -298,14 +305,14 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
                   <p className="text-xs text-amber font-medium">Número no registrado — se creará un nuevo miembro</p>
                 </div>
                 <div>
-                  <label className={labelCls}>Nombre de la pareja *</label>
+                  <label className={labelCls}>Nombre *</label>
                   <input value={partnerName} onChange={e => setPartnerName(e.target.value)}
                     placeholder="Nombre completo" className={inputCls} />
                 </div>
               </div>
             )}
 
-            <p className="text-[11px] text-mist">Se creará una familia compartida y los hijos se asignarán a ambos titulares.</p>
+            <p className="text-[11px] text-mist">Los hijos se asignarán a ambos titulares.</p>
           </div>
         )}
 
