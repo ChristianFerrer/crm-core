@@ -1,202 +1,223 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Search, CheckCircle, Baby, AlertTriangle } from 'lucide-react'
+import { Family, Membership } from '@/lib/types'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Search, CheckCircle, LogIn } from 'lucide-react'
 
-type Family = {
-  id: string
-  name: string
-  phone: string | null
-  children: { name: string; birth_date: string | null }[]
-  memberships: {
-    id: string
-    sessions_remaining: number | null
-    expires_at: string
-    membership_types: { name: string } | null
-  }[]
-}
-
-function getAge(birthDate: string) {
-  const diff = Date.now() - new Date(birthDate).getTime()
-  return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25))
+type FamilyResult = Family & {
+  memberships: (Membership & { membership_types: { name: string; sessions: number | null } | null })[]
 }
 
 export default function CheckInPage() {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Family[]>([])
+  const [results, setResults] = useState<FamilyResult[]>([])
+  const [selected, setSelected] = useState<FamilyResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState<{ familyName: string; sessionsLeft: number | null } | null>(null)
-  const [checking, setChecking] = useState(false)
+  const [registering, setRegistering] = useState(false)
+  const [success, setSuccess] = useState<{ familyName: string; sessionsRemaining: number | null } | null>(null)
+  const debounceRef = useRef<NodeJS.Timeout>()
 
-  async function search(value: string) {
-    setQuery(value)
-    setSuccess(null)
-    if (value.length < 2) { setResults([]); return }
-    setLoading(true)
-    const { data } = await supabase
-      .from('families')
-      .select(`
-        id, name, phone,
-        children(name, birth_date),
-        memberships(id, sessions_remaining, expires_at, membership_types(name))
-      `)
-      .or(`name.ilike.%${value}%,phone.ilike.%${value}%`)
-      .limit(5)
-    setResults((data as any[]) ?? [])
-    setLoading(false)
-  }
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([])
+      return
+    }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true)
+      const { data } = await supabase
+        .from('families')
+        .select('*, memberships(*, membership_types(name, sessions))')
+        .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
+        .limit(5)
+      setResults((data as FamilyResult[]) ?? [])
+      setLoading(false)
+    }, 300)
+    return () => clearTimeout(debounceRef.current)
+  }, [query])
 
-  async function doCheckIn(family: Family) {
-    setChecking(true)
-    const membership = family.memberships?.[0]
-    const isUnlimited = membership?.membership_types?.name?.toLowerCase().includes('ilimitado')
+  async function handleCheckIn() {
+    if (!selected) return
+    setRegistering(true)
+
+    const membership = selected.memberships?.[0]
 
     // Insert visit
-    await supabase.from('visits').insert({
-      family_id: family.id,
+    const { error: visitError } = await supabase.from('visits').insert({
+      family_id: selected.id,
       membership_id: membership?.id ?? null,
+      checked_in_at: new Date().toISOString(),
     })
 
-    // Decrement sessions if not unlimited
-    if (membership && !isUnlimited && membership.sessions_remaining != null) {
-      await supabase
-        .from('memberships')
-        .update({ sessions_remaining: membership.sessions_remaining - 1 })
-        .eq('id', membership.id)
+    if (visitError) {
+      alert('Error al registrar la entrada: ' + visitError.message)
+      setRegistering(false)
+      return
     }
 
-    const newSessions = !isUnlimited && membership?.sessions_remaining != null
-      ? membership.sessions_remaining - 1
-      : null
+    let newSessions: number | null = null
 
-    setSuccess({ familyName: family.name, sessionsLeft: newSessions })
-    setResults([])
+    // Decrement sessions if applicable
+    if (membership && membership.sessions_remaining !== null) {
+      const newCount = Math.max(0, membership.sessions_remaining - 1)
+      await supabase
+        .from('memberships')
+        .update({ sessions_remaining: newCount })
+        .eq('id', membership.id)
+      newSessions = newCount
+    }
+
+    setSuccess({
+      familyName: selected.name,
+      sessionsRemaining: newSessions,
+    })
+    setRegistering(false)
+  }
+
+  function reset() {
     setQuery('')
-    setChecking(false)
+    setResults([])
+    setSelected(null)
+    setSuccess(null)
+  }
+
+  if (success) {
+    return (
+      <div className="p-4 flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Entrada registrada!</h2>
+        <p className="text-lg text-gray-700 mb-1">{success.familyName}</p>
+        {success.sessionsRemaining !== null && (
+          <p className={`text-base font-medium mb-6 ${
+            success.sessionsRemaining <= 2 ? 'text-red-500' : 'text-violet-600'
+          }`}>
+            Sesiones restantes: {success.sessionsRemaining}
+          </p>
+        )}
+        {success.sessionsRemaining === null && (
+          <p className="text-sm text-green-600 mb-6">Bono mensual ilimitado</p>
+        )}
+        {success.sessionsRemaining !== null && success.sessionsRemaining <= 2 && (
+          <div className="mb-6 p-3 bg-red-50 rounded-lg text-sm text-red-600">
+            Quedan pocas sesiones. Recomienda renovar el bono.
+          </div>
+        )}
+        <Button onClick={reset} className="bg-violet-600 hover:bg-violet-700 text-white w-full max-w-xs">
+          Nueva entrada
+        </Button>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-xl font-bold text-gray-900">Registrar entrada</h1>
+    <div className="p-4">
+      <div className="pt-4 mb-6">
+        <h1 className="text-xl font-bold text-gray-900 mb-1">Check-in</h1>
+        <p className="text-sm text-gray-500">Busca la familia para registrar la entrada</p>
+      </div>
 
-      {success ? (
-        <div className="space-y-4">
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-3">
-            <CheckCircle size={40} className="text-green-500 mx-auto" />
-            <div>
-              <p className="text-lg font-bold text-gray-900">{success.familyName}</p>
-              <p className="text-sm text-green-600 font-medium">Entrada registrada</p>
-            </div>
-            {success.sessionsLeft != null && (
-              <div className={`inline-block px-4 py-2 rounded-xl text-sm font-semibold ${
-                success.sessionsLeft <= 2 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-              }`}>
-                {success.sessionsLeft === 0
-                  ? '⚠ Bono agotado'
-                  : `Quedan ${success.sessionsLeft} sesiones`}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => setSuccess(null)}
-            className="w-full bg-violet-600 text-white font-semibold rounded-2xl py-4 text-sm"
-          >
-            Nueva entrada
-          </button>
-        </div>
-      ) : (
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Input
+          value={query}
+          onChange={e => { setQuery(e.target.value); setSelected(null) }}
+          placeholder="Nombre o teléfono..."
+          className="pl-10 h-12 text-base"
+          autoFocus
+        />
+      </div>
+
+      {/* Search results */}
+      {!selected && (
         <>
-          <div className="relative">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar familia por nombre o teléfono..."
-              value={query}
-              onChange={(e) => search(e.target.value)}
-              autoFocus
-              className="w-full bg-white border border-gray-200 rounded-2xl pl-11 pr-4 py-4 text-base outline-none focus:border-violet-400 shadow-sm"
-            />
-          </div>
-
-          {loading && (
-            <div className="space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 animate-pulse h-20" />
-              ))}
-            </div>
-          )}
-
-          {results.length > 0 && (
-            <div className="space-y-3">
-              {results.map((family) => {
+          {loading && <p className="text-sm text-gray-400 text-center py-4">Buscando...</p>}
+          {!loading && results.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {results.map(family => {
                 const membership = family.memberships?.[0]
-                const isUnlimited = membership?.membership_types?.name?.toLowerCase().includes('ilimitado')
-                const sessionsLeft = membership?.sessions_remaining
-                const isLow = !isUnlimited && sessionsLeft != null && sessionsLeft <= 2
-                const hasNoSessions = !isUnlimited && sessionsLeft === 0
-
                 return (
-                  <div key={family.id} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
-                    <div className="flex items-start justify-between">
+                  <Card
+                    key={family.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow border-2 hover:border-violet-300"
+                    onClick={() => setSelected(family)}
+                  >
+                    <CardContent className="py-3 px-4 flex justify-between items-center">
                       <div>
-                        <p className="font-bold text-gray-900">{family.name}</p>
-                        {family.phone && <p className="text-sm text-gray-400">{family.phone}</p>}
-                        {family.children?.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {family.children.map((c, i) => (
-                              <span key={i} className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 rounded-lg px-2 py-1">
-                                <Baby size={11} />
-                                {c.name}{c.birth_date ? ` ${getAge(c.birth_date)}a` : ''}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        <div className="font-semibold text-gray-900">{family.name}</div>
+                        {family.phone && <div className="text-sm text-gray-500">{family.phone}</div>}
                       </div>
-                      <div className="text-right shrink-0 ml-3">
-                        {membership ? (
-                          <>
-                            <p className="text-xs text-gray-400">{membership.membership_types?.name}</p>
-                            {isUnlimited ? (
-                              <p className="text-lg font-bold text-violet-600">∞</p>
-                            ) : sessionsLeft != null ? (
-                              <p className={`text-xl font-bold ${isLow ? 'text-amber-600' : 'text-violet-600'}`}>{sessionsLeft}</p>
-                            ) : null}
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-400">Sin bono</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {isLow && !hasNoSessions && (
-                      <div className="flex items-center gap-2 bg-amber-50 rounded-xl px-3 py-2">
-                        <AlertTriangle size={13} className="text-amber-500 shrink-0" />
-                        <p className="text-xs text-amber-700">Quedan pocas sesiones</p>
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => doCheckIn(family)}
-                      disabled={checking || hasNoSessions}
-                      className={`w-full font-semibold rounded-xl py-3 text-sm transition-transform active:scale-95 ${
-                        hasNoSessions
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-violet-600 text-white'
-                      }`}
-                    >
-                      {checking ? 'Registrando...' : hasNoSessions ? 'Bono agotado' : 'Registrar entrada'}
-                    </button>
-                  </div>
+                      {membership && (
+                        <Badge variant="secondary" className="bg-violet-100 text-violet-700 text-xs">
+                          {membership.membership_types?.name ?? 'Activo'}
+                        </Badge>
+                      )}
+                    </CardContent>
+                  </Card>
                 )
               })}
             </div>
           )}
-
-          {query.length > 1 && !loading && results.length === 0 && (
-            <p className="text-center text-sm text-gray-400 py-8">No se encontró ninguna familia</p>
+          {!loading && query.length >= 2 && results.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-8">No se encontraron familias</p>
           )}
         </>
+      )}
+
+      {/* Selected family */}
+      {selected && (
+        <div className="space-y-4">
+          <Card className="border-2 border-violet-400">
+            <CardContent className="pt-4 space-y-3">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">{selected.name}</h2>
+                  {selected.phone && <p className="text-sm text-gray-500">{selected.phone}</p>}
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setSelected(null)} className="text-xs text-gray-400">
+                  Cambiar
+                </Button>
+              </div>
+              {selected.memberships?.[0] && (
+                <div className="border-t pt-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Bono</span>
+                    <span className="font-medium">{selected.memberships[0].membership_types?.name}</span>
+                  </div>
+                  {selected.memberships[0].sessions_remaining !== null && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Sesiones disponibles</span>
+                      <span className={`font-semibold ${
+                        selected.memberships[0].sessions_remaining <= 2 ? 'text-red-500' : 'text-violet-600'
+                      }`}>
+                        {selected.memberships[0].sessions_remaining}
+                      </span>
+                    </div>
+                  )}
+                  {selected.memberships[0].sessions_remaining === null && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Tipo</span>
+                      <span className="text-green-600 font-medium">Ilimitado</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Button
+            onClick={handleCheckIn}
+            disabled={registering}
+            className="w-full h-14 text-base bg-violet-600 hover:bg-violet-700 text-white"
+          >
+            <LogIn className="w-5 h-5 mr-2" />
+            {registering ? 'Registrando...' : 'Registrar entrada'}
+          </Button>
+        </div>
       )}
     </div>
   )
