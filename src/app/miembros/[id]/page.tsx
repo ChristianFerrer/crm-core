@@ -1,8 +1,9 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, FileText, CreditCard, Clock, Users } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, FileText, CreditCard, Clock, Users, Calendar, AlertTriangle } from 'lucide-react'
 import { MemberQr } from '@/components/MemberQr'
+import { AssignMembership } from '@/components/AssignMembership'
 
 export const revalidate = 0
 
@@ -16,10 +17,14 @@ function calcAge(d: string) {
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const [{ data: member }, { data: visits }] = await Promise.all([
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  const [{ data: member }, { data: visits }, { data: monthVisits }] = await Promise.all([
     supabase
       .from('members')
-      .select('id, name, phone, email, birth_date, notes, qr_code, families(id, name), memberships(id, sessions_remaining, expires_at, membership_types(name))')
+      .select('id, name, phone, email, birth_date, notes, qr_code, created_at, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
       .eq('id', id)
       .single(),
     supabase
@@ -27,7 +32,12 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       .select('id, checked_in_at')
       .eq('member_id', id)
       .order('checked_in_at', { ascending: false })
-      .limit(15),
+      .limit(20),
+    supabase
+      .from('visits')
+      .select('id', { count: 'exact', head: true })
+      .eq('member_id', id)
+      .gte('checked_in_at', startOfMonth.toISOString()),
   ])
 
   if (!member) notFound()
@@ -38,13 +48,30 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const s = bono?.sessions_remaining
   const isLow = !isUnlimited && s != null && s <= 2
 
+  // Expiry warning: within 7 days
+  const expiresAt = bono?.expires_at ? new Date(bono.expires_at) : null
+  const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
+  const isExpiringSoon = daysLeft != null && daysLeft <= 7 && daysLeft >= 0
+
+  // Family members (other than this member)
+  let familyMembers: any[] = []
+  if (m.families?.id) {
+    const { data } = await supabase
+      .from('members')
+      .select('id, name, birth_date')
+      .eq('family_id', m.families.id)
+      .neq('id', id)
+      .order('birth_date', { ascending: false })
+    familyMembers = (data as any[]) ?? []
+  }
+
+  const children = familyMembers.filter(fm => fm.birth_date && calcAge(fm.birth_date) < 18)
+  const adults = familyMembers.filter(fm => !fm.birth_date || calcAge(fm.birth_date) >= 18)
+
   return (
     <div className="space-y-4 lg:max-w-2xl">
       <div className="flex items-center gap-3 pt-2">
-        <Link
-          href={m.families ? `/familias/${m.families.id}` : '/familias'}
-          className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors"
-        >
+        <Link href="/miembros" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
           <ArrowLeft size={15} className="text-fog" />
         </Link>
         <div>
@@ -58,8 +85,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-4 space-y-4 lg:space-y-0">
-        {/* Info + QR */}
+        {/* Left col: info + QR */}
         <div className="space-y-3">
+          {/* Personal info */}
           <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
             {m.birth_date && (
               <div className="flex items-center justify-between">
@@ -79,25 +107,66 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                 <span className="text-sm text-fog truncate">{m.email}</span>
               </div>
             )}
+            <div className="flex items-center gap-3">
+              <Calendar size={14} className="text-mist shrink-0" />
+              <span className="text-xs text-mist">
+                Alta: {new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+            </div>
             {m.notes && (
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 border-t border-line pt-3">
                 <FileText size={14} className="text-mist shrink-0 mt-0.5" />
                 <span className="text-sm text-fog">{m.notes}</span>
               </div>
             )}
           </div>
 
+          {/* Children / family members */}
+          {(children.length > 0 || adults.length > 0) && (
+            <div className="rounded-2xl border border-line bg-surface p-4">
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <Users size={12} className="text-iris" /> Familia
+              </p>
+              <div className="space-y-2">
+                {children.map((c: any) => (
+                  <Link key={c.id} href={`/miembros/${c.id}`} className="flex items-center justify-between hover:bg-surface2 -mx-1 px-1 py-1 rounded-lg transition-colors">
+                    <span className="text-sm text-snow">{c.name}</span>
+                    <span className="text-xs text-mist">{calcAge(c.birth_date)} años · niño/a</span>
+                  </Link>
+                ))}
+                {adults.map((a: any) => (
+                  <Link key={a.id} href={`/miembros/${a.id}`} className="flex items-center justify-between hover:bg-surface2 -mx-1 px-1 py-1 rounded-lg transition-colors">
+                    <span className="text-sm text-snow">{a.name}</span>
+                    <span className="text-xs text-mist">{a.birth_date ? `${calcAge(a.birth_date)} años` : 'adulto'}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* QR code */}
           <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col items-center gap-3">
             <p className="text-xs font-semibold text-fog uppercase tracking-wide">Código QR de acceso</p>
             <MemberQr qrCode={m.qr_code} />
-            <p className="text-[10px] text-mist text-center">{m.qr_code}</p>
           </div>
         </div>
 
+        {/* Right col: bono + stats */}
         <div className="space-y-3">
+          {/* Monthly visits */}
+          <div className="rounded-2xl border border-line bg-surface p-4 grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <p className="font-display text-3xl font-semibold text-lime">{(monthVisits as any)?.count ?? 0}</p>
+              <p className="text-xs text-mist mt-1">Visitas este mes</p>
+            </div>
+            <div className="text-center">
+              <p className="font-display text-3xl font-semibold text-fog">{(visits as any[])?.length ?? 0}</p>
+              <p className="text-xs text-mist mt-1">Total visitas</p>
+            </div>
+          </div>
+
           {/* Membership */}
-          <div className={`rounded-2xl border p-4 ${isLow ? 'border-amber/30 bg-amber/5' : s === 0 ? 'border-rose/30 bg-rose-soft' : 'border-line bg-surface'}`}>
+          <div className={`rounded-2xl border p-4 ${isLow && s !== 0 ? 'border-amber/30 bg-amber/5' : s === 0 ? 'border-rose/30 bg-rose-soft' : isExpiringSoon ? 'border-amber/30 bg-amber/5' : 'border-line bg-surface'}`}>
             <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
               <CreditCard size={13} className="text-lime" /> Bono activo
             </div>
@@ -106,38 +175,54 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-snow">{bono.membership_types?.name}</p>
-                    {bono.expires_at && (
+                    {expiresAt && (
                       <p className="text-xs text-mist mt-0.5">
-                        Vence {new Date(bono.expires_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        Vence {expiresAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </p>
                     )}
                   </div>
                   {isUnlimited ? (
                     <span className="text-2xl font-bold text-iris">∞</span>
                   ) : s != null ? (
-                    <span className={`text-2xl font-bold ${isLow ? 'text-amber' : s === 0 ? 'text-rose' : 'text-lime'}`}>{s}</span>
+                    <span className={`text-2xl font-bold ${isLow ? (s === 0 ? 'text-rose' : 'text-amber') : 'text-lime'}`}>{s}</span>
                   ) : null}
                 </div>
-                {isLow && s !== 0 && <p className="text-xs text-amber font-medium mt-3">⚠ Quedan pocas sesiones</p>}
-                {s === 0 && <p className="text-xs text-rose font-medium mt-3">⚠ Bono agotado — hay que renovar</p>}
+                {isLow && s !== 0 && (
+                  <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1">
+                    <AlertTriangle size={11} /> Quedan pocas sesiones — avisar al cliente
+                  </p>
+                )}
+                {s === 0 && (
+                  <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1">
+                    <AlertTriangle size={11} /> Bono agotado — necesita renovar
+                  </p>
+                )}
+                {isExpiringSoon && (
+                  <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1">
+                    <AlertTriangle size={11} /> Vence en {daysLeft} día{daysLeft === 1 ? '' : 's'}
+                  </p>
+                )}
+                <div className="mt-3 pt-3 border-t border-line">
+                  <AssignMembership memberId={m.id} />
+                </div>
               </>
             ) : (
-              <p className="text-sm text-mist">Sin bono asignado</p>
+              <div className="space-y-3">
+                <p className="text-sm text-mist">Sin bono asignado</p>
+                <AssignMembership memberId={m.id} />
+              </div>
             )}
           </div>
 
-          {/* Visit stats */}
-          <div className="rounded-2xl border border-line bg-surface p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-snow">Total visitas</p>
-              <p className="text-2xl font-bold font-display text-lime">{(visits as any[])?.length ?? 0}</p>
-            </div>
-            {(visits as any[])?.[0] && (
-              <p className="text-xs text-mist mt-1">
-                Última: {new Date((visits as any[])[0].checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+          {/* Last visit */}
+          {(visits as any[])?.[0] && (
+            <div className="rounded-2xl border border-line bg-surface px-4 py-3">
+              <p className="text-xs text-mist">Última visita</p>
+              <p className="text-sm font-semibold text-snow mt-0.5">
+                {new Date((visits as any[])[0].checked_in_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

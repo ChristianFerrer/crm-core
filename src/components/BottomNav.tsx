@@ -6,7 +6,7 @@ import { Home, Users, LogIn, BarChart2 } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
-  { href: '/familias', label: 'Familias', icon: Users },
+  { href: '/miembros', label: 'Clientes', icon: Users },
   { href: '/checkin', label: 'Check-in', icon: LogIn },
   { href: '/panel', label: 'Panel', icon: BarChart2 },
 ]
@@ -18,7 +18,7 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden">
       <div className="flex">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href
+          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
           return (
             <Link
               key={href}
