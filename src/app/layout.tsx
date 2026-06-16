@@ -1,29 +1,24 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Fraunces } from 'next/font/google'
 import './globals.css'
 import BottomNav from '@/components/BottomNav'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', axes: ['opsz'] })
 
 export const metadata: Metadata = {
-  title: 'Ludoteca El Bosc Màgic',
-  description: 'CRM para ludoteca infantil',
+  title: 'El Bosc Màgic · CRM',
+  description: 'Gestión de familias y bonos',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
-        <main className="max-w-md mx-auto min-h-screen pb-20">
+    <html lang="es" className={`${inter.variable} ${fraunces.variable}`}>
+      <body className="min-h-screen bg-carbon text-snow">
+        <main className="max-w-md mx-auto min-h-screen pb-20 px-4 pt-4">
           {children}
         </main>
-        <div className="max-w-md mx-auto">
-          <BottomNav />
-        </div>
+        <BottomNav />
       </body>
     </html>
   )
