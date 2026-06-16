@@ -69,6 +69,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   return (
     <div className="space-y-4 lg:max-w-2xl">
+      {/* Header */}
       <div className="flex items-center gap-3 pt-2">
         <Link href="/miembros" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0">
           <ArrowLeft size={15} className="text-fog" />
@@ -84,103 +85,106 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </Link>
       </div>
 
-      <div className="lg:grid lg:grid-cols-2 lg:gap-4 space-y-4 lg:space-y-0">
-        {/* Left col: info + QR */}
-        <div className="space-y-3">
-          {/* Personal info */}
-          <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
-            {m.phone ? (
-              <div className="flex items-center gap-3">
-                <Phone size={14} className="text-mist shrink-0" />
-                <a href={`tel:${m.phone}`} className="text-sm text-lime font-medium">{m.phone}</a>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <Phone size={14} className="text-mist shrink-0" />
-                <span className="text-sm text-mist italic">Sin teléfono</span>
-              </div>
-            )}
-            {m.email && (
-              <div className="flex items-center gap-3">
-                <Mail size={14} className="text-mist shrink-0" />
-                <span className="text-sm text-fog truncate">{m.email}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <Calendar size={14} className="text-mist shrink-0" />
-              <span className="text-sm text-fog">
-                Alta: {new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>
+      {/* Contact info — teléfono + alta + email + notas */}
+      <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
+        {/* Teléfono destacado */}
+        {m.phone ? (
+          <a href={`tel:${m.phone}`} className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded-lg bg-lime/10 flex items-center justify-center shrink-0">
+              <Phone size={14} className="text-lime" />
             </div>
-            {m.birth_date && (
-              <div className="flex items-center gap-3">
-                <span className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
-                  <span className="text-mist text-xs">🎂</span>
-                </span>
-                <span className="text-sm text-fog">{calcAge(m.birth_date)} años</span>
-              </div>
-            )}
-            {m.notes && (
-              <div className="flex items-start gap-3 border-t border-line pt-3">
-                <FileText size={14} className="text-mist shrink-0 mt-0.5" />
-                <span className="text-sm text-fog">{m.notes}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Family box */}
-          {(m.families || memberChildren.length > 0) && (
-            <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
-              {m.families && (
-                <>
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-                    <Users size={12} className="text-iris" />
-                    Familia · {m.families.name.replace(/^Familia(s)?\s*/i, '')}
-                  </p>
-                  {familyAdults.length > 0 ? (
-                    <div className="space-y-1">
-                      {familyAdults.map((a: any) => (
-                        <Link key={a.id} href={`/miembros/${a.id}`} className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-2 py-1.5 transition-colors">
-                          <span className="text-sm text-snow">{a.name}</span>
-                          <span className="text-xs text-mist">miembro</span>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-mist">Único titular de la familia</p>
-                  )}
-                </>
-              )}
-
-              {memberChildren.length > 0 && (
-                <>
-                  {m.families && <div className="border-t border-line" />}
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-                    Hijos
-                  </p>
-                  <div className="space-y-1">
-                    {memberChildren.map((c, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-lg px-2 py-1.5">
-                        <span className="text-sm text-snow">{c.name}</span>
-                        <span className="text-xs text-mist">
-                          {c.birth_date ? `${calcAge(c.birth_date)} años` : 'niño/a'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+            <div>
+              <p className="text-base font-semibold text-lime group-hover:underline">{m.phone}</p>
+              <p className="text-[10px] text-mist">Teléfono de contacto</p>
             </div>
-          )}
-
-          {/* QR code */}
-          <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col items-center gap-3">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Código QR de acceso</p>
-            <MemberQr qrCode={m.qr_code} />
+          </a>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-surface2 flex items-center justify-center shrink-0">
+              <Phone size={14} className="text-mist" />
+            </div>
+            <span className="text-sm text-mist">Sin teléfono registrado</span>
           </div>
+        )}
+
+        <div className="border-t border-line" />
+
+        {/* Fecha de alta */}
+        <div className="flex items-center gap-3">
+          <Calendar size={14} className="text-mist shrink-0" />
+          <span className="text-sm text-fog">
+            Miembro desde {new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
         </div>
 
-        {/* Right col: bono + stats */}
+        {m.email && (
+          <div className="flex items-center gap-3">
+            <Mail size={14} className="text-mist shrink-0" />
+            <span className="text-sm text-fog truncate">{m.email}</span>
+          </div>
+        )}
+
+        {m.notes && (
+          <div className="flex items-start gap-3 border-t border-line pt-3">
+            <FileText size={14} className="text-mist shrink-0 mt-0.5" />
+            <span className="text-sm text-fog">{m.notes}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Familia + hijos */}
+      {(m.families || memberChildren.length > 0) && (
+        <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
+          {m.families && (
+            <>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+                <Users size={12} className="text-iris" />
+                Familia · {m.families.name.replace(/^Familia(s)?\s*/i, '')}
+              </p>
+              {familyAdults.length > 0 ? (
+                <div className="space-y-1">
+                  {familyAdults.map((a: any) => (
+                    <Link key={a.id} href={`/miembros/${a.id}`} className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-2 py-1.5 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />
+                        <span className="text-sm text-snow">{a.name}</span>
+                      </div>
+                      <span className="text-xs text-lime">Ver →</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-mist">Único titular de la familia</p>
+              )}
+            </>
+          )}
+
+          {memberChildren.length > 0 && (
+            <>
+              {m.families && <div className="border-t border-line" />}
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">
+                {memberChildren.length === 1 ? '1 hijo/a' : `${memberChildren.length} hijos`}
+              </p>
+              <div className="space-y-1">
+                {memberChildren.map((c, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg bg-surface2 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-iris bg-iris/10 rounded-full w-5 h-5 flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="text-sm text-snow">{c.name}</span>
+                    </div>
+                    <span className="text-xs text-mist">
+                      {c.birth_date ? `${calcAge(c.birth_date)} años` : 'sin fecha'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="lg:grid lg:grid-cols-2 lg:gap-4 space-y-4 lg:space-y-0">
+        {/* Left col: stats + bono */}
         <div className="space-y-3">
           {/* Monthly visits */}
           <div className="rounded-2xl border border-line bg-surface p-4 grid grid-cols-2 gap-4">
@@ -216,21 +220,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                     <span className={`text-2xl font-bold ${isLow ? (s === 0 ? 'text-rose' : 'text-amber') : 'text-lime'}`}>{s}</span>
                   ) : null}
                 </div>
-                {isLow && s !== 0 && (
-                  <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1">
-                    <AlertTriangle size={11} /> Quedan pocas sesiones — avisar al cliente
-                  </p>
-                )}
-                {s === 0 && (
-                  <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1">
-                    <AlertTriangle size={11} /> Bono agotado — necesita renovar
-                  </p>
-                )}
-                {isExpiringSoon && (
-                  <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1">
-                    <AlertTriangle size={11} /> Vence en {daysLeft} día{daysLeft === 1 ? '' : 's'}
-                  </p>
-                )}
+                {isLow && s !== 0 && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Quedan pocas sesiones</p>}
+                {s === 0 && <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Bono agotado — necesita renovar</p>}
+                {isExpiringSoon && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Vence en {daysLeft} día{daysLeft === 1 ? '' : 's'}</p>}
                 <div className="mt-3 pt-3 border-t border-line">
                   <AssignMembership memberId={m.id} />
                 </div>
@@ -242,8 +234,16 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               </div>
             )}
           </div>
+        </div>
 
-          {/* Last visit */}
+        {/* Right col: QR + última visita */}
+        <div className="space-y-3">
+          {/* QR code */}
+          <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col items-center gap-3">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Código QR de acceso</p>
+            <MemberQr qrCode={m.qr_code} />
+          </div>
+
           {(visits as any[])?.[0] && (
             <div className="rounded-2xl border border-line bg-surface px-4 py-3">
               <p className="text-xs text-mist">Última visita</p>
