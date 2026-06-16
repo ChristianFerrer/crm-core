@@ -164,12 +164,13 @@ export default function RegistroPage() {
             <span className="text-ink font-bold text-lg">B</span>
           </div>
           <h1 className="font-display text-2xl font-semibold text-snow">Hazte socio</h1>
-          <p className="text-fog text-sm">El Bosc Màgic · Rellena tus datos</p>
+          <p className="text-fog text-sm">El Bosc Màgic · Alta de familia</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Personal */}
-          <div className="space-y-3">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Datos del padre/madre */}
+          <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Padre / Madre · titular</p>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
@@ -194,21 +195,24 @@ export default function RegistroPage() {
             />
           </div>
 
-          {/* Children */}
-          <div className="space-y-2">
+          {/* Niños */}
+          <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-fog uppercase tracking-wide">Niños</p>
               <button type="button" onClick={addChild} className="flex items-center gap-1 text-xs text-lime hover:text-lime-deep font-semibold">
-                <Plus size={13} /> Añadir
+                <Plus size={13} /> Añadir niño/a
               </button>
             </div>
+            {children.length === 0 && (
+              <p className="text-xs text-mist py-1">Añade los niños que vendrán a jugar.</p>
+            )}
             {children.map((c, i) => (
-              <div key={i} className="flex gap-2 items-start">
+              <div key={i} className="flex gap-2 items-start border-t border-line pt-3 first:border-0 first:pt-0">
                 <div className="flex-1 space-y-2">
                   <input
                     value={c.name}
                     onChange={e => updateChild(i, 'name', e.target.value)}
-                    placeholder={`Nombre del niño/a`}
+                    placeholder={`Nombre del niño/a ${i + 1}`}
                     className={inputCls}
                   />
                   <input
@@ -226,7 +230,7 @@ export default function RegistroPage() {
           </div>
 
           {/* Membership type */}
-          <div className="space-y-2">
+          <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
             <p className="text-xs font-semibold text-fog uppercase tracking-wide">Bono</p>
             <div className="space-y-2">
               <button
