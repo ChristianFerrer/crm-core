@@ -1,19 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Plus, X } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X, UserPlus, Check, Loader2 } from 'lucide-react'
 import { use } from 'react'
+import { DatePickerModal } from '@/components/DatePickerModal'
 
-type Family = { id: string; name: string }
 type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
+type PartnerResult = { id: string; name: string; phone: string }
 
 export default function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [families, setFamilies] = useState<Family[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,27 +22,40 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [birthDate, setBirthDate] = useState('')
-  const [notes, setNotes] = useState('')
-  const [familyId, setFamilyId] = useState('')
+  const [familyId, setFamilyId] = useState<string | null>(null)
   const [children, setChildren] = useState<Child[]>([])
 
+  // Existing partner(s) in family
+  const [existingPartners, setExistingPartners] = useState<{ id: string; name: string }[]>([])
+
+  // Add partner
+  const [showPartner, setShowPartner] = useState(false)
+  const [partnerPhone, setPartnerPhone] = useState('')
+  const [partnerSearching, setPartnerSearching] = useState(false)
+  const [partnerFound, setPartnerFound] = useState<PartnerResult | null | undefined>(undefined)
+  const [partnerConfirmed, setPartnerConfirmed] = useState(false)
+  const [partnerName, setPartnerName] = useState('')
+  const partnerTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
   useEffect(() => {
-    Promise.all([
-      supabase.from('members').select('*').eq('id', id).single(),
-      supabase.from('families').select('id, name').order('name'),
-    ]).then(([{ data: member }, { data: fams }]) => {
-      if (member) {
+    supabase.from('members').select('*').eq('id', id).single()
+      .then(async ({ data: member }) => {
+        if (!member) return
         setName(member.name ?? '')
         setPhone(member.phone ?? '')
         setEmail(member.email ?? '')
         setBirthDate(member.birth_date ?? '')
-        setNotes(member.notes ?? '')
-        setFamilyId(member.family_id ?? '')
+        setFamilyId(member.family_id ?? null)
         setChildren((member.children as Child[]) ?? [])
-      }
-      setFamilies((fams as Family[]) ?? [])
-      setLoading(false)
-    })
+
+        // Load partners
+        if (member.family_id) {
+          const { data } = await supabase
+            .from('members').select('id, name').eq('family_id', member.family_id).neq('id', id)
+          setExistingPartners((data as any[]) ?? [])
+        }
+        setLoading(false)
+      })
   }, [id])
 
   function addChild() { setChildren(cs => [...cs, { name: '', sex: '', birth_date: '' }]) }
@@ -51,27 +64,82 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
     setChildren(cs => cs.map((c, idx) => idx === i ? { ...c, [field]: value } : c))
   }
 
+  function resetPartner() {
+    setShowPartner(false); setPartnerPhone(''); setPartnerFound(undefined)
+    setPartnerConfirmed(false); setPartnerName('')
+  }
+
+  function handlePartnerPhone(val: string) {
+    setPartnerPhone(val)
+    setPartnerFound(undefined)
+    setPartnerConfirmed(false)
+    setPartnerName('')
+    clearTimeout(partnerTimer.current)
+    if (val.replace(/\s/g, '').length < 8) return
+    setPartnerSearching(true)
+    partnerTimer.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('members')
+        .select('id, name, phone')
+        .or(`phone.eq.${val.trim()},phone.ilike.%${val.replace(/\s/g, '')}%`)
+        .limit(1)
+        .single()
+      setPartnerSearching(false)
+      setPartnerFound(data ?? null)
+    }, 400)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
-    setSaving(true)
-    setError(null)
+    setSaving(true); setError(null)
 
-    const cleanChildren = children.filter(c => c.name.trim())
+    try {
+      const cleanChildren = children.filter(c => c.name.trim())
+      const hasNewPartner = showPartner && partnerPhone.trim() && (partnerConfirmed || partnerName.trim())
 
-    const { error: err } = await supabase.from('members').update({
-      name: name.trim(),
-      phone: phone.trim() || null,
-      email: email.trim() || null,
-      birth_date: birthDate || null,
-      notes: notes.trim() || null,
-      family_id: familyId || null,
-      children: cleanChildren,
-      children_count: cleanChildren.length,
-    }).eq('id', id)
+      let fid = familyId
+      if (hasNewPartner && !fid) {
+        const lastName = name.trim().split(' ').slice(1).join(' ') || name.trim().split(' ')[0]
+        const { data: fam, error: fe } = await supabase
+          .from('families').insert({ name: `Familia ${lastName}` }).select('id').single()
+        if (fe) throw fe
+        fid = fam.id
+      }
 
-    if (err) { setError(err.message); setSaving(false) }
-    else router.push(`/miembros/${id}`)
+      const { error: err } = await supabase.from('members').update({
+        name: name.trim(),
+        phone: phone.trim() || null,
+        email: email.trim() || null,
+        birth_date: birthDate || null,
+        family_id: fid,
+        children: cleanChildren,
+        children_count: cleanChildren.length,
+      }).eq('id', id)
+      if (err) throw err
+
+      if (hasNewPartner && fid) {
+        if (partnerFound && partnerConfirmed) {
+          await supabase.from('members').update({
+            family_id: fid,
+            ...(cleanChildren.length > 0 ? { children: cleanChildren, children_count: cleanChildren.length } : {}),
+          }).eq('id', partnerFound.id)
+        } else if (partnerName.trim()) {
+          await supabase.from('members').insert({
+            name: partnerName.trim(),
+            phone: partnerPhone.trim(),
+            family_id: fid,
+            children: cleanChildren,
+            children_count: cleanChildren.length,
+          })
+        }
+      }
+
+      router.push(`/miembros/${id}`)
+    } catch (err: any) {
+      setError(err.message ?? 'Error al guardar')
+      setSaving(false)
+    }
   }
 
   const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
@@ -103,15 +171,9 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre completo" required className={inputCls} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Teléfono</label>
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Fecha nacimiento</label>
-              <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className={inputCls} />
-            </div>
+          <div>
+            <label className={labelCls}>Teléfono</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
           </div>
 
           <div>
@@ -120,8 +182,8 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
           </div>
 
           <div>
-            <label className={labelCls}>Notas</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Alergias, preferencias, horarios habituales..." rows={3} className={`${inputCls} resize-none`} />
+            <label className={labelCls}>Fecha de nacimiento</label>
+            <DatePickerModal value={birthDate} onChange={setBirthDate} />
           </div>
         </div>
 
@@ -145,26 +207,107 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
                 <button type="button" onClick={() => removeChild(i)} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
               </div>
               <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder="Nombre" className={inputCls} />
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Sexo</label>
                 <select value={c.sex} onChange={e => updateChild(i, 'sex', e.target.value)} className={inputCls}>
-                  <option value="">Sexo</option>
+                  <option value="">Sin especificar</option>
                   <option value="M">Niño</option>
                   <option value="F">Niña</option>
                 </select>
-                <input type="date" value={c.birth_date} onChange={e => updateChild(i, 'birth_date', e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Fecha de nacimiento</label>
+                <DatePickerModal value={c.birth_date} onChange={v => updateChild(i, 'birth_date', v)} />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Familia */}
-        <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Familia</p>
-          <select value={familyId} onChange={e => setFamilyId(e.target.value)} className={inputCls}>
-            <option value="">Sin familia</option>
-            {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-          </select>
-        </div>
+        {/* Pareja */}
+        {existingPartners.length > 0 && !showPartner && (
+          <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Pareja / otro titular</p>
+            {existingPartners.map(p => (
+              <div key={p.id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-surface2 px-4 py-3">
+                <div className="w-7 h-7 rounded-full bg-iris/20 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-iris">{p.name[0]}</span>
+                </div>
+                <span className="text-sm text-snow">{p.name}</span>
+                <Link href={`/miembros/${p.id}`} className="ml-auto text-xs text-lime hover:underline">Ver →</Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!showPartner ? (
+          <button type="button" onClick={() => setShowPartner(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
+            <UserPlus size={14} /> {existingPartners.length > 0 ? 'Agregar otro titular' : 'Agregar pareja / otro titular'}
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Agregar pareja</p>
+              <button type="button" onClick={resetPartner} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
+            </div>
+            <p className="text-xs text-mist">Introduce el teléfono. Si ya está registrado lo vinculamos automáticamente.</p>
+
+            <div>
+              <label className={labelCls}>Teléfono de la pareja</label>
+              <div className="relative">
+                <input type="tel" value={partnerPhone} onChange={e => handlePartnerPhone(e.target.value)}
+                  placeholder="612 345 678" className={inputCls} />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {partnerSearching && <Loader2 size={14} className="text-mist animate-spin" />}
+                  {partnerConfirmed && <Check size={14} className="text-lime" />}
+                </div>
+              </div>
+            </div>
+
+            {partnerFound && !partnerConfirmed && (
+              <div className="rounded-xl border border-lime/20 bg-lime/5 p-4 space-y-3">
+                <p className="text-xs text-fog">Miembro encontrado</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-lime/20 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-lime">{partnerFound.name[0]}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-snow">{partnerFound.name}</p>
+                    <p className="text-xs text-mist">{partnerFound.phone}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setPartnerConfirmed(true)}
+                  className="w-full rounded-xl bg-lime/10 border border-lime/30 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">
+                  Confirmar como pareja
+                </button>
+              </div>
+            )}
+
+            {partnerConfirmed && partnerFound && (
+              <div className="flex items-center gap-3 rounded-xl border border-lime/20 bg-lime/5 px-4 py-3">
+                <Check size={14} className="text-lime shrink-0" />
+                <p className="text-sm text-snow">{partnerFound.name} <span className="text-mist text-xs">— vinculado</span></p>
+                <button type="button" onClick={() => { setPartnerConfirmed(false); setPartnerFound(undefined); setPartnerPhone('') }}
+                  className="ml-auto text-mist hover:text-rose"><X size={13} /></button>
+              </div>
+            )}
+
+            {partnerFound === null && (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-amber/20 bg-amber/5 px-4 py-3">
+                  <p className="text-xs text-amber font-medium">Número no registrado — se creará un nuevo miembro</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Nombre de la pareja *</label>
+                  <input value={partnerName} onChange={e => setPartnerName(e.target.value)}
+                    placeholder="Nombre completo" className={inputCls} />
+                </div>
+              </div>
+            )}
+
+            <p className="text-[11px] text-mist">Se creará una familia compartida y los hijos se asignarán a ambos titulares.</p>
+          </div>
+        )}
 
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 
