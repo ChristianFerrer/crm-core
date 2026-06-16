@@ -1,216 +1,258 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Search, CheckCircle, Baby, AlertTriangle } from 'lucide-react'
+import { Search, Check, X, Baby, MousePointerClick, LogIn } from 'lucide-react'
 
-type FamilyResult = {
+type Family = {
   id: string
   name: string
   phone: string | null
   children: { name: string; birth_date: string | null }[]
-  memberships: { id: string; sessions_remaining: number | null; expires_at: string; membership_types: { name: string } | null }[]
+  memberships: {
+    id: string
+    sessions_remaining: number | null
+    expires_at: string
+    membership_types: { name: string } | null
+  }[]
 }
 
 function getAge(d: string) {
   return Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
 }
 
-export default function CheckInPage() {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<FamilyResult[]>([])
-  const [selected, setSelected] = useState<FamilyResult | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [registering, setRegistering] = useState(false)
-  const [success, setSuccess] = useState<{ familyName: string; sessionsRemaining: number | null } | null>(null)
-  const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined)
+function verify(family: Family, checkedInToday: Set<string>) {
+  const m = family.memberships?.[0]
+  if (!m) return { ok: false, title: 'Sin bono activo', detail: 'Esta familia no tiene ningún bono asignado.' }
+  const isUnlimited = m.membership_types?.name?.toLowerCase().includes('ilimitado')
+  if (isUnlimited) {
+    if (checkedInToday.has(family.id)) return { ok: true, title: 'Bono ilimitado', detail: 'Ya registró entrada hoy, pero puede volver a entrar.' }
+    return { ok: true, title: 'Bono ilimitado', detail: 'Acceso libre — bono mensual sin límite de sesiones.' }
+  }
+  if (m.sessions_remaining === 0) return { ok: false, title: 'Bono agotado', detail: 'No quedan sesiones. Hay que renovar el bono.' }
+  if (m.sessions_remaining == null) return { ok: false, title: 'Sin sesiones', detail: 'El bono no tiene sesiones configuradas.' }
+  return {
+    ok: true,
+    title: 'Acceso permitido',
+    detail: `Le quedan ${m.sessions_remaining} sesión${m.sessions_remaining === 1 ? '' : 'es'} tras esta visita.`,
+  }
+}
 
-  useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return }
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      const { data } = await supabase
+function dot(family: Family, checkedInToday: Set<string>) {
+  const m = family.memberships?.[0]
+  if (!m || m.sessions_remaining === 0) return 'bg-rose'
+  if (m.membership_types?.name?.toLowerCase().includes('ilimitado')) return 'bg-iris'
+  if (checkedInToday.has(family.id)) return 'bg-fog'
+  if (m.sessions_remaining != null && m.sessions_remaining <= 2) return 'bg-amber'
+  return 'bg-mint'
+}
+
+export default function CheckInPage() {
+  const [families, setFamilies] = useState<Family[]>([])
+  const [checkedInToday, setCheckedInToday] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [flash, setFlash] = useState<string | null>(null)
+  const [registering, setRegistering] = useState(false)
+  const flashTimer = useRef<NodeJS.Timeout | undefined>(undefined)
+
+  const fetchAll = useCallback(async () => {
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
+    const [fam, visits] = await Promise.all([
+      supabase
         .from('families')
         .select('id, name, phone, children(name, birth_date), memberships(id, sessions_remaining, expires_at, membership_types(name))')
-        .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
-        .limit(5)
-      setResults((data as unknown as FamilyResult[]) ?? [])
-      setLoading(false)
-    }, 300)
-    return () => clearTimeout(debounceRef.current)
-  }, [query])
+        .order('name'),
+      supabase
+        .from('visits')
+        .select('family_id')
+        .gte('checked_in_at', todayStart.toISOString()),
+    ])
+    setFamilies((fam.data as unknown as Family[]) ?? [])
+    setCheckedInToday(new Set((visits.data ?? []).map((v: any) => v.family_id)))
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { void fetchAll() }, [fetchAll])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return families
+    const qd = q.replace(/\D/g, '')
+    return families.filter(f =>
+      f.name.toLowerCase().includes(q) ||
+      (qd.length >= 2 && (f.phone ?? '').replace(/\D/g, '').includes(qd))
+    )
+  }, [families, query])
+
+  const selected = families.find(f => f.id === selectedId) ?? null
+  const result = selected ? verify(selected, checkedInToday) : null
 
   async function handleCheckIn() {
-    if (!selected) return
+    if (!selected || !result?.ok || registering) return
     setRegistering(true)
-    const membership = selected.memberships?.[0]
+    const m = selected.memberships?.[0]
+    const isUnlimited = m?.membership_types?.name?.toLowerCase().includes('ilimitado')
 
     await supabase.from('visits').insert({
       family_id: selected.id,
-      membership_id: membership?.id ?? null,
+      membership_id: m?.id ?? null,
       checked_in_at: new Date().toISOString(),
     })
 
-    let newSessions: number | null = null
-    if (membership && membership.sessions_remaining !== null) {
-      const newCount = Math.max(0, membership.sessions_remaining - 1)
-      await supabase.from('memberships').update({ sessions_remaining: newCount }).eq('id', membership.id)
-      newSessions = newCount
+    if (m && !isUnlimited && m.sessions_remaining != null) {
+      await supabase.from('memberships')
+        .update({ sessions_remaining: Math.max(0, m.sessions_remaining - 1) })
+        .eq('id', m.id)
     }
 
-    setSuccess({ familyName: selected.name, sessionsRemaining: newSessions })
+    clearTimeout(flashTimer.current)
+    setFlash(isUnlimited ? 'Entrada registrada — bono ilimitado.' : `Entrada registrada. Quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones.`)
+    flashTimer.current = setTimeout(() => setFlash(null), 3000)
     setRegistering(false)
-  }
-
-  function reset() {
-    setQuery(''); setResults([]); setSelected(null); setSuccess(null)
-  }
-
-  if (success) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-4">
-        <div className="w-16 h-16 rounded-full bg-mint-soft flex items-center justify-center">
-          <CheckCircle className="w-8 h-8 text-mint" />
-        </div>
-        <div>
-          <h2 className="font-display text-2xl font-semibold text-snow">¡Entrada registrada!</h2>
-          <p className="text-fog mt-1">{success.familyName}</p>
-        </div>
-        {success.sessionsRemaining !== null && (
-          <div className={`px-5 py-2 rounded-full text-sm font-semibold ${
-            success.sessionsRemaining <= 2 ? 'bg-rose/20 text-rose' : 'bg-lime/20 text-lime'
-          }`}>
-            {success.sessionsRemaining === 0 ? 'Bono agotado' : `Quedan ${success.sessionsRemaining} sesiones`}
-          </div>
-        )}
-        {success.sessionsRemaining === null && (
-          <div className="px-5 py-2 rounded-full text-sm font-semibold bg-iris/20 text-iris">Bono ilimitado</div>
-        )}
-        <button
-          onClick={reset}
-          className="mt-4 bg-lime text-ink font-semibold rounded-2xl px-8 py-3.5 text-sm active:scale-95 transition-transform"
-          style={{ boxShadow: 'var(--shadow-lime)' }}
-        >
-          Nueva entrada
-        </button>
-      </div>
-    )
+    void fetchAll()
   }
 
   return (
     <div className="space-y-5">
-      <div className="pt-2">
-        <h1 className="font-display text-2xl font-semibold text-snow">Check-in</h1>
-        <p className="text-sm text-fog mt-0.5">Busca la familia para registrar la entrada</p>
+      <div>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Check-in</h1>
+        <p className="text-sm text-fog mt-0.5">Selecciona la familia para registrar la entrada</p>
       </div>
 
-      <div className="relative">
-        <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-mist" />
-        <input
-          type="text"
-          value={query}
-          onChange={e => { setQuery(e.target.value); setSelected(null) }}
-          placeholder="Nombre o teléfono..."
-          className="w-full bg-surface border border-line rounded-2xl pl-11 pr-4 py-4 text-base text-snow placeholder:text-mist outline-none focus:border-line2"
-          autoFocus
-        />
-      </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr] lg:items-start">
 
-      {!selected && (
-        <>
-          {loading && <p className="text-sm text-mist text-center py-4">Buscando...</p>}
-          {!loading && results.length > 0 && (
-            <div className="space-y-2">
-              {results.map(family => {
-                const m = family.memberships?.[0]
+        {/* Left: search + list */}
+        <div className="rounded-2xl border border-line bg-surface p-4">
+          <div className="relative mb-3">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Nombre o teléfono..."
+              autoFocus
+              className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
+            />
+          </div>
+
+          {loading ? (
+            <div className="space-y-1">
+              {[1,2,3,4,5].map(i => <div key={i} className="h-12 rounded-xl bg-surface2 animate-pulse" />)}
+            </div>
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto space-y-0.5 pr-1">
+              {filtered.map(family => {
+                const d = dot(family, checkedInToday)
+                const isSelected = selectedId === family.id
                 return (
                   <button
                     key={family.id}
-                    onClick={() => setSelected(family)}
-                    className="w-full text-left rounded-2xl border border-line bg-surface px-4 py-3 hover:border-line2 transition-colors flex items-center justify-between"
+                    onClick={() => { setSelectedId(family.id); setFlash(null) }}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                      isSelected ? 'bg-lime text-ink' : 'text-snow hover:bg-surface2'
+                    }`}
                   >
-                    <div>
-                      <p className="font-semibold text-snow">{family.name}</p>
-                      {family.phone && <p className="text-xs text-mist">{family.phone}</p>}
-                    </div>
-                    {m && (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-lime/20 text-lime shrink-0 ml-3">
-                        {m.membership_types?.name ?? 'Activo'}
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${d}`} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate text-sm font-medium">{family.name}</span>
+                      <span className={`block truncate text-xs ${isSelected ? 'text-ink/60' : 'text-mist'}`}>
+                        {family.children?.slice(0, 2).map((c, i) => (
+                          `${c.name}${c.birth_date ? ` ${getAge(c.birth_date)}a` : ''}`
+                        )).join(' · ')}
                       </span>
+                    </span>
+                    {family.memberships?.[0]?.sessions_remaining != null && (
+                      <span className={`text-xs font-semibold shrink-0 ${isSelected ? 'text-ink/70' : 'text-mist'}`}>
+                        {family.memberships[0].sessions_remaining} ses.
+                      </span>
+                    )}
+                    {family.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado') && (
+                      <span className={`text-xs font-semibold shrink-0 ${isSelected ? 'text-ink/70' : 'text-iris'}`}>∞</span>
                     )}
                   </button>
                 )
               })}
+              {filtered.length === 0 && (
+                <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
+              )}
             </div>
           )}
-          {!loading && query.length >= 2 && results.length === 0 && (
-            <p className="text-center text-sm text-mist py-10">No se encontró ninguna familia</p>
-          )}
-        </>
-      )}
+        </div>
 
-      {selected && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border-2 border-lime/40 bg-surface p-4 space-y-3">
-            <div className="flex items-start justify-between">
+        {/* Right: result panel */}
+        <div>
+          {!selected || !result ? (
+            <div className="grid min-h-[20rem] place-items-center rounded-2xl border-2 border-dashed border-line bg-surface/40 p-8 text-center">
               <div>
-                <h2 className="text-lg font-bold text-snow">{selected.name}</h2>
-                {selected.phone && <p className="text-sm text-mist">{selected.phone}</p>}
+                <MousePointerClick size={32} className="mx-auto text-mist" />
+                <p className="mt-3 max-w-xs text-sm text-fog">Selecciona una familia para ver su estado</p>
               </div>
-              <button onClick={() => setSelected(null)} className="text-xs text-mist hover:text-fog">Cambiar</button>
             </div>
-
-            {selected.children?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selected.children.map((c, i) => (
-                  <span key={i} className="flex items-center gap-1 text-xs bg-surface2 border border-line rounded-lg px-2 py-1 text-fog">
-                    <Baby size={11} className="text-iris" />
-                    {c.name}{c.birth_date ? ` ${getAge(c.birth_date)}a` : ''}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {selected.memberships?.[0] && (
-              <div className="border-t border-line pt-3 space-y-1.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-mist">Bono</span>
-                  <span className="text-fog font-medium">{selected.memberships[0].membership_types?.name}</span>
+          ) : (
+            <div className={`overflow-hidden rounded-2xl border ${result.ok ? 'border-mint/30 bg-mint-soft' : 'border-rose/30 bg-rose-soft'}`}>
+              {/* Status header */}
+              <div className={`px-6 py-7 text-center ${result.ok ? 'bg-mint text-ink' : 'bg-rose text-ink'}`}>
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-ink/15">
+                  {result.ok ? <Check size={30} strokeWidth={3} /> : <X size={30} strokeWidth={3} />}
                 </div>
-                {selected.memberships[0].sessions_remaining !== null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-mist">Sesiones disponibles</span>
-                    <span className={`font-bold ${selected.memberships[0].sessions_remaining <= 2 ? 'text-rose' : 'text-lime'}`}>
-                      {selected.memberships[0].sessions_remaining}
-                    </span>
+                <div className="mt-3 font-display text-xl font-semibold">{result.title}</div>
+                <div className="mx-auto mt-1 max-w-xs text-sm text-ink/75">{result.detail}</div>
+              </div>
+
+              {/* Family details + action */}
+              <div className="space-y-4 p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-display text-lg font-semibold text-snow">{selected.name}</p>
+                    {selected.phone && <p className="text-sm text-fog mt-0.5">{selected.phone}</p>}
+                    {selected.children?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {selected.children.map((c, i) => (
+                          <span key={i} className="flex items-center gap-1 text-xs text-fog bg-surface2 border border-line rounded-lg px-2 py-1">
+                            <Baby size={11} className="text-iris" />
+                            {c.name}{c.birth_date ? ` ${getAge(c.birth_date)}a` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right text-sm text-fog shrink-0">
+                    <p>{selected.memberships?.[0]?.membership_types?.name}</p>
+                    {selected.memberships?.[0]?.sessions_remaining != null && (
+                      <p className={`font-bold text-base mt-0.5 ${selected.memberships[0].sessions_remaining <= 2 ? 'text-amber' : 'text-lime'}`}>
+                        {selected.memberships[0].sessions_remaining} ses.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {result.ok ? (
+                  <button
+                    onClick={handleCheckIn}
+                    disabled={registering}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:bg-lime-deep active:scale-[0.99] disabled:opacity-60"
+                    style={{ boxShadow: 'var(--shadow-lime)' }}
+                  >
+                    <LogIn size={18} strokeWidth={2.2} />
+                    {registering ? 'Registrando...' : 'Registrar entrada'}
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-rose/30 bg-surface px-4 py-3 text-center text-sm font-medium text-rose">
+                    No se puede registrar la entrada
+                  </div>
+                )}
+
+                {flash && (
+                  <div className="flex items-center justify-center gap-2 text-center text-sm font-semibold text-mint">
+                    <Check size={16} strokeWidth={2.5} /> {flash}
                   </div>
                 )}
               </div>
-            )}
-
-            {selected.memberships?.[0]?.sessions_remaining != null && selected.memberships[0].sessions_remaining <= 2 && selected.memberships[0].sessions_remaining > 0 && (
-              <div className="flex items-center gap-2 bg-rose-soft border border-rose/20 rounded-xl px-3 py-2">
-                <AlertTriangle size={13} className="text-rose shrink-0" />
-                <p className="text-xs text-rose">Quedan pocas sesiones — recomienda renovar</p>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={handleCheckIn}
-            disabled={registering || selected.memberships?.[0]?.sessions_remaining === 0}
-            className={`w-full font-semibold rounded-2xl py-4 text-sm transition-transform active:scale-95 ${
-              selected.memberships?.[0]?.sessions_remaining === 0
-                ? 'bg-surface border border-line text-mist cursor-not-allowed'
-                : 'bg-lime text-ink'
-            }`}
-            style={selected.memberships?.[0]?.sessions_remaining !== 0 ? { boxShadow: 'var(--shadow-lime)' } : {}}
-          >
-            {registering ? 'Registrando...' : selected.memberships?.[0]?.sessions_remaining === 0 ? 'Bono agotado' : 'Registrar entrada'}
-          </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
