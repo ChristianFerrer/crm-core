@@ -211,7 +211,7 @@ function TenantModal({
           <div>
             <label className={labelCls + ' flex items-center gap-1'}>
               Nombre del establecimiento *
-              <HelpCircle size={11} className="text-mist" title="Nombre comercial del establecimiento tal como aparecerá en la app." />
+              <span title="Nombre comercial del establecimiento tal como aparecerá en la app."><HelpCircle size={11} className="text-mist" /></span>
             </label>
             <input required value={form.name} onChange={e => upd('name', e.target.value)}
               placeholder="El Bosc Màgic" className={inputCls} />
@@ -221,7 +221,7 @@ function TenantModal({
           <div>
             <label className={labelCls + ' flex items-center gap-1'}>
               Slug (identificador URL)
-              <HelpCircle size={11} className="text-mist" title="Identificador único en minúsculas sin espacios. Se genera automáticamente a partir del nombre." />
+              <span title="Identificador único en minúsculas sin espacios. Se genera automáticamente a partir del nombre."><HelpCircle size={11} className="text-mist" /></span>
             </label>
             <input value={form.slug} onChange={e => upd('slug', e.target.value)}
               placeholder="el-bosc-magic" className={inputCls} />
@@ -232,7 +232,7 @@ function TenantModal({
             <div>
               <label className={labelCls + ' flex items-center gap-1'}>
                 Nombre contacto
-                <HelpCircle size={11} className="text-mist" title="Nombre de la persona responsable del establecimiento." />
+                <span title="Nombre de la persona responsable del establecimiento."><HelpCircle size={11} className="text-mist" /></span>
               </label>
               <input value={form.owner_firstname} onChange={e => upd('owner_firstname', e.target.value)}
                 placeholder="María" className={inputCls} />
@@ -248,7 +248,7 @@ function TenantModal({
           <div>
             <label className={labelCls + ' flex items-center gap-1'}>
               Email de contacto
-              <HelpCircle size={11} className="text-mist" title="Correo del responsable para comunicaciones y soporte. No da acceso a la app." />
+              <span title="Correo del responsable para comunicaciones y soporte. No da acceso a la app."><HelpCircle size={11} className="text-mist" /></span>
             </label>
             <input type="email" value={form.owner_email} onChange={e => upd('owner_email', e.target.value)}
               placeholder="contacto@establecimiento.com" className={inputCls} />
@@ -258,7 +258,7 @@ function TenantModal({
           <div className="rounded-xl border border-iris/30 bg-iris/5 p-4 space-y-2">
             <label className="flex items-center gap-1.5 text-xs font-semibold text-iris uppercase tracking-wide">
               Email administrador (acceso a la app)
-              <HelpCircle size={11} className="text-iris/60" title="Este correo puede iniciar sesión en Watermelon y acceder al CRM del establecimiento. Distinto al email de contacto." />
+              <span title="Este correo puede iniciar sesión en Watermelon y acceder al CRM del establecimiento. Distinto al email de contacto."><HelpCircle size={11} className="text-iris/60" /></span>
             </label>
             <input type="email" value={form.admin_email} onChange={e => upd('admin_email', e.target.value)}
               placeholder="admin@establecimiento.com"
@@ -273,7 +273,7 @@ function TenantModal({
             <div>
               <label className={labelCls + ' flex items-center gap-1'}>
                 Teléfono
-                <HelpCircle size={11} className="text-mist" title="Teléfono principal del establecimiento para contacto." />
+                <span title="Teléfono principal del establecimiento para contacto."><HelpCircle size={11} className="text-mist" /></span>
               </label>
               <input type="tel" value={form.phone} onChange={e => upd('phone', e.target.value)}
                 placeholder="612 345 678" className={inputCls} />
@@ -281,7 +281,7 @@ function TenantModal({
             <div>
               <label className={labelCls + ' flex items-center gap-1'}>
                 Ciudad
-                <HelpCircle size={11} className="text-mist" title="Ciudad donde está ubicado el establecimiento." />
+                <span title="Ciudad donde está ubicado el establecimiento."><HelpCircle size={11} className="text-mist" /></span>
               </label>
               <input value={form.city} onChange={e => upd('city', e.target.value)}
                 placeholder="Barcelona" className={inputCls} />
@@ -292,7 +292,7 @@ function TenantModal({
           <div>
             <label className={labelCls + ' flex items-center gap-1'}>
               Plan de suscripción
-              <HelpCircle size={11} className="text-mist" title="Trial: 30 días gratis. Starter: funciones básicas. Pro: completo. Enterprise: personalizado." />
+              <span title="Trial: 30 días gratis. Starter: funciones básicas. Pro: completo. Enterprise: personalizado."><HelpCircle size={11} className="text-mist" /></span>
             </label>
             <select value={form.plan} onChange={e => upd('plan', e.target.value as Tenant['plan'])} className={inputCls}>
               <option value="trial">Trial (prueba gratuita)</option>
@@ -306,7 +306,7 @@ function TenantModal({
           <div>
             <label className={labelCls + ' flex items-center gap-1'}>
               Notas internas
-              <HelpCircle size={11} className="text-mist" title="Notas privadas del equipo de Watermelon. No visibles para el cliente." />
+              <span title="Notas privadas del equipo de Watermelon. No visibles para el cliente."><HelpCircle size={11} className="text-mist" /></span>
             </label>
             <textarea rows={2} value={form.notes} onChange={e => upd('notes', e.target.value)}
               placeholder="Observaciones..." className={inputCls + ' resize-none'} />
