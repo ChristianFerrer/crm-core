@@ -19,6 +19,7 @@ type MemberRow = {
     expires_at: string
     membership_types: { name: string } | null
   }[]
+  children?: { name: string; sex: string; birth_date: string }[]
 }
 
 type ActiveVisit = {
@@ -77,7 +78,7 @@ function toLocalDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const MEMBER_QUERY = 'id, name, phone, birth_date, families(name), memberships(id, sessions_remaining, expires_at, membership_types(name))'
+const MEMBER_QUERY = 'id, name, phone, birth_date, families(name), memberships(id, sessions_remaining, expires_at, membership_types(name)), children'
 
 // ─── Tab: Check-in ───────────────────────────────────────────────────────────
 
@@ -97,6 +98,8 @@ function CheckInTab({
   const [flash, setFlash] = useState<string | null>(null)
   const [camError, setCamError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [childrenPresent, setChildrenPresent] = useState<{ name: string }[]>([])
+  const [extraChildren, setExtraChildren] = useState<string[]>([])
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -113,7 +116,7 @@ function CheckInTab({
           setScanning(false)
           const { data } = await supabase.from('members').select(MEMBER_QUERY).eq('qr_code', decoded).single()
           if (!data) { setCamError('Código QR no reconocido'); return }
-          setMember(data as unknown as MemberRow)
+          selectMember(data as unknown as MemberRow)
         },
         () => {}
       ).catch(() => setCamError('No se puede acceder a la cámara'))
@@ -123,6 +126,13 @@ function CheckInTab({
 
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
+    setChildrenPresent([]); setExtraChildren([])
+  }
+
+  function selectMember(m: MemberRow) {
+    setMember(m)
+    setChildrenPresent((m.children ?? []).map(c => ({ name: c.name })))
+    setExtraChildren([])
   }
 
   const filteredMembers = query.trim().length > 0
@@ -143,10 +153,16 @@ function CheckInTab({
     const b = getBono(member)
     const m = member.memberships?.[0]
 
+    const allChildrenPresent = [
+      ...childrenPresent,
+      ...extraChildren.filter(n => n.trim()).map(n => ({ name: n.trim() })),
+    ]
+
     await supabase.from('visits').insert({
       member_id: member.id,
       membership_id: (b?.ok && m) ? m.id : null,
       checked_in_at: new Date().toISOString(),
+      children_present: allChildrenPresent,
     })
 
     if (b?.ok && !b.unlimited && m?.sessions_remaining != null) {
@@ -166,7 +182,12 @@ function CheckInTab({
     setRegistering(false)
 
     const { data } = await supabase.from('members').select(MEMBER_QUERY).eq('id', member.id).single()
-    if (data) setMember(data as unknown as MemberRow)
+    if (data) {
+      const refreshed = data as unknown as MemberRow
+      setMember(refreshed)
+      setChildrenPresent((refreshed.children ?? []).map(c => ({ name: c.name })))
+      setExtraChildren([])
+    }
     onCheckedIn()
   }
 
@@ -225,7 +246,7 @@ function CheckInTab({
                   const b = getBono(m)
                   const inside = activeVisits.some(v => v.members?.id === m.id)
                   return (
-                    <button key={m.id} onClick={() => { setMember(m); setQuery('') }}
+                    <button key={m.id} onClick={() => { selectMember(m); setQuery('') }}
                       className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${member?.id === m.id ? 'bg-lime/15 text-lime' : 'text-snow hover:bg-surface2'}`}>
                       <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
                       <span className="flex-1 min-w-0">
@@ -290,6 +311,69 @@ function CheckInTab({
                   </div>
                 )}
               </div>
+
+              {/* Children selection */}
+              {((member.children && member.children.length > 0) || extraChildren.length > 0) && !alreadyInside && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide">Niños presentes</p>
+                  {member.children && member.children.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {member.children.map((child, i) => {
+                        const selected = childrenPresent.some(c => c.name === child.name)
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setChildrenPresent(prev =>
+                              selected
+                                ? prev.filter(c => c.name !== child.name)
+                                : [...prev, { name: child.name }]
+                            )}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              selected
+                                ? 'bg-lime/15 border-lime/30 text-lime'
+                                : 'bg-surface2 border-line text-fog'
+                            }`}
+                          >
+                            {child.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {extraChildren.length > 0 && (
+                    <div className="space-y-1.5">
+                      {extraChildren.map((name, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input
+                            value={name}
+                            onChange={e => setExtraChildren(prev => prev.map((n, j) => j === i ? e.target.value : n))}
+                            placeholder="Nombre del niño/a"
+                            className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-1.5 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setExtraChildren(prev => prev.filter((_, j) => j !== i))}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-rose hover:border-rose/30 transition-colors"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!alreadyInside && (
+                <button
+                  type="button"
+                  onClick={() => setExtraChildren(prev => [...prev, ''])}
+                  className="flex items-center gap-1.5 text-xs text-mist hover:text-fog transition-colors"
+                >
+                  <span className="w-5 h-5 rounded-full border border-line bg-surface2 flex items-center justify-center font-bold text-fog">+</span>
+                  Añadir niño/a
+                </button>
+              )}
 
               {alreadyInside ? (
                 <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">

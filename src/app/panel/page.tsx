@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, TrendingUp, AlertTriangle, UserMinus, Crown } from 'lucide-react'
+import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -106,6 +106,15 @@ export default async function PanelPage() {
         <p className="text-fog mt-1 text-sm">
           {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
+      </div>
+
+      <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line mb-6">
+        <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">
+          <BarChart2 size={13} /> Resumen
+        </div>
+        <Link href="/panel/servicios" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
+          <Tag size={13} /> Servicios
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, CreditCard, Clock, Users, Baby, AlertTriangle } from 'lucide-react'
+import FamiliaActions from './FamiliaActions'
 
 export const revalidate = 0
 
@@ -58,9 +59,10 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
         <Link href="/familias" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0">
           <ArrowLeft size={15} className="text-fog" />
         </Link>
-        <h1 className="font-display text-xl font-semibold text-snow truncate">
+        <h1 className="font-display text-xl font-semibold text-snow truncate flex-1">
           {family.name.replace(/^Familia(s)?\s*/i, 'Familia ')}
         </h1>
+        <FamiliaActions id={id} />
       </div>
 
       {/* Titulares */}
