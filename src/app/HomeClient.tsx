@@ -45,14 +45,19 @@ type HomeClientProps = {
   capacity: number | null
 }
 
-type DrawerKey = 'enSala' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | null
+type DrawerKey = 'enSala' | 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | null
+
+type ChildInSala = { name: string; age: number; memberName: string }
 
 export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
 
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
   const activeAdults = activeVisits.length
-  const activeChildren = activeVisits.reduce((sum, v) => sum + (v.children_present?.length ?? 0), 0)
+  const childrenInSala: ChildInSala[] = activeVisits.flatMap(v =>
+    (v.children_present ?? []).map(c => ({ ...c, memberName: v.members?.name ?? '—' }))
+  )
+  const activeChildren = childrenInSala.length
   const activeTotal = activeAdults + activeChildren
   const conBonoVisits = todayVisits.filter(v => v.membership_id)
   const sinBonoVisits = todayVisits.filter(v => !v.membership_id)
@@ -67,13 +72,14 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
 
   const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
     { key: 'enSala', label: 'En sala', value: activeVisits.length, accent: 'text-iris', border: 'border-iris/30', visits: activeVisits, icon: <Timer size={16} /> },
+    { key: 'ninos', label: 'Niños en sala', value: activeChildren, accent: 'text-mint', border: 'border-mint/30', visits: [], icon: <Users size={16} /> },
     { key: 'entradasHoy', label: 'Entradas hoy', value: todayVisits.length, accent: 'text-lime', border: 'border-lime/30', visits: todayVisits, icon: <LogIn size={16} /> },
     { key: 'conBono', label: 'Con bono', value: conBonoVisits.length, accent: 'text-mint', border: 'border-mint/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
     { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.length, accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
     { key: 'custodias', label: 'Custodias', value: todayCustodias.length, accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
   ]
 
-  const drawerVisits = activeDrawer ? (stats.find(s => s.key === activeDrawer)?.visits ?? []) : []
+  const drawerVisits = activeDrawer && activeDrawer !== 'ninos' ? (stats.find(s => s.key === activeDrawer)?.visits ?? []) : []
 
   const [tenantName, setTenantName] = useState<string | null>(null)
   useEffect(() => {
@@ -172,7 +178,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       )}
 
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map(({ key, label, value, accent, border, icon }) => (
           <button
             key={key}
@@ -191,7 +197,23 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
           <h3 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3">
             {stats.find(s => s.key === activeDrawer)?.label}
           </h3>
-          {drawerVisits.length === 0 ? (
+          {activeDrawer === 'ninos' ? (
+            childrenInSala.length === 0 ? (
+              <p className="text-sm text-mist">Sin niños en sala</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {childrenInSala.map((c, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-xl border border-line bg-carbon px-4 py-3">
+                    <div>
+                      <p className="font-semibold text-sm text-snow">{c.name}</p>
+                      <p className="text-xs text-mist">{c.age} años · {c.memberName}</p>
+                    </div>
+                    <span className="w-2 h-2 rounded-full shrink-0 bg-mint" />
+                  </div>
+                ))}
+              </div>
+            )
+          ) : drawerVisits.length === 0 ? (
             <p className="text-sm text-mist">Sin entradas</p>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
