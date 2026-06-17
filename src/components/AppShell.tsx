@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User } from 'lucide-react'
+import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User, Building2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 
@@ -14,6 +14,21 @@ const navItems = [
   { href: '/panel', label: 'Panel', icon: BarChart2 },
 ]
 
+async function resolveTenantName(userEmail: string): Promise<string | null> {
+  // Super admin impersonating
+  const stored = localStorage.getItem('viewingAsTenant')
+  if (stored) {
+    try { return JSON.parse(stored).name } catch {}
+  }
+  // Establishment admin: look up their tenant
+  const { data } = await supabase
+    .from('tenants')
+    .select('name')
+    .eq('admin_email', userEmail)
+    .single()
+  return data?.name ?? null
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -21,12 +36,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    const stored = localStorage.getItem('viewingAsTenant')
-    if (stored) {
-      try { setTenantName(JSON.parse(stored).name) } catch {}
-    }
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserEmail(session?.user?.email ?? null)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const email = session?.user?.email ?? null
+      setUserEmail(email)
+      if (email) {
+        const name = await resolveTenantName(email)
+        setTenantName(name)
+      }
     })
   }, [pathname])
 
@@ -40,20 +56,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="lg:flex lg:min-h-screen">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-56 lg:shrink-0 border-r border-line bg-surface sticky top-0 h-screen">
-        <div className="px-5 py-6 border-b border-line">
+
+        {/* Brand — always Watermelon */}
+        <div className="px-5 py-5 border-b border-line">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-lime flex items-center justify-center shrink-0" style={{ boxShadow: 'var(--shadow-lime)' }}>
-              <span className="text-ink font-bold text-sm">B</span>
+              <span className="text-ink font-bold text-sm">W</span>
             </div>
             <div>
-              <p className="font-display font-semibold text-snow text-sm leading-tight">
-                {tenantName ?? 'El Bosc Màgic'}
-              </p>
-              <p className="text-[10px] text-mist">CRM Ludoteca</p>
+              <p className="font-display font-semibold text-snow text-sm leading-tight">Watermelon</p>
+              <p className="text-[10px] text-mist">CRM</p>
             </div>
           </div>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
@@ -74,21 +91,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* User + logout */}
+        {/* Bottom: establishment name + user + logout */}
         <div className="px-3 py-4 border-t border-line space-y-2">
-          {userEmail && (
+          {tenantName && (
             <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-surface2">
-              <div className="w-6 h-6 rounded-full bg-iris/20 flex items-center justify-center shrink-0">
-                <User size={12} className="text-iris" />
+              <div className="w-6 h-6 rounded-full bg-lime/20 flex items-center justify-center shrink-0">
+                <Building2 size={11} className="text-lime" />
               </div>
-              <p className="text-[11px] text-fog truncate">{userEmail}</p>
+              <p className="text-xs font-semibold text-snow truncate">{tenantName}</p>
+            </div>
+          )}
+          {userEmail && (
+            <div className="flex items-center gap-2 px-2">
+              <User size={11} className="text-mist shrink-0" />
+              <p className="text-[11px] text-mist truncate">{userEmail}</p>
             </div>
           )}
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors"
           >
-            <LogOut size={15} /> Cerrar sesión
+            <LogOut size={14} /> Cerrar sesión
           </button>
         </div>
       </aside>
