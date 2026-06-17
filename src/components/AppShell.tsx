@@ -36,15 +36,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const email = session?.user?.email ?? null
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      const email = user?.email ?? null
       setUserEmail(email)
       if (email) {
         const name = await resolveTenantName(email)
         setTenantName(name)
       }
     })
-  }, [pathname])
+  }, [])
 
   async function handleLogout() {
     localStorage.removeItem('viewingAsTenant')

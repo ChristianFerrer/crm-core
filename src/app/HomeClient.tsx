@@ -79,8 +79,8 @@ export default function HomeClient({ todayVisits, expiringMembers, monthCount, d
 
   const [tenantName, setTenantName] = useState<string | null>(null)
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const email = session?.user?.email
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      const email = user?.email
       if (email) {
         const name = await resolveTenantName(email)
         setTenantName(name)
