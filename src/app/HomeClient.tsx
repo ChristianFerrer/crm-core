@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, LogIn, Timer, CreditCard, UserX, Users } from 'lucide-react'
+import { AlertTriangle, LogIn, Timer, CreditCard, UserX, Users, CalendarClock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -44,7 +44,7 @@ type HomeClientProps = {
   capacity: number | null
 }
 
-type DrawerKey = 'enSala' | 'entradasHoy' | 'conBono' | 'sinBono' | null
+type DrawerKey = 'enSala' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | null
 
 export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
@@ -66,6 +66,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
     { key: 'entradasHoy', label: 'Entradas hoy', value: todayVisits.length, accent: 'text-lime', border: 'border-lime/30', visits: todayVisits, icon: <LogIn size={16} /> },
     { key: 'conBono', label: 'Con bono', value: conBonoVisits.length, accent: 'text-mint', border: 'border-mint/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
     { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.length, accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
+    { key: 'custodias', label: 'Custodias', value: todayCustodias.length, accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
   ]
 
   const drawerVisits = activeDrawer ? (stats.find(s => s.key === activeDrawer)?.visits ?? []) : []
@@ -101,37 +102,35 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
         <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
       </div>
 
-      {/* Hourly line chart */}
-      <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-        <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Afluencia hoy por hora</h2>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis
-              dataKey="hour"
-              tick={{ fill: '#6b7280', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fill: '#6b7280', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              allowDecimals={false}
-            />
-            <Tooltip
-              contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }}
-              labelStyle={{ color: '#6b7280', fontSize: 11 }}
-              cursor={{ stroke: '#1e2530' }}
-            />
-            <Legend
-              wrapperStyle={{ fontSize: 12, color: '#6b7280', paddingTop: 8 }}
-              formatter={(value) => value === 'conBono' ? 'Con bono' : 'Sin bono'}
-            />
-            <Line type="monotone" dataKey="conBono" stroke="#84cc16" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
+      {/* Charts side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Afluencia por hora · bono / sin bono</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ stroke: '#1e2530' }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(value) => value === 'conBono' ? 'Con bono' : 'Sin bono'} />
+              <Line type="monotone" dataKey="conBono" stroke="#84cc16" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Total visitas por hora</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={barChartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Bar dataKey="total" fill="#c6f24e" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Aforo */}
@@ -145,44 +144,13 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             <span className="text-xs text-fog">{activeVisits.length} de {capacity} plazas ocupadas</span>
           </div>
           <div className="h-3 w-full rounded-full bg-line overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${aforoColor}`}
-              style={{ width: `${aforoPct}%` }}
-            />
+            <div className={`h-full rounded-full transition-all duration-500 ${aforoColor}`} style={{ width: `${aforoPct}%` }} />
           </div>
         </div>
       )}
 
-      {/* Total visits bar chart */}
-      <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-        <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Total visitas por hora</h2>
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={barChartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis
-              dataKey="hour"
-              tick={{ fill: '#6b7280', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fill: '#6b7280', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              allowDecimals={false}
-            />
-            <Tooltip
-              contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }}
-              labelStyle={{ color: '#6b7280', fontSize: 11 }}
-              cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-            />
-            <Bar dataKey="total" fill="#c6f24e" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map(({ key, label, value, accent, border, icon }) => (
           <button
             key={key}
@@ -286,28 +254,6 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
         )}
       </div>
 
-      {todayCustodias.length > 0 && (
-        <div>
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3">Custodias del día</h2>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {todayCustodias.map(visit => (
-              <Link
-                key={visit.id}
-                href="/checkin?tab=dentro"
-                className="rounded-xl border border-line bg-surface px-4 py-3 flex items-center justify-between hover:border-line2 transition-colors"
-              >
-                <div>
-                  <p className="font-semibold text-sm text-snow">{visit.members?.name ?? '—'}</p>
-                  <p className="text-xs text-mist">
-                    {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                <span className="w-2 h-2 rounded-full shrink-0 bg-iris" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
