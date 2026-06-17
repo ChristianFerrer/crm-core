@@ -143,14 +143,14 @@ export default function ServiciosPage() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
-        <Link href="/panel" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
+      <div className="inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
+        <Link href="/panel" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <BarChart2 size={13} /> Resumen
         </Link>
-        <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">
+        <div className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">
           <Tag size={13} /> Servicios
         </div>
-        <Link href="/panel/perfil" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
+        <Link href="/panel/perfil" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <Building2 size={13} /> Perfil
         </Link>
       </div>

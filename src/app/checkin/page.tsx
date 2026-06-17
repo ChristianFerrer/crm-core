@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
@@ -843,8 +844,10 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 
-export default function VisitasPage() {
-  const [tab, setTab] = useState<'checkin' | 'dentro' | 'historial'>('checkin')
+function VisitasPageInner() {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab') as 'checkin' | 'dentro' | 'historial' | null
+  const [tab, setTab] = useState<'checkin' | 'dentro' | 'historial'>(initialTab ?? 'checkin')
   const [allMembers, setAllMembers] = useState<MemberRow[]>([])
   const [activeVisits, setActiveVisits] = useState<ActiveVisit[]>([])
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
@@ -914,7 +917,7 @@ export default function VisitasPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {tabs.map(({ id, label, icon: Icon, badge }) => (
           <button key={id} onClick={() => setTab(id)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors relative ${tab === id ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
@@ -950,5 +953,14 @@ export default function VisitasPage() {
 
       {tab === 'historial' && <HistorialTab rates={rates} />}
     </div>
+  )
+}
+
+import { Suspense } from 'react'
+export default function VisitasPage() {
+  return (
+    <Suspense>
+      <VisitasPageInner />
+    </Suspense>
   )
 }
