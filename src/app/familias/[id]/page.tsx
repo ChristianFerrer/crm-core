@@ -1,135 +1,191 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Phone, FileText, CreditCard, Clock, User } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, CreditCard, Clock, Users, Baby, AlertTriangle } from 'lucide-react'
 
 export const revalidate = 0
 
 function calcAge(d: string) {
-  const b = new Date(d), now = new Date()
+  const b = new Date(d + 'T12:00:00'), now = new Date()
   let age = now.getFullYear() - b.getFullYear()
   if (now.getMonth() - b.getMonth() < 0 || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) age--
   return age
 }
 
+type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
+
 export default async function FamiliaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const [{ data: family }, { data: members }, { data: visits }] = await Promise.all([
+  const [{ data: family }, { data: members }] = await Promise.all([
     supabase.from('families').select('id, name, notes').eq('id', id).single(),
     supabase
       .from('members')
-      .select('id, name, phone, email, birth_date, notes, memberships(id, sessions_remaining, expires_at, membership_types(name))')
+      .select('id, name, phone, email, children, memberships(id, sessions_remaining, expires_at, membership_types(name, price))')
       .eq('family_id', id)
       .order('name'),
-    supabase
-      .from('visits')
-      .select('id, checked_in_at, member_id, members(name)')
-      .in('member_id', (await supabase.from('members').select('id').eq('family_id', id)).data?.map(m => m.id) ?? [])
-      .order('checked_in_at', { ascending: false })
-      .limit(15),
   ])
 
   if (!family) notFound()
 
   const memberList = (members as any[]) ?? []
 
+  // Collect all children across titulares (deduplicated by name)
+  const allChildren: Child[] = []
+  const seen = new Set<string>()
+  for (const m of memberList) {
+    for (const c of (m.children as Child[]) ?? []) {
+      const key = c.name.trim().toLowerCase()
+      if (key && !seen.has(key)) { seen.add(key); allChildren.push(c) }
+    }
+  }
+
+  // Last 15 visits across all family members
+  const memberIds = memberList.map((m: any) => m.id)
+  const { data: visits } = memberIds.length
+    ? await supabase
+        .from('visits')
+        .select('id, checked_in_at, member_id, members(name)')
+        .in('member_id', memberIds)
+        .order('checked_in_at', { ascending: false })
+        .limit(15)
+    : { data: [] }
+
   return (
     <div className="space-y-4 lg:max-w-2xl">
+      {/* Header */}
       <div className="flex items-center gap-3 pt-2">
-        <Link href="/familias" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
+        <Link href="/familias" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0">
           <ArrowLeft size={15} className="text-fog" />
         </Link>
-        <h1 className="font-display text-xl font-semibold text-snow truncate">Familia {family.name}</h1>
+        <h1 className="font-display text-xl font-semibold text-snow truncate">
+          {family.name.replace(/^Familia(s)?\s*/i, 'Familia ')}
+        </h1>
       </div>
 
-      {family.notes && (
-        <div className="rounded-2xl border border-line bg-surface p-4 flex items-start gap-3">
-          <FileText size={14} className="text-mist shrink-0 mt-0.5" />
-          <span className="text-sm text-fog">{family.notes}</span>
+      {/* Titulares */}
+      <div className="rounded-2xl border border-line bg-surface p-4 space-y-4">
+        <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+          <Users size={12} className="text-iris" /> Titulares
+        </p>
+
+        {memberList.length === 0 && (
+          <p className="text-sm text-mist">Sin titulares en esta familia.</p>
+        )}
+
+        {memberList.map((m: any, idx: number) => {
+          const bono = m.memberships?.[0]
+          const isUnlimited = bono?.membership_types?.name?.toLowerCase().includes('ilimitado')
+          const s = bono?.sessions_remaining
+          const isLow = !isUnlimited && s != null && s <= 2
+          const isExhausted = s === 0
+          const expiresAt = bono?.expires_at ? new Date(bono.expires_at) : null
+          const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / 86400000) : null
+          const isExpiringSoon = daysLeft != null && daysLeft <= 7 && daysLeft >= 0
+
+          return (
+            <div key={m.id}>
+              {idx > 0 && <div className="border-t border-line" />}
+              <Link
+                href={`/miembros/${m.id}`}
+                className="flex items-start gap-3 rounded-xl hover:bg-surface2 -mx-2 px-2 py-2 transition-colors group"
+              >
+                {/* Avatar */}
+                <div className="w-9 h-9 rounded-full bg-iris/15 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-iris">{m.name[0]}</span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-snow truncate group-hover:text-lime transition-colors">{m.name}</p>
+                    <span className="text-xs text-lime shrink-0">Ver →</span>
+                  </div>
+
+                  {m.phone && (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Phone size={11} className="text-mist shrink-0" />
+                      <span className="text-xs text-fog">{m.phone}</span>
+                    </div>
+                  )}
+                  {m.email && (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Mail size={11} className="text-mist shrink-0" />
+                      <span className="text-xs text-fog truncate">{m.email}</span>
+                    </div>
+                  )}
+
+                  {/* Bono */}
+                  <div className={`mt-2 inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-xs font-medium ${
+                    isExhausted ? 'bg-rose/10 text-rose' :
+                    isLow || isExpiringSoon ? 'bg-amber/10 text-amber' :
+                    bono ? 'bg-lime/10 text-lime' : 'bg-surface2 text-mist'
+                  }`}>
+                    <CreditCard size={11} />
+                    {bono ? (
+                      <>
+                        {bono.membership_types?.name}
+                        {isUnlimited ? ' · ∞' : s != null ? ` · ${s} ses.` : ''}
+                        {isExhausted && ' · agotado'}
+                        {isExpiringSoon && !isExhausted && ` · vence en ${daysLeft}d`}
+                      </>
+                    ) : 'Sin bono'}
+                    {(isLow && !isExhausted) || isExpiringSoon ? <AlertTriangle size={10} /> : null}
+                  </div>
+                </div>
+              </Link>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Hijos */}
+      {allChildren.length > 0 && (
+        <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+            <Baby size={12} className="text-lime" /> Hijos · {allChildren.length}
+          </p>
+          <div className="space-y-2">
+            {allChildren.map((c, i) => {
+              const age = c.birth_date ? calcAge(c.birth_date) : null
+              return (
+                <div key={i} className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                    c.sex === 'F' ? 'bg-iris/20 text-iris' : 'bg-lime/20 text-lime'
+                  }`}>
+                    {c.sex === 'F' ? '♀' : c.sex === 'M' ? '♂' : '?'}
+                  </div>
+                  <div>
+                    <span className="text-sm text-snow">{c.name}</span>
+                    {age !== null && <span className="text-xs text-mist ml-2">{age} años</span>}
+                    {!c.birth_date && c.sex && <span className="text-xs text-mist ml-2">{c.sex === 'M' ? 'Niño' : 'Niña'}</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
-      {/* Members */}
+      {/* Historial de visitas */}
       <div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
-          <User size={13} className="text-iris" /> Miembros ({memberList.length})
-        </div>
-        <div className="space-y-3">
-          {memberList.map((m: any) => {
-            const bono = m.memberships?.[0]
-            const isUnlimited = bono?.membership_types?.name?.toLowerCase().includes('ilimitado')
-            const s = bono?.sessions_remaining
-            const isLow = !isUnlimited && s != null && s <= 2
-            return (
-              <Link
-                key={m.id}
-                href={`/miembros/${m.id}`}
-                className="rounded-2xl border border-line bg-surface p-4 hover:border-line2 transition-colors block"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-sm text-snow">{m.name}</p>
-                    {m.birth_date && <p className="text-xs text-mist mt-0.5">{calcAge(m.birth_date)} años</p>}
-                    {m.phone && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <Phone size={11} className="text-mist" />
-                        <span className="text-xs text-fog">{m.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right shrink-0">
-                    {bono ? (
-                      <>
-                        <p className="text-xs text-fog">{bono.membership_types?.name}</p>
-                        {isUnlimited ? (
-                          <p className="text-base font-bold text-iris mt-0.5">∞</p>
-                        ) : s != null ? (
-                          <p className={`text-base font-bold mt-0.5 ${isLow ? 'text-amber' : 'text-lime'}`}>{s} ses.</p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="text-xs text-rose">Sin bono</p>
-                    )}
-                  </div>
-                </div>
-                {isLow && (
-                  <p className="text-xs text-amber font-medium mt-2">⚠ Pocas sesiones restantes</p>
-                )}
-                {s === 0 && (
-                  <p className="text-xs text-rose font-medium mt-2">⚠ Bono agotado — necesita renovar</p>
-                )}
-              </Link>
-            )
-          })}
-          {memberList.length === 0 && (
-            <div className="rounded-2xl border border-line bg-surface p-4 text-center text-sm text-mist">
-              Sin miembros en esta familia
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Visits */}
-      <div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
+        <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5 mb-3">
           <Clock size={13} className="text-lime" /> Historial de visitas
-        </div>
+        </p>
         {!(visits as any[])?.length ? (
           <div className="rounded-2xl border border-line bg-surface p-4 text-center text-sm text-mist">
             Sin visitas registradas
           </div>
         ) : (
           <div className="space-y-1">
-            {(visits as any[]).map((v) => (
+            {(visits as any[]).map((v: any) => (
               <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex justify-between items-center text-sm">
-                <div>
-                  <span className="text-fog">{(v.members as any)?.name}</span>
-                  <span className="text-mist ml-2 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-snow text-xs font-medium truncate">{(v.members as any)?.name}</span>
+                  <span className="text-mist text-xs shrink-0">
                     {new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                   </span>
                 </div>
-                <span className="text-mist text-xs">
+                <span className="text-mist text-xs shrink-0">
                   {new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
