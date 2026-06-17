@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, Pencil,
-  CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle
+  CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle, LogOut
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -593,13 +593,25 @@ function ConfigSection() {
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('dashboard')
   const [tenants, setTenants] = useState<Tenant[]>([])
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const router = useRouter()
 
   async function loadTenants() {
     const { data } = await supabase.from('tenants').select('*').order('created_at', { ascending: false })
     setTenants((data as Tenant[]) ?? [])
   }
 
-  useEffect(() => { loadTenants() }, [])
+  useEffect(() => {
+    loadTenants()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null)
+    })
+  }, [])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   const navItems = [
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
@@ -636,8 +648,21 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        <div className="px-5 py-4 border-t border-line">
-          <p className="text-[10px] text-mist">Admin · v0.1</p>
+        <div className="px-3 py-4 border-t border-line space-y-2">
+          {userEmail && (
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-surface2">
+              <div className="w-6 h-6 rounded-full bg-amber/20 flex items-center justify-center shrink-0">
+                <Shield size={12} className="text-amber" />
+              </div>
+              <p className="text-[11px] text-fog truncate">{userEmail}</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors"
+          >
+            <LogOut size={14} /> Cerrar sesión
+          </button>
         </div>
       </aside>
 
