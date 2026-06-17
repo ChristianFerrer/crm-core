@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User, Building2 } from 'lucide-react'
+import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User, Building2, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 
@@ -34,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [tenantName, setTenantName] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -115,6 +116,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
+
+      {/* Mobile header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-line px-4 py-3">
+        <div className="flex items-center justify-between">
+          {/* Brand + tenant */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-lime flex items-center justify-center shrink-0">
+              <span className="text-ink font-bold text-xs">W</span>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-snow leading-tight">{tenantName ?? 'Watermelon'}</p>
+              <p className="text-[10px] text-mist leading-tight">CRM</p>
+            </div>
+          </div>
+          {/* User menu toggle */}
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-surface2 border border-line"
+          >
+            <div className="w-5 h-5 rounded-full bg-iris/20 flex items-center justify-center">
+              <User size={11} className="text-iris" />
+            </div>
+            <ChevronDown size={12} className={`text-fog transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {/* Dropdown user menu */}
+        {menuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-surface border-b border-line px-4 py-3 space-y-2 shadow-lg">
+            {userEmail && (
+              <div className="flex items-center gap-2 py-1">
+                <User size={12} className="text-mist shrink-0" />
+                <p className="text-xs text-fog truncate">{userEmail}</p>
+              </div>
+            )}
+            <button
+              onClick={() => { setMenuOpen(false); handleLogout() }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors border border-line"
+            >
+              <LogOut size={14} /> Cerrar sesión
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
