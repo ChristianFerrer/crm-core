@@ -23,6 +23,7 @@ type Tenant = {
   slug: string | null
   owner_name: string | null
   owner_email: string | null
+  admin_email: string | null
   phone: string | null
   city: string | null
   plan: 'trial' | 'starter' | 'pro' | 'enterprise'
@@ -142,36 +143,166 @@ function DashboardSection({ tenants }: { tenants: Tenant[] }) {
 
 // ─── Tenants Section ──────────────────────────────────────────────────────────
 
-function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: () => void }) {
-  const router = useRouter()
-  const [showModal, setShowModal] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    name: '', slug: '', owner_name: '', owner_email: '', phone: '', city: '',
-    plan: 'trial' as Tenant['plan'], notes: '',
-  })
+type TenantForm = {
+  name: string; slug: string; owner_name: string; owner_email: string
+  admin_email: string; phone: string; city: string
+  plan: Tenant['plan']; notes: string
+}
 
-  function updateForm(field: string, value: string) {
+const emptyForm: TenantForm = {
+  name: '', slug: '', owner_name: '', owner_email: '', admin_email: '',
+  phone: '', city: '', plan: 'trial', notes: '',
+}
+
+function TenantModal({
+  mode, initial, onClose, onSaved,
+}: {
+  mode: 'create' | 'edit'
+  initial: TenantForm & { id?: string }
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<TenantForm>(initial)
+  const [saving, setSaving] = useState(false)
+
+  function upd(field: string, value: string) {
     setForm(f => {
-      const updated = { ...f, [field]: value }
-      if (field === 'name') updated.slug = toSlug(value)
-      return updated
+      const next = { ...f, [field]: value }
+      if (field === 'name' && mode === 'create') next.slug = toSlug(value)
+      return next
     })
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    await supabase.from('tenants').insert({
-      name: form.name, slug: form.slug || null, owner_name: form.owner_name || null,
-      owner_email: form.owner_email || null, phone: form.phone || null,
+    const payload = {
+      name: form.name, slug: form.slug || null,
+      owner_name: form.owner_name || null, owner_email: form.owner_email || null,
+      admin_email: form.admin_email || null, phone: form.phone || null,
       city: form.city || null, plan: form.plan, notes: form.notes || null,
-      status: form.plan === 'trial' ? 'trial' : 'active',
-    })
+    }
+    if (mode === 'create') {
+      await supabase.from('tenants').insert({ ...payload, status: form.plan === 'trial' ? 'trial' : 'active' })
+    } else {
+      await supabase.from('tenants').update(payload).eq('id', (initial as any).id)
+    }
     setSaving(false)
-    setShowModal(false)
-    setForm({ name: '', slug: '', owner_name: '', owner_email: '', phone: '', city: '', plan: 'trial', notes: '' })
-    onReload()
+    onSaved()
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-surface border border-line rounded-t-2xl lg:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
+          <h3 className="text-base font-semibold text-snow">
+            {mode === 'create' ? 'Nuevo establecimiento' : `Editar · ${initial.name}`}
+          </h3>
+          <button onClick={onClose} className="text-mist hover:text-fog"><X size={18} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-5 space-y-4">
+          {/* Nombre */}
+          <div>
+            <label className={labelCls}>Nombre del establecimiento *</label>
+            <input required value={form.name} onChange={e => upd('name', e.target.value)}
+              placeholder="El Bosc Màgic" className={inputCls} />
+          </div>
+
+          {/* Slug */}
+          <div>
+            <label className={labelCls}>Slug (URL interna)</label>
+            <input value={form.slug} onChange={e => upd('slug', e.target.value)}
+              placeholder="el-bosc-magic" className={inputCls} />
+          </div>
+
+          {/* Responsable + email contacto */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Nombre responsable</label>
+              <input value={form.owner_name} onChange={e => upd('owner_name', e.target.value)}
+                placeholder="Nombre" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Email de contacto</label>
+              <input type="email" value={form.owner_email} onChange={e => upd('owner_email', e.target.value)}
+                placeholder="contacto@ejemplo.com" className={inputCls} />
+            </div>
+          </div>
+
+          {/* Admin email — destacado */}
+          <div className="rounded-xl border border-iris/30 bg-iris/5 p-4 space-y-2">
+            <label className="block text-xs font-semibold text-iris uppercase tracking-wide">
+              Email administrador (acceso a la app)
+            </label>
+            <input type="email" value={form.admin_email} onChange={e => upd('admin_email', e.target.value)}
+              placeholder="admin@establecimiento.com"
+              className="w-full bg-surface2 border border-iris/30 rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-iris/60 transition-colors" />
+            <p className="text-[11px] text-iris/70">
+              Este correo podrá iniciar sesión en Watermelon y acceder a la vista del establecimiento.
+            </p>
+          </div>
+
+          {/* Teléfono + ciudad */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Teléfono</label>
+              <input type="tel" value={form.phone} onChange={e => upd('phone', e.target.value)}
+                placeholder="612 345 678" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Ciudad</label>
+              <input value={form.city} onChange={e => upd('city', e.target.value)}
+                placeholder="Barcelona" className={inputCls} />
+            </div>
+          </div>
+
+          {/* Plan */}
+          <div>
+            <label className={labelCls}>Plan</label>
+            <select value={form.plan} onChange={e => upd('plan', e.target.value as Tenant['plan'])} className={inputCls}>
+              <option value="trial">Trial (prueba gratuita)</option>
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+
+          {/* Notas */}
+          <div>
+            <label className={labelCls}>Notas internas</label>
+            <textarea rows={2} value={form.notes} onChange={e => upd('notes', e.target.value)}
+              placeholder="Observaciones..." className={inputCls + ' resize-none'} />
+          </div>
+
+          <button type="submit" disabled={saving}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink text-sm transition hover:bg-lime/90 disabled:opacity-60">
+            {saving ? 'Guardando...' : mode === 'create' ? 'Crear establecimiento' : 'Guardar cambios'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: () => void }) {
+  const router = useRouter()
+  const [modal, setModal] = useState<{ mode: 'create' | 'edit'; initial: TenantForm & { id?: string } } | null>(null)
+
+  function openCreate() {
+    setModal({ mode: 'create', initial: { ...emptyForm } })
+  }
+
+  function openEdit(t: Tenant) {
+    setModal({
+      mode: 'edit',
+      initial: {
+        id: t.id, name: t.name, slug: t.slug ?? '', owner_name: t.owner_name ?? '',
+        owner_email: t.owner_email ?? '', admin_email: t.admin_email ?? '',
+        phone: t.phone ?? '', city: t.city ?? '', plan: t.plan, notes: t.notes ?? '',
+      },
+    })
   }
 
   async function toggleStatus(t: Tenant) {
@@ -192,116 +323,92 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
           <h2 className="text-xl font-display font-semibold text-snow">Establecimientos</h2>
           <p className="text-sm text-fog mt-0.5">{tenants.length} registrados</p>
         </div>
-        <button onClick={() => setShowModal(true)}
+        <button onClick={openCreate}
           className="flex items-center gap-2 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-lime/90 transition-colors">
           <Plus size={15} /> Nuevo
         </button>
       </div>
 
       <div className="space-y-3">
-        {tenants.map(t => {
-          const StatusIcon = STATUS_ICONS[t.status] ?? CheckCircle
-          return (
-            <div key={t.id} className="rounded-2xl border border-line bg-surface p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-iris/10 flex items-center justify-center shrink-0">
-                    <span className="text-sm font-bold text-iris">{t.name[0]}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-snow truncate">{t.name}</p>
-                    <p className="text-xs text-mist mt-0.5">{t.city ?? ''}{t.city && t.owner_email ? ' · ' : ''}{t.owner_email ?? ''}</p>
-                  </div>
+        {tenants.map(t => (
+          <div key={t.id} className="rounded-2xl border border-line bg-surface p-5">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-iris/10 flex items-center justify-center shrink-0">
+                  <span className="text-sm font-bold text-iris">{t.name[0]}</span>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <div className="min-w-0">
+                  <p className="font-semibold text-snow truncate">{t.name}</p>
+                  <p className="text-xs text-mist mt-0.5">
+                    {[t.city, t.owner_email].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-4 text-xs text-mist">
-                  {t.phone && <span>{t.phone}</span>}
-                  <span>Alta: {new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  {t.trial_ends_at && <span className="text-amber">Prueba hasta {new Date(t.trial_ends_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => enterAsTenant(t)}
-                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-iris/30 text-iris hover:bg-iris/10 transition-colors">
-                    <Eye size={12} /> Ver cliente
-                  </button>
-                  <button onClick={() => toggleStatus(t)}
-                    className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
-                      t.status === 'active'
-                        ? 'border-rose/30 text-rose hover:bg-rose/10'
-                        : 'border-lime/30 text-lime hover:bg-lime/10'
-                    }`}>
-                    {t.status === 'active' ? 'Suspender' : 'Activar'}
-                  </button>
-                </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[t.status]}`}>{t.status}</span>
               </div>
-              {t.notes && <p className="mt-2 text-xs text-fog border-t border-line pt-2">{t.notes}</p>}
             </div>
-          )
-        })}
+
+            {/* Detail rows */}
+            <div className="mt-3 space-y-1">
+              {t.admin_email && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-iris uppercase tracking-wide w-24 shrink-0">Admin email</span>
+                  <span className="text-xs text-snow font-medium">{t.admin_email}</span>
+                </div>
+              )}
+              {t.phone && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Teléfono</span>
+                  <span className="text-xs text-fog">{t.phone}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Alta</span>
+                <span className="text-xs text-fog">{new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              </div>
+              {t.trial_ends_at && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-amber uppercase tracking-wide w-24 shrink-0">Trial hasta</span>
+                  <span className="text-xs text-amber">{new Date(t.trial_ends_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+                </div>
+              )}
+            </div>
+
+            {t.notes && <p className="mt-3 text-xs text-fog border-t border-line pt-3">{t.notes}</p>}
+
+            {/* Actions */}
+            <div className="mt-4 flex items-center gap-2 border-t border-line pt-3">
+              <button onClick={() => openEdit(t)}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
+                <Pencil size={12} /> Editar
+              </button>
+              <button onClick={() => enterAsTenant(t)}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-iris/30 text-iris hover:bg-iris/10 transition-colors">
+                <Eye size={12} /> Ver cliente
+              </button>
+              <button onClick={() => toggleStatus(t)}
+                className={`ml-auto flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
+                  t.status === 'active'
+                    ? 'border-rose/30 text-rose hover:bg-rose/10'
+                    : 'border-lime/30 text-lime hover:bg-lime/10'
+                }`}>
+                {t.status === 'active' ? 'Suspender' : 'Activar'}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-lg bg-surface border border-line rounded-t-2xl lg:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
-              <h3 className="text-base font-semibold text-snow">Nuevo establecimiento</h3>
-              <button onClick={() => setShowModal(false)} className="text-mist hover:text-fog"><X size={18} /></button>
-            </div>
-            <form onSubmit={handleSubmit} className="overflow-y-auto p-5 space-y-4">
-              <div>
-                <label className={labelCls}>Nombre *</label>
-                <input required value={form.name} onChange={e => updateForm('name', e.target.value)} placeholder="Nombre del establecimiento" className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Slug (URL)</label>
-                <input value={form.slug} onChange={e => updateForm('slug', e.target.value)} placeholder="mi-ludoteca" className={inputCls} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Responsable</label>
-                  <input value={form.owner_name} onChange={e => updateForm('owner_name', e.target.value)} placeholder="Nombre" className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Email *</label>
-                  <input required type="email" value={form.owner_email} onChange={e => updateForm('owner_email', e.target.value)} placeholder="email@ejemplo.com" className={inputCls} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Teléfono</label>
-                  <input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)} placeholder="612 345 678" className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Ciudad</label>
-                  <input value={form.city} onChange={e => updateForm('city', e.target.value)} placeholder="Barcelona" className={inputCls} />
-                </div>
-              </div>
-              <div>
-                <label className={labelCls}>Plan</label>
-                <select value={form.plan} onChange={e => updateForm('plan', e.target.value)} className={inputCls}>
-                  <option value="trial">Trial (prueba gratuita)</option>
-                  <option value="starter">Starter</option>
-                  <option value="pro">Pro</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Notas internas</label>
-                <textarea rows={2} value={form.notes} onChange={e => updateForm('notes', e.target.value)} placeholder="Observaciones..." className={inputCls + ' resize-none'} />
-              </div>
-              <button type="submit" disabled={saving}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink text-sm transition hover:bg-lime/90 disabled:opacity-60">
-                {saving ? 'Creando...' : 'Crear establecimiento'}
-              </button>
-            </form>
-          </div>
-        </div>
+      {modal && (
+        <TenantModal
+          mode={modal.mode}
+          initial={modal.initial}
+          onClose={() => setModal(null)}
+          onSaved={onReload}
+        />
       )}
     </div>
   )
