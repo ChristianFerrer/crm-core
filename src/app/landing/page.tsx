@@ -44,28 +44,14 @@ const benefits = [
 
 const plans = [
   {
-    name: 'Starter',
-    price: '29',
-    desc: 'Para ludotecas que empiezan',
-    features: ['Hasta 100 miembros', 'Control de acceso', 'Bonos y membresías', 'Soporte por email'],
-    accent: 'border-line',
-    badge: null,
-  },
-  {
-    name: 'Pro',
-    price: '59',
-    desc: 'El más popular',
-    features: ['Miembros ilimitados', 'Todo de Starter', 'Agenda y reservas', 'Panel de análisis', 'Soporte prioritario'],
-    accent: 'border-lime/50',
-    badge: 'Popular',
-  },
-  {
-    name: 'Enterprise',
-    price: '—',
-    desc: 'Para grupos o franquicias',
-    features: ['Múltiples establecimientos', 'Todo de Pro', 'Onboarding personalizado', 'SLA dedicado'],
-    accent: 'border-line',
-    badge: null,
+    features: [
+      'Miembros ilimitados',
+      'Control de acceso',
+      'Bonos y membresías',
+      'Agenda y reservas',
+      'Panel de análisis',
+      'Soporte en español',
+    ],
   },
 ]
 
@@ -240,49 +226,29 @@ export default function LandingPage() {
           </h2>
           <p className="text-fog text-lg">14 días de prueba gratis en cualquier plan.</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          {plans.map(({ name, price, desc, features: fs, accent, badge }) => (
-            <div key={name} className={`relative rounded-2xl border ${accent} bg-surface p-6 flex flex-col`}>
-              {badge && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-lime px-3 py-0.5 text-xs font-bold text-ink">
-                  {badge}
-                </span>
-              )}
-              <div className="mb-6">
-                <p className="text-sm font-semibold text-fog mb-1">{name}</p>
-                <div className="flex items-end gap-1 mb-1">
-                  {price === '—' ? (
-                    <span className="font-display text-4xl font-semibold text-snow">Contacta</span>
-                  ) : (
-                    <>
-                      <span className="font-display text-5xl font-semibold text-snow">{price}€</span>
-                      <span className="text-fog text-sm mb-1.5">/mes</span>
-                    </>
-                  )}
-                </div>
-                <p className="text-xs text-mist">{desc}</p>
-              </div>
-              <ul className="space-y-2.5 flex-1 mb-6">
-                {fs.map(f => (
-                  <li key={f} className="flex items-center gap-2.5 text-sm text-fog">
-                    <CheckCircle size={14} className="text-lime shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/login"
-                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-colors ${
-                  badge
-                    ? 'bg-lime text-ink hover:bg-lime/90'
-                    : 'border border-line text-fog hover:text-snow hover:border-line2'
-                }`}
-                style={badge ? { boxShadow: 'var(--shadow-lime)' } : undefined}
-              >
-                {price === '—' ? 'Hablar con ventas' : 'Empezar gratis'}
-              </Link>
+        <div className="max-w-md mx-auto">
+          <div className="rounded-2xl border border-lime/50 bg-surface p-8 flex flex-col items-center text-center">
+            <div className="mb-2">
+              <span className="font-display text-6xl font-semibold text-snow">99,9€</span>
+              <span className="text-fog text-base ml-1">/mes</span>
             </div>
-          ))}
+            <p className="text-mist text-sm mb-8">Todo incluido · Sin sorpresas</p>
+            <ul className="space-y-3 w-full mb-8 text-left">
+              {plans[0].features.map(f => (
+                <li key={f} className="flex items-center gap-3 text-sm text-fog">
+                  <CheckCircle size={15} className="text-lime shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/login"
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-lime py-3.5 text-sm font-semibold text-ink hover:bg-lime/90 transition-colors"
+              style={{ boxShadow: 'var(--shadow-lime)' }}
+            >
+              Empezar 14 días gratis
+            </Link>
+          </div>
         </div>
       </section>
 
