@@ -10,8 +10,9 @@ const FALLBACK_HOURLY_RATE = 5
 type VisitType = 'entrada' | 'custodia'
 
 type ServiceRates = {
-  entrada: number
-  custodia: number | null
+  adult: number       // entrada adulto €/hora
+  child: number       // entrada niño €/hora
+  custodia: number    // custodia €/hora por niño
 }
 
 type MemberRow = {
@@ -72,12 +73,13 @@ function calcDurationMin(from: string, to?: string | null) {
 }
 
 function calcCost(minutes: number, numChildren: number, visitType: VisitType, rates: ServiceRates) {
+  const fractions = Math.ceil(minutes / 60) // por hora o fracción
   if (visitType === 'custodia') {
-    // Custodia is a flat rate per child per session
-    return (rates.custodia ?? rates.entrada) * Math.max(1, numChildren)
+    // Custodia: tarifa/hora × niños (el adulto acompañante no se cobra aparte)
+    return fractions * rates.custodia * Math.max(1, numChildren)
   }
-  // Entrada: hourly rate × children, billed in 30-min increments
-  return Math.ceil(minutes / 30) * 0.5 * rates.entrada * Math.max(1, numChildren)
+  // Entrada: adulto + cada niño, por hora o fracción
+  return fractions * (rates.adult + numChildren * rates.child)
 }
 
 function getBono(m: MemberRow) {
@@ -202,8 +204,8 @@ function CheckInTab({
       )
     } else {
       const rateLabel = visitType === 'custodia'
-        ? `${rates.custodia ?? rates.entrada}€/sesión × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
-        : `${rates.entrada}€/h × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+        ? `${rates.custodia}€/h × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+        : `${rates.adult}€ adulto + ${numChildren} × ${rates.child}€ niño/h`
       setFlash(`✓ ${typeLabel} registrada · sin bono — ${rateLabel}`)
     }
     flashTimer.current = setTimeout(() => setFlash(null), 6000)
@@ -318,8 +320,8 @@ function CheckInTab({
                 {!bono?.ok && !alreadyInside && (
                   <p className="text-xs text-amber/80 mt-0.5">
                     {visitType === 'custodia'
-                      ? `Custodia: ${rates.custodia ?? rates.entrada} €/sesión por niño`
-                      : `Tarifa: ${rates.entrada} €/h por niño · mínimo 30 min`}
+                      ? `Custodia: ${rates.custodia} €/h × niños · por hora o fracción`
+                      : `Adulto ${rates.adult}€ + niño ${rates.child}€ · por hora o fracción`}
                   </p>
                 )}
               </div>
@@ -812,7 +814,7 @@ export default function VisitasPage() {
   const [activeVisits, setActiveVisits] = useState<ActiveVisit[]>([])
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
-  const [rates, setRates] = useState<ServiceRates>({ entrada: FALLBACK_HOURLY_RATE, custodia: null })
+  const [rates, setRates] = useState<ServiceRates>({ adult: FALLBACK_HOURLY_RATE, child: FALLBACK_HOURLY_RATE, custodia: FALLBACK_HOURLY_RATE })
 
   useEffect(() => {
     supabase.from('members').select(MEMBER_QUERY).order('name')
@@ -821,15 +823,18 @@ export default function VisitasPage() {
     // Load service rates
     supabase
       .from('services')
-      .select('category, price, price_unit')
+      .select('name, category, price, price_unit')
       .in('category', ['entrada', 'custodia'])
       .eq('active', true)
       .then(({ data }) => {
-        const entrada = (data ?? []).find(s => s.category === 'entrada' && s.price_unit === 'hora')
-        const custodia = (data ?? []).find(s => s.category === 'custodia')
+        const rows = data ?? []
+        const adult = rows.find(s => s.category === 'entrada' && /adulto/i.test(s.name))
+        const child = rows.find(s => s.category === 'entrada' && /ni[ñn]/i.test(s.name))
+        const custodiaHour = rows.find(s => s.category === 'custodia' && s.price_unit === 'hora')
         setRates({
-          entrada: entrada?.price ?? FALLBACK_HOURLY_RATE,
-          custodia: custodia?.price ?? null,
+          adult: adult?.price ?? FALLBACK_HOURLY_RATE,
+          child: child?.price ?? FALLBACK_HOURLY_RATE,
+          custodia: custodiaHour?.price ?? FALLBACK_HOURLY_RATE,
         })
       })
   }, [])
