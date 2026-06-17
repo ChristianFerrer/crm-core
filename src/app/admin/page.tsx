@@ -7,7 +7,7 @@ import { isSuperAdmin } from '@/lib/roles'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, Pencil,
-  CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle, LogOut
+  CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle, LogOut, ChevronDown
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -595,6 +595,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('dashboard')
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
 
   async function loadTenants() {
@@ -673,9 +674,40 @@ export default function AdminPage() {
       </aside>
 
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-line px-4 py-3 flex items-center gap-2">
-        <Shield size={15} className="text-amber" />
-        <span className="font-semibold text-snow text-sm">Admin</span>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-line px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-amber/15 flex items-center justify-center shrink-0">
+              <Shield size={13} className="text-amber" />
+            </div>
+            <span className="font-semibold text-snow text-sm">Admin</span>
+          </div>
+          <button
+            onClick={() => setMobileMenuOpen(o => !o)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-surface2 border border-line"
+          >
+            <div className="w-5 h-5 rounded-full bg-amber/20 flex items-center justify-center">
+              <Shield size={11} className="text-amber" />
+            </div>
+            <ChevronDown size={12} className={`text-fog transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+        {mobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-surface border-b border-line px-4 py-3 space-y-2 shadow-lg">
+            {userEmail && (
+              <div className="flex items-center gap-2 py-1">
+                <Shield size={12} className="text-mist shrink-0" />
+                <p className="text-xs text-fog truncate">{userEmail}</p>
+              </div>
+            )}
+            <button
+              onClick={() => { setMobileMenuOpen(false); handleLogout() }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors border border-line"
+            >
+              <LogOut size={14} /> Cerrar sesión
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Content */}
