@@ -46,12 +46,14 @@ export default function MiembrosPage() {
       .then(({ data }) => { setMembers((data as unknown as MemberRow[]) ?? []); setLoading(false) })
   }, [])
 
-  const q = search.trim().toLowerCase()
+  const q = search.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const qDigits = q.replace(/\D/g, '')
   const filtered = q
-    ? members.filter(m =>
-        m.name.toLowerCase().includes(q) ||
-        (m.phone ?? '').replace(/\D/g, '').includes(q.replace(/\D/g, ''))
-      )
+    ? members.filter(m => {
+        const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        return mName.includes(q) ||
+          (qDigits.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qDigits))
+      })
     : members
 
   return (
