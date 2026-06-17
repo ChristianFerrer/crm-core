@@ -58,10 +58,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="px-5 py-4 border-t border-line space-y-2">
           <Link href="/admin" className="flex items-center gap-1.5 text-[10px] text-mist hover:text-amber transition-colors">
-            <Shield size={10} /> Admin
+            <Shield size={10} /> Watermelon Admin
           </Link>
           <div className="flex items-center justify-between">
-            <p className="text-[10px] text-mist">Demo · v0.1</p>
+            <p className="text-[10px] text-mist">v0.1</p>
             <button onClick={handleLogout} className="flex items-center gap-1 text-[10px] text-mist hover:text-rose transition-colors">
               <LogOut size={11} /> Salir
             </button>

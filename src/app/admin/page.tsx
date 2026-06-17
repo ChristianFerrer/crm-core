@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, ChevronRight, Pencil,
-  CheckCircle, AlertTriangle, XCircle, Clock, ArrowLeft
+  CheckCircle, AlertTriangle, XCircle, Clock, ArrowLeft, Eye
 } from 'lucide-react'
 import Link from 'next/link'
 import {
@@ -142,6 +143,7 @@ function DashboardSection({ tenants }: { tenants: Tenant[] }) {
 // ─── Tenants Section ──────────────────────────────────────────────────────────
 
 function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: () => void }) {
+  const router = useRouter()
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
@@ -176,6 +178,11 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
     const next = t.status === 'active' ? 'suspended' : 'active'
     await supabase.from('tenants').update({ status: next }).eq('id', t.id)
     onReload()
+  }
+
+  function enterAsTenant(t: Tenant) {
+    localStorage.setItem('viewingAsTenant', JSON.stringify({ id: t.id, name: t.name }))
+    router.push('/')
   }
 
   return (
@@ -217,14 +224,20 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                   <span>Alta: {new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                   {t.trial_ends_at && <span className="text-amber">Prueba hasta {new Date(t.trial_ends_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>}
                 </div>
-                <button onClick={() => toggleStatus(t)}
-                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
-                    t.status === 'active'
-                      ? 'border-rose/30 text-rose hover:bg-rose/10'
-                      : 'border-lime/30 text-lime hover:bg-lime/10'
-                  }`}>
-                  {t.status === 'active' ? 'Suspender' : 'Activar'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => enterAsTenant(t)}
+                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-iris/30 text-iris hover:bg-iris/10 transition-colors">
+                    <Eye size={12} /> Ver cliente
+                  </button>
+                  <button onClick={() => toggleStatus(t)}
+                    className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
+                      t.status === 'active'
+                        ? 'border-rose/30 text-rose hover:bg-rose/10'
+                        : 'border-lime/30 text-lime hover:bg-lime/10'
+                    }`}>
+                    {t.status === 'active' ? 'Suspender' : 'Activar'}
+                  </button>
+                </div>
               </div>
               {t.notes && <p className="mt-2 text-xs text-fog border-t border-line pt-2">{t.notes}</p>}
             </div>

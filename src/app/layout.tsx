@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', axes: ['opsz'] })
 
 export const metadata: Metadata = {
-  title: 'El Bosc Màgic · CRM',
-  description: 'Gestión de familias y bonos',
+  title: 'Watermelon CRM',
+  description: 'CRM para Ludotecas',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
