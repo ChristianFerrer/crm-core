@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, LogIn, Timer, CreditCard, UserX, Users, CalendarClock } from 'lucide-react'
+import { AlertTriangle, LogIn, Timer, CreditCard, UserX, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -66,7 +66,6 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
     { key: 'entradasHoy', label: 'Entradas hoy', value: todayVisits.length, accent: 'text-lime', border: 'border-lime/30', visits: todayVisits, icon: <LogIn size={16} /> },
     { key: 'conBono', label: 'Con bono', value: conBonoVisits.length, accent: 'text-mint', border: 'border-mint/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
     { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.length, accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
-    { key: 'custodias', label: 'Custodias', value: todayCustodias.length, accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
   ]
 
   const drawerVisits = activeDrawer ? (stats.find(s => s.key === activeDrawer)?.visits ?? []) : []
@@ -97,9 +96,19 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{tenantName ?? 'Mi establecimiento'}</h1>
-        <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{tenantName ?? 'Mi establecimiento'}</h1>
+          <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
+        </div>
+        <Link
+          href="/checkin"
+          className="flex items-center gap-1.5 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm shrink-0 active:scale-95 transition-transform"
+          style={{ boxShadow: 'var(--shadow-lime)' }}
+        >
+          <LogIn size={15} strokeWidth={2.4} />
+          Registrar entrada
+        </Link>
       </div>
 
       {/* Charts side by side */}
@@ -150,7 +159,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       )}
 
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map(({ key, label, value, accent, border, icon }) => (
           <button
             key={key}
@@ -193,16 +202,6 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Link
-          href="/checkin"
-          className="flex items-center justify-center gap-2 bg-lime text-ink font-semibold rounded-2xl py-4 text-sm flex-1 active:scale-95 transition-transform"
-          style={{ boxShadow: 'var(--shadow-lime)' }}
-        >
-          <LogIn size={18} strokeWidth={2.4} />
-          Registrar entrada
-        </Link>
-      </div>
 
       {expiringMembers.length > 0 && (
         <div className="rounded-2xl border border-amber/30 bg-surface p-4">
