@@ -4,20 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, LogIn } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-
-async function resolveTenantName(email: string): Promise<string | null> {
-  const stored = localStorage.getItem('viewingAsTenant')
-  if (stored) {
-    try { return JSON.parse(stored).name } catch {}
-  }
-  const { data } = await supabase
-    .from('tenants')
-    .select('name')
-    .ilike('admin_email', email.trim())
-    .limit(1)
-    .maybeSingle()
-  return data?.name ?? null
-}
+import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
   LineChart,
   Line,
@@ -79,11 +66,17 @@ export default function HomeClient({ todayVisits, expiringMembers, monthCount, d
 
   const [tenantName, setTenantName] = useState<string | null>(null)
   useEffect(() => {
+    const impersonating = localStorage.getItem('viewingAsTenant')
+    if (impersonating) {
+      try { setTenantName(JSON.parse(impersonating).name); return } catch {}
+    }
+    const cached = getStoredTenant()
+    if (cached) { setTenantName(cached.name); return }
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const email = session?.user?.email
       if (email) {
-        const name = await resolveTenantName(email)
-        if (name) setTenantName(name)
+        const tenant = await loadAndStoreTenant(email)
+        if (tenant) setTenantName(tenant.name)
       }
     })
   }, [])

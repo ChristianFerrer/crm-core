@@ -4,14 +4,16 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isSuperAdmin } from '@/lib/roles'
+import { loadAndStoreTenant } from '@/lib/tenant'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.push('/login'); return }
       const email = session.user.email ?? ''
+      if (!isSuperAdmin(email)) await loadAndStoreTenant(email)
       router.replace(isSuperAdmin(email) ? '/admin' : '/')
     })
   }, [router])

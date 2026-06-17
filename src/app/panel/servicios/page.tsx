@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check } from 'lucide-react'
+import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type Service = {
@@ -150,6 +150,9 @@ export default function ServiciosPage() {
         <div className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">
           <Tag size={13} /> Servicios
         </div>
+        <Link href="/panel/perfil" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
+          <Building2 size={13} /> Perfil
+        </Link>
       </div>
 
       {/* Header row */}

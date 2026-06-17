@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User, Building2, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
 
 const navItems = [
@@ -13,20 +14,6 @@ const navItems = [
   { href: '/calendario', label: 'Agenda', icon: CalendarDays },
   { href: '/panel', label: 'Panel', icon: BarChart2 },
 ]
-
-async function resolveTenantName(userEmail: string): Promise<string | null> {
-  const stored = localStorage.getItem('viewingAsTenant')
-  if (stored) {
-    try { return JSON.parse(stored).name } catch {}
-  }
-  const { data } = await supabase
-    .from('tenants')
-    .select('name')
-    .ilike('admin_email', userEmail.trim())
-    .limit(1)
-    .maybeSingle()
-  return data?.name ?? null
-}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -38,16 +25,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function load(email: string) {
       setUserEmail(email)
-      const name = await resolveTenantName(email)
-      if (name) setTenantName(name)
+      // Check impersonation first (super admin viewing a tenant)
+      const impersonating = localStorage.getItem('viewingAsTenant')
+      if (impersonating) {
+        try { setTenantName(JSON.parse(impersonating).name); return } catch {}
+      }
+      // Use cached tenant, or fetch and cache if missing
+      let tenant = getStoredTenant()
+      if (!tenant) tenant = await loadAndStoreTenant(email)
+      if (tenant) setTenantName(tenant.name)
     }
 
-    // Read existing session immediately (no network)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) load(session.user.email)
     })
 
-    // Also listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user?.email) load(session.user.email)
     })
@@ -57,6 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   async function handleLogout() {
     localStorage.removeItem('viewingAsTenant')
+    clearStoredTenant()
     await supabase.auth.signOut()
     router.push('/login')
   }

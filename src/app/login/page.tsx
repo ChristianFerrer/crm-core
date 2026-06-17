@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isSuperAdmin } from '@/lib/roles'
+import { loadAndStoreTenant } from '@/lib/tenant'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,8 +38,9 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
-        const dest = data.user?.email && isSuperAdmin(data.user.email) ? '/admin' : '/'
-        router.push(dest)
+        const userEmail = data.user?.email ?? ''
+        if (!isSuperAdmin(userEmail)) await loadAndStoreTenant(userEmail)
+        router.push(isSuperAdmin(userEmail) ? '/admin' : '/')
       }
     } else {
       const { error } = await supabase.auth.signUp({ email, password })

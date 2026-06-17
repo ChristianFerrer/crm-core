@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag } from 'lucide-react'
+import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag, Building2 } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -114,6 +114,9 @@ export default async function PanelPage() {
         </div>
         <Link href="/panel/servicios" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <Tag size={13} /> Servicios
+        </Link>
+        <Link href="/panel/perfil" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
+          <Building2 size={13} /> Perfil
         </Link>
       </div>
 
