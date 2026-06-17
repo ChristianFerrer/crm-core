@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
-  Users, TrendingUp, Calendar, Activity, ChevronRight, Pencil,
-  CheckCircle, AlertTriangle, XCircle, Clock, ArrowLeft, Eye
+  Users, TrendingUp, Calendar, Activity, Pencil,
+  CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle
 } from 'lucide-react'
-import Link from 'next/link'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
@@ -22,6 +21,8 @@ type Tenant = {
   name: string
   slug: string | null
   owner_name: string | null
+  owner_firstname: string | null
+  owner_lastname: string | null
   owner_email: string | null
   admin_email: string | null
   phone: string | null
@@ -144,14 +145,15 @@ function DashboardSection({ tenants }: { tenants: Tenant[] }) {
 // ─── Tenants Section ──────────────────────────────────────────────────────────
 
 type TenantForm = {
-  name: string; slug: string; owner_name: string; owner_email: string
+  name: string; slug: string
+  owner_firstname: string; owner_lastname: string; owner_email: string
   admin_email: string; phone: string; city: string
   plan: Tenant['plan']; notes: string
 }
 
 const emptyForm: TenantForm = {
-  name: '', slug: '', owner_name: '', owner_email: '', admin_email: '',
-  phone: '', city: '', plan: 'trial', notes: '',
+  name: '', slug: '', owner_firstname: '', owner_lastname: '', owner_email: '',
+  admin_email: '', phone: '', city: '', plan: 'trial', notes: '',
 }
 
 function TenantModal({
@@ -176,9 +178,11 @@ function TenantModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+    const fullName = [form.owner_firstname, form.owner_lastname].filter(Boolean).join(' ')
     const payload = {
       name: form.name, slug: form.slug || null,
-      owner_name: form.owner_name || null, owner_email: form.owner_email || null,
+      owner_firstname: form.owner_firstname || null, owner_lastname: form.owner_lastname || null,
+      owner_name: fullName || null, owner_email: form.owner_email || null,
       admin_email: form.admin_email || null, phone: form.phone || null,
       city: form.city || null, plan: form.plan, notes: form.notes || null,
     }
@@ -203,38 +207,58 @@ function TenantModal({
           <button onClick={onClose} className="text-mist hover:text-fog"><X size={18} /></button>
         </div>
         <form onSubmit={handleSubmit} className="overflow-y-auto p-5 space-y-4">
-          {/* Nombre */}
+          {/* Nombre establecimiento */}
           <div>
-            <label className={labelCls}>Nombre del establecimiento *</label>
+            <label className={labelCls + ' flex items-center gap-1'}>
+              Nombre del establecimiento *
+              <HelpCircle size={11} className="text-mist" title="Nombre comercial del establecimiento tal como aparecerá en la app." />
+            </label>
             <input required value={form.name} onChange={e => upd('name', e.target.value)}
               placeholder="El Bosc Màgic" className={inputCls} />
           </div>
 
           {/* Slug */}
           <div>
-            <label className={labelCls}>Slug (URL interna)</label>
+            <label className={labelCls + ' flex items-center gap-1'}>
+              Slug (identificador URL)
+              <HelpCircle size={11} className="text-mist" title="Identificador único en minúsculas sin espacios. Se genera automáticamente a partir del nombre." />
+            </label>
             <input value={form.slug} onChange={e => upd('slug', e.target.value)}
               placeholder="el-bosc-magic" className={inputCls} />
           </div>
 
-          {/* Responsable + email contacto */}
+          {/* Nombre + Apellido responsable */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Nombre responsable</label>
-              <input value={form.owner_name} onChange={e => upd('owner_name', e.target.value)}
-                placeholder="Nombre" className={inputCls} />
+              <label className={labelCls + ' flex items-center gap-1'}>
+                Nombre contacto
+                <HelpCircle size={11} className="text-mist" title="Nombre de la persona responsable del establecimiento." />
+              </label>
+              <input value={form.owner_firstname} onChange={e => upd('owner_firstname', e.target.value)}
+                placeholder="María" className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Email de contacto</label>
-              <input type="email" value={form.owner_email} onChange={e => upd('owner_email', e.target.value)}
-                placeholder="contacto@ejemplo.com" className={inputCls} />
+              <label className={labelCls}>Apellido contacto</label>
+              <input value={form.owner_lastname} onChange={e => upd('owner_lastname', e.target.value)}
+                placeholder="García" className={inputCls} />
             </div>
+          </div>
+
+          {/* Email contacto */}
+          <div>
+            <label className={labelCls + ' flex items-center gap-1'}>
+              Email de contacto
+              <HelpCircle size={11} className="text-mist" title="Correo del responsable para comunicaciones y soporte. No da acceso a la app." />
+            </label>
+            <input type="email" value={form.owner_email} onChange={e => upd('owner_email', e.target.value)}
+              placeholder="contacto@establecimiento.com" className={inputCls} />
           </div>
 
           {/* Admin email — destacado */}
           <div className="rounded-xl border border-iris/30 bg-iris/5 p-4 space-y-2">
-            <label className="block text-xs font-semibold text-iris uppercase tracking-wide">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-iris uppercase tracking-wide">
               Email administrador (acceso a la app)
+              <HelpCircle size={11} className="text-iris/60" title="Este correo puede iniciar sesión en Watermelon y acceder al CRM del establecimiento. Distinto al email de contacto." />
             </label>
             <input type="email" value={form.admin_email} onChange={e => upd('admin_email', e.target.value)}
               placeholder="admin@establecimiento.com"
@@ -247,12 +271,18 @@ function TenantModal({
           {/* Teléfono + ciudad */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Teléfono</label>
+              <label className={labelCls + ' flex items-center gap-1'}>
+                Teléfono
+                <HelpCircle size={11} className="text-mist" title="Teléfono principal del establecimiento para contacto." />
+              </label>
               <input type="tel" value={form.phone} onChange={e => upd('phone', e.target.value)}
                 placeholder="612 345 678" className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Ciudad</label>
+              <label className={labelCls + ' flex items-center gap-1'}>
+                Ciudad
+                <HelpCircle size={11} className="text-mist" title="Ciudad donde está ubicado el establecimiento." />
+              </label>
               <input value={form.city} onChange={e => upd('city', e.target.value)}
                 placeholder="Barcelona" className={inputCls} />
             </div>
@@ -260,7 +290,10 @@ function TenantModal({
 
           {/* Plan */}
           <div>
-            <label className={labelCls}>Plan</label>
+            <label className={labelCls + ' flex items-center gap-1'}>
+              Plan de suscripción
+              <HelpCircle size={11} className="text-mist" title="Trial: 30 días gratis. Starter: funciones básicas. Pro: completo. Enterprise: personalizado." />
+            </label>
             <select value={form.plan} onChange={e => upd('plan', e.target.value as Tenant['plan'])} className={inputCls}>
               <option value="trial">Trial (prueba gratuita)</option>
               <option value="starter">Starter</option>
@@ -271,7 +304,10 @@ function TenantModal({
 
           {/* Notas */}
           <div>
-            <label className={labelCls}>Notas internas</label>
+            <label className={labelCls + ' flex items-center gap-1'}>
+              Notas internas
+              <HelpCircle size={11} className="text-mist" title="Notas privadas del equipo de Watermelon. No visibles para el cliente." />
+            </label>
             <textarea rows={2} value={form.notes} onChange={e => upd('notes', e.target.value)}
               placeholder="Observaciones..." className={inputCls + ' resize-none'} />
           </div>
@@ -298,7 +334,8 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
     setModal({
       mode: 'edit',
       initial: {
-        id: t.id, name: t.name, slug: t.slug ?? '', owner_name: t.owner_name ?? '',
+        id: t.id, name: t.name, slug: t.slug ?? '',
+        owner_firstname: t.owner_firstname ?? '', owner_lastname: t.owner_lastname ?? '',
         owner_email: t.owner_email ?? '', admin_email: t.admin_email ?? '',
         phone: t.phone ?? '', city: t.city ?? '', plan: t.plan, notes: t.notes ?? '',
       },
@@ -599,21 +636,15 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        <div className="px-5 py-4 border-t border-line space-y-2">
-          <Link href="/" className="flex items-center gap-1.5 text-[10px] text-mist hover:text-snow transition-colors">
-            <ArrowLeft size={10} /> Volver al CRM
-          </Link>
+        <div className="px-5 py-4 border-t border-line">
           <p className="text-[10px] text-mist">Admin · v0.1</p>
         </div>
       </aside>
 
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-line px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Shield size={15} className="text-amber" />
-          <span className="font-semibold text-snow text-sm">Admin</span>
-        </div>
-        <Link href="/" className="text-xs text-mist hover:text-snow flex items-center gap-1"><ArrowLeft size={11} /> CRM</Link>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-line px-4 py-3 flex items-center gap-2">
+        <Shield size={15} className="text-amber" />
+        <span className="font-semibold text-snow text-sm">Admin</span>
       </div>
 
       {/* Content */}

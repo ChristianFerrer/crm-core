@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, Shield } from 'lucide-react'
+import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
 
 const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
@@ -16,6 +17,14 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [tenantName, setTenantName] = useState<string | null>(null)
+
+  useEffect(() => {
+    const stored = localStorage.getItem('viewingAsTenant')
+    if (stored) {
+      try { setTenantName(JSON.parse(stored).name) } catch {}
+    }
+  }, [pathname])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -32,7 +41,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="text-ink font-bold text-sm">B</span>
             </div>
             <div>
-              <p className="font-display font-semibold text-snow text-sm leading-tight">El Bosc Màgic</p>
+              <p className="font-display font-semibold text-snow text-sm leading-tight">
+                {tenantName ?? 'El Bosc Màgic'}
+              </p>
               <p className="text-[10px] text-mist">CRM Ludoteca</p>
             </div>
           </div>
@@ -56,10 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )
           })}
         </nav>
-        <div className="px-5 py-4 border-t border-line space-y-2">
-          <Link href="/admin" className="flex items-center gap-1.5 text-[10px] text-mist hover:text-amber transition-colors">
-            <Shield size={10} /> Watermelon Admin
-          </Link>
+        <div className="px-5 py-4 border-t border-line">
           <div className="flex items-center justify-between">
             <p className="text-[10px] text-mist">v0.1</p>
             <button onClick={handleLogout} className="flex items-center gap-1 text-[10px] text-mist hover:text-rose transition-colors">
