@@ -26,6 +26,7 @@ type ActiveVisit = {
   id: string
   checked_in_at: string
   membership_id: string | null
+  children_present: { name: string }[] | null
   members: { id: string; name: string } | null
 }
 
@@ -434,11 +435,15 @@ function DentroTab({
   checkingOut: string | null
   checkoutSummaries: CheckoutSummary[]
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000)
     return () => clearInterval(t)
   }, [])
+
+  const totalAdults = activeVisits.length
+  const totalChildren = activeVisits.reduce((sum, v) => sum + (v.children_present?.length ?? 0), 0)
 
   return (
     <div className="space-y-3">
@@ -447,6 +452,24 @@ function DentroTab({
         Dentro ahora
         <span className="ml-1 rounded-full bg-lime/15 text-lime px-2 py-0.5 font-bold">{activeVisits.length}</span>
       </div>
+
+      {/* Totals summary */}
+      {activeVisits.length > 0 && (
+        <div className="flex gap-3">
+          <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
+            <p className="text-2xl font-bold text-snow">{totalAdults}</p>
+            <p className="text-xs text-fog mt-0.5">Adultos</p>
+          </div>
+          <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
+            <p className="text-2xl font-bold text-lime">{totalChildren}</p>
+            <p className="text-xs text-fog mt-0.5">Niños</p>
+          </div>
+          <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
+            <p className="text-2xl font-bold text-iris">{totalAdults + totalChildren}</p>
+            <p className="text-xs text-fog mt-0.5">Total</p>
+          </div>
+        </div>
+      )}
 
       {checkoutSummaries.map(s => (
         <div key={s.visitId} className="rounded-xl border border-mint/20 bg-mint/5 px-4 py-3 flex items-center gap-3">
@@ -474,37 +497,71 @@ function DentroTab({
             const hasBono = v.membership_id !== null
             const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin))
             const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+            const kids = v.children_present ?? []
+            const isExpanded = expandedId === v.id
 
             return (
-              <div key={v.id} className="rounded-2xl border border-line bg-surface px-4 py-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-surface2 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-fog">{(v.members?.name ?? '?')[0]}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-mist">Entrada {entryTime}</span>
-                    <span className="text-xs text-fog font-medium">{fmtDuration(calcDurationMin(v.checked_in_at, null))}</span>
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  {hasBono ? (
-                    <span className="text-xs text-iris font-medium">Bono</span>
-                  ) : (
-                    <div>
-                      <p className="text-xs text-amber font-semibold">{fmtCost(estimatedCost!)}</p>
-                      <p className="text-[10px] text-mist">estimado</p>
-                    </div>
-                  )}
-                </div>
+              <div key={v.id} className="rounded-2xl border border-line bg-surface overflow-hidden">
+                {/* Main row — clickable */}
                 <button
-                  onClick={() => onCheckOut(v)}
-                  disabled={checkingOut === v.id}
-                  className="flex items-center gap-1.5 rounded-xl border border-line bg-surface2 px-3 py-2 text-xs font-semibold text-fog hover:border-rose/40 hover:text-rose transition-colors disabled:opacity-50 shrink-0"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface2 transition-colors"
+                  onClick={() => setExpandedId(isExpanded ? null : v.id)}
                 >
-                  <LogOut size={13} />
-                  {checkingOut === v.id ? '...' : 'Salida'}
+                  <div className="w-8 h-8 rounded-full bg-surface2 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-fog">{(v.members?.name ?? '?')[0]}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-mist">Entrada {entryTime}</span>
+                      <span className="text-xs text-fog font-medium">{fmtDuration(durationMin)}</span>
+                      {kids.length > 0 && (
+                        <span className="text-xs text-lime font-medium">{kids.length} niño{kids.length !== 1 ? 's' : ''}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0 mr-1">
+                    {hasBono ? (
+                      <span className="text-xs text-iris font-medium">Bono</span>
+                    ) : (
+                      <div>
+                        <p className="text-xs text-amber font-semibold">{fmtCost(estimatedCost!)}</p>
+                        <p className="text-[10px] text-mist">estimado</p>
+                      </div>
+                    )}
+                  </div>
+                  <ChevronRight size={14} className={`text-mist shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                 </button>
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="border-t border-line px-4 py-3 space-y-3 bg-surface2/40">
+                    <div className="flex items-center gap-4 text-xs text-fog">
+                      <span className="flex items-center gap-1"><Clock size={11} className="text-mist" /> Entrada <span className="text-snow font-semibold">{entryTime}</span></span>
+                      <span className="flex items-center gap-1"><Timer size={11} className="text-mist" /> <span className="text-snow font-semibold">{fmtDuration(durationMin)}</span></span>
+                    </div>
+                    {kids.length > 0 ? (
+                      <div>
+                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Niños presentes</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {kids.map((k, i) => (
+                            <span key={i} className="rounded-full bg-lime/10 border border-lime/20 text-lime text-xs px-2.5 py-1 font-medium">{k.name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-mist">Sin niños registrados</p>
+                    )}
+                    <button
+                      onClick={() => onCheckOut(v)}
+                      disabled={checkingOut === v.id}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose/30 bg-rose/10 px-3 py-2 text-xs font-semibold text-rose hover:bg-rose/20 transition-colors disabled:opacity-50"
+                    >
+                      <LogOut size={13} />
+                      {checkingOut === v.id ? 'Registrando salida...' : 'Registrar salida'}
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -696,7 +753,7 @@ export default function VisitasPage() {
   async function loadActiveVisits() {
     const { data } = await supabase
       .from('visits')
-      .select('id, checked_in_at, membership_id, members(id, name)')
+      .select('id, checked_in_at, membership_id, children_present, members(id, name)')
       .is('checked_out_at', null)
       .order('checked_in_at', { ascending: true })
     setActiveVisits((data as unknown as ActiveVisit[]) ?? [])

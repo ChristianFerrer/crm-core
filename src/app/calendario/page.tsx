@@ -166,8 +166,9 @@ export default function CalendarioPage() {
 
   const filteredBookings = bookings.filter(b => b.type === activeTab)
 
+  // All bookings indexed by date (for dots — show all types)
   const bookingsByDate: Record<string, Booking[]> = {}
-  filteredBookings.forEach(b => {
+  bookings.forEach(b => {
     if (!bookingsByDate[b.date]) bookingsByDate[b.date] = []
     bookingsByDate[b.date].push(b)
   })
