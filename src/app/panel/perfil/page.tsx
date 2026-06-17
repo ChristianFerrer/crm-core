@@ -113,12 +113,6 @@ export default function PerfilPage() {
             <Row icon={Mail} label="Email de administrador" value={profile.admin_email} />
           </div>
 
-          {profile.notes && (
-            <div className="rounded-2xl border border-line bg-surface p-5">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">Notas</p>
-              <p className="text-sm text-fog">{profile.notes}</p>
-            </div>
-          )}
         </div>
       )}
     </div>
