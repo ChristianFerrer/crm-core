@@ -25,6 +25,7 @@ type TodayVisit = {
   membership_id: string | null
   member_id: string
   visit_type: string
+  children_present: { name: string; age: number }[] | null
   members: { name: string } | null
 }
 
@@ -50,6 +51,9 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
 
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
+  const activeAdults = activeVisits.length
+  const activeChildren = activeVisits.reduce((sum, v) => sum + (v.children_present?.length ?? 0), 0)
+  const activeTotal = activeAdults + activeChildren
   const conBonoVisits = todayVisits.filter(v => v.membership_id)
   const sinBonoVisits = todayVisits.filter(v => !v.membership_id)
 
@@ -92,7 +96,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
     setActiveDrawer(prev => (prev === key ? null : key))
   }
 
-  const aforoPct = capacity ? Math.min(100, (activeVisits.length / capacity) * 100) : 0
+  const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
   const aforoColor = aforoPct < 70 ? 'bg-lime' : aforoPct <= 90 ? 'bg-amber' : 'bg-rose-500'
 
   return (
@@ -150,8 +154,16 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             <Users size={13} /> Aforo
           </h2>
           <div className="flex items-end justify-between mb-2">
-            <span className="font-display text-2xl font-semibold text-snow">{activeVisits.length}</span>
-            <span className="text-xs text-fog">{activeVisits.length} de {capacity} plazas ocupadas</span>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
+              <span className="text-xs text-fog">personas</span>
+            </div>
+            <span className="text-xs text-fog">{activeTotal} de {capacity} plazas</span>
+          </div>
+          <div className="flex gap-3 mb-2">
+            <span className="text-xs text-fog">{activeAdults} adulto{activeAdults !== 1 ? 's' : ''}</span>
+            <span className="text-xs text-mist">·</span>
+            <span className="text-xs text-fog">{activeChildren} niño{activeChildren !== 1 ? 's' : ''}</span>
           </div>
           <div className="h-3 w-full rounded-full bg-line overflow-hidden">
             <div className={`h-full rounded-full transition-all duration-500 ${aforoColor}`} style={{ width: `${aforoPct}%` }} />
