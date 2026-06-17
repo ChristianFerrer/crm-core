@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, LogIn, Timer, CreditCard, UserX, Users, CalendarClock } from 'lucide-react'
+import { AlertTriangle, LogIn, CreditCard, UserX, Users, CalendarClock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -52,6 +52,8 @@ type ChildInSala = { name: string; age: number; memberName: string }
 export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
 
+  const persons = (v: TodayVisit) => 1 + (v.children_present?.length ?? 0)
+
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
   const activeAdults = activeVisits.length
   const childrenInSala: ChildInSala[] = activeVisits.flatMap(v =>
@@ -59,24 +61,27 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
   )
   const activeChildren = childrenInSala.length
   const activeTotal = activeAdults + activeChildren
+
   const conBonoVisits = todayVisits.filter(v => v.membership_id)
   const sinBonoVisits = todayVisits.filter(v => !v.membership_id)
 
-  const buckets = Array.from({ length: 24 }, (_, h) => ({
-    hour: `${String(h).padStart(2, '0')}h`,
-    conBono: todayVisits.filter(v => v.membership_id && new Date(v.checked_in_at).getHours() === h).length,
-    sinBono: todayVisits.filter(v => !v.membership_id && new Date(v.checked_in_at).getHours() === h).length,
-  }))
+  const buckets = Array.from({ length: 24 }, (_, h) => {
+    const hourVisits = todayVisits.filter(v => new Date(v.checked_in_at).getHours() === h)
+    return {
+      hour: `${String(h).padStart(2, '0')}h`,
+      conBono: hourVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0),
+      sinBono: hourVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0),
+    }
+  })
   const chartData = buckets.slice(7, 23)
   const barChartData = chartData.map(b => ({ ...b, total: b.conBono + b.sinBono }))
 
   const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
-    { key: 'enSala', label: 'En sala', value: activeVisits.length, accent: 'text-iris', border: 'border-iris/30', visits: activeVisits, icon: <Timer size={16} /> },
     { key: 'ninos', label: 'Niños en sala', value: activeChildren, accent: 'text-mint', border: 'border-mint/30', visits: [], icon: <Users size={16} /> },
-    { key: 'entradasHoy', label: 'Entradas hoy', value: todayVisits.length, accent: 'text-lime', border: 'border-lime/30', visits: todayVisits, icon: <LogIn size={16} /> },
-    { key: 'conBono', label: 'Con bono', value: conBonoVisits.length, accent: 'text-mint', border: 'border-mint/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
-    { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.length, accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
-    { key: 'custodias', label: 'Custodias', value: todayCustodias.length, accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
+    { key: 'entradasHoy', label: 'Entradas hoy', value: todayVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-lime', border: 'border-lime/30', visits: todayVisits, icon: <LogIn size={16} /> },
+    { key: 'conBono', label: 'Con bono', value: conBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-mint', border: 'border-mint/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
+    { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
+    { key: 'custodias', label: 'Custodias', value: todayCustodias.reduce((s, v) => s + persons(v), 0), accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
   ]
 
   const drawerVisits = activeDrawer && activeDrawer !== 'ninos' ? (stats.find(s => s.key === activeDrawer)?.visits ?? []) : []
@@ -178,7 +183,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       )}
 
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map(({ key, label, value, accent, border, icon }) => (
           <button
             key={key}
@@ -201,14 +206,23 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             childrenInSala.length === 0 ? (
               <p className="text-sm text-mist">Sin niños en sala</p>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {childrenInSala.map((c, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-xl border border-line bg-carbon px-4 py-3">
-                    <div>
-                      <p className="font-semibold text-sm text-snow">{c.name}</p>
-                      <p className="text-xs text-mist">{c.age} años · {c.memberName}</p>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {Object.entries(
+                  childrenInSala.reduce<Record<string, ChildInSala[]>>((acc, c) => {
+                    ;(acc[c.memberName] ??= []).push(c)
+                    return acc
+                  }, {})
+                ).map(([titular, kids]) => (
+                  <div key={titular} className="rounded-xl border border-line bg-carbon px-4 py-3">
+                    <p className="text-xs font-semibold text-fog mb-2">{titular}</p>
+                    <div className="space-y-1">
+                      {kids.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <p className="text-sm text-snow">{c.name}</p>
+                          <span className="text-xs text-mist">{c.age} años</span>
+                        </div>
+                      ))}
                     </div>
-                    <span className="w-2 h-2 rounded-full shrink-0 bg-mint" />
                   </div>
                 ))}
               </div>
