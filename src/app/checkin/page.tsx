@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer } from 'lucide-react'
+import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
-// Tarifa por hora cuando no hay bono activo
-const HOURLY_RATE = 5 // €/h
+const HOURLY_RATE = 5
 
 type MemberRow = {
   id: string
@@ -29,15 +28,19 @@ type ActiveVisit = {
   members: { id: string; name: string } | null
 }
 
+type HistoryVisit = {
+  id: string
+  checked_in_at: string
+  checked_out_at: string | null
+  membership_id: string | null
+  members: { id: string; name: string } | null
+}
+
 type CheckoutSummary = {
   memberName: string
   durationMin: number
   cost: number | null
   visitId: string
-}
-
-function getAge(d: string) {
-  return Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
 }
 
 function fmtDuration(minutes: number) {
@@ -51,15 +54,13 @@ function fmtCost(cost: number) {
   return cost.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 }
 
-function calcCurrentDuration(checkedIn: string, now: Date) {
-  return Math.floor((now.getTime() - new Date(checkedIn).getTime()) / 60000)
+function calcDurationMin(from: string, to?: string | null) {
+  const end = to ? new Date(to).getTime() : Date.now()
+  return Math.max(0, Math.floor((end - new Date(from).getTime()) / 60000))
 }
 
-function calcFinalCost(checkedIn: string, hasBono: boolean): { minutes: number; cost: number | null } {
-  const minutes = Math.max(1, Math.floor((Date.now() - new Date(checkedIn).getTime()) / 60000))
-  if (hasBono) return { minutes, cost: null }
-  const halfHours = Math.ceil(minutes / 30)
-  return { minutes, cost: halfHours * 0.5 * HOURLY_RATE }
+function calcCost(minutes: number) {
+  return Math.ceil(minutes / 30) * 0.5 * HOURLY_RATE
 }
 
 function getBono(m: MemberRow) {
@@ -71,47 +72,33 @@ function getBono(m: MemberRow) {
   return { ok: true, unlimited: false, label: bono.membership_types?.name ?? 'Bono', sessions: bono.sessions_remaining }
 }
 
+// Format a Date as YYYY-MM-DD in local time
+function toLocalDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const MEMBER_QUERY = 'id, name, phone, birth_date, families(name), memberships(id, sessions_remaining, expires_at, membership_types(name))'
 
-export default function CheckInPage() {
-  const [mode, setMode] = useState<'qr' | 'search'>('qr')
+// ─── Tab: Check-in ───────────────────────────────────────────────────────────
+
+function CheckInTab({
+  allMembers,
+  activeVisits,
+  onCheckedIn,
+}: {
+  allMembers: MemberRow[]
+  activeVisits: ActiveVisit[]
+  onCheckedIn: () => void
+}) {
+  const [mode, setMode] = useState<'manual' | 'qr'>('manual')
   const [scanning, setScanning] = useState(true)
   const [member, setMember] = useState<MemberRow | null>(null)
   const [registering, setRegistering] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
   const [camError, setCamError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [allMembers, setAllMembers] = useState<MemberRow[]>([])
-
-  const [activeVisits, setActiveVisits] = useState<ActiveVisit[]>([])
-  const [now, setNow] = useState(new Date())
-  const [checkingOut, setCheckingOut] = useState<string | null>(null)
-  const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
-
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // Clock tick
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30000)
-    return () => clearInterval(t)
-  }, [])
-
-  useEffect(() => {
-    supabase.from('members').select(MEMBER_QUERY).order('name')
-      .then(({ data }) => setAllMembers((data as unknown as MemberRow[]) ?? []))
-    loadActiveVisits()
-  }, [])
-
-  async function loadActiveVisits() {
-    const { data } = await supabase
-      .from('visits')
-      .select('id, checked_in_at, membership_id, members(id, name)')
-      .is('checked_out_at', null)
-      .order('checked_in_at', { ascending: true })
-    setActiveVisits((data as unknown as ActiveVisit[]) ?? [])
-  }
-
-  // QR scanner
   useEffect(() => {
     if (mode !== 'qr' || !scanning) return
     let html5Qr: any, stopped = false
@@ -134,55 +121,6 @@ export default function CheckInPage() {
     return () => { stopped = true; html5Qr?.stop().catch(() => {}) }
   }, [mode, scanning])
 
-  async function handleCheckIn() {
-    if (!member || registering) return
-    setRegistering(true)
-    const bono = getBono(member)
-    const m = member.memberships?.[0]
-
-    const { data: visit } = await supabase.from('visits').insert({
-      member_id: member.id,
-      membership_id: (bono?.ok && m) ? m.id : null,
-      checked_in_at: new Date().toISOString(),
-    }).select('id').single()
-
-    if (bono?.ok && !bono.unlimited && m?.sessions_remaining != null) {
-      await supabase.from('memberships')
-        .update({ sessions_remaining: Math.max(0, m.sessions_remaining - 1) })
-        .eq('id', m.id)
-    }
-
-    clearTimeout(flashTimer.current)
-    setFlash(
-      bono?.ok
-        ? bono.unlimited ? '✓ Entrada registrada · bono ilimitado'
-          : `✓ Entrada registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
-        : `✓ Entrada registrada · sin bono — se cobrará ${HOURLY_RATE}€/h`
-    )
-    flashTimer.current = setTimeout(() => setFlash(null), 5000)
-    setRegistering(false)
-
-    // Refresh member + active list
-    const { data } = await supabase.from('members').select(MEMBER_QUERY).eq('id', member.id).single()
-    if (data) setMember(data as unknown as MemberRow)
-    await loadActiveVisits()
-  }
-
-  async function handleCheckOut(visit: ActiveVisit) {
-    setCheckingOut(visit.id)
-    const checkedOutAt = new Date().toISOString()
-    await supabase.from('visits').update({ checked_out_at: checkedOutAt }).eq('id', visit.id)
-    const { minutes, cost } = calcFinalCost(visit.checked_in_at, visit.membership_id !== null)
-    setCheckoutSummaries(prev => [{
-      visitId: visit.id,
-      memberName: visit.members?.name ?? '—',
-      durationMin: minutes,
-      cost,
-    }, ...prev.slice(0, 4)])
-    setCheckingOut(null)
-    await loadActiveVisits()
-  }
-
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
   }
@@ -196,128 +134,64 @@ export default function CheckInPage() {
       })
     : []
 
-  // Member panel
   const bono = member ? getBono(member) : null
   const alreadyInside = member ? activeVisits.some(v => v.members?.id === member.id) : false
 
-  const memberPanel = member ? (
-    <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-      {/* Status bar */}
-      <div className={`px-5 py-4 flex items-center gap-3 ${
-        alreadyInside ? 'bg-iris/10 border-b border-iris/20' :
-        bono?.ok ? 'bg-lime/10 border-b border-lime/20' :
-        'bg-amber/10 border-b border-amber/20'
-      }`}>
-        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-          alreadyInside ? 'bg-iris/20' : bono?.ok ? 'bg-lime/20' : 'bg-amber/20'
-        }`}>
-          {alreadyInside ? <Clock size={18} className="text-iris" /> :
-           bono?.ok ? <Check size={18} className="text-lime" strokeWidth={2.5} /> :
-           <AlertTriangle size={18} className="text-amber" />}
-        </div>
-        <div>
-          <p className={`text-sm font-semibold ${alreadyInside ? 'text-iris' : bono?.ok ? 'text-lime' : 'text-amber'}`}>
-            {alreadyInside ? 'Ya está dentro' :
-             bono?.ok ? (bono.unlimited ? 'Bono ilimitado' : `${bono.sessions} sesiones restantes`) :
-             !bono ? 'Sin bono · se cobrará por horas' : 'Bono agotado · se cobrará por horas'}
-          </p>
-          {!bono?.ok && !alreadyInside && (
-            <p className="text-xs text-amber/80 mt-0.5">Tarifa: {HOURLY_RATE} €/h · mínimo 30 min</p>
-          )}
-        </div>
-      </div>
+  async function handleCheckIn() {
+    if (!member || registering) return
+    setRegistering(true)
+    const b = getBono(member)
+    const m = member.memberships?.[0]
 
-      {/* Member info */}
-      <div className="p-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-display text-lg font-semibold text-snow">{member.name}</p>
-            {member.families && <p className="text-xs text-mist mt-0.5">Familia {member.families.name}</p>}
-            {member.phone && <p className="text-sm text-fog mt-1">{member.phone}</p>}
-          </div>
-          {bono && (
-            <div className="text-right shrink-0">
-              <p className="text-xs text-fog">{bono.label}</p>
-              {bono.unlimited ? (
-                <p className="font-bold text-base text-iris mt-0.5">∞</p>
-              ) : bono.sessions != null ? (
-                <p className={`font-bold text-base mt-0.5 ${bono.sessions <= 2 ? 'text-amber' : 'text-lime'}`}>{bono.sessions}</p>
-              ) : null}
-            </div>
-          )}
-        </div>
+    await supabase.from('visits').insert({
+      member_id: member.id,
+      membership_id: (b?.ok && m) ? m.id : null,
+      checked_in_at: new Date().toISOString(),
+    })
 
-        {alreadyInside ? (
-          <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
-            Este miembro ya tiene una entrada activa
-          </div>
-        ) : (
-          <button
-            onClick={handleCheckIn}
-            disabled={registering}
-            className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
-              bono?.ok
-                ? 'bg-lime text-ink hover:bg-lime-deep'
-                : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
-            }`}
-            style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}
-          >
-            <LogIn size={17} strokeWidth={2.2} />
-            {registering ? 'Registrando...' : bono?.ok ? 'Registrar entrada' : 'Registrar entrada (sin bono)'}
-          </button>
-        )}
+    if (b?.ok && !b.unlimited && m?.sessions_remaining != null) {
+      await supabase.from('memberships')
+        .update({ sessions_remaining: Math.max(0, m.sessions_remaining - 1) })
+        .eq('id', m.id)
+    }
 
-        {flash && (
-          <div className="flex items-center justify-center gap-2 text-sm font-semibold text-mint text-center">
-            <Check size={14} strokeWidth={2.5} /> {flash}
-          </div>
-        )}
+    clearTimeout(flashTimer.current)
+    setFlash(
+      b?.ok
+        ? b.unlimited ? '✓ Entrada registrada · bono ilimitado'
+          : `✓ Entrada registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
+        : `✓ Entrada registrada · sin bono — se cobrará ${HOURLY_RATE}€/h`
+    )
+    flashTimer.current = setTimeout(() => setFlash(null), 5000)
+    setRegistering(false)
 
-        <button onClick={reset} className="flex w-full items-center justify-center gap-1.5 text-xs text-mist hover:text-fog pt-1">
-          <RotateCcw size={12} /> {mode === 'qr' ? 'Escanear otro' : 'Nueva búsqueda'}
-        </button>
-      </div>
-    </div>
-  ) : (
-    <div className="grid min-h-[14rem] place-items-center rounded-2xl border-2 border-dashed border-line bg-surface/40 p-8 text-center">
-      <div>
-        {mode === 'qr' ? <QrCode size={32} className="mx-auto text-mist" /> : <User size={32} className="mx-auto text-mist" />}
-        <p className="mt-3 text-sm text-fog max-w-xs">
-          {mode === 'qr' ? 'Escanea el QR del miembro' : 'Busca y selecciona un miembro'}
-        </p>
-      </div>
-    </div>
-  )
+    const { data } = await supabase.from('members').select(MEMBER_QUERY).eq('id', member.id).single()
+    if (data) setMember(data as unknown as MemberRow)
+    onCheckedIn()
+  }
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Check-in</h1>
-          <p className="text-sm text-fog mt-0.5">Registra entradas y salidas</p>
+    <div className="space-y-4">
+      {/* Controls row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex rounded-xl border border-line bg-surface overflow-hidden">
+          <button onClick={() => { setMode('manual'); reset() }}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'manual' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
+            <Search size={13} /> Manual
+          </button>
+          <button onClick={() => { setMode('qr'); reset() }}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'qr' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
+            <QrCode size={13} /> QR
+          </button>
         </div>
-        <div className="flex items-center gap-2 mt-1">
-          <Link href="/alta"
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors shrink-0">
-            <UserPlus size={13} /> Alta
-          </Link>
-          <div className="flex rounded-xl border border-line bg-surface overflow-hidden shrink-0">
-            <button onClick={() => { setMode('qr'); reset() }}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'qr' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
-              <QrCode size={13} /> QR
-            </button>
-            <button onClick={() => { setMode('search'); setMember(null) }}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'search' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
-              <Search size={13} /> Manual
-            </button>
-          </div>
-        </div>
+        <Link href="/miembros/nuevo"
+          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
+          <UserPlus size={13} /> Nuevo miembro
+        </Link>
       </div>
 
-      {/* Scanner + result */}
       <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr] lg:items-start">
-        {/* Left */}
+        {/* Search / QR */}
         <div className="rounded-2xl border border-line bg-surface p-4">
           {mode === 'qr' ? (
             <>
@@ -352,7 +226,7 @@ export default function CheckInPage() {
                   const inside = activeVisits.some(v => v.members?.id === m.id)
                   return (
                     <button key={m.id} onClick={() => { setMember(m); setQuery('') }}
-                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${member?.id === m.id ? 'bg-lime text-ink' : 'text-snow hover:bg-surface2'}`}>
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${member?.id === m.id ? 'bg-lime/15 text-lime' : 'text-snow hover:bg-surface2'}`}>
                       <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
                       <span className="flex-1 min-w-0">
                         <span className="block truncate text-sm font-medium">{m.name}</span>
@@ -371,92 +245,442 @@ export default function CheckInPage() {
           )}
         </div>
 
-        {/* Right */}
-        <div>{memberPanel}</div>
-      </div>
-
-      {/* ─── Dentro ahora ─── */}
-      <div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
-          <Timer size={13} className="text-lime" />
-          Dentro ahora
-          <span className="ml-1 rounded-full bg-lime/15 text-lime px-2 py-0.5 font-bold">{activeVisits.length}</span>
-        </div>
-
-        {/* Checkout summaries */}
-        {checkoutSummaries.map(s => (
-          <div key={s.visitId} className="mb-2 rounded-xl border border-mint/20 bg-mint/5 px-4 py-3 flex items-center gap-3">
-            <Check size={14} className="text-mint shrink-0" />
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-semibold text-snow">{s.memberName}</span>
-              <span className="text-xs text-fog ml-2">{fmtDuration(s.durationMin)}</span>
+        {/* Member panel */}
+        {member ? (
+          <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+            <div className={`px-5 py-4 flex items-center gap-3 ${
+              alreadyInside ? 'bg-iris/10 border-b border-iris/20' :
+              bono?.ok ? 'bg-lime/10 border-b border-lime/20' :
+              'bg-amber/10 border-b border-amber/20'
+            }`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                alreadyInside ? 'bg-iris/20' : bono?.ok ? 'bg-lime/20' : 'bg-amber/20'
+              }`}>
+                {alreadyInside ? <Clock size={18} className="text-iris" /> :
+                 bono?.ok ? <Check size={18} className="text-lime" strokeWidth={2.5} /> :
+                 <AlertTriangle size={18} className="text-amber" />}
+              </div>
+              <div>
+                <p className={`text-sm font-semibold ${alreadyInside ? 'text-iris' : bono?.ok ? 'text-lime' : 'text-amber'}`}>
+                  {alreadyInside ? 'Ya está dentro' :
+                   bono?.ok ? (bono.unlimited ? 'Bono ilimitado' : `${bono.sessions} sesiones restantes`) :
+                   !bono ? 'Sin bono · se cobrará por horas' : 'Bono agotado · se cobrará por horas'}
+                </p>
+                {!bono?.ok && !alreadyInside && (
+                  <p className="text-xs text-amber/80 mt-0.5">Tarifa: {HOURLY_RATE} €/h · mínimo 30 min</p>
+                )}
+              </div>
             </div>
-            {s.cost !== null ? (
-              <span className="text-sm font-bold text-lime shrink-0">{fmtCost(s.cost)}</span>
-            ) : (
-              <span className="text-xs text-fog shrink-0">Bono</span>
-            )}
-          </div>
-        ))}
 
-        {activeVisits.length === 0 ? (
-          <div className="rounded-2xl border border-line bg-surface p-4 text-center text-sm text-mist">
-            Nadie dentro en este momento
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-display text-lg font-semibold text-snow">{member.name}</p>
+                  {member.families && <p className="text-xs text-mist mt-0.5">Familia {member.families.name}</p>}
+                  {member.phone && <p className="text-sm text-fog mt-1">{member.phone}</p>}
+                </div>
+                {bono && (
+                  <div className="text-right shrink-0">
+                    <p className="text-xs text-fog">{bono.label}</p>
+                    {bono.unlimited ? (
+                      <p className="font-bold text-base text-iris mt-0.5">∞</p>
+                    ) : bono.sessions != null ? (
+                      <p className={`font-bold text-base mt-0.5 ${bono.sessions <= 2 ? 'text-amber' : 'text-lime'}`}>{bono.sessions}</p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+
+              {alreadyInside ? (
+                <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
+                  Este miembro ya tiene una entrada activa
+                </div>
+              ) : (
+                <button
+                  onClick={handleCheckIn}
+                  disabled={registering}
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
+                    bono?.ok
+                      ? 'bg-lime text-ink hover:bg-lime-deep'
+                      : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
+                  }`}
+                  style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}
+                >
+                  <LogIn size={17} strokeWidth={2.2} />
+                  {registering ? 'Registrando...' : bono?.ok ? 'Registrar entrada' : 'Registrar entrada (sin bono)'}
+                </button>
+              )}
+
+              {flash && (
+                <div className="flex items-center justify-center gap-2 text-sm font-semibold text-mint text-center">
+                  <Check size={14} strokeWidth={2.5} /> {flash}
+                </div>
+              )}
+
+              <button onClick={reset} className="flex w-full items-center justify-center gap-1.5 text-xs text-mist hover:text-fog pt-1">
+                <RotateCcw size={12} /> Nueva búsqueda
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="space-y-2">
-            {activeVisits.map(v => {
-              const durationMin = calcCurrentDuration(v.checked_in_at, now)
-              const hasBono = v.membership_id !== null
-              const estimatedCost = hasBono ? null : (() => {
-                const hh = Math.ceil(durationMin / 30)
-                return hh * 0.5 * HOURLY_RATE
-              })()
-              const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-
-              return (
-                <div key={v.id} className="rounded-2xl border border-line bg-surface px-4 py-3 flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="w-8 h-8 rounded-full bg-surface2 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-fog">{(v.members?.name ?? '?')[0]}</span>
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-mist">Entrada {entryTime}</span>
-                      <span className="text-xs text-fog font-medium">{fmtDuration(durationMin)}</span>
-                    </div>
-                  </div>
-
-                  {/* Bono / coste estimado */}
-                  <div className="text-right shrink-0">
-                    {hasBono ? (
-                      <span className="text-xs text-iris font-medium">Bono</span>
-                    ) : (
-                      <div>
-                        <p className="text-xs text-amber font-semibold">{fmtCost(estimatedCost!)}</p>
-                        <p className="text-[10px] text-mist">estimado</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Checkout button */}
-                  <button
-                    onClick={() => handleCheckOut(v)}
-                    disabled={checkingOut === v.id}
-                    className="flex items-center gap-1.5 rounded-xl border border-line bg-surface2 px-3 py-2 text-xs font-semibold text-fog hover:border-rose/40 hover:text-rose transition-colors disabled:opacity-50 shrink-0"
-                  >
-                    <LogOut size={13} />
-                    {checkingOut === v.id ? '...' : 'Salida'}
-                  </button>
-                </div>
-              )
-            })}
+          <div className="grid min-h-[14rem] place-items-center rounded-2xl border-2 border-dashed border-line bg-surface/40 p-8 text-center">
+            <div>
+              {mode === 'qr' ? <QrCode size={32} className="mx-auto text-mist" /> : <User size={32} className="mx-auto text-mist" />}
+              <p className="mt-3 text-sm text-fog max-w-xs">
+                {mode === 'qr' ? 'Escanea el QR del miembro' : 'Busca y selecciona un miembro'}
+              </p>
+            </div>
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── Tab: Dentro ahora ───────────────────────────────────────────────────────
+
+function DentroTab({
+  activeVisits,
+  onCheckOut,
+  checkingOut,
+  checkoutSummaries,
+}: {
+  activeVisits: ActiveVisit[]
+  onCheckOut: (v: ActiveVisit) => void
+  checkingOut: string | null
+  checkoutSummaries: CheckoutSummary[]
+}) {
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide">
+        <Timer size={13} className="text-lime" />
+        Dentro ahora
+        <span className="ml-1 rounded-full bg-lime/15 text-lime px-2 py-0.5 font-bold">{activeVisits.length}</span>
+      </div>
+
+      {checkoutSummaries.map(s => (
+        <div key={s.visitId} className="rounded-xl border border-mint/20 bg-mint/5 px-4 py-3 flex items-center gap-3">
+          <Check size={14} className="text-mint shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-semibold text-snow">{s.memberName}</span>
+            <span className="text-xs text-fog ml-2">{fmtDuration(s.durationMin)}</span>
+          </div>
+          {s.cost !== null ? (
+            <span className="text-sm font-bold text-lime shrink-0">{fmtCost(s.cost)}</span>
+          ) : (
+            <span className="text-xs text-fog shrink-0">Bono</span>
+          )}
+        </div>
+      ))}
+
+      {activeVisits.length === 0 ? (
+        <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">
+          Nadie dentro en este momento
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {activeVisits.map(v => {
+            const durationMin = calcDurationMin(v.checked_in_at, null)
+            const hasBono = v.membership_id !== null
+            const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin))
+            const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+            return (
+              <div key={v.id} className="rounded-2xl border border-line bg-surface px-4 py-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-surface2 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-fog">{(v.members?.name ?? '?')[0]}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-mist">Entrada {entryTime}</span>
+                    <span className="text-xs text-fog font-medium">{fmtDuration(calcDurationMin(v.checked_in_at, null))}</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  {hasBono ? (
+                    <span className="text-xs text-iris font-medium">Bono</span>
+                  ) : (
+                    <div>
+                      <p className="text-xs text-amber font-semibold">{fmtCost(estimatedCost!)}</p>
+                      <p className="text-[10px] text-mist">estimado</p>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => onCheckOut(v)}
+                  disabled={checkingOut === v.id}
+                  className="flex items-center gap-1.5 rounded-xl border border-line bg-surface2 px-3 py-2 text-xs font-semibold text-fog hover:border-rose/40 hover:text-rose transition-colors disabled:opacity-50 shrink-0"
+                >
+                  <LogOut size={13} />
+                  {checkingOut === v.id ? '...' : 'Salida'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Tab: Historial ──────────────────────────────────────────────────────────
+
+type HistorialRange = 'day' | 'week' | 'month' | 'custom'
+
+function HistorialTab() {
+  const [range, setRange] = useState<HistorialRange>('day')
+  const [customDate, setCustomDate] = useState(toLocalDate(new Date()))
+  const [visits, setVisits] = useState<HistoryVisit[]>([])
+  const [loading, setLoading] = useState(false)
+  const [weekOffset, setWeekOffset] = useState(0) // 0 = current week
+  const [monthOffset, setMonthOffset] = useState(0)
+
+  useEffect(() => {
+    fetchVisits()
+  }, [range, customDate, weekOffset, monthOffset])
+
+  async function fetchVisits() {
+    setLoading(true)
+    const now = new Date()
+    let from: string, to: string
+
+    if (range === 'day') {
+      const d = toLocalDate(now)
+      from = `${d}T00:00:00`
+      to = `${d}T23:59:59`
+    } else if (range === 'week') {
+      const d = new Date(now)
+      d.setDate(d.getDate() + weekOffset * 7)
+      const day = d.getDay() === 0 ? 6 : d.getDay() - 1
+      const mon = new Date(d); mon.setDate(d.getDate() - day)
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+      from = `${toLocalDate(mon)}T00:00:00`
+      to = `${toLocalDate(sun)}T23:59:59`
+    } else if (range === 'month') {
+      const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+      from = `${toLocalDate(d)}T00:00:00`
+      to = `${toLocalDate(last)}T23:59:59`
+    } else {
+      from = `${customDate}T00:00:00`
+      to = `${customDate}T23:59:59`
+    }
+
+    const { data } = await supabase
+      .from('visits')
+      .select('id, checked_in_at, checked_out_at, membership_id, members(id, name)')
+      .gte('checked_in_at', from)
+      .lte('checked_in_at', to)
+      .order('checked_in_at', { ascending: false })
+
+    setVisits((data as unknown as HistoryVisit[]) ?? [])
+    setLoading(false)
+  }
+
+  function rangeLabel() {
+    const now = new Date()
+    if (range === 'week') {
+      const d = new Date(now); d.setDate(d.getDate() + weekOffset * 7)
+      const day = d.getDay() === 0 ? 6 : d.getDay() - 1
+      const mon = new Date(d); mon.setDate(d.getDate() - day)
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+      return `${mon.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} – ${sun.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
+    }
+    if (range === 'month') {
+      const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+      return d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+    }
+    return ''
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Range selector */}
+      <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
+        {(['day', 'week', 'month', 'custom'] as HistorialRange[]).map(r => (
+          <button key={r} onClick={() => { setRange(r); setWeekOffset(0); setMonthOffset(0) }}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${range === r ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
+            {r === 'day' ? 'Hoy' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : 'Fecha'}
+          </button>
+        ))}
+      </div>
+
+      {/* Navigation for week/month */}
+      {(range === 'week' || range === 'month') && (
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={() => range === 'week' ? setWeekOffset(o => o - 1) : setMonthOffset(o => o - 1)}
+            className="w-8 h-8 flex items-center justify-center rounded-xl border border-line bg-surface text-fog hover:text-snow hover:border-line2 transition-colors">
+            <ChevronLeft size={15} />
+          </button>
+          <span className="text-sm font-semibold text-snow capitalize">{rangeLabel()}</span>
+          <button
+            onClick={() => range === 'week' ? setWeekOffset(o => o + 1) : setMonthOffset(o => o + 1)}
+            disabled={(range === 'week' && weekOffset >= 0) || (range === 'month' && monthOffset >= 0)}
+            className="w-8 h-8 flex items-center justify-center rounded-xl border border-line bg-surface text-fog hover:text-snow hover:border-line2 transition-colors disabled:opacity-30">
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* Custom date picker */}
+      {range === 'custom' && (
+        <input
+          type="date"
+          value={customDate}
+          max={toLocalDate(new Date())}
+          onChange={e => setCustomDate(e.target.value)}
+          className="w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow outline-none focus:border-line2"
+        />
+      )}
+
+      {/* Visit count */}
+      <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide">
+        <History size={13} className="text-lime" />
+        {loading ? 'Cargando...' : `${visits.length} visitas`}
+      </div>
+
+      {/* List */}
+      {loading ? (
+        <div className="space-y-2">
+          {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl bg-surface border border-line animate-pulse" />)}
+        </div>
+      ) : visits.length === 0 ? (
+        <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">
+          Sin visitas en este período
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {visits.map(v => {
+            const dmin = v.checked_out_at ? calcDurationMin(v.checked_in_at, v.checked_out_at) : null
+            const cost = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin)) : null
+            const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+            const exitTime = v.checked_out_at ? new Date(v.checked_out_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null
+            const dateStr = new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
+
+            return (
+              <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    {range !== 'day' && range !== 'custom' && (
+                      <span className="text-[10px] text-mist capitalize">{dateStr} ·</span>
+                    )}
+                    <span className="text-xs text-fog">{entryTime}{exitTime ? ` → ${exitTime}` : ' → en curso'}</span>
+                    {dmin != null && <span className="text-xs text-mist">· {fmtDuration(dmin)}</span>}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  {v.membership_id ? (
+                    <span className="text-xs text-iris font-medium">Bono</span>
+                  ) : cost != null ? (
+                    <span className="text-xs font-bold text-lime">{fmtCost(cost)}</span>
+                  ) : (
+                    <span className="text-xs text-amber">En curso</span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main page ───────────────────────────────────────────────────────────────
+
+export default function VisitasPage() {
+  const [tab, setTab] = useState<'checkin' | 'dentro' | 'historial'>('checkin')
+  const [allMembers, setAllMembers] = useState<MemberRow[]>([])
+  const [activeVisits, setActiveVisits] = useState<ActiveVisit[]>([])
+  const [checkingOut, setCheckingOut] = useState<string | null>(null)
+  const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
+
+  useEffect(() => {
+    supabase.from('members').select(MEMBER_QUERY).order('name')
+      .then(({ data }) => setAllMembers((data as unknown as MemberRow[]) ?? []))
+    loadActiveVisits()
+  }, [])
+
+  async function loadActiveVisits() {
+    const { data } = await supabase
+      .from('visits')
+      .select('id, checked_in_at, membership_id, members(id, name)')
+      .is('checked_out_at', null)
+      .order('checked_in_at', { ascending: true })
+    setActiveVisits((data as unknown as ActiveVisit[]) ?? [])
+  }
+
+  async function handleCheckOut(visit: ActiveVisit) {
+    setCheckingOut(visit.id)
+    const checkedOutAt = new Date().toISOString()
+    await supabase.from('visits').update({ checked_out_at: checkedOutAt }).eq('id', visit.id)
+    const dmin = Math.max(1, Math.floor((Date.now() - new Date(visit.checked_in_at).getTime()) / 60000))
+    const cost = visit.membership_id !== null ? null : calcCost(Math.max(30, dmin))
+    setCheckoutSummaries(prev => [{
+      visitId: visit.id,
+      memberName: visit.members?.name ?? '—',
+      durationMin: dmin,
+      cost,
+    }, ...prev.slice(0, 4)])
+    setCheckingOut(null)
+    await loadActiveVisits()
+  }
+
+  const tabs = [
+    { id: 'checkin' as const, label: 'Check-in', icon: LogIn },
+    { id: 'dentro' as const, label: 'Dentro', icon: Timer, badge: activeVisits.length > 0 ? activeVisits.length : undefined },
+    { id: 'historial' as const, label: 'Historial', icon: History },
+  ]
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Visitas</h1>
+        <p className="text-sm text-fog mt-0.5">Entradas, salidas e historial</p>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
+        {tabs.map(({ id, label, icon: Icon, badge }) => (
+          <button key={id} onClick={() => setTab(id)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors relative ${tab === id ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
+            <Icon size={13} />
+            {label}
+            {badge != null && (
+              <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-lime text-ink text-[9px] font-bold flex items-center justify-center">
+                {badge}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'checkin' && (
+        <CheckInTab
+          allMembers={allMembers}
+          activeVisits={activeVisits}
+          onCheckedIn={loadActiveVisits}
+        />
+      )}
+
+      {tab === 'dentro' && (
+        <DentroTab
+          activeVisits={activeVisits}
+          onCheckOut={handleCheckOut}
+          checkingOut={checkingOut}
+          checkoutSummaries={checkoutSummaries}
+        />
+      )}
+
+      {tab === 'historial' && <HistorialTab />}
     </div>
   )
 }
