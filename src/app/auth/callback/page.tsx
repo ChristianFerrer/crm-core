@@ -3,8 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-const ADMIN_EMAILS = ['christianferbol@gmail.com', 'admin@watermelon.app']
+import { isSuperAdmin } from '@/lib/roles'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -13,8 +12,7 @@ export default function AuthCallbackPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { router.push('/login'); return }
       const email = session.user.email ?? ''
-      const dest = ADMIN_EMAILS.includes(email.toLowerCase().trim()) ? '/admin' : '/'
-      router.replace(dest)
+      router.replace(isSuperAdmin(email) ? '/admin' : '/')
     })
   }, [router])
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { isSuperAdmin } from '@/lib/roles'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, Pencil,
@@ -602,9 +603,14 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    loadTenants()
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserEmail(session?.user?.email ?? null)
+      const email = session?.user?.email ?? ''
+      if (!isSuperAdmin(email)) {
+        router.replace('/')
+        return
+      }
+      setUserEmail(email)
+      loadTenants()
     })
   }, [])
 

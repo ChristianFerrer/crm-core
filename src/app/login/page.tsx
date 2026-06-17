@@ -3,13 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-
-// Emails that go to the admin panel
-const ADMIN_EMAILS = ['christianferbol@gmail.com', 'admin@watermelon.app']
-
-function isAdmin(email: string) {
-  return ADMIN_EMAILS.includes(email.toLowerCase().trim())
-}
+import { isSuperAdmin } from '@/lib/roles'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -43,7 +37,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
-        const dest = data.user?.email && isAdmin(data.user.email) ? '/admin' : '/'
+        const dest = data.user?.email && isSuperAdmin(data.user.email) ? '/admin' : '/'
         router.push(dest)
       }
     } else {
