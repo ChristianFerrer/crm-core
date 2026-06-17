@@ -6,10 +6,15 @@ import BottomNav from '@/components/BottomNav'
 
 export function ConditionalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const isPublic = pathname.startsWith('/alta')
+  const isPublic = pathname.startsWith('/alta') || pathname === '/login'
+  const isAdmin = pathname.startsWith('/admin')
 
   if (isPublic) {
     return <>{children}</>
+  }
+
+  if (isAdmin) {
+    return <main className="min-h-screen bg-carbon">{children}</main>
   }
 
   return (

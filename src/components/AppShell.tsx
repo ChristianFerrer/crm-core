@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Home, Users, LogIn, BarChart2, CalendarDays } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
@@ -14,6 +15,12 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   return (
     <div className="lg:flex lg:min-h-screen">
@@ -49,8 +56,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )
           })}
         </nav>
-        <div className="px-5 py-4 border-t border-line">
+        <div className="px-5 py-4 border-t border-line flex items-center justify-between">
           <p className="text-[10px] text-mist">Demo · v0.1</p>
+          <button onClick={handleLogout} className="flex items-center gap-1 text-[10px] text-mist hover:text-rose transition-colors">
+            <LogOut size={11} /> Salir
+          </button>
         </div>
       </aside>
 
