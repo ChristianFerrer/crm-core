@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, LogIn } from 'lucide-react'
 import {
@@ -62,6 +62,14 @@ export default function HomeClient({ todayVisits, expiringMembers, monthCount, d
 
   const drawerVisits = activeDrawer ? (stats.find(s => s.key === activeDrawer)?.visits ?? []) : []
 
+  const [tenantName, setTenantName] = useState<string | null>(null)
+  useEffect(() => {
+    const stored = localStorage.getItem('viewingAsTenant')
+    if (stored) {
+      try { setTenantName(JSON.parse(stored).name) } catch {}
+    }
+  }, [])
+
   function handleStatClick(key: DrawerKey) {
     setActiveDrawer(prev => (prev === key ? null : key))
   }
@@ -69,7 +77,7 @@ export default function HomeClient({ todayVisits, expiringMembers, monthCount, d
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">El Bosc Màgic</h1>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{tenantName ?? 'El Bosc Màgic'}</h1>
         <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
       </div>
 

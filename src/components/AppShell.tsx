@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut } from 'lucide-react'
+import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 
@@ -18,15 +18,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [tenantName, setTenantName] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem('viewingAsTenant')
     if (stored) {
       try { setTenantName(JSON.parse(stored).name) } catch {}
     }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null)
+    })
   }, [pathname])
 
   async function handleLogout() {
+    localStorage.removeItem('viewingAsTenant')
     await supabase.auth.signOut()
     router.push('/login')
   }
@@ -48,6 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </div>
+
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
@@ -67,13 +73,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )
           })}
         </nav>
-        <div className="px-5 py-4 border-t border-line">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-mist">v0.1</p>
-            <button onClick={handleLogout} className="flex items-center gap-1 text-[10px] text-mist hover:text-rose transition-colors">
-              <LogOut size={11} /> Salir
-            </button>
-          </div>
+
+        {/* User + logout */}
+        <div className="px-3 py-4 border-t border-line space-y-2">
+          {userEmail && (
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-surface2">
+              <div className="w-6 h-6 rounded-full bg-iris/20 flex items-center justify-center shrink-0">
+                <User size={12} className="text-iris" />
+              </div>
+              <p className="text-[11px] text-fog truncate">{userEmail}</p>
+            </div>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors"
+          >
+            <LogOut size={15} /> Cerrar sesión
+          </button>
         </div>
       </aside>
 
