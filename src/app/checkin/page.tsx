@@ -920,11 +920,11 @@ function VisitasPageInner() {
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {tabs.map(({ id, label, icon: Icon, badge }) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`flex-1 lg:flex-none flex items-center justify-center gap-1.5 px-4 py-2 whitespace-nowrap rounded-lg text-xs font-semibold transition-colors relative ${tab === id ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
-            <Icon size={13} />
+            className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors relative ${tab === id ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
+            <Icon size={14} />
             {label}
             {badge != null && (
-              <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-lime text-ink text-[9px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime text-ink text-[9px] font-bold flex items-center justify-center">
                 {badge}
               </span>
             )}
