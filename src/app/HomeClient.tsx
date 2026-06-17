@@ -229,31 +229,6 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
         </div>
       )}
 
-      <div>
-        <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3">Entradas de hoy</h2>
-        {todayVisits.length === 0 ? (
-          <div className="rounded-2xl border border-line bg-surface p-6 text-center text-sm text-mist">Sin entradas todavía</div>
-        ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {todayVisits.map(visit => (
-              <Link
-                key={visit.id}
-                href={`/miembros/${visit.member_id}`}
-                className="rounded-xl border border-line bg-surface px-4 py-3 flex items-center justify-between hover:border-line2 transition-colors"
-              >
-                <div>
-                  <p className="font-semibold text-sm text-snow">{visit.members?.name ?? '—'}</p>
-                  <p className="text-xs text-mist">
-                    {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-lime' : 'bg-amber'}`} />
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
     </div>
   )
 }
