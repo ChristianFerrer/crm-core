@@ -604,6 +604,7 @@ function DentroTab({
                       <span className="flex items-center gap-1"><Clock size={11} className="text-mist" /> Entrada <span className="text-snow font-semibold">{entryTime}</span></span>
                       <span className="flex items-center gap-1"><Timer size={11} className="text-mist" /> <span className="text-snow font-semibold">{fmtDuration(durationMin)}</span></span>
                     </div>
+
                     {kids.length > 0 ? (
                       <div>
                         <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Niños presentes</p>
@@ -616,6 +617,40 @@ function DentroTab({
                     ) : (
                       <p className="text-xs text-mist">Sin niños registrados</p>
                     )}
+
+                    {/* Cost breakdown */}
+                    {!hasBono && (() => {
+                      const fractions = Math.ceil(Math.max(1, durationMin) / 60)
+                      const isCustodia = v.visit_type === 'custodia'
+                      const lines = isCustodia
+                        ? kids.map(k => ({ label: k.name, unit: `${rates.custodia}€ × ${fractions}h`, cost: fractions * rates.custodia }))
+                        : [
+                            { label: v.members?.name ?? 'Adulto', unit: `${rates.adult}€ × ${fractions}h`, cost: fractions * rates.adult },
+                            ...kids.map(k => ({ label: k.name, unit: `${rates.child}€ × ${fractions}h`, cost: fractions * rates.child })),
+                          ]
+                      const total = lines.reduce((s, l) => s + l.cost, 0)
+                      return (
+                        <div className="rounded-xl border border-line bg-surface divide-y divide-line overflow-hidden">
+                          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide px-3 py-2">
+                            Desglose · {isCustodia ? 'Custodia' : 'Entrada'} · por hora o fracción
+                          </p>
+                          {lines.map((l, i) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-2">
+                              <span className="text-xs text-fog">{l.label}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] text-mist">{l.unit}</span>
+                                <span className="text-xs font-semibold text-snow w-14 text-right">{fmtCost(l.cost)}</span>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between px-3 py-2 bg-surface2">
+                            <span className="text-xs font-semibold text-snow">Total estimado</span>
+                            <span className="text-sm font-bold text-lime">{fmtCost(total)}</span>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
                     <button
                       onClick={() => onCheckOut(v)}
                       disabled={checkingOut === v.id}
