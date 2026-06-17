@@ -7,6 +7,13 @@ import Link from 'next/link'
 
 const FALLBACK_HOURLY_RATE = 5
 
+type VisitType = 'entrada' | 'custodia'
+
+type ServiceRates = {
+  entrada: number
+  custodia: number | null
+}
+
 type MemberRow = {
   id: string
   name: string
@@ -26,6 +33,7 @@ type ActiveVisit = {
   id: string
   checked_in_at: string
   membership_id: string | null
+  visit_type: VisitType
   children_present: { name: string }[] | null
   members: { id: string; name: string } | null
 }
@@ -35,6 +43,8 @@ type HistoryVisit = {
   checked_in_at: string
   checked_out_at: string | null
   membership_id: string | null
+  visit_type: VisitType
+  children_present: { name: string }[] | null
   members: { id: string; name: string } | null
 }
 
@@ -61,8 +71,13 @@ function calcDurationMin(from: string, to?: string | null) {
   return Math.max(0, Math.floor((end - new Date(from).getTime()) / 60000))
 }
 
-function calcCost(minutes: number, hourlyRate: number) {
-  return Math.ceil(minutes / 30) * 0.5 * hourlyRate
+function calcCost(minutes: number, numChildren: number, visitType: VisitType, rates: ServiceRates) {
+  if (visitType === 'custodia') {
+    // Custodia is a flat rate per child per session
+    return (rates.custodia ?? rates.entrada) * Math.max(1, numChildren)
+  }
+  // Entrada: hourly rate × children, billed in 30-min increments
+  return Math.ceil(minutes / 30) * 0.5 * rates.entrada * Math.max(1, numChildren)
 }
 
 function getBono(m: MemberRow) {
@@ -87,12 +102,12 @@ function CheckInTab({
   allMembers,
   activeVisits,
   onCheckedIn,
-  hourlyRate,
+  rates,
 }: {
   allMembers: MemberRow[]
   activeVisits: ActiveVisit[]
   onCheckedIn: () => void
-  hourlyRate: number
+  rates: ServiceRates
 }) {
   const [mode, setMode] = useState<'manual' | 'qr'>('manual')
   const [scanning, setScanning] = useState(true)
@@ -101,6 +116,7 @@ function CheckInTab({
   const [flash, setFlash] = useState<string | null>(null)
   const [camError, setCamError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [visitType, setVisitType] = useState<VisitType>('entrada')
   const [childrenPresent, setChildrenPresent] = useState<{ name: string }[]>([])
   const [extraChildren, setExtraChildren] = useState<string[]>([])
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -129,7 +145,7 @@ function CheckInTab({
 
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setChildrenPresent([]); setExtraChildren([])
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([])
   }
 
   function selectMember(m: MemberRow) {
@@ -160,11 +176,13 @@ function CheckInTab({
       ...childrenPresent,
       ...extraChildren.filter(n => n.trim()).map(n => ({ name: n.trim() })),
     ]
+    const numChildren = Math.max(1, allChildrenPresent.length)
 
     await supabase.from('visits').insert({
       member_id: member.id,
       membership_id: (b?.ok && m) ? m.id : null,
       checked_in_at: new Date().toISOString(),
+      visit_type: visitType,
       children_present: allChildrenPresent,
     })
 
@@ -174,14 +192,21 @@ function CheckInTab({
         .eq('id', m.id)
     }
 
+    const typeLabel = visitType === 'custodia' ? 'Custodia' : 'Entrada'
     clearTimeout(flashTimer.current)
-    setFlash(
-      b?.ok
-        ? b.unlimited ? '✓ Entrada registrada · bono ilimitado'
-          : `✓ Entrada registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
-        : `✓ Entrada registrada · sin bono — se cobrará ${hourlyRate}€/h`
-    )
-    flashTimer.current = setTimeout(() => setFlash(null), 5000)
+    if (b?.ok) {
+      setFlash(
+        b.unlimited
+          ? `✓ ${typeLabel} registrada · bono ilimitado · ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+          : `✓ ${typeLabel} registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
+      )
+    } else {
+      const rateLabel = visitType === 'custodia'
+        ? `${rates.custodia ?? rates.entrada}€/sesión × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+        : `${rates.entrada}€/h × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+      setFlash(`✓ ${typeLabel} registrada · sin bono — ${rateLabel}`)
+    }
+    flashTimer.current = setTimeout(() => setFlash(null), 6000)
     setRegistering(false)
 
     const { data } = await supabase.from('members').select(MEMBER_QUERY).eq('id', member.id).single()
@@ -291,7 +316,11 @@ function CheckInTab({
                    !bono ? 'Sin bono · se cobrará por horas' : 'Bono agotado · se cobrará por horas'}
                 </p>
                 {!bono?.ok && !alreadyInside && (
-                  <p className="text-xs text-amber/80 mt-0.5">Tarifa: {hourlyRate} €/h · mínimo 30 min</p>
+                  <p className="text-xs text-amber/80 mt-0.5">
+                    {visitType === 'custodia'
+                      ? `Custodia: ${rates.custodia ?? rates.entrada} €/sesión por niño`
+                      : `Tarifa: ${rates.entrada} €/h por niño · mínimo 30 min`}
+                  </p>
                 )}
               </div>
             </div>
@@ -314,6 +343,31 @@ function CheckInTab({
                   </div>
                 )}
               </div>
+
+              {/* Visit type selector */}
+              {!alreadyInside && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide">Tipo de visita</p>
+                  <div className="flex gap-2">
+                    {(['entrada', 'custodia'] as VisitType[]).map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setVisitType(t)}
+                        className={`flex-1 rounded-xl border py-2 text-xs font-semibold transition-colors capitalize ${
+                          visitType === t
+                            ? t === 'custodia'
+                              ? 'bg-mint/15 border-mint/30 text-mint'
+                              : 'bg-lime/15 border-lime/30 text-lime'
+                            : 'bg-surface2 border-line text-fog hover:text-snow'
+                        }`}
+                      >
+                        {t === 'entrada' ? 'Entrada normal' : 'Custodia'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Children selection */}
               {((member.children && member.children.length > 0) || extraChildren.length > 0) && !alreadyInside && (
@@ -431,13 +485,13 @@ function DentroTab({
   onCheckOut,
   checkingOut,
   checkoutSummaries,
-  hourlyRate,
+  rates,
 }: {
   activeVisits: ActiveVisit[]
   onCheckOut: (v: ActiveVisit) => void
   checkingOut: string | null
   checkoutSummaries: CheckoutSummary[]
-  hourlyRate: number
+  rates: ServiceRates
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
@@ -499,7 +553,8 @@ function DentroTab({
           {activeVisits.map(v => {
             const durationMin = calcDurationMin(v.checked_in_at, null)
             const hasBono = v.membership_id !== null
-            const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin), hourlyRate)
+            const numChildren = Math.max(1, v.children_present?.length ?? 0)
+            const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin), numChildren, v.visit_type, rates)
             const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
             const kids = v.children_present ?? []
             const isExpanded = expandedId === v.id
@@ -526,11 +581,14 @@ function DentroTab({
                   </div>
                   <div className="text-right shrink-0 mr-1">
                     {hasBono ? (
-                      <span className="text-xs text-iris font-medium">Bono</span>
+                      <div className="text-right">
+                        <span className="text-xs text-iris font-medium">Bono</span>
+                        {v.visit_type === 'custodia' && <p className="text-[10px] text-mint">Custodia</p>}
+                      </div>
                     ) : (
-                      <div>
+                      <div className="text-right">
                         <p className="text-xs text-amber font-semibold">{fmtCost(estimatedCost!)}</p>
-                        <p className="text-[10px] text-mist">estimado</p>
+                        <p className="text-[10px] text-mist">{v.visit_type === 'custodia' ? 'custodia' : 'estimado'}</p>
                       </div>
                     )}
                   </div>
@@ -579,7 +637,7 @@ function DentroTab({
 
 type HistorialRange = 'day' | 'week' | 'month' | 'custom'
 
-function HistorialTab({ hourlyRate }: { hourlyRate: number }) {
+function HistorialTab({ rates }: { rates: ServiceRates }) {
   const [range, setRange] = useState<HistorialRange>('day')
   const [customDate, setCustomDate] = useState(toLocalDate(new Date()))
   const [visits, setVisits] = useState<HistoryVisit[]>([])
@@ -620,7 +678,7 @@ function HistorialTab({ hourlyRate }: { hourlyRate: number }) {
 
     const { data } = await supabase
       .from('visits')
-      .select('id, checked_in_at, checked_out_at, membership_id, members(id, name)')
+      .select('id, checked_in_at, checked_out_at, membership_id, visit_type, children_present, members(id, name)')
       .gte('checked_in_at', from)
       .lte('checked_in_at', to)
       .order('checked_in_at', { ascending: false })
@@ -704,7 +762,8 @@ function HistorialTab({ hourlyRate }: { hourlyRate: number }) {
         <div className="space-y-1.5">
           {visits.map(v => {
             const dmin = v.checked_out_at ? calcDurationMin(v.checked_in_at, v.checked_out_at) : null
-            const cost = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin), hourlyRate) : null
+            const numChildren = Math.max(1, v.children_present?.length ?? 0)
+            const cost = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin), numChildren, v.visit_type, rates) : null
             const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
             const exitTime = v.checked_out_at ? new Date(v.checked_out_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null
             const dateStr = new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -723,9 +782,15 @@ function HistorialTab({ hourlyRate }: { hourlyRate: number }) {
                 </div>
                 <div className="text-right shrink-0">
                   {v.membership_id ? (
-                    <span className="text-xs text-iris font-medium">Bono</span>
+                    <div>
+                      <span className="text-xs text-iris font-medium">Bono</span>
+                      {v.visit_type === 'custodia' && <p className="text-[10px] text-mint">Custodia</p>}
+                    </div>
                   ) : cost != null ? (
-                    <span className="text-xs font-bold text-lime">{fmtCost(cost)}</span>
+                    <div>
+                      <span className="text-xs font-bold text-lime">{fmtCost(cost)}</span>
+                      {v.visit_type === 'custodia' && <p className="text-[10px] text-mint">Custodia</p>}
+                    </div>
                   ) : (
                     <span className="text-xs text-amber">En curso</span>
                   )}
@@ -747,31 +812,32 @@ export default function VisitasPage() {
   const [activeVisits, setActiveVisits] = useState<ActiveVisit[]>([])
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
-  const [hourlyRate, setHourlyRate] = useState<number>(FALLBACK_HOURLY_RATE)
+  const [rates, setRates] = useState<ServiceRates>({ entrada: FALLBACK_HOURLY_RATE, custodia: null })
 
   useEffect(() => {
     supabase.from('members').select(MEMBER_QUERY).order('name')
       .then(({ data }) => setAllMembers((data as unknown as MemberRow[]) ?? []))
     loadActiveVisits()
-    // Load hourly rate from services table
+    // Load service rates
     supabase
       .from('services')
-      .select('price')
-      .eq('category', 'entrada')
-      .eq('price_unit', 'hora')
+      .select('category, price, price_unit')
+      .in('category', ['entrada', 'custodia'])
       .eq('active', true)
-      .order('sort_order', { ascending: true, nullsFirst: false })
-      .limit(1)
-      .maybeSingle()
       .then(({ data }) => {
-        if (data?.price) setHourlyRate(data.price)
+        const entrada = (data ?? []).find(s => s.category === 'entrada' && s.price_unit === 'hora')
+        const custodia = (data ?? []).find(s => s.category === 'custodia')
+        setRates({
+          entrada: entrada?.price ?? FALLBACK_HOURLY_RATE,
+          custodia: custodia?.price ?? null,
+        })
       })
   }, [])
 
   async function loadActiveVisits() {
     const { data } = await supabase
       .from('visits')
-      .select('id, checked_in_at, membership_id, children_present, members(id, name)')
+      .select('id, checked_in_at, membership_id, visit_type, children_present, members(id, name)')
       .is('checked_out_at', null)
       .order('checked_in_at', { ascending: true })
     setActiveVisits((data as unknown as ActiveVisit[]) ?? [])
@@ -782,7 +848,8 @@ export default function VisitasPage() {
     const checkedOutAt = new Date().toISOString()
     await supabase.from('visits').update({ checked_out_at: checkedOutAt }).eq('id', visit.id)
     const dmin = Math.max(1, Math.floor((Date.now() - new Date(visit.checked_in_at).getTime()) / 60000))
-    const cost = visit.membership_id !== null ? null : calcCost(Math.max(30, dmin), hourlyRate)
+    const numChildren = Math.max(1, visit.children_present?.length ?? 0)
+    const cost = visit.membership_id !== null ? null : calcCost(Math.max(30, dmin), numChildren, visit.visit_type, rates)
     setCheckoutSummaries(prev => [{
       visitId: visit.id,
       memberName: visit.members?.name ?? '—',
@@ -827,7 +894,7 @@ export default function VisitasPage() {
           allMembers={allMembers}
           activeVisits={activeVisits}
           onCheckedIn={loadActiveVisits}
-          hourlyRate={hourlyRate}
+          rates={rates}
         />
       )}
 
@@ -837,11 +904,11 @@ export default function VisitasPage() {
           onCheckOut={handleCheckOut}
           checkingOut={checkingOut}
           checkoutSummaries={checkoutSummaries}
-          hourlyRate={hourlyRate}
+          rates={rates}
         />
       )}
 
-      {tab === 'historial' && <HistorialTab hourlyRate={hourlyRate} />}
+      {tab === 'historial' && <HistorialTab rates={rates} />}
     </div>
   )
 }
