@@ -109,10 +109,10 @@ export default function MiembrosPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         <button
           onClick={() => { setView('miembros'); setSearch('') }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors ${
+          className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             view === 'miembros' ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'
           }`}
         >
@@ -120,7 +120,7 @@ export default function MiembrosPage() {
         </button>
         <button
           onClick={() => { setView('familias'); setSearch('') }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-colors ${
+          className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             view === 'familias' ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'
           }`}
         >

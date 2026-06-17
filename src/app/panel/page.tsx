@@ -108,7 +108,7 @@ export default async function PanelPage() {
         </p>
       </div>
 
-      <div className="inline-flex gap-1 bg-surface rounded-xl p-1 border border-line mb-6">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line mb-6">
         <div className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">
           <BarChart2 size={13} /> Resumen
         </div>

@@ -744,10 +744,10 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
   return (
     <div className="space-y-4">
       {/* Range selector */}
-      <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {(['day', 'week', 'month', 'custom'] as HistorialRange[]).map(r => (
           <button key={r} onClick={() => { setRange(r); setWeekOffset(0); setMonthOffset(0) }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${range === r ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
+            className={`flex-1 lg:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${range === r ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
             {r === 'day' ? 'Hoy' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : 'Fecha'}
           </button>
         ))}

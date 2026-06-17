@@ -143,7 +143,7 @@ export default function ServiciosPage() {
       </div>
 
       {/* Tab nav */}
-      <div className="inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         <Link href="/panel" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <BarChart2 size={13} /> Resumen
         </Link>
