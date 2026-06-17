@@ -79,11 +79,11 @@ export default function HomeClient({ todayVisits, expiringMembers, monthCount, d
 
   const [tenantName, setTenantName] = useState<string | null>(null)
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      const email = user?.email
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const email = session?.user?.email
       if (email) {
         const name = await resolveTenantName(email)
-        setTenantName(name)
+        if (name) setTenantName(name)
       }
     })
   }, [])
@@ -95,7 +95,7 @@ export default function HomeClient({ todayVisits, expiringMembers, monthCount, d
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{tenantName ?? '—'}</h1>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{tenantName ?? 'Mi establecimiento'}</h1>
         <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
       </div>
 

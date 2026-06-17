@@ -36,14 +36,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      const email = user?.email ?? null
+    async function load(email: string) {
       setUserEmail(email)
-      if (email) {
-        const name = await resolveTenantName(email)
-        setTenantName(name)
-      }
+      const name = await resolveTenantName(email)
+      if (name) setTenantName(name)
+    }
+
+    // Read existing session immediately (no network)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) load(session.user.email)
     })
+
+    // Also listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) load(session.user.email)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   async function handleLogout() {
