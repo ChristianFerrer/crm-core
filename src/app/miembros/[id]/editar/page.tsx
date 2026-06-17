@@ -18,7 +18,8 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -41,7 +42,9 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
     supabase.from('members').select('*').eq('id', id).single()
       .then(async ({ data: member }) => {
         if (!member) return
-        setName(member.name ?? '')
+        const parts = (member.name ?? '').split(' ')
+        setFirstName(parts[0] ?? '')
+        setLastName(parts.slice(1).join(' ') ?? '')
         setPhone(member.phone ?? '')
         setEmail(member.email ?? '')
         setBirthDate(member.birth_date ?? '')
@@ -89,7 +92,8 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!firstName.trim()) return
+    const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
     setSaving(true); setError(null)
 
     try {
@@ -98,15 +102,14 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
       let fid = familyId
       if (hasNewPartner && !fid) {
-        const lastName = name.trim().split(' ').slice(1).join(' ') || name.trim().split(' ')[0]
         const { data: fam, error: fe } = await supabase
-          .from('families').insert({ name: `Familia ${lastName}` }).select('id').single()
+          .from('families').insert({ name: `Familia ${lastName.trim() || firstName.trim()}` }).select('id').single()
         if (fe) throw fe
         fid = fam.id
       }
 
       const { error: err } = await supabase.from('members').update({
-        name: name.trim(), phone: phone.trim() || null, email: email.trim() || null,
+        name: fullName, phone: phone.trim() || null, email: email.trim() || null,
         birth_date: birthDate || null, family_id: fid,
         children: cleanChildren, children_count: cleanChildren.length,
       }).eq('id', id)
@@ -166,9 +169,15 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
           <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular</p>
 
-          <div>
-            <label className={labelCls}>Nombre *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre completo" required className={inputCls} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Nombre *</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" required className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Apellido</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido" className={inputCls} />
+            </div>
           </div>
           <div>
             <label className={labelCls}>Teléfono</label>
@@ -318,7 +327,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 
-        <button type="submit" disabled={saving || !name.trim()}
+        <button type="submit" disabled={saving || !firstName.trim()}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:bg-lime-deep active:scale-[0.99] disabled:opacity-60"
           style={{ boxShadow: 'var(--shadow-lime)' }}>
           <Save size={17} strokeWidth={2.2} />

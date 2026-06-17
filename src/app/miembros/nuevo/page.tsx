@@ -15,7 +15,8 @@ export default function NuevoMiembroPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [birthDate, setBirthDate] = useState('')
@@ -63,7 +64,8 @@ export default function NuevoMiembroPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!firstName.trim()) return
+    const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
     setSaving(true); setError(null)
 
     try {
@@ -72,9 +74,8 @@ export default function NuevoMiembroPage() {
 
       let familyId: string | null = null
       if (hasPartner) {
-        const lastName = name.trim().split(' ').slice(1).join(' ') || name.trim().split(' ')[0]
         const { data: fam, error: fe } = await supabase
-          .from('families').insert({ name: `Familia ${lastName}` }).select('id').single()
+          .from('families').insert({ name: `Familia ${lastName.trim() || firstName.trim()}` }).select('id').single()
         if (fe) throw fe
         familyId = fam.id
       }
@@ -82,7 +83,7 @@ export default function NuevoMiembroPage() {
       const { data: member, error: me } = await supabase
         .from('members')
         .insert({
-          name: name.trim(),
+          name: fullName,
           phone: phone.trim() || null,
           email: email.trim() || null,
           birth_date: birthDate || null,
@@ -134,9 +135,15 @@ export default function NuevoMiembroPage() {
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
           <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular</p>
 
-          <div>
-            <label className={labelCls}>Nombre *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre completo" required className={inputCls} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Nombre *</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" required className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Apellido</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido" className={inputCls} />
+            </div>
           </div>
 
           <div>
@@ -267,7 +274,7 @@ export default function NuevoMiembroPage() {
 
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 
-        <button type="submit" disabled={saving || !name.trim()}
+        <button type="submit" disabled={saving || !firstName.trim()}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:bg-lime-deep active:scale-[0.99] disabled:opacity-60"
           style={{ boxShadow: 'var(--shadow-lime)' }}>
           <Save size={17} strokeWidth={2.2} />
