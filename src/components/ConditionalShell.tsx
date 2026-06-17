@@ -13,7 +13,7 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [viewingAs, setViewingAs] = useState<ViewingAs>(null)
 
-  const isPublic = pathname.startsWith('/alta') || pathname === '/login' || pathname.startsWith('/auth')
+  const isPublic = pathname.startsWith('/alta') || pathname === '/login' || pathname.startsWith('/auth') || pathname === '/landing'
   const isAdmin = pathname.startsWith('/admin')
 
   useEffect(() => {
