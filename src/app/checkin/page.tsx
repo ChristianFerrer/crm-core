@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
-const HOURLY_RATE = 5
+const FALLBACK_HOURLY_RATE = 5
 
 type MemberRow = {
   id: string
@@ -61,8 +61,8 @@ function calcDurationMin(from: string, to?: string | null) {
   return Math.max(0, Math.floor((end - new Date(from).getTime()) / 60000))
 }
 
-function calcCost(minutes: number) {
-  return Math.ceil(minutes / 30) * 0.5 * HOURLY_RATE
+function calcCost(minutes: number, hourlyRate: number) {
+  return Math.ceil(minutes / 30) * 0.5 * hourlyRate
 }
 
 function getBono(m: MemberRow) {
@@ -87,10 +87,12 @@ function CheckInTab({
   allMembers,
   activeVisits,
   onCheckedIn,
+  hourlyRate,
 }: {
   allMembers: MemberRow[]
   activeVisits: ActiveVisit[]
   onCheckedIn: () => void
+  hourlyRate: number
 }) {
   const [mode, setMode] = useState<'manual' | 'qr'>('manual')
   const [scanning, setScanning] = useState(true)
@@ -177,7 +179,7 @@ function CheckInTab({
       b?.ok
         ? b.unlimited ? '✓ Entrada registrada · bono ilimitado'
           : `✓ Entrada registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
-        : `✓ Entrada registrada · sin bono — se cobrará ${HOURLY_RATE}€/h`
+        : `✓ Entrada registrada · sin bono — se cobrará ${hourlyRate}€/h`
     )
     flashTimer.current = setTimeout(() => setFlash(null), 5000)
     setRegistering(false)
@@ -289,7 +291,7 @@ function CheckInTab({
                    !bono ? 'Sin bono · se cobrará por horas' : 'Bono agotado · se cobrará por horas'}
                 </p>
                 {!bono?.ok && !alreadyInside && (
-                  <p className="text-xs text-amber/80 mt-0.5">Tarifa: {HOURLY_RATE} €/h · mínimo 30 min</p>
+                  <p className="text-xs text-amber/80 mt-0.5">Tarifa: {hourlyRate} €/h · mínimo 30 min</p>
                 )}
               </div>
             </div>
@@ -429,11 +431,13 @@ function DentroTab({
   onCheckOut,
   checkingOut,
   checkoutSummaries,
+  hourlyRate,
 }: {
   activeVisits: ActiveVisit[]
   onCheckOut: (v: ActiveVisit) => void
   checkingOut: string | null
   checkoutSummaries: CheckoutSummary[]
+  hourlyRate: number
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
@@ -495,7 +499,7 @@ function DentroTab({
           {activeVisits.map(v => {
             const durationMin = calcDurationMin(v.checked_in_at, null)
             const hasBono = v.membership_id !== null
-            const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin))
+            const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin), hourlyRate)
             const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
             const kids = v.children_present ?? []
             const isExpanded = expandedId === v.id
@@ -575,7 +579,7 @@ function DentroTab({
 
 type HistorialRange = 'day' | 'week' | 'month' | 'custom'
 
-function HistorialTab() {
+function HistorialTab({ hourlyRate }: { hourlyRate: number }) {
   const [range, setRange] = useState<HistorialRange>('day')
   const [customDate, setCustomDate] = useState(toLocalDate(new Date()))
   const [visits, setVisits] = useState<HistoryVisit[]>([])
@@ -700,7 +704,7 @@ function HistorialTab() {
         <div className="space-y-1.5">
           {visits.map(v => {
             const dmin = v.checked_out_at ? calcDurationMin(v.checked_in_at, v.checked_out_at) : null
-            const cost = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin)) : null
+            const cost = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin), hourlyRate) : null
             const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
             const exitTime = v.checked_out_at ? new Date(v.checked_out_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null
             const dateStr = new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -743,11 +747,25 @@ export default function VisitasPage() {
   const [activeVisits, setActiveVisits] = useState<ActiveVisit[]>([])
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
+  const [hourlyRate, setHourlyRate] = useState<number>(FALLBACK_HOURLY_RATE)
 
   useEffect(() => {
     supabase.from('members').select(MEMBER_QUERY).order('name')
       .then(({ data }) => setAllMembers((data as unknown as MemberRow[]) ?? []))
     loadActiveVisits()
+    // Load hourly rate from services table
+    supabase
+      .from('services')
+      .select('price')
+      .eq('category', 'entrada')
+      .eq('price_unit', 'hora')
+      .eq('active', true)
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.price) setHourlyRate(data.price)
+      })
   }, [])
 
   async function loadActiveVisits() {
@@ -764,7 +782,7 @@ export default function VisitasPage() {
     const checkedOutAt = new Date().toISOString()
     await supabase.from('visits').update({ checked_out_at: checkedOutAt }).eq('id', visit.id)
     const dmin = Math.max(1, Math.floor((Date.now() - new Date(visit.checked_in_at).getTime()) / 60000))
-    const cost = visit.membership_id !== null ? null : calcCost(Math.max(30, dmin))
+    const cost = visit.membership_id !== null ? null : calcCost(Math.max(30, dmin), hourlyRate)
     setCheckoutSummaries(prev => [{
       visitId: visit.id,
       memberName: visit.members?.name ?? '—',
@@ -809,6 +827,7 @@ export default function VisitasPage() {
           allMembers={allMembers}
           activeVisits={activeVisits}
           onCheckedIn={loadActiveVisits}
+          hourlyRate={hourlyRate}
         />
       )}
 
@@ -818,10 +837,11 @@ export default function VisitasPage() {
           onCheckOut={handleCheckOut}
           checkingOut={checkingOut}
           checkoutSummaries={checkoutSummaries}
+          hourlyRate={hourlyRate}
         />
       )}
 
-      {tab === 'historial' && <HistorialTab />}
+      {tab === 'historial' && <HistorialTab hourlyRate={hourlyRate} />}
     </div>
   )
 }
