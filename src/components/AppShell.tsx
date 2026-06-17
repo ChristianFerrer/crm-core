@@ -15,17 +15,16 @@ const navItems = [
 ]
 
 async function resolveTenantName(userEmail: string): Promise<string | null> {
-  // Super admin impersonating
   const stored = localStorage.getItem('viewingAsTenant')
   if (stored) {
     try { return JSON.parse(stored).name } catch {}
   }
-  // Establishment admin: look up their tenant
   const { data } = await supabase
     .from('tenants')
     .select('name')
-    .eq('admin_email', userEmail)
-    .single()
+    .ilike('admin_email', userEmail.trim())
+    .limit(1)
+    .maybeSingle()
   return data?.name ?? null
 }
 

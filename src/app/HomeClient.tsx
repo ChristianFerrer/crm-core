@@ -10,7 +10,12 @@ async function resolveTenantName(email: string): Promise<string | null> {
   if (stored) {
     try { return JSON.parse(stored).name } catch {}
   }
-  const { data } = await supabase.from('tenants').select('name').eq('admin_email', email).single()
+  const { data } = await supabase
+    .from('tenants')
+    .select('name')
+    .ilike('admin_email', email.trim())
+    .limit(1)
+    .maybeSingle()
   return data?.name ?? null
 }
 import {
