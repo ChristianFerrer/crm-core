@@ -254,7 +254,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                           <div className="flex flex-wrap gap-1 mb-1.5">
                             {(visit.children_present ?? []).map((c, i) => (
                               <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
-                                {c.name}
+                                {c.name} · {c.age}a
                               </span>
                             ))}
                           </div>
