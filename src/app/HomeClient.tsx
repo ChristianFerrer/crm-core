@@ -123,6 +123,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
 
   const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
   const aforoColor = aforoPct < 70 ? 'bg-lime' : aforoPct <= 90 ? 'bg-amber' : 'bg-rose-500'
+  const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
 
   return (
     <div className="space-y-6">
@@ -180,20 +181,25 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
             <Users size={13} /> Aforo
           </h2>
-          <div className="flex items-end justify-between mb-2">
+          <div className="flex items-end justify-between mb-3">
             <div className="flex items-baseline gap-2">
               <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
-              <span className="text-xs text-fog">personas</span>
+              <span className="text-xs text-fog">de {capacity} plazas</span>
             </div>
-            <span className="text-xs text-fog">{activeTotal} de {capacity} plazas</span>
+            <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
           </div>
-          <div className="flex gap-3 mb-2">
-            <span className="text-xs text-fog">{activeAdults} adulto{activeAdults !== 1 ? 's' : ''}</span>
-            <span className="text-xs text-mist">·</span>
-            <span className="text-xs text-fog">{activeChildren} niño{activeChildren !== 1 ? 's' : ''}</span>
-          </div>
-          <div className="h-3 w-full rounded-full bg-line overflow-hidden">
+          <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3">
             <div className={`h-full rounded-full transition-all duration-500 ${aforoColor}`} style={{ width: `${aforoPct}%` }} />
+          </div>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
+              <span className="text-xs text-fog">{activeAdults} adulto{activeAdults !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
+              <span className="text-xs text-fog">{activeChildren} niño{activeChildren !== 1 ? 's' : ''}</span>
+            </div>
           </div>
         </div>
       )}
