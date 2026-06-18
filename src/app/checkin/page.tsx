@@ -120,7 +120,7 @@ function CheckInTab({
   const [camError, setCamError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [visitType, setVisitType] = useState<VisitType>('entrada')
-  const [childrenPresent, setChildrenPresent] = useState<{ name: string }[]>([])
+  const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
   const [extraChildren, setExtraChildren] = useState<string[]>([])
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -153,7 +153,7 @@ function CheckInTab({
 
   function selectMember(m: MemberRow) {
     setMember(m)
-    setChildrenPresent((m.children ?? []).map(c => ({ name: c.name })))
+    setChildrenPresent((m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined })))
     setExtraChildren([])
   }
 

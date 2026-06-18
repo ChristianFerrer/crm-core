@@ -25,7 +25,7 @@ type TodayVisit = {
   membership_id: string | null
   member_id: string
   visit_type: string
-  children_present: { name: string; age: number }[] | null
+  children_present: { name: string; age?: number; birth_date?: string }[] | null
   members: { name: string } | null
 }
 
@@ -50,7 +50,30 @@ type HomeClientProps = {
 
 type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
 
-type ChildInSala = { name: string; age: number; memberName: string }
+function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
+  if (birth_date) {
+    const now = new Date()
+    const dob = new Date(birth_date)
+    let years = now.getFullYear() - dob.getFullYear()
+    let months = now.getMonth() - dob.getMonth()
+    if (now.getDate() < dob.getDate()) months--
+    if (months < 0) { years--; months += 12 }
+    if (years === 0) return `${months}m`
+    if (months === 0) return `${years}a`
+    return `${years}a ${months}m`
+  }
+  if (fallbackAge != null) return `${fallbackAge}a`
+  return ''
+}
+
+function fmtElapsed(checkedInAt: string): string {
+  const mins = Math.floor((Date.now() - new Date(checkedInAt).getTime()) / 60000)
+  if (mins < 60) return `${mins}min`
+  const h = Math.floor(mins / 60), m = mins % 60
+  return m > 0 ? `${h}h ${m}min` : `${h}h`
+}
+
+type ChildInSala = { name: string; age?: number; birth_date?: string; memberName: string }
 
 export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
@@ -84,9 +107,9 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
   const chartData = buckets.slice(7, 23)
 
   const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
-    { key: 'ninos', label: 'Niños en sala', value: activeChildren, accent: 'text-mint', border: 'border-mint/30', visits: [], icon: <Users size={16} /> },
+    { key: 'ninos', label: 'Niños en sala', value: activeChildren, accent: 'text-cyan-300', border: 'border-cyan-300/30', visits: [], icon: <Users size={16} /> },
     { key: 'entradasHoy', label: 'Entradas hoy', value: todayVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-lime', border: 'border-lime/30', visits: todayVisits, icon: <LogIn size={16} /> },
-    { key: 'conBono', label: 'Con bono', value: conBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-mint', border: 'border-mint/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
+    { key: 'conBono', label: 'Con bono', value: conBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-iris', border: 'border-iris/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
     { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
     { key: 'custodias', label: 'Custodias', value: todayCustodias.reduce((s, v) => s + persons(v), 0), accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
     { key: 'cumpleanos', label: 'Cumpleaños', value: todayBirthdays.length, accent: 'text-rose', border: 'border-rose/30', visits: [], icon: <Cake size={16} /> },
@@ -153,7 +176,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
               <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ stroke: '#1e2530' }} />
               <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(value) => value === 'conBono' ? 'Con bono' : 'Sin bono'} />
-              <Line type="monotone" dataKey="conBono" stroke="#84cc16" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="conBono" stroke="#8b8bff" strokeWidth={2} dot={false} />
               <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -195,11 +218,11 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
           <div className="flex gap-4">
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
-              <span className="text-xs text-fog">{activeAdults} adulto{activeAdults !== 1 ? 's' : ''}</span>
+              <span className="text-xs text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
-              <span className="text-xs text-fog">{activeChildren} niño{activeChildren !== 1 ? 's' : ''}</span>
+              <span className="text-xs text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
             </div>
           </div>
         </div>
@@ -248,20 +271,14 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
               <p className="text-sm text-mist">Sin niños en sala</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {activeVisits.filter(v => (v.children_present?.length ?? 0) > 0).map(visit => {
-                  const checkinTime = new Date(visit.checked_in_at)
-                  const elapsedMin = Math.floor((Date.now() - checkinTime.getTime()) / 60000)
-                  const elapsed = elapsedMin < 60
-                    ? `${elapsedMin} min`
-                    : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}min`
-                  return (
+                {activeVisits.filter(v => (v.children_present?.length ?? 0) > 0).map(visit => (
                     <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap gap-1 mb-1.5">
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
                             {(visit.children_present ?? []).map((c, i) => (
-                              <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
-                                {c.name} · {c.age}a
+                              <span key={i} className="text-[11px] font-semibold text-cyan-300">
+                                {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
                               </span>
                             ))}
                           </div>
@@ -269,15 +286,14 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                         </div>
                         <div className="flex items-center gap-2 shrink-0 pt-0.5">
                           <div className="text-right">
-                            <p className="text-xs text-mist">{checkinTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
-                            <p className="text-[11px] text-fog">{elapsed}</p>
+                            <p className="text-xs text-mist">{new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>
                           </div>
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-lime' : 'bg-amber'}`} />
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
                         </div>
                       </div>
                     </div>
-                  )
-                })}
+                  ))}
               </div>
             )
           ) : drawerVisits.length === 0 ? (
@@ -286,6 +302,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {drawerVisits.map(visit => {
                 const kids = visit.children_present ?? []
+                const isActive = !visit.checked_out_at
                 return (
                   <Link
                     key={visit.id}
@@ -294,10 +311,10 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                   >
                     <div className="flex-1 min-w-0">
                       {kids.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-1.5">
+                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
                           {kids.map((c, i) => (
-                            <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
-                              {c.name} · {c.age}a
+                            <span key={i} className="text-[11px] font-semibold text-cyan-300">
+                              {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
                             </span>
                           ))}
                         </div>
@@ -305,10 +322,13 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                       <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                      <span className="text-xs text-mist">
-                        {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-lime' : 'bg-amber'}`} />
+                      <div className="text-right">
+                        <p className="text-xs text-mist">
+                          {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        {isActive && <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>}
+                      </div>
+                      <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
                     </div>
                   </Link>
                 )
