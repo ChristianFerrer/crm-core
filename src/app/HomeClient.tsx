@@ -230,23 +230,17 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             childrenInSala.length === 0 ? (
               <p className="text-sm text-mist">Sin niños en sala</p>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {Object.entries(
-                  childrenInSala.reduce<Record<string, ChildInSala[]>>((acc, c) => {
-                    ;(acc[c.memberName] ??= []).push(c)
-                    return acc
-                  }, {})
-                ).map(([titular, kids]) => (
-                  <div key={titular} className="rounded-xl border border-line bg-carbon px-4 py-3">
-                    <p className="text-xs font-semibold text-fog mb-2">{titular}</p>
-                    <div className="space-y-1">
-                      {kids.map((c, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <p className="text-sm text-snow">{c.name}</p>
-                          <span className="text-xs text-mist">{c.age} años</span>
-                        </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {activeVisits.filter(v => (v.children_present?.length ?? 0) > 0).map(visit => (
+                  <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
+                    <div className="flex flex-wrap gap-1 mb-1.5">
+                      {(visit.children_present ?? []).map((c, i) => (
+                        <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
+                          {c.name}
+                        </span>
                       ))}
                     </div>
+                    <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
                   </div>
                 ))}
               </div>
