@@ -188,8 +188,9 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             </div>
             <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
           </div>
-          <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3">
-            <div className={`h-full rounded-full transition-all duration-500 ${aforoColor}`} style={{ width: `${aforoPct}%` }} />
+          <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3 flex">
+            <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
+            <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
           </div>
           <div className="flex gap-4">
             <div className="flex items-center gap-1.5">
