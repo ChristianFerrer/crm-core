@@ -18,6 +18,7 @@ interface Booking {
   member_id: string | null
   notes: string | null
   status: BookingStatus
+  guests: number | null
 }
 
 interface Member {
@@ -85,6 +86,7 @@ export default function CalendarioPage() {
     start_time: '',
     end_time: '',
     member_id: '',
+    guests: '',
     notes: '',
   })
 
@@ -131,6 +133,7 @@ export default function CalendarioPage() {
       start_time: '',
       end_time: '',
       member_id: '',
+      guests: '',
       notes: '',
     })
     setShowModal(true)
@@ -146,6 +149,7 @@ export default function CalendarioPage() {
       start_time: form.start_time || null,
       end_time: form.end_time || null,
       member_id: form.member_id || null,
+      guests: form.guests ? parseInt(form.guests) : null,
       notes: form.notes || null,
       status: 'pending',
     })
@@ -424,6 +428,21 @@ export default function CalendarioPage() {
                   />
                 </div>
               </div>
+
+              {/* Invitados (solo cumpleaños) */}
+              {form.type === 'birthday' && (
+                <div>
+                  <label className="block text-xs font-semibold text-fog mb-1.5">Nº invitados</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.guests}
+                    onChange={e => setForm(f => ({ ...f, guests: e.target.value }))}
+                    placeholder="Ej: 12"
+                    className={inputClass}
+                  />
+                </div>
+              )}
 
               {/* Miembro */}
               <div>
