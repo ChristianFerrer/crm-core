@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, LogIn, CreditCard, UserX, Users, CalendarClock, Cake } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -54,6 +54,7 @@ type ChildInSala = { name: string; age: number; memberName: string }
 
 export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
+  const drawerRef = useRef<HTMLDivElement>(null)
 
   const persons = (v: TodayVisit) => 1 + (v.children_present?.length ?? 0)
 
@@ -70,14 +71,17 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
 
   const buckets = Array.from({ length: 24 }, (_, h) => {
     const hourVisits = todayVisits.filter(v => new Date(v.checked_in_at).getHours() === h)
+    const adultos = hourVisits.length
+    const ninos = hourVisits.reduce((s, v) => s + (v.children_present?.length ?? 0), 0)
     return {
       hour: `${String(h).padStart(2, '0')}h`,
+      adultos,
+      ninos,
       conBono: hourVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0),
       sinBono: hourVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0),
     }
   })
   const chartData = buckets.slice(7, 23)
-  const barChartData = chartData.map(b => ({ ...b, total: b.conBono + b.sinBono }))
 
   const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
     { key: 'ninos', label: 'Niños en sala', value: activeChildren, accent: 'text-mint', border: 'border-mint/30', visits: [], icon: <Users size={16} /> },
@@ -110,7 +114,11 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
   }, [])
 
   function handleStatClick(key: DrawerKey) {
-    setActiveDrawer(prev => (prev === key ? null : key))
+    setActiveDrawer(prev => {
+      const next = prev === key ? null : key
+      if (next) setTimeout(() => drawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+      return next
+    })
   }
 
   const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
@@ -151,14 +159,16 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
         </div>
 
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Total visitas por hora</h2>
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Adultos y niños por hora</h2>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={barChartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+            <BarChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
               <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-              <Bar dataKey="total" fill="#c6f24e" radius={[4, 4, 0, 0]} />
+              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v, name) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(v) => v === 'adultos' ? 'Adultos' : 'Niños'} />
+              <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
+              <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -204,7 +214,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       </div>
 
       {activeDrawer && (
-        <div className="rounded-2xl border border-line bg-surface p-4">
+        <div ref={drawerRef} className="rounded-2xl border border-line bg-surface p-4">
           <h3 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3">
             {stats.find(s => s.key === activeDrawer)?.label}
           </h3>
@@ -280,7 +290,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                         <div className="flex flex-wrap gap-1 mb-1.5">
                           {kids.map((c, i) => (
                             <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
-                              {c.name}
+                              {c.name} · {c.age}a
                             </span>
                           ))}
                         </div>
