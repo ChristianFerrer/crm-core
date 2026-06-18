@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { trackTenantSession } from '@/lib/trackSession'
 
 export type CurrentTenant = { id: string; name: string; admin_email: string | null }
 
@@ -11,6 +12,7 @@ export async function loadAndStoreTenant(email: string): Promise<CurrentTenant |
     .maybeSingle()
   if (data) {
     localStorage.setItem('currentTenant', JSON.stringify(data))
+    trackTenantSession(data.id)
     return data
   }
   return null

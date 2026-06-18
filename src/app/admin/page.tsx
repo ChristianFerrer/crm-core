@@ -7,14 +7,15 @@ import { isSuperAdmin } from '@/lib/roles'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, Pencil,
-  CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle, LogOut, ChevronDown
+  CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle, LogOut, ChevronDown,
+  Smartphone, Monitor, Tablet, Globe, Wifi, WifiOff
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
 } from 'recharts'
 
-type Tab = 'dashboard' | 'tenants' | 'metrics' | 'config'
+type Tab = 'dashboard' | 'tenants' | 'metrics' | 'accesos' | 'config'
 
 type Tenant = {
   id: string
@@ -555,6 +556,183 @@ function MetricsSection() {
   )
 }
 
+// ─── Accesos Section ─────────────────────────────────────────────────────────
+
+type TenantAccess = {
+  tenant_id: string
+  tenant_name: string
+  last_access: string | null
+  sessions_30d: number
+  devices: { device_type: string; browser: string; os: string; is_pwa: boolean; logged_in_at: string }[]
+}
+
+function DeviceIcon({ type }: { type: string }) {
+  if (type === 'mobile') return <Smartphone size={13} className="text-iris" />
+  if (type === 'tablet') return <Tablet size={13} className="text-amber" />
+  return <Monitor size={13} className="text-mint" />
+}
+
+function AccesosSection({ tenants }: { tenants: Tenant[] }) {
+  const [data, setData] = useState<TenantAccess[]>([])
+  const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const { data: sessions } = await supabase
+        .from('tenant_sessions')
+        .select('tenant_id, logged_in_at, device_type, browser, os, is_pwa')
+        .gte('logged_in_at', since30d)
+        .order('logged_in_at', { ascending: false })
+
+      // Also get last access ever
+      const { data: allLast } = await supabase
+        .from('tenant_sessions')
+        .select('tenant_id, logged_in_at')
+        .order('logged_in_at', { ascending: false })
+
+      const lastByTenant: Record<string, string> = {}
+      allLast?.forEach((s: any) => {
+        if (!lastByTenant[s.tenant_id]) lastByTenant[s.tenant_id] = s.logged_in_at
+      })
+
+      const byTenant: Record<string, TenantAccess> = {}
+      tenants.forEach(t => {
+        byTenant[t.id] = {
+          tenant_id: t.id,
+          tenant_name: t.name,
+          last_access: lastByTenant[t.id] ?? null,
+          sessions_30d: 0,
+          devices: [],
+        }
+      })
+
+      sessions?.forEach((s: any) => {
+        if (!byTenant[s.tenant_id]) return
+        byTenant[s.tenant_id].sessions_30d++
+        byTenant[s.tenant_id].devices.push(s)
+      })
+
+      setData(Object.values(byTenant).sort((a, b) => {
+        if (!a.last_access) return 1
+        if (!b.last_access) return -1
+        return new Date(b.last_access).getTime() - new Date(a.last_access).getTime()
+      }))
+      setLoading(false)
+    }
+    load()
+  }, [tenants])
+
+  function activityStatus(last: string | null) {
+    if (!last) return { label: 'Sin accesos', cls: 'bg-fog/20 text-fog border-fog/30', icon: WifiOff }
+    const days = Math.floor((Date.now() - new Date(last).getTime()) / 86400000)
+    if (days <= 3) return { label: 'Activo', cls: 'bg-lime/20 text-lime border-lime/30', icon: Wifi }
+    if (days <= 14) return { label: `Hace ${days}d`, cls: 'bg-amber/20 text-amber border-amber/30', icon: Wifi }
+    return { label: `Hace ${days}d`, cls: 'bg-rose/20 text-rose border-rose/30', icon: WifiOff }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-display font-semibold text-snow">Accesos</h2>
+        <p className="text-sm text-fog mt-0.5">Actividad de sesiones por establecimiento · últimos 30 días</p>
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-16 rounded-2xl bg-surface border border-line animate-pulse" />)}</div>
+      ) : (
+        <div className="space-y-2">
+          {data.map(t => {
+            const { label, cls, icon: StatusIcon } = activityStatus(t.last_access)
+            const isOpen = expanded === t.tenant_id
+            const uniqueDevices = t.devices.reduce<Record<string, number>>((acc, d) => {
+              const key = `${d.device_type}|${d.browser}|${d.os}|${d.is_pwa}`
+              acc[key] = (acc[key] ?? 0) + 1
+              return acc
+            }, {})
+
+            return (
+              <div key={t.tenant_id} className="rounded-2xl border border-line bg-surface overflow-hidden">
+                <button
+                  onClick={() => setExpanded(isOpen ? null : t.tenant_id)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface2 transition-colors text-left"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-iris/10 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-iris">{t.tenant_name[0]}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-snow">{t.tenant_name}</p>
+                    <p className="text-xs text-mist mt-0.5">
+                      {t.last_access
+                        ? `Último acceso: ${new Date(t.last_access).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                        : 'Sin accesos registrados'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-semibold text-fog">{t.sessions_30d} sesiones</span>
+                    <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}`}>
+                      <StatusIcon size={9} /> {label}
+                    </span>
+                    <ChevronDown size={13} className={`text-mist transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-line px-4 py-3 space-y-3">
+                    {t.devices.length === 0 ? (
+                      <p className="text-xs text-mist">Sin sesiones en los últimos 30 días</p>
+                    ) : (
+                      <>
+                        {/* Device summary */}
+                        <div>
+                          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Terminales detectados</p>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(uniqueDevices).map(([key, count]) => {
+                              const [device, browser, os, pwa] = key.split('|')
+                              return (
+                                <div key={key} className="flex items-center gap-1.5 rounded-xl border border-line bg-surface2 px-3 py-1.5">
+                                  <DeviceIcon type={device} />
+                                  <span className="text-xs text-snow font-medium">
+                                    {pwa === 'true' ? 'PWA' : browser}
+                                  </span>
+                                  <span className="text-xs text-fog">· {os}</span>
+                                  {count > 1 && <span className="text-[10px] font-bold text-lime ml-1">×{count}</span>}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Last 5 sessions */}
+                        <div>
+                          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Últimas sesiones</p>
+                          <div className="space-y-1">
+                            {t.devices.slice(0, 5).map((s, i) => (
+                              <div key={i} className="flex items-center gap-2 text-xs text-fog">
+                                <DeviceIcon type={s.device_type} />
+                                <span className="text-snow">{s.is_pwa ? 'PWA' : s.browser}</span>
+                                <span>· {s.os}</span>
+                                <span className="ml-auto text-mist shrink-0">
+                                  {new Date(s.logged_in_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Config Section ───────────────────────────────────────────────────────────
 
 function ConfigSection() {
@@ -624,6 +802,7 @@ export default function AdminPage() {
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tenants' as Tab, label: 'Establecimientos', icon: Building2 },
     { id: 'metrics' as Tab, label: 'Métricas', icon: BarChart3 },
+    { id: 'accesos' as Tab, label: 'Accesos', icon: Activity },
     { id: 'config' as Tab, label: 'Configuración', icon: Settings },
   ]
 
@@ -727,6 +906,7 @@ export default function AdminPage() {
         {tab === 'dashboard' && <DashboardSection tenants={tenants} />}
         {tab === 'tenants' && <TenantsSection tenants={tenants} onReload={loadTenants} />}
         {tab === 'metrics' && <MetricsSection />}
+        {tab === 'accesos' && <AccesosSection tenants={tenants} />}
         {tab === 'config' && <ConfigSection />}
       </main>
     </div>
