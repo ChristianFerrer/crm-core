@@ -68,9 +68,13 @@ function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
 
 function fmtElapsed(checkedInAt: string): string {
   const mins = Math.floor((Date.now() - new Date(checkedInAt).getTime()) / 60000)
-  if (mins < 60) return `${mins}min`
   const h = Math.floor(mins / 60), m = mins % 60
+  if (h === 0) return `${m}min`
   return m > 0 ? `${h}h ${m}min` : `${h}h`
+}
+
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 }
 
 type ChildInSala = { name: string; age?: number; birth_date?: string; memberName: string }
@@ -286,7 +290,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                         </div>
                         <div className="flex items-center gap-2 shrink-0 pt-0.5">
                           <div className="text-right">
-                            <p className="text-xs text-mist">{new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
                             <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>
                           </div>
                           <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
@@ -294,6 +298,45 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                       </div>
                     </div>
                   ))}
+              </div>
+            )
+          ) : activeDrawer === 'custodias' ? (
+            drawerVisits.length === 0 ? (
+              <p className="text-sm text-mist">Sin custodias hoy</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {drawerVisits.map(visit => {
+                  const kids = visit.children_present ?? []
+                  const isActive = !visit.checked_out_at
+                  return (
+                    <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          {kids.length > 0 && (
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
+                              {kids.map((c, i) => (
+                                <span key={i} className="text-[11px] font-semibold text-cyan-300">
+                                  {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                          <div className="text-right">
+                            <p className="text-xs text-mist">
+                              {fmtTime(visit.checked_in_at)}
+                              {visit.checked_out_at ? ` → ${fmtTime(visit.checked_out_at)}` : ' → en curso'}
+                            </p>
+                            {isActive && <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>}
+                          </div>
+                          <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )
           ) : drawerVisits.length === 0 ? (
@@ -323,9 +366,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
                     </div>
                     <div className="flex items-center gap-2 shrink-0 pt-0.5">
                       <div className="text-right">
-                        <p className="text-xs text-mist">
-                          {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                        <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
                         {isActive && <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>}
                       </div>
                       <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
