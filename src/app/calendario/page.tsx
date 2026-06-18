@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
@@ -25,56 +25,32 @@ interface Booking {
   amount: number | null
 }
 
-interface Member {
-  id: string
-  name: string
-}
+interface Member { id: string; name: string }
 
-const inputClass =
-  'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
-
+const inputClass = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-function getDaysInMonth(year: number, month: number) { return new Date(year, month + 1, 0).getDate() }
-function getFirstDayOfWeek(year: number, month: number) { return (new Date(year, month, 1).getDay() + 6) % 7 }
-function toDateStr(year: number, month: number, day: number) {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
+function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
+function getFirstDayOfWeek(y: number, m: number) { return (new Date(y, m, 1).getDay() + 6) % 7 }
+function toDateStr(y: number, m: number, d: number) { return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` }
 
 function calcAge(birth_date: string) {
   const now = new Date(), dob = new Date(birth_date)
-  let y = now.getFullYear() - dob.getFullYear()
-  let m = now.getMonth() - dob.getMonth()
+  let y = now.getFullYear() - dob.getFullYear(), m = now.getMonth() - dob.getMonth()
   if (now.getDate() < dob.getDate()) m--
   if (m < 0) { y--; m += 12 }
-  if (y === 0) return `${m}m`
-  return m === 0 ? `${y}a` : `${y}a ${m}m`
+  return y === 0 ? `${m}m` : m === 0 ? `${y}a` : `${y}a ${m}m`
 }
 
-function bookingColor(type: BookingType) {
-  if (type === 'birthday') return 'bg-iris'
-  if (type === 'custodia') return 'bg-amber-400'
-  return 'bg-fog'
-}
+function bookingColor(t: BookingType) { return t === 'birthday' ? 'bg-iris' : t === 'custodia' ? 'bg-amber-400' : 'bg-fog' }
+function bookingBadge(t: BookingType) { return t === 'birthday' ? 'bg-iris/20 text-iris border border-iris/30' : t === 'custodia' ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30' : 'bg-fog/20 text-fog border border-fog/30' }
+function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'bg-lime/20 text-lime border border-lime/30' : s === 'cancelled' ? 'bg-rose/20 text-rose border border-rose/30' : 'bg-fog/20 text-fog border border-fog/30' }
+function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'bg-mint/20 text-mint border border-mint/30' : 'bg-amber/20 text-amber border border-amber/30' }
 
-function bookingBadge(type: BookingType) {
-  if (type === 'birthday') return 'bg-iris/20 text-iris border border-iris/30'
-  if (type === 'custodia') return 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
-  return 'bg-fog/20 text-fog border border-fog/30'
-}
+const EMPTY_FORM = { type: 'birthday' as BookingType, title: '', child_name: '', date: '', start_time: '', end_time: '', member_id: '', guests: '', amount: '', notes: '' }
 
-function statusBadge(status: BookingStatus) {
-  if (status === 'confirmed') return 'bg-lime/20 text-lime border border-lime/30'
-  if (status === 'cancelled') return 'bg-rose/20 text-rose border border-rose/30'
-  return 'bg-fog/20 text-fog border border-fog/30'
-}
-
-function paymentBadge(ps: PaymentStatus) {
-  return ps === 'paid'
-    ? 'bg-mint/20 text-mint border border-mint/30'
-    : 'bg-amber/20 text-amber border border-amber/30'
-}
+type EditForm = { guests: string; member_id: string; status: BookingStatus; payment_status: PaymentStatus; notes: string }
 
 export default function CalendarioPage() {
   const today = new Date()
@@ -86,60 +62,45 @@ export default function CalendarioPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
-
-  const [form, setForm] = useState({
-    type: 'birthday' as BookingType,
-    title: '',
-    child_name: '',
-    date: '',
-    start_time: '',
-    end_time: '',
-    member_id: '',
-    guests: '',
-    amount: '',
-    notes: '',
-  })
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<EditForm>({ guests: '', member_id: '', status: 'pending', payment_status: 'pending', notes: '' })
+  const [saving, setSaving] = useState(false)
 
   const fetchBookings = useCallback(async () => {
     const from = `${year}-${String(month + 1).padStart(2, '0')}-01`
-    const lastDay = getDaysInMonth(year, month)
-    const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(getDaysInMonth(year, month)).padStart(2, '0')}`
     const { data } = await supabase
       .from('bookings')
       .select('id, date, start_time, end_time, type, title, child_name, member_id, members(id, name, children), notes, status, guests, payment_status, amount')
-      .gte('date', from)
-      .lte('date', to)
-      .order('start_time')
+      .gte('date', from).lte('date', to).order('start_time')
     setBookings((data ?? []) as unknown as Booking[])
   }, [year, month])
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
+  useEffect(() => { supabase.from('members').select('id, name').order('name').then(({ data }) => setMembers(data ?? [])) }, [])
 
-  useEffect(() => {
-    supabase.from('members').select('id, name').order('name').then(({ data }) => setMembers(data ?? []))
-  }, [])
-
-  function prevMonth() {
-    if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1)
-    setSelectedDate(null)
-  }
-  function nextMonth() {
-    if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1)
-    setSelectedDate(null)
-  }
+  function prevMonth() { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1); setSelectedDate(null) }
+  function nextMonth() { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1); setSelectedDate(null) }
 
   function openNewBooking() {
-    setForm({
-      type: activeTab, title: '', child_name: '',
-      date: selectedDate ?? toDateStr(year, month, today.getDate()),
-      start_time: '', end_time: '', member_id: '', guests: '', amount: '', notes: '',
-    })
+    setForm({ ...EMPTY_FORM, type: activeTab, date: selectedDate ?? toDateStr(year, month, today.getDate()) })
     setShowModal(true)
   }
 
+  function openEdit(b: Booking) {
+    setEditingId(b.id)
+    setEditForm({
+      guests: b.guests?.toString() ?? '',
+      member_id: b.member_id ?? '',
+      status: b.status,
+      payment_status: b.payment_status,
+      notes: b.notes ?? '',
+    })
+  }
+
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault(); setLoading(true)
     await supabase.from('bookings').insert({
       type: form.type, title: form.title, date: form.date,
       child_name: form.child_name || null,
@@ -147,23 +108,34 @@ export default function CalendarioPage() {
       member_id: form.member_id || null,
       guests: form.guests ? parseInt(form.guests) : null,
       amount: form.amount ? parseFloat(form.amount) : null,
-      notes: form.notes || null,
-      status: 'pending', payment_status: 'pending',
+      notes: form.notes || null, status: 'pending', payment_status: 'pending',
     })
-    setLoading(false)
-    setShowModal(false)
-    fetchBookings()
+    setLoading(false); setShowModal(false); fetchBookings()
   }
 
-  const daysInMonth = getDaysInMonth(year, month)
-  const firstDow = getFirstDayOfWeek(year, month)
-  const cells: (number | null)[] = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  async function handleSaveEdit() {
+    if (!editingId) return; setSaving(true)
+    await supabase.from('bookings').update({
+      guests: editForm.guests ? parseInt(editForm.guests) : null,
+      member_id: editForm.member_id || null,
+      status: editForm.status,
+      payment_status: editForm.payment_status,
+      notes: editForm.notes || null,
+    }).eq('id', editingId)
+    setSaving(false); setEditingId(null); fetchBookings()
+  }
+
+  async function handleCancel(id: string) {
+    await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', id)
+    setEditingId(null); fetchBookings()
+  }
+
+  const cells: (number | null)[] = [...Array(getFirstDayOfWeek(year, month)).fill(null), ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1)]
   while (cells.length % 7 !== 0) cells.push(null)
 
   const bookingsByDate: Record<string, Booking[]> = {}
   bookings.forEach(b => { if (!bookingsByDate[b.date]) bookingsByDate[b.date] = []; bookingsByDate[b.date].push(b) })
-
-  const allSelectedBookings = selectedDate ? (bookings.filter(b => b.date === selectedDate)) : []
+  const allSelectedBookings = selectedDate ? bookings.filter(b => b.date === selectedDate) : []
 
   return (
     <div className="min-h-screen bg-carbon text-snow pb-24 lg:pb-8">
@@ -177,22 +149,18 @@ export default function CalendarioPage() {
             <Plus size={16} /> Nueva reserva
           </button>
         </div>
-
         <div className="flex gap-2 mt-5">
           {[{ key: 'birthday', label: 'Reservas' }, { key: 'custodia', label: 'Custodia' }].map(tab => (
-            <button key={tab.key}
-              onClick={() => { setActiveTab(tab.key as 'birthday' | 'custodia'); setSelectedDate(null) }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
-                activeTab === tab.key
-                  ? tab.key === 'birthday' ? 'bg-iris/15 text-iris border-iris/30' : 'bg-amber-400/15 text-amber-300 border-amber-400/30'
-                  : 'bg-surface border-line text-fog hover:text-snow'
-              }`}>{tab.label}</button>
+            <button key={tab.key} onClick={() => { setActiveTab(tab.key as any); setSelectedDate(null) }}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${activeTab === tab.key ? tab.key === 'birthday' ? 'bg-iris/15 text-iris border-iris/30' : 'bg-amber-400/15 text-amber-300 border-amber-400/30' : 'bg-surface border-line text-fog hover:text-snow'}`}>
+              {tab.label}
+            </button>
           ))}
         </div>
       </div>
 
       <div className="px-4 lg:px-8 space-y-4">
-        {/* Calendar */}
+        {/* Calendar grid */}
         <div className="bg-surface border border-line rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-line">
             <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronLeft size={18} /></button>
@@ -204,7 +172,7 @@ export default function CalendarioPage() {
           </div>
           <div className="grid grid-cols-7">
             {cells.map((day, idx) => {
-              if (!day) return <div key={`empty-${idx}`} className="min-h-[64px] border-b border-r border-line/50 last:border-r-0" />
+              if (!day) return <div key={`e-${idx}`} className="min-h-[64px] border-b border-r border-line/50 last:border-r-0" />
               const dateStr = toDateStr(year, month, day)
               const dayBookings = bookingsByDate[dateStr] ?? []
               const isToday = dateStr === toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
@@ -216,7 +184,7 @@ export default function CalendarioPage() {
                   <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-lime text-ink' : isSelected ? 'text-lime' : 'text-fog'}`}>{day}</span>
                   <div className="flex flex-wrap gap-0.5">
                     {dayBookings.slice(0, 3).map(b => <span key={b.id} className={`w-2 h-2 rounded-full ${bookingColor(b.type)}`} />)}
-                    {dayBookings.length > 3 && <span className="text-[9px] text-mist leading-none self-end">+{dayBookings.length - 3}</span>}
+                    {dayBookings.length > 3 && <span className="text-[9px] text-mist self-end">+{dayBookings.length - 3}</span>}
                   </div>
                 </button>
               )
@@ -224,33 +192,30 @@ export default function CalendarioPage() {
           </div>
         </div>
 
-        {/* Selected day detail */}
+        {/* Day detail */}
         {selectedDate && (
           <div className="bg-surface border border-line rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-line flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-snow">
-                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </p>
+                <p className="text-sm font-semibold text-snow">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                 <p className="text-xs text-mist mt-0.5">{allSelectedBookings.length} reserva{allSelectedBookings.length !== 1 ? 's' : ''}</p>
               </div>
-              <button onClick={() => setSelectedDate(null)} className="text-mist hover:text-fog transition-colors"><X size={16} /></button>
+              <button onClick={() => setSelectedDate(null)} className="text-mist hover:text-fog"><X size={16} /></button>
             </div>
             {allSelectedBookings.length === 0 ? (
               <div className="px-5 py-8 text-center text-sm text-mist">No hay reservas este día</div>
             ) : (
               <div className="divide-y divide-line">
                 {allSelectedBookings.map(b => {
-                  const titular = b.members?.name ?? null
-                  const child = b.child_name ?? null
-                  const childObj = child && b.members?.children
-                    ? b.members.children.find((c: any) => c.name.toLowerCase() === child.toLowerCase())
+                  const childObj = b.child_name && b.members?.children
+                    ? (b.members.children as any[]).find(c => c.name.toLowerCase() === b.child_name!.toLowerCase())
                     : null
                   const childAge = childObj?.birth_date ? calcAge(childObj.birth_date) : null
+                  const isEditing = editingId === b.id
 
                   return (
                     <div key={b.id} className="px-5 py-4">
-                      {/* Badges row */}
+                      {/* Badges */}
                       <div className="flex items-center gap-2 flex-wrap mb-3">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${bookingBadge(b.type)}`}>
                           {b.type === 'birthday' ? 'Cumpleaños' : b.type === 'custodia' ? 'Custodia' : 'Otro'}
@@ -261,43 +226,105 @@ export default function CalendarioPage() {
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${paymentBadge(b.payment_status)}`}>
                           {b.payment_status === 'paid' ? 'Pagado' : 'Pago pendiente'}
                         </span>
+                        {!isEditing && b.status !== 'cancelled' && (
+                          <button onClick={() => openEdit(b)} className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-fog hover:text-snow transition-colors">
+                            <Pencil size={11} /> Editar
+                          </button>
+                        )}
                       </div>
 
-                      <div className="flex items-start justify-between gap-4">
+                      {/* Main info (always visible) */}
+                      <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="min-w-0 space-y-1">
-                          {/* Child */}
-                          {child ? (
-                            <p className="text-sm font-semibold text-cyan-300">
-                              {child}{childAge ? ` · ${childAge}` : ''}
-                            </p>
+                          {b.child_name ? (
+                            <p className="text-sm font-semibold text-cyan-300">{b.child_name}{childAge ? ` · ${childAge}` : ''}</p>
                           ) : (
                             <p className="text-sm font-semibold text-snow">{b.title}</p>
                           )}
-                          {/* Titular */}
-                          {titular && <p className="text-xs text-fog">{titular}</p>}
-                          {/* Time */}
+                          {b.members?.name && <p className="text-xs text-fog">{b.members.name}</p>}
                           {(b.start_time || b.end_time) && (
                             <p className="text-xs text-mist flex items-center gap-1">
-                              <Clock size={11} />
-                              {b.start_time?.slice(0, 5)}{b.end_time ? ` → ${b.end_time.slice(0, 5)}` : ''}
+                              <Clock size={11} />{b.start_time?.slice(0, 5)}{b.end_time ? ` → ${b.end_time.slice(0, 5)}` : ''}
                             </p>
                           )}
-                          {/* Guests */}
-                          {b.guests && (
-                            <p className="text-xs text-mist flex items-center gap-1">
-                              <Users size={11} /> {b.guests} invitados
-                            </p>
-                          )}
-                          {/* Notes */}
-                          {b.notes && <p className="text-xs text-fog mt-1 italic">{b.notes}</p>}
+                          {b.guests && <p className="text-xs text-mist flex items-center gap-1"><Users size={11} /> {b.guests} invitados</p>}
+                          {b.notes && <p className="text-xs text-fog italic">{b.notes}</p>}
                         </div>
-                        {/* Amount */}
                         {b.amount != null && (
-                          <div className="shrink-0 text-right">
-                            <p className="text-lg font-bold text-snow">{b.amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</p>
-                          </div>
+                          <p className="text-lg font-bold text-snow shrink-0">{b.amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</p>
                         )}
                       </div>
+
+                      {/* Inline edit form */}
+                      {isEditing && (
+                        <div className="mt-3 pt-3 border-t border-line space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Status */}
+                            <div>
+                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Estado</label>
+                              <div className="flex gap-1.5">
+                                {(['pending', 'confirmed'] as BookingStatus[]).map(s => (
+                                  <button key={s} type="button" onClick={() => setEditForm(f => ({ ...f, status: s }))}
+                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${editForm.status === s ? s === 'confirmed' ? 'bg-lime/20 text-lime border-lime/40' : 'bg-fog/20 text-fog border-fog/40' : 'bg-surface2 text-mist border-line'}`}>
+                                    {s === 'confirmed' ? 'Confirmada' : 'Solicitud'}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            {/* Payment */}
+                            <div>
+                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Pago</label>
+                              <div className="flex gap-1.5">
+                                {(['pending', 'paid'] as PaymentStatus[]).map(p => (
+                                  <button key={p} type="button" onClick={() => setEditForm(f => ({ ...f, payment_status: p }))}
+                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${editForm.payment_status === p ? p === 'paid' ? 'bg-mint/20 text-mint border-mint/40' : 'bg-amber/20 text-amber border-amber/40' : 'bg-surface2 text-mist border-line'}`}>
+                                    {p === 'paid' ? 'Pagado' : 'Pendiente'}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Guests */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Nº invitados</label>
+                              <input type="number" min="1" value={editForm.guests}
+                                onChange={e => setEditForm(f => ({ ...f, guests: e.target.value }))}
+                                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+                            </div>
+                            {/* Contact */}
+                            <div>
+                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Titular de contacto</label>
+                              <select value={editForm.member_id} onChange={e => setEditForm(f => ({ ...f, member_id: e.target.value }))}
+                                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2">
+                                <option value="">Sin asignar</option>
+                                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                          {/* Notes */}
+                          <div>
+                            <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</label>
+                            <textarea rows={2} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                              className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2 resize-none" />
+                          </div>
+                          {/* Actions */}
+                          <div className="flex gap-2">
+                            <button onClick={handleSaveEdit} disabled={saving}
+                              className="flex-1 bg-lime text-ink font-semibold py-2 rounded-lg text-xs hover:bg-lime/90 transition-colors disabled:opacity-50">
+                              {saving ? 'Guardando...' : 'Guardar cambios'}
+                            </button>
+                            <button onClick={() => handleCancel(b.id)}
+                              className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-rose border border-rose/30 hover:bg-rose/10 transition-colors">
+                              <Trash2 size={12} /> Cancelar reserva
+                            </button>
+                            <button onClick={() => setEditingId(null)}
+                              className="px-3 py-2 rounded-lg text-xs font-semibold text-fog border border-line hover:text-snow transition-colors">
+                              Cerrar
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -307,57 +334,41 @@ export default function CalendarioPage() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* New booking modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative w-full max-w-lg bg-surface border border-line rounded-t-2xl lg:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
               <h2 className="text-base font-semibold text-snow">Nueva reserva</h2>
-              <button onClick={() => setShowModal(false)} className="text-mist hover:text-fog transition-colors"><X size={18} /></button>
+              <button onClick={() => setShowModal(false)} className="text-mist hover:text-fog"><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="overflow-y-auto p-5 space-y-4">
-              {/* Tipo */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5"><Tag size={11} className="inline mr-1" />Tipo</label>
                 <div className="flex gap-2">
                   {[{ value: 'birthday', label: 'Cumpleaños' }, { value: 'custodia', label: 'Custodia' }, { value: 'other', label: 'Otro' }].map(opt => (
-                    <button key={opt.value} type="button"
-                      onClick={() => setForm(f => ({ ...f, type: opt.value as BookingType }))}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${
-                        form.type === opt.value
-                          ? opt.value === 'birthday' ? 'bg-iris/20 text-iris border-iris/40'
-                          : opt.value === 'custodia' ? 'bg-amber-400/20 text-amber-300 border-amber-400/40'
-                          : 'bg-fog/20 text-fog border-fog/40'
-                          : 'bg-surface2 text-mist border-line hover:text-snow'
-                      }`}>{opt.label}</button>
+                    <button key={opt.value} type="button" onClick={() => setForm(f => ({ ...f, type: opt.value as BookingType }))}
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${form.type === opt.value ? opt.value === 'birthday' ? 'bg-iris/20 text-iris border-iris/40' : opt.value === 'custodia' ? 'bg-amber-400/20 text-amber-300 border-amber-400/40' : 'bg-fog/20 text-fog border-fog/40' : 'bg-surface2 text-mist border-line hover:text-snow'}`}>
+                      {opt.label}
+                    </button>
                   ))}
                 </div>
               </div>
-
-              {/* Título */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5">Título *</label>
-                <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                  placeholder="Ej: Cumple de Martina" className={inputClass} />
+                <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ej: Cumple de Martina" className={inputClass} />
               </div>
-
-              {/* Nombre del niño (cumpleaños) */}
               {form.type === 'birthday' && (
                 <div>
                   <label className="block text-xs font-semibold text-fog mb-1.5">Nombre del niño/a</label>
-                  <input value={form.child_name} onChange={e => setForm(f => ({ ...f, child_name: e.target.value }))}
-                    placeholder="Ej: Martina" className={inputClass} />
+                  <input value={form.child_name} onChange={e => setForm(f => ({ ...f, child_name: e.target.value }))} placeholder="Ej: Martina" className={inputClass} />
                 </div>
               )}
-
-              {/* Fecha */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5"><Calendar size={11} className="inline mr-1" />Fecha *</label>
                 <input required type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputClass} />
               </div>
-
-              {/* Hora */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-fog mb-1.5"><Clock size={11} className="inline mr-1" />Hora inicio</label>
@@ -368,41 +379,30 @@ export default function CalendarioPage() {
                   <input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inputClass} />
                 </div>
               </div>
-
-              {/* Invitados + Importe (cumpleaños) */}
               {form.type === 'birthday' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-fog mb-1.5"><Users size={11} className="inline mr-1" />Nº invitados</label>
-                    <input type="number" min="1" value={form.guests} onChange={e => setForm(f => ({ ...f, guests: e.target.value }))}
-                      placeholder="12" className={inputClass} />
+                    <input type="number" min="1" value={form.guests} onChange={e => setForm(f => ({ ...f, guests: e.target.value }))} placeholder="12" className={inputClass} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-fog mb-1.5"><Euro size={11} className="inline mr-1" />Importe (€)</label>
-                    <input type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                      placeholder="120.00" className={inputClass} />
+                    <input type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="120.00" className={inputClass} />
                   </div>
                 </div>
               )}
-
-              {/* Titular */}
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5"><User size={11} className="inline mr-1" />Titular</label>
+                <label className="block text-xs font-semibold text-fog mb-1.5"><User size={11} className="inline mr-1" />Titular de contacto</label>
                 <select value={form.member_id} onChange={e => setForm(f => ({ ...f, member_id: e.target.value }))} className={inputClass}>
                   <option value="">Sin asignar</option>
                   {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </div>
-
-              {/* Notas */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5"><FileText size={11} className="inline mr-1" />Notas (opcional)</label>
-                <textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="Observaciones..." className={inputClass + ' resize-none'} />
+                <textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Observaciones..." className={inputClass + ' resize-none'} />
               </div>
-
-              <button type="submit" disabled={loading}
-                className="w-full bg-lime text-ink font-semibold py-3 rounded-xl hover:bg-lime/90 transition-colors disabled:opacity-50 text-sm">
+              <button type="submit" disabled={loading} className="w-full bg-lime text-ink font-semibold py-3 rounded-xl hover:bg-lime/90 transition-colors disabled:opacity-50 text-sm">
                 {loading ? 'Guardando...' : 'Crear reserva'}
               </button>
             </form>

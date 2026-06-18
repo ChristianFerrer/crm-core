@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag, Building2 } from 'lucide-react'
+import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
 
 export const revalidate = 0
 
@@ -55,6 +56,7 @@ export default async function PanelPage() {
   since7.setHours(0, 0, 0, 0)
   const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString()
 
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
   const recentVisitedIds = (await supabase.from('visits').select('member_id').gte('checked_in_at', tenDaysAgo)).data?.map(v => v.member_id) ?? []
 
   const [
@@ -66,6 +68,8 @@ export default async function PanelPage() {
     { data: atRiskMembers },
     { data: topVisits },
     { data: lowBonoMembers },
+    { data: allMembers },
+    { data: activeBonoMembers },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
@@ -78,6 +82,8 @@ export default async function PanelPage() {
       : supabase.from('members').select('id, name, families(name)').limit(5),
     supabase.from('visits').select('member_id, members(name)').gte('checked_in_at', startOfMonth).limit(200),
     supabase.from('memberships').select('id, sessions_remaining, membership_types(name), members(id, name, families(name))').lte('sessions_remaining', 2).not('sessions_remaining', 'is', null).limit(10),
+    supabase.from('members').select('id, created_at, children'),
+    supabase.from('memberships').select('member_id').or('sessions_remaining.is.null,sessions_remaining.gt.0').gte('expires_at', now.toISOString().split('T')[0]),
   ])
 
   const DAY = ['D','L','M','X','J','V','S']
@@ -90,6 +96,27 @@ export default async function PanelPage() {
     const b = buckets.find(x => x.date === t.getTime())
     if (b) b.v++
   })
+
+  // Member growth this month — daily new registrations
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const growthBuckets = Array.from({ length: daysInMonth }, (_, i) => ({
+    label: `${i + 1}`,
+    nuevos: 0,
+  }))
+  const membersThisMonth = (allMembers ?? []).filter((m: any) => m.created_at >= startOfMonth)
+  membersThisMonth.forEach((m: any) => {
+    const d = new Date(m.created_at).getDate() - 1
+    if (growthBuckets[d]) growthBuckets[d].nuevos++
+  })
+  const newThisMonth = membersThisMonth.length
+  const lastMonthTotal = (totalMembers ?? 0) - newThisMonth
+  const totalAdults = totalMembers ?? 0
+  const totalChildren = (allMembers ?? []).reduce((s: number, m: any) => s + ((m.children as any[])?.length ?? 0), 0)
+
+  // Bono distribution
+  const withBonoIds = new Set((activeBonoMembers ?? []).map((m: any) => m.member_id))
+  const withBono = withBonoIds.size
+  const withoutBono = Math.max(0, (totalMembers ?? 0) - withBono)
 
   const tally: Record<string, { name: string; count: number }> = {}
   ;(topVisits as any[] ?? []).forEach((v: any) => {
@@ -125,6 +152,18 @@ export default async function PanelPage() {
         <StatCard icon={TrendingUp} label="Visitas hoy" value={todayCount ?? 0} sub="entradas registradas" accent="iris" />
         <StatCard icon={TrendingUp} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
         <StatCard icon={AlertTriangle} label="Bonos bajos" value={expiringCount ?? 0} sub="≤2 sesiones restantes" accent="amber" />
+      </div>
+
+      {/* Member growth + bono charts */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <MemberGrowthChart
+          data={growthBuckets}
+          lastMonthTotal={lastMonthTotal}
+          totalAdults={totalAdults}
+          totalChildren={totalChildren}
+          newThisMonth={newThisMonth}
+        />
+        <BonoDistChart withBono={withBono} withoutBono={withoutBono} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
