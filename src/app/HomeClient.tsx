@@ -231,18 +231,36 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
               <p className="text-sm text-mist">Sin niños en sala</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {activeVisits.filter(v => (v.children_present?.length ?? 0) > 0).map(visit => (
-                  <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
-                    <div className="flex flex-wrap gap-1 mb-1.5">
-                      {(visit.children_present ?? []).map((c, i) => (
-                        <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
-                          {c.name}
-                        </span>
-                      ))}
+                {activeVisits.filter(v => (v.children_present?.length ?? 0) > 0).map(visit => {
+                  const checkinTime = new Date(visit.checked_in_at)
+                  const elapsedMin = Math.floor((Date.now() - checkinTime.getTime()) / 60000)
+                  const elapsed = elapsedMin < 60
+                    ? `${elapsedMin} min`
+                    : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}min`
+                  return (
+                    <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap gap-1 mb-1.5">
+                            {(visit.children_present ?? []).map((c, i) => (
+                              <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
+                                {c.name}
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                          <div className="text-right">
+                            <p className="text-xs text-mist">{checkinTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-[11px] text-fog">{elapsed}</p>
+                          </div>
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-lime' : 'bg-amber'}`} />
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )
           ) : drawerVisits.length === 0 ? (
