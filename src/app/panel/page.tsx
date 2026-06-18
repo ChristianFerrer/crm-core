@@ -83,7 +83,7 @@ export default async function PanelPage() {
     supabase.from('visits').select('member_id, members(name)').gte('checked_in_at', startOfMonth).limit(200),
     supabase.from('memberships').select('id, sessions_remaining, membership_types(name), members(id, name, families(name))').lte('sessions_remaining', 2).not('sessions_remaining', 'is', null).limit(10),
     supabase.from('members').select('id, created_at, children'),
-    supabase.from('memberships').select('member_id').or('sessions_remaining.is.null,sessions_remaining.gt.0').gte('expires_at', now.toISOString().split('T')[0]),
+    supabase.from('memberships').select('member_id, sessions_remaining').or('sessions_remaining.is.null,sessions_remaining.gt.0').gte('expires_at', now.toISOString().split('T')[0]),
   ])
 
   const DAY = ['D','L','M','X','J','V','S']
@@ -97,26 +97,38 @@ export default async function PanelPage() {
     if (b) b.v++
   })
 
-  // Member growth this month — daily new registrations
+  // Member growth this month — cumulative line
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const growthBuckets = Array.from({ length: daysInMonth }, (_, i) => ({
-    label: `${i + 1}`,
-    nuevos: 0,
-  }))
+  const dailyNew = Array(daysInMonth).fill(0)
   const membersThisMonth = (allMembers ?? []).filter((m: any) => m.created_at >= startOfMonth)
   membersThisMonth.forEach((m: any) => {
     const d = new Date(m.created_at).getDate() - 1
-    if (growthBuckets[d]) growthBuckets[d].nuevos++
+    if (dailyNew[d] !== undefined) dailyNew[d]++
   })
   const newThisMonth = membersThisMonth.length
   const lastMonthTotal = (totalMembers ?? 0) - newThisMonth
+  let running = 0
+  const growthBuckets = dailyNew.map((nuevos, i) => {
+    running += nuevos
+    return { label: `${i + 1}`, nuevos, total: running }
+  })
   const totalAdults = totalMembers ?? 0
   const totalChildren = (allMembers ?? []).reduce((s: number, m: any) => s + ((m.children as any[])?.length ?? 0), 0)
 
-  // Bono distribution
-  const withBonoIds = new Set((activeBonoMembers ?? []).map((m: any) => m.member_id))
-  const withBono = withBonoIds.size
-  const withoutBono = Math.max(0, (totalMembers ?? 0) - withBono)
+  // Bono distribution: full / low (≤2) / none
+  const bonoByMember = new Map<string, number | null>()
+  ;(activeBonoMembers ?? []).forEach((m: any) => {
+    const existing = bonoByMember.get(m.member_id)
+    const sessions: number | null = m.sessions_remaining
+    if (existing === undefined) { bonoByMember.set(m.member_id, sessions) }
+    else if (existing !== null && (sessions === null || sessions > existing)) { bonoByMember.set(m.member_id, sessions) }
+  })
+  let withFullBono = 0, withLowBono = 0
+  bonoByMember.forEach(sessions => {
+    if (sessions === null || sessions > 2) withFullBono++
+    else if (sessions > 0) withLowBono++
+  })
+  const withoutBono = Math.max(0, (totalMembers ?? 0) - withFullBono - withLowBono)
 
   const tally: Record<string, { name: string; count: number }> = {}
   ;(topVisits as any[] ?? []).forEach((v: any) => {
@@ -163,7 +175,7 @@ export default async function PanelPage() {
           totalChildren={totalChildren}
           newThisMonth={newThisMonth}
         />
-        <BonoDistChart withBono={withBono} withoutBono={withoutBono} />
+        <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
