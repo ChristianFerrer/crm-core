@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, LogIn, CreditCard, UserX, Users, CalendarClock } from 'lucide-react'
+import { AlertTriangle, LogIn, CreditCard, UserX, Users, CalendarClock, Cake } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -36,6 +36,8 @@ type ExpiringMembership = {
   members: { id: string; name: string } | null
 }
 
+type BirthdayMember = { id: string; name: string; birth_date: string }
+
 type HomeClientProps = {
   todayVisits: TodayVisit[]
   todayCustodias: TodayVisit[]
@@ -43,13 +45,14 @@ type HomeClientProps = {
   monthCount: number
   dateLabel: string
   capacity: number | null
+  todayBirthdays: BirthdayMember[]
 }
 
-type DrawerKey = 'enSala' | 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | null
+type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
 
 type ChildInSala = { name: string; age: number; memberName: string }
 
-export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity }: HomeClientProps) {
+export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
 
   const persons = (v: TodayVisit) => 1 + (v.children_present?.length ?? 0)
@@ -82,9 +85,12 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
     { key: 'conBono', label: 'Con bono', value: conBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-mint', border: 'border-mint/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
     { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
     { key: 'custodias', label: 'Custodias', value: todayCustodias.reduce((s, v) => s + persons(v), 0), accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
+    { key: 'cumpleanos', label: 'Cumpleaños', value: todayBirthdays.length, accent: 'text-rose', border: 'border-rose/30', visits: [], icon: <Cake size={16} /> },
   ]
 
-  const drawerVisits = activeDrawer && activeDrawer !== 'ninos' ? (stats.find(s => s.key === activeDrawer)?.visits ?? []) : []
+  const drawerVisits = activeDrawer && activeDrawer !== 'ninos' && activeDrawer !== 'cumpleanos'
+    ? (stats.find(s => s.key === activeDrawer)?.visits ?? [])
+    : []
 
   const [tenantName, setTenantName] = useState<string | null>(null)
   useEffect(() => {
@@ -183,7 +189,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       )}
 
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map(({ key, label, value, accent, border, icon }) => (
           <button
             key={key}
@@ -202,7 +208,25 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
           <h3 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3">
             {stats.find(s => s.key === activeDrawer)?.label}
           </h3>
-          {activeDrawer === 'ninos' ? (
+          {activeDrawer === 'cumpleanos' ? (
+            todayBirthdays.length === 0 ? (
+              <p className="text-sm text-mist">Sin cumpleaños hoy</p>
+            ) : (
+              <div className="space-y-2">
+                {todayBirthdays.map(m => {
+                  const age = new Date().getFullYear() - new Date(m.birth_date).getFullYear()
+                  return (
+                    <Link key={m.id} href={`/miembros/${m.id}`}
+                      className="flex items-center justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors"
+                    >
+                      <p className="font-semibold text-sm text-snow">{m.name}</p>
+                      <span className="text-sm font-bold text-rose">{age} años 🎂</span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )
+          ) : activeDrawer === 'ninos' ? (
             childrenInSala.length === 0 ? (
               <p className="text-sm text-mist">Sin niños en sala</p>
             ) : (

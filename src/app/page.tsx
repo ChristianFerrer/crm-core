@@ -10,11 +10,15 @@ export default async function DashboardPage() {
   const weekFromNow = new Date(todayStart)
   weekFromNow.setDate(weekFromNow.getDate() + 7)
 
+  const todayMonth = now.getMonth() + 1  // 1-12
+  const todayDay = now.getDate()
+
   const [
     { data: todayVisits },
     { count: monthCount },
     { data: expiringMembers },
     { data: tenants },
+    { data: birthdayMembers },
   ] = await Promise.all([
     supabase
       .from('visits')
@@ -35,12 +39,21 @@ export default async function DashboardPage() {
       .from('tenants')
       .select('capacity')
       .limit(1),
+    supabase
+      .from('members')
+      .select('id, name, birth_date')
+      .not('birth_date', 'is', null),
   ])
 
   const allVisits = (todayVisits ?? []) as any[]
   const todayCustodias = allVisits.filter((v: any) => v.visit_type === 'custodia')
   const dateLabel = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
   const capacity: number | null = tenants?.[0]?.capacity ?? null
+
+  const todayBirthdays = (birthdayMembers ?? []).filter((m: any) => {
+    const d = new Date(m.birth_date)
+    return d.getUTCMonth() + 1 === todayMonth && d.getUTCDate() === todayDay
+  }) as { id: string; name: string; birth_date: string }[]
 
   return (
     <HomeClient
@@ -50,6 +63,7 @@ export default async function DashboardPage() {
       monthCount={monthCount ?? 0}
       dateLabel={dateLabel}
       capacity={capacity}
+      todayBirthdays={todayBirthdays}
     />
   )
 }
