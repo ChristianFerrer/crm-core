@@ -41,7 +41,7 @@ export default async function DashboardPage() {
       .limit(1),
     supabase
       .from('members')
-      .select('id, name, birth_date')
+      .select('id, name, birth_date, families(name)')
       .not('birth_date', 'is', null),
   ])
 
@@ -53,7 +53,12 @@ export default async function DashboardPage() {
   const todayBirthdays = (birthdayMembers ?? []).filter((m: any) => {
     const d = new Date(m.birth_date)
     return d.getUTCMonth() + 1 === todayMonth && d.getUTCDate() === todayDay
-  }) as { id: string; name: string; birth_date: string }[]
+  }).map((m: any) => ({
+    id: m.id as string,
+    name: m.name as string,
+    birth_date: m.birth_date as string,
+    families: Array.isArray(m.families) ? (m.families[0] ?? null) : (m.families ?? null),
+  }))
 
   return (
     <HomeClient

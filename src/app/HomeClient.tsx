@@ -36,7 +36,7 @@ type ExpiringMembership = {
   members: { id: string; name: string } | null
 }
 
-type BirthdayMember = { id: string; name: string; birth_date: string }
+type BirthdayMember = { id: string; name: string; birth_date: string; families: { name: string } | null }
 
 type HomeClientProps = {
   todayVisits: TodayVisit[]
@@ -257,17 +257,19 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
               <p className="text-sm text-mist">Sin cumpleaños hoy</p>
             ) : (
               <div className="space-y-2">
-                {todayBirthdays.map(m => {
-                  const age = new Date().getFullYear() - new Date(m.birth_date).getFullYear()
-                  return (
-                    <Link key={m.id} href={`/miembros/${m.id}`}
-                      className="flex items-center justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors"
-                    >
+                {todayBirthdays.map(m => (
+                  <Link key={m.id} href={`/miembros/${m.id}`}
+                    className="flex items-center justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
+                  >
+                    <div className="min-w-0">
                       <p className="font-semibold text-sm text-snow">{m.name}</p>
-                      <span className="text-sm font-bold text-rose">{age} años 🎂</span>
-                    </Link>
-                  )
-                })}
+                      {m.families?.name && <p className="text-xs text-fog">{m.families.name}</p>}
+                    </div>
+                    <span className="text-sm font-bold text-rose shrink-0">
+                      {fmtChildAge(m.birth_date)} 🎂
+                    </span>
+                  </Link>
+                ))}
               </div>
             )
           ) : activeDrawer === 'ninos' ? (
