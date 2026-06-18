@@ -39,7 +39,7 @@ type ExpiringMembership = {
 type BirthdayMember = {
   name: string
   birth_date: string
-  familyName: string | null
+  titularName: string
   booking: { start_time: string | null; end_time: string | null; guests: number | null; title: string } | null
 }
 
@@ -263,29 +263,29 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             ) : (
               <div className="space-y-2">
                 {todayBirthdays.map((m, i) => (
-                  <div key={i} className="rounded-xl border border-line bg-carbon px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold text-cyan-300">{m.name} · {fmtChildAge(m.birth_date)} 🎂</p>
-                        {m.familyName && <p className="text-xs text-fog mt-0.5">{m.familyName}</p>}
-                      </div>
-                      <div className="text-right shrink-0">
-                        {m.booking ? (
-                          <>
-                            <p className="text-xs text-mist">
-                              {m.booking.start_time?.slice(0, 5) ?? '—'}
-                              {m.booking.end_time ? ` → ${m.booking.end_time.slice(0, 5)}` : ''}
-                            </p>
-                            {m.booking.guests && (
-                              <p className="text-[11px] text-fog">{m.booking.guests} invitados</p>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-[11px] text-fog">Sin reserva hoy</p>
-                        )}
-                      </div>
+                  <Link key={i} href="/calendario"
+                    className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-cyan-300">{m.name} · {fmtChildAge(m.birth_date)} 🎂</p>
+                      <p className="text-xs text-fog mt-0.5">{m.titularName}</p>
                     </div>
-                  </div>
+                    <div className="text-right shrink-0">
+                      {m.booking ? (
+                        <>
+                          <p className="text-xs text-mist">
+                            {m.booking.start_time?.slice(0, 5) ?? '—'}
+                            {m.booking.end_time ? ` → ${m.booking.end_time.slice(0, 5)}` : ''}
+                          </p>
+                          {m.booking.guests && (
+                            <p className="text-[11px] text-fog">{m.booking.guests} invitados</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-[11px] text-fog">Sin reserva</p>
+                      )}
+                    </div>
+                  </Link>
                 ))}
               </div>
             )
