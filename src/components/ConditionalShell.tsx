@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { AppShell } from '@/components/AppShell'
 import BottomNav from '@/components/BottomNav'
 import { ArrowLeft, Eye } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 type ViewingAs = { id: string; name: string } | null
 
@@ -12,9 +13,22 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [viewingAs, setViewingAs] = useState<ViewingAs>(null)
+  const [authChecked, setAuthChecked] = useState(false)
 
   const isPublic = pathname.startsWith('/alta') || pathname === '/login' || pathname.startsWith('/auth') || pathname === '/landing'
   const isAdmin = pathname.startsWith('/admin')
+
+  useEffect(() => {
+    if (isPublic) { setAuthChecked(true); return }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace('/login')
+      } else {
+        setAuthChecked(true)
+      }
+    })
+  }, [pathname, isPublic, router])
 
   useEffect(() => {
     if (!isAdmin) {
@@ -30,6 +44,9 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
   }
 
   if (isPublic) return <>{children}</>
+
+  // Don't render protected content until auth is confirmed
+  if (!authChecked) return null
 
   if (isAdmin) return <main className="min-h-screen bg-carbon">{children}</main>
 
