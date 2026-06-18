@@ -97,23 +97,32 @@ export default async function PanelPage() {
     if (b) b.v++
   })
 
-  // Member growth this month — cumulative line
+  // Member growth — cumulative adults + children lines, baseline = last month totals
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const dailyNew = Array(daysInMonth).fill(0)
   const membersThisMonth = (allMembers ?? []).filter((m: any) => m.created_at >= startOfMonth)
-  membersThisMonth.forEach((m: any) => {
-    const d = new Date(m.created_at).getDate() - 1
-    if (dailyNew[d] !== undefined) dailyNew[d]++
-  })
+  const membersBeforeMonth = (allMembers ?? []).filter((m: any) => m.created_at < startOfMonth)
+  const lastMonthAdults = membersBeforeMonth.length
+  const lastMonthChildren = membersBeforeMonth.reduce((s: number, m: any) => s + ((m.children as any[])?.length ?? 0), 0)
   const newThisMonth = membersThisMonth.length
-  const lastMonthTotal = (totalMembers ?? 0) - newThisMonth
-  let running = 0
-  const growthBuckets = dailyNew.map((nuevos, i) => {
-    running += nuevos
-    return { label: `${i + 1}`, nuevos, total: running }
-  })
   const totalAdults = totalMembers ?? 0
   const totalChildren = (allMembers ?? []).reduce((s: number, m: any) => s + ((m.children as any[])?.length ?? 0), 0)
+
+  // Daily cumulative from baseline
+  const dailyAdults = Array(daysInMonth).fill(0)
+  const dailyChildren = Array(daysInMonth).fill(0)
+  membersThisMonth.forEach((m: any) => {
+    const d = new Date(m.created_at).getDate() - 1
+    if (d >= 0 && d < daysInMonth) {
+      dailyAdults[d]++
+      dailyChildren[d] += (m.children as any[])?.length ?? 0
+    }
+  })
+  let runAdults = lastMonthAdults, runChildren = lastMonthChildren
+  const growthBuckets = Array.from({ length: daysInMonth }, (_, i) => {
+    runAdults += dailyAdults[i]
+    runChildren += dailyChildren[i]
+    return { label: `${i + 1}`, adultos: runAdults, ninos: runChildren }
+  })
 
   // Bono distribution: full / low (≤2) / none
   const bonoByMember = new Map<string, number | null>()
@@ -159,23 +168,22 @@ export default async function PanelPage() {
         </Link>
       </div>
 
+      {/* Member growth + bono charts */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <MemberGrowthChart
+          data={growthBuckets}
+          lastMonthAdults={lastMonthAdults}
+          lastMonthChildren={lastMonthChildren}
+          newThisMonth={newThisMonth}
+        />
+        <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
+      </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard icon={Users} label="Miembros totales" value={totalMembers ?? 0} sub="registrados" accent="lime" />
         <StatCard icon={TrendingUp} label="Visitas hoy" value={todayCount ?? 0} sub="entradas registradas" accent="iris" />
         <StatCard icon={TrendingUp} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
         <StatCard icon={AlertTriangle} label="Bonos bajos" value={expiringCount ?? 0} sub="≤2 sesiones restantes" accent="amber" />
-      </div>
-
-      {/* Member growth + bono charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <MemberGrowthChart
-          data={growthBuckets}
-          lastMonthTotal={lastMonthTotal}
-          totalAdults={totalAdults}
-          totalChildren={totalChildren}
-          newThisMonth={newThisMonth}
-        />
-        <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
