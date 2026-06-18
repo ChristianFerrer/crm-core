@@ -109,7 +109,7 @@ export function BonoDistChart({
             fill="transparent"
           >
             {data.map((_, i) => (
-              <Cell key={i} fill={i === 0 ? '#8b8bff' : '#4b5563'} />
+              <Cell key={i} fill={i === 0 ? '#8b8bff' : '#f59e0b'} />
             ))}
           </Bar>
           <Bar dataKey="bajo" stackId="a" radius={[0, 4, 4, 0]} fill="#f43f5e" />
@@ -126,8 +126,8 @@ export function BonoDistChart({
           <span className="text-xs text-fog"><span className="text-rose font-semibold">{withLowBono}</span> bono bajo</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-fog/60 shrink-0" />
-          <span className="text-xs text-fog"><span className="text-fog font-semibold">{withoutBono}</span> sin bono</span>
+          <span className="w-2 h-2 rounded-full bg-amber shrink-0" />
+          <span className="text-xs text-fog"><span className="text-amber font-semibold">{withoutBono}</span> sin bono</span>
         </div>
       </div>
     </div>
