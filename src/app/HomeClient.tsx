@@ -255,21 +255,35 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
             <p className="text-sm text-mist">Sin entradas</p>
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {drawerVisits.map(visit => (
-                <Link
-                  key={visit.id}
-                  href="/checkin?tab=dentro"
-                  className="flex items-center justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors"
-                >
-                  <div>
-                    <p className="font-semibold text-sm text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-xs text-mist">
-                      {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-lime' : 'bg-amber'}`} />
-                </Link>
-              ))}
+              {drawerVisits.map(visit => {
+                const kids = visit.children_present ?? []
+                return (
+                  <Link
+                    key={visit.id}
+                    href="/checkin?tab=dentro"
+                    className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      {kids.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                          {kids.map((c, i) => (
+                            <span key={i} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-lime text-ink">
+                              {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                      <span className="text-xs text-mist">
+                        {new Date(visit.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-lime' : 'bg-amber'}`} />
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
