@@ -13,22 +13,33 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [viewingAs, setViewingAs] = useState<ViewingAs>(null)
-  const [authChecked, setAuthChecked] = useState(false)
+  // null = still checking, true = authenticated, false = not authenticated
+  const [authed, setAuthed] = useState<boolean | null>(null)
 
   const isPublic = pathname.startsWith('/alta') || pathname === '/login' || pathname.startsWith('/auth') || pathname === '/landing'
   const isAdmin = pathname.startsWith('/admin')
 
+  // Single auth listener on mount — never re-runs on navigation
   useEffect(() => {
-    if (isPublic) { setAuthChecked(true); return }
-
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.replace('/login')
-      } else {
-        setAuthChecked(true)
-      }
+      setAuthed(!!session)
     })
-  }, [pathname, isPublic, router])
+
+    // Keep in sync with auth state changes (login / logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthed(!!session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Redirect unauthenticated users away from protected routes
+  useEffect(() => {
+    if (authed === false && !isPublic && !isAdmin) {
+      router.replace('/login')
+    }
+  }, [authed, isPublic, isAdmin, router])
 
   useEffect(() => {
     if (!isAdmin) {
@@ -45,8 +56,8 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
 
   if (isPublic) return <>{children}</>
 
-  // Don't render protected content until auth is confirmed
-  if (!authChecked) return null
+  // Still checking auth on cold start — show nothing briefly
+  if (authed === null && !isPublic) return null
 
   if (isAdmin) return <main className="min-h-screen bg-carbon">{children}</main>
 
