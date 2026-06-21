@@ -151,13 +151,16 @@ export function OpportunityDashboard({
                   {count}
                 </span>
               </div>
-              {/* Q3+Q4: label + chevron */}
-              <div className="col-span-2 flex flex-col justify-end">
-                <div className="text-[11px] font-semibold text-snow leading-tight">{s.label}</div>
-                <div className="text-[10px] text-mist mt-0.5">{s.sub}</div>
-                <div className={`mt-1.5 flex items-center gap-1 text-[10px] ${isOpen ? s.accent : 'text-fog'}`}>
-                  {isOpen ? <><ChevronUp size={10} /> Cerrar</> : <><ChevronDown size={10} /> Ver</>}
+              {/* Q3+Q4: label + sub */}
+              <div className="col-span-2 flex flex-col justify-start pt-1">
+                <div className="flex items-center gap-1">
+                  {isOpen
+                    ? <ChevronUp size={10} className={s.accent} />
+                    : <ChevronDown size={10} className="text-fog" />
+                  }
+                  <span className="text-[11px] font-semibold text-snow leading-tight">{s.label}</span>
                 </div>
+                <div className="text-[10px] text-mist mt-0.5 pl-[14px]">{s.sub}</div>
               </div>
             </button>
           )
