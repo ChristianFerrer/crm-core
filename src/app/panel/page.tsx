@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag, Building2 } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
+import { BirthdayLeads } from './BirthdayLeads'
 
 export const revalidate = 0
 
@@ -70,6 +71,8 @@ export default async function PanelPage() {
     { data: lowBonoMembers },
     { data: allMembers },
     { data: activeBonoMembers },
+    { data: tenant },
+    { data: birthdayLeadsData },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
@@ -84,6 +87,8 @@ export default async function PanelPage() {
     supabase.from('memberships').select('id, sessions_remaining, membership_types(name), members(id, name, families(name))').lte('sessions_remaining', 2).not('sessions_remaining', 'is', null).limit(10),
     supabase.from('members').select('id, created_at, children'),
     supabase.from('memberships').select('member_id, sessions_remaining').or('sessions_remaining.is.null,sessions_remaining.gt.0').gte('expires_at', now.toISOString().split('T')[0]),
+    supabase.from('tenants').select('id').limit(1).single(),
+    supabase.from('birthday_leads').select('*').eq('year', now.getFullYear()),
   ])
 
   const DAY = ['D','L','M','X','J','V','S']
@@ -139,6 +144,40 @@ export default async function PanelPage() {
   })
   const withoutBono = Math.max(0, (totalMembers ?? 0) - withFullBono - withLowBono)
 
+  // Birthday leads — children with birthdays this month
+  const thisMonth = now.getMonth() + 1
+  const thisYear = now.getFullYear()
+  const birthdayLeadsMap = new Map<string, any>()
+  ;(birthdayLeadsData ?? []).forEach((l: any) => {
+    birthdayLeadsMap.set(`${l.member_id}-${l.child_name}`, l)
+  })
+  const birthdayLeads: any[] = []
+  ;(allMembers ?? []).forEach((m: any) => {
+    ;((m.children as any[]) ?? []).forEach((c: any) => {
+      if (!c.birth_date) return
+      const dob = new Date(c.birth_date)
+      if (dob.getUTCMonth() + 1 !== thisMonth) return
+      const key = `${m.id}-${c.name}`
+      const lead = birthdayLeadsMap.get(key)
+      const age = thisYear - dob.getUTCFullYear()
+      birthdayLeads.push({
+        id: lead?.id ?? null,
+        member_id: m.id,
+        member_name: m.name,
+        child_name: c.name,
+        child_birth_date: c.birth_date,
+        year: thisYear,
+        status: lead?.status ?? 'sin_contactar',
+        notes: lead?.notes ?? null,
+        age,
+        birthday_day: dob.getUTCDate(),
+      })
+    })
+  })
+  birthdayLeads.sort((a, b) => a.birthday_day - b.birthday_day)
+  const birthdayLeadsCount = birthdayLeads.length
+  const tenantId = tenant?.id ?? ''
+
   const tally: Record<string, { name: string; count: number }> = {}
   ;(topVisits as any[] ?? []).forEach((v: any) => {
     const mid = v.member_id; const name = (v.members as any)?.name
@@ -185,6 +224,9 @@ export default async function PanelPage() {
         <StatCard icon={TrendingUp} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
         <StatCard icon={AlertTriangle} label="Bonos bajos" value={expiringCount ?? 0} sub="≤2 sesiones restantes" accent="amber" />
       </div>
+
+      {/* Birthday leads */}
+      <BirthdayLeads leads={birthdayLeads} tenantId={tenantId} />
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="rounded-2xl border border-line bg-surface p-5">
