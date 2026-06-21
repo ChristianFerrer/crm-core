@@ -249,22 +249,22 @@ export default async function PanelPage() {
         </Link>
       </div>
 
-      {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto]">
-        <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
-        <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
-        <div className="rounded-2xl border border-line bg-surface p-5 min-w-[220px]">
-          <p className="text-sm font-semibold text-snow mb-5">Visitas · últimos 7 días</p>
-          <MiniBar data={buckets} />
+      {/* Charts + Stat cards grouped */}
+      <div className="rounded-3xl border border-line bg-surface/40 p-4 space-y-4">
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto]">
+          <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
+          <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
+          <div className="rounded-2xl border border-line bg-surface p-5 min-w-[220px]">
+            <p className="text-sm font-semibold text-snow mb-5">Visitas · últimos 7 días</p>
+            <MiniBar data={buckets} />
+          </div>
         </div>
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon={Users} label="Miembros totales" value={totalMembers ?? 0} sub="registrados" accent="lime" />
-        <StatCard icon={TrendingUp} label="Visitas hoy" value={todayCount ?? 0} sub="entradas registradas" accent="iris" />
-        <StatCard icon={TrendingUp} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
-        <StatCard icon={AlertTriangle} label="Bonos bajos" value={expiringCount ?? 0} sub="≤2 sesiones restantes" accent="amber" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard icon={Users} label="Miembros totales" value={totalMembers ?? 0} sub="registrados" accent="lime" />
+          <StatCard icon={TrendingUp} label="Visitas hoy" value={todayCount ?? 0} sub="entradas registradas" accent="iris" />
+          <StatCard icon={TrendingUp} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
+          <StatCard icon={AlertTriangle} label="Bonos bajos" value={expiringCount ?? 0} sub="≤2 sesiones restantes" accent="amber" />
+        </div>
       </div>
 
       {/* Opportunity indicators */}

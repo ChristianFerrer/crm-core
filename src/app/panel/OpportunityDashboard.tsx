@@ -135,20 +135,25 @@ export function OpportunityDashboard({
             <button
               key={s.id}
               onClick={() => toggle(s.id)}
-              className={`rounded-2xl border bg-surface p-4 text-left transition-all hover:border-line2 ${
+              className={`aspect-square rounded-2xl border bg-surface p-3 flex flex-col justify-between text-left transition-all hover:border-line2 ${
                 isOpen ? `${s.border} ring-1 ring-inset ${s.border}` : 'border-line'
               }`}
             >
-              <div className={`w-9 h-9 rounded-xl ${s.bg} flex items-center justify-center mb-3`}>
-                <Icon size={18} className={s.iconColor} />
+              <div className="flex items-start justify-between">
+                <div className={`w-7 h-7 rounded-lg ${s.bg} flex items-center justify-center`}>
+                  <Icon size={14} className={s.iconColor} />
+                </div>
+                {isOpen
+                  ? <ChevronUp size={12} className={s.accent} />
+                  : <ChevronDown size={12} className="text-fog" />
+                }
               </div>
-              <div className={`font-display text-2xl font-semibold ${count > 0 ? s.accent : 'text-fog'}`}>
-                {count}
-              </div>
-              <div className="text-xs font-semibold text-snow mt-0.5 leading-tight">{s.label}</div>
-              <div className="text-xs text-mist mt-0.5">{s.sub}</div>
-              <div className={`mt-2 flex items-center gap-1 text-xs ${isOpen ? s.accent : 'text-fog'}`}>
-                {isOpen ? <><ChevronUp size={12} /> Cerrar</> : <><ChevronDown size={12} /> Ver detalle</>}
+              <div>
+                <div className={`font-display text-4xl font-bold leading-none ${count > 0 ? s.accent : 'text-fog'}`}>
+                  {count}
+                </div>
+                <div className="text-[11px] font-semibold text-snow mt-1.5 leading-tight">{s.label}</div>
+                <div className="text-[10px] text-mist mt-0.5">{s.sub}</div>
               </div>
             </button>
           )
