@@ -135,25 +135,29 @@ export function OpportunityDashboard({
             <button
               key={s.id}
               onClick={() => toggle(s.id)}
-              className={`aspect-square rounded-2xl border bg-surface p-3 flex flex-col justify-between text-left transition-all hover:border-line2 ${
+              className={`aspect-square rounded-2xl border bg-surface p-3 grid grid-cols-2 grid-rows-2 text-left transition-all hover:border-line2 ${
                 isOpen ? `${s.border} ring-1 ring-inset ${s.border}` : 'border-line'
               }`}
             >
-              <div className="flex items-start justify-between">
+              {/* Q1: icon */}
+              <div className="flex items-start">
                 <div className={`w-7 h-7 rounded-lg ${s.bg} flex items-center justify-center`}>
                   <Icon size={14} className={s.iconColor} />
                 </div>
-                {isOpen
-                  ? <ChevronUp size={12} className={s.accent} />
-                  : <ChevronDown size={12} className="text-fog" />
-                }
               </div>
-              <div>
-                <div className={`font-display text-4xl font-bold leading-none ${count > 0 ? s.accent : 'text-fog'}`}>
+              {/* Q2: number */}
+              <div className="flex items-start justify-end">
+                <span className={`font-display text-4xl font-bold leading-none ${count > 0 ? s.accent : 'text-fog'}`}>
                   {count}
-                </div>
-                <div className="text-[11px] font-semibold text-snow mt-1.5 leading-tight">{s.label}</div>
+                </span>
+              </div>
+              {/* Q3+Q4: label + chevron */}
+              <div className="col-span-2 flex flex-col justify-end">
+                <div className="text-[11px] font-semibold text-snow leading-tight">{s.label}</div>
                 <div className="text-[10px] text-mist mt-0.5">{s.sub}</div>
+                <div className={`mt-1.5 flex items-center gap-1 text-[10px] ${isOpen ? s.accent : 'text-fog'}`}>
+                  {isOpen ? <><ChevronUp size={10} /> Cerrar</> : <><ChevronDown size={10} /> Ver</>}
+                </div>
               </div>
             </button>
           )
