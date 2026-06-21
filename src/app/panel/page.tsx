@@ -150,13 +150,17 @@ export default async function PanelPage() {
   const birthdayLeadsMap = new Map<string, any>()
   ;(birthdayLeadsData ?? []).forEach((l: any) => birthdayLeadsMap.set(`${l.member_id}-${l.child_name}`, l))
   const birthdayLeads: any[] = []
+  const seenChildren = new Set<string>()
   ;(allMembers ?? []).forEach((m: any) => {
     ;((m.children as any[]) ?? []).forEach((c: any) => {
       if (!c.birth_date) return
       const dob = new Date(c.birth_date)
       if (dob.getUTCMonth() + 1 !== thisMonth) return
-      const key = `${m.id}-${c.name}`
-      const lead = birthdayLeadsMap.get(key)
+      const dedupeKey = `${c.name}-${c.birth_date}`
+      if (seenChildren.has(dedupeKey)) return
+      seenChildren.add(dedupeKey)
+      const leadKey = `${m.id}-${c.name}`
+      const lead = birthdayLeadsMap.get(leadKey)
       birthdayLeads.push({
         id: lead?.id ?? null, member_id: m.id, member_name: m.name,
         child_name: c.name, child_birth_date: c.birth_date, year: thisYear,
