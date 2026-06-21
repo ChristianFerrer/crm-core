@@ -2,8 +2,8 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag, Building2 } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
-import { BirthdayLeads } from './BirthdayLeads'
-import { FollowUpSection, FollowUpItem } from './FollowUpSection'
+import { FollowUpItem } from './FollowUpSection'
+import { OpportunityDashboard } from './OpportunityDashboard'
 
 export const revalidate = 0
 
@@ -264,48 +264,14 @@ export default async function PanelPage() {
       </div>
 
       {/* Opportunity indicators */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <BirthdayLeads leads={birthdayLeads} tenantId={tenantId} />
-        <FollowUpSection
-          title="Bonos a punto de agotarse"
-          description="Contacta antes de que se queden sin sesiones y dejen de venir"
-          icon="AlertTriangle"
-          iconColor="text-amber"
-          items={bonosBajosItems}
-          tenantId={tenantId}
-          emptyText="No hay bonos bajos en este momento"
-        />
-        <FollowUpSection
-          title="Clientes inactivos"
-          description="No han visitado en más de 10 días — recupera el hábito"
-          icon="UserMinus"
-          iconColor="text-rose"
-          items={inactivosItems}
-          tenantId={tenantId}
-          emptyText="Todos los clientes han visitado recientemente"
-        />
-        <FollowUpSection
-          title="Bonos caducados sin renovar"
-          description="El bono venció en los últimos 30 días — momento ideal para llamar"
-          icon="RefreshCw"
-          iconColor="text-iris"
-          items={expiredBonosItems}
-          tenantId={tenantId}
-          emptyText="No hay bonos caducados sin renovar"
-        />
-      </div>
-
-      {sinBonoItems.length > 0 && (
-        <FollowUpSection
-          title="Visitan sin bono activo"
-          description="Clientes habituales que pagan al contado — candidatos a contratar bono"
-          icon="WalletCards"
-          iconColor="text-iris"
-          items={sinBonoItems}
-          tenantId={tenantId}
-          emptyText="Todos los visitantes tienen bono activo"
-        />
-      )}
+      <OpportunityDashboard
+        birthdayLeads={birthdayLeads}
+        bonosBajosItems={bonosBajosItems}
+        inactivosItems={inactivosItems}
+        expiredBonosItems={expiredBonosItems}
+        sinBonoItems={sinBonoItems}
+        tenantId={tenantId}
+      />
 
       {/* Visit chart + at-risk */}
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
