@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag, Building2 } from 'lucide-react'
+import { Users, TrendingUp, AlertTriangle, BarChart2, Tag, Building2 } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
@@ -250,9 +250,13 @@ export default async function PanelPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-[1fr_auto_auto]">
         <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
         <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
+        <div className="rounded-2xl border border-line bg-surface p-5 min-w-[220px]">
+          <p className="text-sm font-semibold text-snow mb-5">Visitas · últimos 7 días</p>
+          <MiniBar data={buckets} />
+        </div>
       </div>
 
       {/* Stat cards */}
@@ -270,34 +274,9 @@ export default async function PanelPage() {
         inactivosItems={inactivosItems}
         expiredBonosItems={expiredBonosItems}
         sinBonoItems={sinBonoItems}
+        top5={top5}
         tenantId={tenantId}
       />
-
-      {/* Visit chart + at-risk */}
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-2xl border border-line bg-surface p-5">
-          <p className="text-sm font-semibold text-snow mb-5">Visitas · últimos 7 días</p>
-          <MiniBar data={buckets} />
-        </div>
-        <div className="rounded-2xl border border-line bg-surface p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-snow mb-4">
-            <Crown size={15} className="text-lime" /> Más activos este mes
-          </div>
-          {!top5.length ? (
-            <p className="text-sm text-mist text-center py-4">Sin datos este mes</p>
-          ) : (
-            <div className="space-y-2">
-              {top5.map((m, i) => (
-                <div key={m.name} className="flex items-center gap-3 rounded-xl bg-surface2 px-3 py-2.5">
-                  <span className="w-6 h-6 rounded-full bg-carbon border border-line flex items-center justify-center text-xs font-bold text-lime shrink-0">{i + 1}</span>
-                  <span className="flex-1 text-sm text-snow font-medium">{m.name}</span>
-                  <span className="text-sm font-semibold text-fog">{m.count} vis.</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
