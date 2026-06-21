@@ -175,7 +175,7 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       </div>
 
       {/* Charts side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Afluencia por hora · bono / sin bono</h2>
           <ResponsiveContainer width="100%" height={180}>

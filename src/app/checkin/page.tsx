@@ -243,7 +243,7 @@ function CheckInTab({
         </Link>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr] lg:items-start">
+      <div className="grid gap-4 md:grid-cols-[1fr_1.1fr] md:items-start">
         {/* Search / QR */}
         <div className="rounded-2xl border border-line bg-surface p-4">
           {mode === 'qr' ? (
