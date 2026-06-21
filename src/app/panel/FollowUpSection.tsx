@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, LucideIcon } from 'lucide-react'
+import { ChevronDown, ChevronUp, AlertTriangle, UserMinus, RefreshCw, WalletCards, Gift } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+
+const ICONS = { AlertTriangle, UserMinus, RefreshCw, WalletCards, Gift } as const
+type IconName = keyof typeof ICONS
 
 export type FollowUpStatus = 'sin_contactar' | 'contactado' | 'convertido' | 'descartado'
 
@@ -29,11 +32,11 @@ const STATUS_CONFIG: Record<FollowUpStatus, { label: string; color: string; bg: 
 const ALL_STATUSES: FollowUpStatus[] = ['sin_contactar', 'contactado', 'convertido', 'descartado']
 
 export function FollowUpSection({
-  title, description, icon: Icon, iconColor, items: initialItems, tenantId, emptyText,
+  title, description, icon, iconColor, items: initialItems, tenantId, emptyText,
 }: {
   title: string
   description: string
-  icon: LucideIcon
+  icon: IconName
   iconColor: string
   items: FollowUpItem[]
   tenantId: string
@@ -72,6 +75,7 @@ export function FollowUpSection({
 
   const pending = items.filter(i => i.status === 'sin_contactar').length
   const converted = items.filter(i => i.status === 'convertido').length
+  const Icon = ICONS[icon]
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">

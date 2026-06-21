@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag, Building2, Gift, RefreshCw, WalletCards, Ban } from 'lucide-react'
+import { Users, TrendingUp, AlertTriangle, UserMinus, Crown, BarChart2, Tag, Building2 } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
 import { BirthdayLeads } from './BirthdayLeads'
 import { FollowUpSection, FollowUpItem } from './FollowUpSection'
@@ -265,7 +265,7 @@ export default async function PanelPage() {
         <FollowUpSection
           title="Bonos a punto de agotarse"
           description="Contacta antes de que se queden sin sesiones y dejen de venir"
-          icon={AlertTriangle}
+          icon="AlertTriangle"
           iconColor="text-amber"
           items={bonosBajosItems}
           tenantId={tenantId}
@@ -274,7 +274,7 @@ export default async function PanelPage() {
         <FollowUpSection
           title="Clientes inactivos"
           description="No han visitado en más de 10 días — recupera el hábito"
-          icon={UserMinus}
+          icon="UserMinus"
           iconColor="text-rose"
           items={inactivosItems}
           tenantId={tenantId}
@@ -283,7 +283,7 @@ export default async function PanelPage() {
         <FollowUpSection
           title="Bonos caducados sin renovar"
           description="El bono venció en los últimos 30 días — momento ideal para llamar"
-          icon={RefreshCw}
+          icon="RefreshCw"
           iconColor="text-iris"
           items={expiredBonosItems}
           tenantId={tenantId}
@@ -295,7 +295,7 @@ export default async function PanelPage() {
         <FollowUpSection
           title="Visitan sin bono activo"
           description="Clientes habituales que pagan al contado — candidatos a contratar bono"
-          icon={WalletCards}
+          icon="WalletCards"
           iconColor="text-iris"
           items={sinBonoItems}
           tenantId={tenantId}
