@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Gift, AlertTriangle, UserMinus, RefreshCw, WalletCards, Crown, ChevronDown, ChevronUp } from 'lucide-react'
 import { BirthdayLeads } from './BirthdayLeads'
 import { FollowUpSection, FollowUpItem } from './FollowUpSection'
@@ -112,6 +112,11 @@ export function OpportunityDashboard({
   tenantId: string
 }) {
   const [open, setOpen] = useState<Section | null>(null)
+  const detailRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (open) detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [open])
 
   const counts: Record<Section, number> = {
     cumpleanos: birthdayLeads.length,
@@ -166,6 +171,8 @@ export function OpportunityDashboard({
           )
         })}
       </div>
+
+      <div ref={detailRef} />
 
       {open === 'cumpleanos' && (
         <BirthdayLeads leads={birthdayLeads} tenantId={tenantId} />
