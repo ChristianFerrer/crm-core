@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, AlertTriangle, UserMinus, RefreshCw, WalletCards, Gift } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 const ICONS = { AlertTriangle, UserMinus, RefreshCw, WalletCards, Gift } as const
 type IconName = keyof typeof ICONS
@@ -71,6 +72,7 @@ export function FollowUpSection({
     ))
     setSaving(null)
     setExpanded(null)
+    toast.success(`${item.member_name} · estado actualizado`)
   }
 
   const pending = items.filter(i => i.status === 'sin_contactar').length

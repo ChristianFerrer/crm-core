@@ -4,6 +4,7 @@ import { Users, TrendingUp, AlertTriangle, BarChart2, Tag, Building2 } from 'luc
 import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
+import { UrgentAlerts } from './UrgentAlerts'
 
 export const revalidate = 0
 
@@ -228,6 +229,36 @@ export default async function PanelPage() {
   })
   const top5 = Object.values(tally).sort((a, b) => b.count - a.count).slice(0, 5)
 
+  // ── Urgent alerts ──────────────────────────────────────────────────────────
+  const tomorrowStr = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  const urgentAlerts: { id: string; type: 'bono' | 'birthday'; message: string }[] = []
+  bonosBajosItems.filter(i => {
+    const sessions = parseInt(i.meta)
+    return sessions === 1
+  }).forEach(i => urgentAlerts.push({
+    id: `bono-1-${i.member_id}`,
+    type: 'bono',
+    message: `${i.member_name} — le queda solo 1 sesión de bono`,
+  }))
+  ;(expiredBonos as any[] ?? []).forEach((b: any) => {
+    if (b.expires_at === todayStr || b.expires_at === tomorrowStr) {
+      urgentAlerts.push({
+        id: `caducado-${b.member_id}`,
+        type: 'bono',
+        message: `${(b.members as any)?.name} — el bono caduca ${b.expires_at === todayStr ? 'hoy' : 'mañana'}`,
+      })
+    }
+  })
+  birthdayLeads.filter(l => {
+    const next = new Date(now.getFullYear(), now.getMonth(), l.birthday_day)
+    return next >= now && next <= in7days
+  }).forEach(l => urgentAlerts.push({
+    id: `bday-${l.member_id}-${l.child_name}`,
+    type: 'birthday',
+    message: `${l.child_name} cumple ${l.age + 1} años el día ${l.birthday_day} — cliente: ${l.member_name}`,
+  }))
+
   return (
     <div className="space-y-6">
       <div>
@@ -236,6 +267,8 @@ export default async function PanelPage() {
           {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
+
+      {urgentAlerts.length > 0 && <UrgentAlerts alerts={urgentAlerts} />}
 
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line mb-6">
         <div className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Fraunces } from 'next/font/google'
 import './globals.css'
 import { ConditionalShell } from '@/components/ConditionalShell'
+import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', axes: ['opsz'] })
@@ -16,6 +17,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${inter.variable} ${fraunces.variable}`}>
       <body className="min-h-screen bg-carbon text-snow">
         <ConditionalShell>{children}</ConditionalShell>
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: 'var(--color-surface2)',
+              border: '1px solid var(--color-line)',
+              color: 'var(--color-snow)',
+              fontSize: '13px',
+            },
+          }}
+        />
       </body>
     </html>
   )

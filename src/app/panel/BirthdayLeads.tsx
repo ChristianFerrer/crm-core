@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Gift, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 type Status = 'sin_contactar' | 'contactado' | 'reservado' | 'descartado'
 
@@ -61,6 +62,7 @@ export function BirthdayLeads({ leads: initialLeads, tenantId }: { leads: Lead[]
     ))
     setSaving(null)
     setExpanded(null)
+    toast.success(`${lead.child_name} · estado actualizado`)
   }
 
   const pending = leads.filter(l => l.status === 'sin_contactar').length

@@ -122,6 +122,7 @@ function CheckInTab({
   const [visitType, setVisitType] = useState<VisitType>('entrada')
   const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
   const [extraChildren, setExtraChildren] = useState<string[]>([])
+  const [pendingConfirm, setPendingConfirm] = useState(false)
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -148,7 +149,7 @@ function CheckInTab({
 
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([])
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setPendingConfirm(false)
   }
 
   function selectMember(m: MemberRow) {
@@ -439,9 +440,37 @@ function CheckInTab({
                 <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
                   Este miembro ya tiene una entrada activa
                 </div>
+              ) : pendingConfirm ? (
+                <div className="rounded-xl border border-amber/30 bg-amber/10 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle size={15} className="text-amber shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber font-semibold">¿Confirmar entrada sin bono?</p>
+                  </div>
+                  <p className="text-xs text-fog">
+                    {bono ? 'El bono está agotado.' : 'No tiene bono activo.'} Se cobrará en efectivo:{' '}
+                    {visitType === 'custodia'
+                      ? `${rates.custodia} €/h por niño`
+                      : `${rates.adult} €/h adulto + ${rates.child} €/h niño`}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPendingConfirm(false)}
+                      className="flex-1 rounded-xl border border-line py-2 text-sm text-fog hover:text-snow transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleCheckIn}
+                      disabled={registering}
+                      className="flex-1 rounded-xl bg-amber/20 border border-amber/30 py-2 text-sm font-semibold text-amber hover:bg-amber/30 transition-colors disabled:opacity-60"
+                    >
+                      {registering ? 'Registrando...' : 'Confirmar'}
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <button
-                  onClick={handleCheckIn}
+                  onClick={() => { if (!bono?.ok) { setPendingConfirm(true) } else { handleCheckIn() } }}
                   disabled={registering}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
                     bono?.ok
