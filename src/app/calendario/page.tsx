@@ -56,7 +56,6 @@ export default function CalendarioPage() {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
-  const [activeTab, setActiveTab] = useState<'birthday' | 'custodia'>('birthday')
   const [bookings, setBookings] = useState<Booking[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -84,7 +83,7 @@ export default function CalendarioPage() {
   function nextMonth() { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1); setSelectedDate(null) }
 
   function openNewBooking() {
-    setForm({ ...EMPTY_FORM, type: activeTab, date: selectedDate ?? toDateStr(year, month, today.getDate()) })
+    setForm({ ...EMPTY_FORM, type: 'birthday', date: selectedDate ?? toDateStr(year, month, today.getDate()) })
     setShowModal(true)
   }
 
@@ -148,14 +147,6 @@ export default function CalendarioPage() {
           <button onClick={openNewBooking} className="flex items-center gap-2 bg-lime text-ink font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/90 transition-colors">
             <Plus size={16} /> Nueva reserva
           </button>
-        </div>
-        <div className="flex gap-2 mt-5">
-          {[{ key: 'birthday', label: 'Reservas' }, { key: 'custodia', label: 'Custodia' }].map(tab => (
-            <button key={tab.key} onClick={() => { setActiveTab(tab.key as any); setSelectedDate(null) }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${activeTab === tab.key ? tab.key === 'birthday' ? 'bg-iris/15 text-iris border-iris/30' : 'bg-amber-400/15 text-amber-300 border-amber-400/30' : 'bg-surface border-line text-fog hover:text-snow'}`}>
-              {tab.label}
-            </button>
-          ))}
         </div>
       </div>
 
