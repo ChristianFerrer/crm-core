@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Gift, AlertTriangle, UserMinus, RefreshCw, WalletCards, Crown, ChevronDown, ChevronUp } from 'lucide-react'
+import { Gift, AlertTriangle, UserMinus, RefreshCw, WalletCards, Crown, CalendarClock, ChevronDown, ChevronUp } from 'lucide-react'
 import { BirthdayLeads } from './BirthdayLeads'
 import { FollowUpSection, FollowUpItem } from './FollowUpSection'
 
@@ -20,7 +20,7 @@ type BirthdayLead = {
 
 type Top5Member = { name: string; count: number }
 
-type Section = 'cumpleanos' | 'bonos_bajos' | 'inactivos' | 'caducados' | 'sin_bono' | 'top_activos'
+type Section = 'cumpleanos' | 'bonos_bajos' | 'bonos_semana' | 'inactivos' | 'caducados' | 'sin_bono' | 'top_activos'
 
 const SECTIONS: {
   id: Section
@@ -47,6 +47,16 @@ const SECTIONS: {
     label: 'Bonos bajos',
     sub: '≤2 sesiones',
     icon: AlertTriangle,
+    accent: 'text-amber',
+    iconColor: 'text-amber',
+    bg: 'bg-amber/10',
+    border: 'border-amber/40',
+  },
+  {
+    id: 'bonos_semana',
+    label: 'Bonos vencen',
+    sub: 'esta semana',
+    icon: CalendarClock,
     accent: 'text-amber',
     iconColor: 'text-amber',
     bg: 'bg-amber/10',
@@ -97,6 +107,7 @@ const SECTIONS: {
 export function OpportunityDashboard({
   birthdayLeads,
   bonosBajosItems,
+  bonosSemanaItems,
   inactivosItems,
   expiredBonosItems,
   sinBonoItems,
@@ -105,6 +116,7 @@ export function OpportunityDashboard({
 }: {
   birthdayLeads: BirthdayLead[]
   bonosBajosItems: FollowUpItem[]
+  bonosSemanaItems: FollowUpItem[]
   inactivosItems: FollowUpItem[]
   expiredBonosItems: FollowUpItem[]
   sinBonoItems: FollowUpItem[]
@@ -121,6 +133,7 @@ export function OpportunityDashboard({
   const counts: Record<Section, number> = {
     cumpleanos: birthdayLeads.length,
     bonos_bajos: bonosBajosItems.length,
+    bonos_semana: bonosSemanaItems.length,
     inactivos: inactivosItems.length,
     caducados: expiredBonosItems.length,
     sin_bono: sinBonoItems.length,
@@ -171,6 +184,17 @@ export function OpportunityDashboard({
 
       {open === 'cumpleanos' && (
         <BirthdayLeads leads={birthdayLeads} tenantId={tenantId} />
+      )}
+      {open === 'bonos_semana' && (
+        <FollowUpSection
+          title="Bonos que vencen esta semana"
+          description="Contacta ahora para que renueven antes de quedarse sin bono"
+          icon="AlertTriangle"
+          iconColor="text-amber"
+          items={bonosSemanaItems}
+          tenantId={tenantId}
+          emptyText="No hay bonos que venzan esta semana"
+        />
       )}
       {open === 'bonos_bajos' && (
         <FollowUpSection

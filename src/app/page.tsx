@@ -18,7 +18,6 @@ export default async function DashboardPage() {
   const [
     { data: todayVisits },
     { count: monthCount },
-    { data: expiringMembers },
     { data: tenants },
     { data: allMembers },
     { data: birthdayBookings },
@@ -32,12 +31,6 @@ export default async function DashboardPage() {
       .from('visits')
       .select('id', { count: 'exact', head: true })
       .gte('checked_in_at', monthStart.toISOString()),
-    supabase
-      .from('memberships')
-      .select('id, expires_at, membership_types(name), members(id, name)')
-      .lte('expires_at', weekFromNow.toISOString().split('T')[0])
-      .gte('expires_at', todayStart.toISOString().split('T')[0])
-      .limit(5),
     supabase
       .from('tenants')
       .select('capacity')
@@ -78,7 +71,6 @@ export default async function DashboardPage() {
     <HomeClient
       todayVisits={allVisits}
       todayCustodias={todayCustodias}
-      expiringMembers={(expiringMembers ?? []) as any}
       monthCount={monthCount ?? 0}
       dateLabel={dateLabel}
       capacity={capacity}

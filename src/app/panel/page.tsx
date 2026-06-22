@@ -19,6 +19,7 @@ export default async function PanelPage() {
   since7.setHours(0, 0, 0, 0)
   const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString()
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
   const recentVisitedIds = (await supabase.from('visits').select('member_id').gte('checked_in_at', tenDaysAgo)).data?.map(v => v.member_id) ?? []
@@ -39,6 +40,7 @@ export default async function PanelPage() {
     { data: expiredBonos },
     { data: followUpLeadsData },
     { data: monthVisits },
+    { data: bonosSemanaRaw },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
@@ -57,6 +59,7 @@ export default async function PanelPage() {
     supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').lt('expires_at', todayStr).gte('expires_at', thirtyDaysAgo).limit(20),
     supabase.from('follow_up_leads').select('*').eq('period', currentPeriod),
     supabase.from('visits').select('member_id').gte('checked_in_at', startOfMonth).limit(500),
+    supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').gte('expires_at', todayStr).lte('expires_at', weekFromNow).limit(20),
   ])
 
   // ── 7-day visit chart ──────────────────────────────────────────────────────
@@ -186,6 +189,20 @@ export default async function PanelPage() {
     }
   })
 
+  // ── 5. Bonos que vencen esta semana ───────────────────────────────────────
+  const bonosSemanaItems: FollowUpItem[] = (bonosSemanaRaw as any[] ?? []).map((b: any) => {
+    const expiresDate = new Date(b.expires_at + 'T00:00:00')
+    const diffDays = Math.round((expiresDate.getTime() - new Date(todayStr + 'T00:00:00').getTime()) / 86400000)
+    const whenLabel = diffDays === 0 ? 'hoy' : diffDays === 1 ? 'mañana' : `en ${diffDays} días`
+    return fuItem(
+      (b.members as any)?.id,
+      (b.members as any)?.name,
+      'bono_semana',
+      `Vence ${whenLabel} · ${new Date(b.expires_at + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · ${(b.membership_types as any)?.name ?? ''}`,
+      'text-amber',
+    )
+  })
+
   // ── Top 5 this month ───────────────────────────────────────────────────────
   const tally: Record<string, { name: string; count: number }> = {}
   ;(topVisits as any[] ?? []).forEach((v: any) => {
@@ -279,6 +296,7 @@ export default async function PanelPage() {
       <OpportunityDashboard
         birthdayLeads={birthdayLeads}
         bonosBajosItems={bonosBajosItems}
+        bonosSemanaItems={bonosSemanaItems}
         inactivosItems={inactivosItems}
         expiredBonosItems={expiredBonosItems}
         sinBonoItems={sinBonoItems}

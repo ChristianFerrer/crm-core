@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp } from 'lucide-react'
+import { LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -29,13 +29,6 @@ type TodayVisit = {
   members: { name: string } | null
 }
 
-type ExpiringMembership = {
-  id: string
-  expires_at: string
-  membership_types: { name: string } | null
-  members: { id: string; name: string } | null
-}
-
 type BirthdayMember = {
   name: string
   birth_date: string
@@ -46,7 +39,6 @@ type BirthdayMember = {
 type HomeClientProps = {
   todayVisits: TodayVisit[]
   todayCustodias: TodayVisit[]
-  expiringMembers: ExpiringMembership[]
   monthCount: number
   dateLabel: string
   capacity: number | null
@@ -84,7 +76,7 @@ function fmtTime(iso: string) {
 
 type ChildInSala = { name: string; age?: number; birth_date?: string; memberName: string }
 
-export default function HomeClient({ todayVisits, todayCustodias, expiringMembers, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
+export default function HomeClient({ todayVisits, todayCustodias, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
 
@@ -416,30 +408,6 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       )}
 
 
-      {expiringMembers.length > 0 && (
-        <div className="rounded-2xl border border-amber/30 bg-surface p-4">
-          <p className="text-xs font-semibold text-amber uppercase tracking-wide flex items-center gap-1.5 mb-3">
-            <AlertTriangle size={11} /> Bonos vencen esta semana
-          </p>
-          <div className="space-y-2">
-            {expiringMembers.map(b => (
-              <Link
-                key={b.id}
-                href={`/miembros/${b.members?.id}`}
-                className="flex items-center justify-between rounded-lg hover:bg-surface2 -mx-1 px-1 py-1.5 transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-medium text-snow">{b.members?.name}</p>
-                  <p className="text-xs text-mist">{b.membership_types?.name}</p>
-                </div>
-                <span className="text-xs text-amber font-semibold shrink-0 ml-2">
-                  {new Date(b.expires_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
 
     </div>
   )
