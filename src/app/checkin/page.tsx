@@ -731,32 +731,8 @@ function DentroTab({
 
 type HistorialRange = 'day' | 'week' | 'month' | 'custom'
 
-function HistorialTab({ rates, capacity }: { rates: ServiceRates; capacity: number | null }) {
+function HistorialTab({ rates }: { rates: ServiceRates }) {
   const [range, setRange] = useState<HistorialRange>('day')
-  const [chartData, setChartData] = useState<{ label: string; adultos: number; ninos: number }[]>([])
-
-  useEffect(() => {
-    async function loadChart() {
-      const days: { label: string; adultos: number; ninos: number }[] = []
-      const now = new Date()
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now); d.setDate(now.getDate() - i)
-        const from = `${toLocalDate(d)}T00:00:00`
-        const to = `${toLocalDate(d)}T23:59:59`
-        const { data } = await supabase
-          .from('visits')
-          .select('children_present')
-          .gte('checked_in_at', from)
-          .lte('checked_in_at', to)
-        const rows = (data ?? []) as { children_present: any[] | null }[]
-        const adultos = rows.length
-        const ninos = rows.reduce((s, r) => s + (r.children_present?.length ?? 0), 0)
-        days.push({ label: d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 2), adultos, ninos })
-      }
-      setChartData(days)
-    }
-    loadChart()
-  }, [])
   const [customDate, setCustomDate] = useState(toLocalDate(new Date()))
   const [visits, setVisits] = useState<HistoryVisit[]>([])
   const [loading, setLoading] = useState(false)
@@ -823,13 +799,6 @@ function HistorialTab({ rates, capacity }: { rates: ServiceRates; capacity: numb
 
   return (
     <div className="space-y-4">
-      {/* 7-day aforo chart */}
-      {chartData.length > 0 && (
-        <div style={{ height: 220 }}>
-          <VisitMiniChart data={chartData} capacity={capacity} />
-        </div>
-      )}
-
       {/* Range selector */}
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {(['day', 'week', 'month', 'custom'] as HistorialRange[]).map(r => (
@@ -941,6 +910,7 @@ function VisitasPageInner() {
   const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
   const [rates, setRates] = useState<ServiceRates>({ adult: FALLBACK_HOURLY_RATE, child: FALLBACK_HOURLY_RATE, custodia: FALLBACK_HOURLY_RATE })
   const [capacity, setCapacity] = useState<number | null>(null)
+  const [chartData, setChartData] = useState<{ label: string; adultos: number; ninos: number }[]>([])
 
   useEffect(() => {
     supabase.from('members').select(MEMBER_QUERY).order('name')
@@ -948,6 +918,24 @@ function VisitasPageInner() {
     supabase.from('tenants').select('capacity').single()
       .then(({ data }) => { if (data?.capacity) setCapacity(data.capacity) })
     loadActiveVisits()
+    // Load 7-day chart data
+    ;(async () => {
+      const now = new Date()
+      const days: { label: string; adultos: number; ninos: number }[] = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now); d.setDate(now.getDate() - i)
+        const from = `${toLocalDate(d)}T00:00:00`
+        const to = `${toLocalDate(d)}T23:59:59`
+        const { data } = await supabase.from('visits').select('children_present').gte('checked_in_at', from).lte('checked_in_at', to)
+        const rows = (data ?? []) as { children_present: any[] | null }[]
+        days.push({
+          label: d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 2),
+          adultos: rows.length,
+          ninos: rows.reduce((s, r) => s + (r.children_present?.length ?? 0), 0),
+        })
+      }
+      setChartData(days)
+    })()
     // Load service rates
     supabase
       .from('services')
@@ -1006,6 +994,13 @@ function VisitasPageInner() {
         <p className="text-sm text-fog mt-0.5">Entradas, salidas e historial</p>
       </div>
 
+      {/* Aforo chart — always visible */}
+      {chartData.length > 0 && (
+        <div style={{ height: 220 }}>
+          <VisitMiniChart data={chartData} capacity={capacity} />
+        </div>
+      )}
+
       {/* Tab bar */}
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {tabs.map(({ id, label, icon: Icon, badge }) => (
@@ -1042,7 +1037,7 @@ function VisitasPageInner() {
         />
       )}
 
-      {tab === 'historial' && <HistorialTab rates={rates} capacity={capacity} />}
+      {tab === 'historial' && <HistorialTab rates={rates} />}
     </div>
   )
 }
