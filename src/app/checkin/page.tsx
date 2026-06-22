@@ -243,9 +243,9 @@ function CheckInTab({
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_1.1fr] md:items-start">
+      <div className="grid gap-4 md:grid-cols-[1fr_1.1fr] md:items-stretch">
         {/* Search / QR */}
-        <div className="rounded-2xl border border-line bg-surface p-4">
+        <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col min-h-[24rem]">
           {mode === 'qr' ? (
             <>
               <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
@@ -273,7 +273,7 @@ function CheckInTab({
                   placeholder="Nombre o teléfono..." autoFocus
                   className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
               </div>
-              <div className="max-h-[50vh] overflow-y-auto space-y-0.5">
+              <div className="flex-1 overflow-y-auto space-y-0.5 min-h-0">
                 {filteredMembers.length > 0 ? filteredMembers.map(m => {
                   const b = getBono(m)
                   const inside = activeVisits.some(v => v.members?.id === m.id)
@@ -300,7 +300,7 @@ function CheckInTab({
 
         {/* Member panel */}
         {member ? (
-          <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+          <div className="rounded-2xl border border-line bg-surface overflow-hidden flex flex-col">
             <div className={`px-5 py-4 flex items-center gap-3 ${
               alreadyInside ? 'bg-iris/10 border-b border-iris/20' :
               bono?.ok ? 'bg-lime/10 border-b border-lime/20' :
@@ -496,7 +496,7 @@ function CheckInTab({
             </div>
           </div>
         ) : (
-          <div className="grid min-h-[14rem] place-items-center rounded-2xl border-2 border-dashed border-line bg-surface/40 p-8 text-center">
+          <div className="grid min-h-[24rem] place-items-center rounded-2xl border-2 border-dashed border-line bg-surface/40 p-8 text-center h-full">
             <div>
               {mode === 'qr' ? <QrCode size={32} className="mx-auto text-mist" /> : <User size={32} className="mx-auto text-mist" />}
               <p className="mt-3 text-sm text-fog max-w-xs">
