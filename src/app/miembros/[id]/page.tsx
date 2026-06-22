@@ -186,6 +186,11 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                         <div className="flex-1 min-w-0">
                           <span className="text-sm text-snow">{child.name || `Hijo/a ${i + 1}`}</span>
                           {age !== null && <span className="text-xs text-mist ml-2">{age} años</span>}
+                          {child.birth_date && (
+                            <span className="text-xs text-fog ml-2">
+                              · {new Date(child.birth_date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )

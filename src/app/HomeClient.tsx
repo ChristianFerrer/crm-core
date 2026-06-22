@@ -276,7 +276,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                     className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
                   >
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold text-cyan-300">{m.name} · {fmtChildAge(m.birth_date)} 🎂</p>
+                      <p className="text-[11px] font-semibold text-cyan-300">{m.name} · {fmtChildAge(m.birth_date)}</p>
                       <p className="text-xs text-fog mt-0.5">{m.titularName}</p>
                     </div>
                     <div className="text-right shrink-0">
