@@ -115,7 +115,7 @@ export function OpportunityDashboard({
   const detailRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (open) detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    if (open) setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }, [open])
 
   const counts: Record<Section, number> = {
@@ -131,7 +131,7 @@ export function OpportunityDashboard({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
         {SECTIONS.map(s => {
           const Icon = s.icon
           const isOpen = open === s.id
@@ -140,32 +140,27 @@ export function OpportunityDashboard({
             <button
               key={s.id}
               onClick={() => toggle(s.id)}
-              className={`aspect-square rounded-2xl border bg-surface p-3 grid grid-cols-2 grid-rows-2 text-left transition-all hover:border-line2 ${
-                isOpen ? `${s.border} ring-1 ring-inset ${s.border}` : 'border-line'
+              className={`group rounded-2xl border bg-surface p-3 flex flex-col gap-2 text-left transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
+                isOpen
+                  ? `${s.border} ring-1 ring-inset ${s.border} bg-surface2`
+                  : 'border-line hover:border-line2 hover:bg-surface2'
               }`}
             >
-              {/* Q1: icon */}
-              <div className="flex items-start">
-                <div className={`w-7 h-7 rounded-lg ${s.bg} flex items-center justify-center`}>
-                  <Icon size={14} className={s.iconColor} />
+              <div className="flex items-center justify-between">
+                <div className={`w-6 h-6 rounded-lg ${s.bg} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                  <Icon size={12} className={s.iconColor} />
                 </div>
+                {isOpen
+                  ? <ChevronUp size={10} className={s.accent} />
+                  : <ChevronDown size={10} className="text-fog group-hover:text-snow transition-colors" />
+                }
               </div>
-              {/* Q2: number */}
-              <div className="flex items-start justify-end">
-                <span className={`font-display text-4xl font-bold leading-none ${count > 0 ? s.accent : 'text-fog'}`}>
+              <div>
+                <div className={`font-display text-3xl font-bold leading-none ${count > 0 ? s.accent : 'text-fog'}`}>
                   {count}
-                </span>
-              </div>
-              {/* Q3+Q4: label + sub */}
-              <div className="col-span-2 flex flex-col justify-start pt-1">
-                <div className="flex items-center gap-1">
-                  {isOpen
-                    ? <ChevronUp size={10} className={s.accent} />
-                    : <ChevronDown size={10} className="text-fog" />
-                  }
-                  <span className="text-[11px] font-semibold text-snow leading-tight">{s.label}</span>
                 </div>
-                <div className="text-[10px] text-mist mt-0.5 pl-[14px]">{s.sub}</div>
+                <div className="text-[11px] font-semibold text-snow mt-1 leading-tight">{s.label}</div>
+                <div className="text-[10px] text-mist mt-0.5">{s.sub}</div>
               </div>
             </button>
           )
