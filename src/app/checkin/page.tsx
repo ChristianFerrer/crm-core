@@ -165,7 +165,7 @@ function CheckInTab({
         const qd = q.replace(/\D/g, '')
         return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
       })
-    : []
+    : allMembers
 
   const bono = member ? getBono(member) : null
   const alreadyInside = member ? activeVisits.some(v => v.members?.id === member.id) : false
@@ -291,7 +291,7 @@ function CheckInTab({
                     </button>
                   )
                 }) : (
-                  <p className="py-8 text-center text-sm text-fog">{query.trim() ? 'Sin resultados' : 'Escribe para buscar'}</p>
+                  <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
                 )}
               </div>
             </>
