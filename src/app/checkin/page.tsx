@@ -245,7 +245,7 @@ function CheckInTab({
 
       <div className="grid gap-4 md:grid-cols-[1fr_1.1fr] md:items-stretch">
         {/* Search / QR */}
-        <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col min-h-[24rem]">
+        <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col h-[calc(100svh-20rem)] min-h-[22rem]">
           {mode === 'qr' ? (
             <>
               <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
@@ -254,7 +254,7 @@ function CheckInTab({
               {scanning && !camError ? (
                 <div id="qr-reader" className="w-full rounded-xl overflow-hidden [&>*]:rounded-xl" />
               ) : (
-                <div className="flex flex-col items-center justify-center min-h-[200px] gap-3">
+                <div className="flex flex-col items-center justify-center flex-1 gap-3">
                   {camError && <p className="text-sm text-rose text-center">{camError}</p>}
                   {!member && (
                     <button onClick={reset}
@@ -267,7 +267,7 @@ function CheckInTab({
             </>
           ) : (
             <>
-              <div className="relative mb-3">
+              <div className="relative mb-3 shrink-0">
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
                 <input value={query} onChange={e => setQuery(e.target.value)}
                   placeholder="Nombre o teléfono..." autoFocus
@@ -293,6 +293,13 @@ function CheckInTab({
                 }) : (
                   <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
                 )}
+              </div>
+              {/* Dot legend */}
+              <div className="shrink-0 mt-3 pt-3 border-t border-line flex flex-wrap gap-x-4 gap-y-1.5">
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-mint shrink-0" /><span className="text-[11px] text-fog">Bono activo</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber shrink-0" /><span className="text-[11px] text-fog">Bono bajo / agotado</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose shrink-0" /><span className="text-[11px] text-fog">Sin bono</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-iris shrink-0" /><span className="text-[11px] text-fog">Dentro ahora / ilimitado</span></div>
               </div>
             </>
           )}
