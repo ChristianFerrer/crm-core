@@ -525,14 +525,12 @@ function DentroTab({
   checkingOut,
   checkoutSummaries,
   rates,
-  capacity,
 }: {
   activeVisits: ActiveVisit[]
   onCheckOut: (v: ActiveVisit) => void
   checkingOut: string | null
   checkoutSummaries: CheckoutSummary[]
   rates: ServiceRates
-  capacity: number | null
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
@@ -541,61 +539,16 @@ function DentroTab({
     return () => clearInterval(t)
   }, [])
 
-  const totalAdults = activeVisits.length
-  const totalChildren = activeVisits.reduce((sum, v) => sum + (v.children_present?.length ?? 0), 0)
-
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide">
+    <div className="flex flex-col gap-3 h-[calc(100svh-20rem)] min-h-[22rem]">
+      <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">
         <Timer size={13} className="text-lime" />
         Dentro ahora
         <span className="ml-1 rounded-full bg-lime/15 text-lime px-2 py-0.5 font-bold">{activeVisits.length}</span>
       </div>
 
-      {/* Totals summary + aforo */}
-      {activeVisits.length > 0 && (() => {
-        const total = totalAdults + totalChildren
-        const pct = capacity ? Math.round((total / capacity) * 100) : 0
-        const barColor = pct >= 90 ? 'bg-rose' : pct >= 70 ? 'bg-amber' : 'bg-lime'
-        const textColor = pct >= 90 ? 'text-rose' : pct >= 70 ? 'text-amber' : 'text-lime'
-        return (
-          <>
-            <div className="flex gap-3">
-              <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
-                <p className="text-2xl font-bold text-snow">{totalAdults}</p>
-                <p className="text-xs text-fog mt-0.5">Adultos</p>
-              </div>
-              <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
-                <p className="text-2xl font-bold text-lime">{totalChildren}</p>
-                <p className="text-xs text-fog mt-0.5">Niños</p>
-              </div>
-              <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
-                <p className="text-2xl font-bold text-iris">{total}</p>
-                <p className="text-xs text-fog mt-0.5">Total</p>
-              </div>
-            </div>
-
-            {capacity != null && (
-              <div className="rounded-xl border border-line bg-surface px-4 py-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Users size={13} className="text-mist" />
-                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Aforo</p>
-                  </div>
-                  <span className={`text-sm font-bold ${textColor}`}>{total} / {capacity}</span>
-                </div>
-                <div className="h-2 rounded-full bg-surface2 overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
-                </div>
-                <p className="text-xs text-mist">{pct}% del aforo ocupado</p>
-              </div>
-            )}
-          </>
-        )
-      })()}
-
       {checkoutSummaries.map(s => (
-        <div key={s.visitId} className="rounded-xl border border-mint/20 bg-mint/5 px-4 py-3 flex items-center gap-3">
+        <div key={s.visitId} className="shrink-0 rounded-xl border border-mint/20 bg-mint/5 px-4 py-3 flex items-center gap-3">
           <Check size={14} className="text-mint shrink-0" />
           <div className="flex-1 min-w-0">
             <span className="text-sm font-semibold text-snow">{s.memberName}</span>
@@ -614,7 +567,7 @@ function DentroTab({
           Nadie dentro en este momento
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
           {activeVisits.map(v => {
             const durationMin = calcDurationMin(v.checked_in_at, null)
             const hasBono = v.membership_id !== null
@@ -1050,7 +1003,6 @@ function VisitasPageInner() {
           checkingOut={checkingOut}
           checkoutSummaries={checkoutSummaries}
           rates={rates}
-          capacity={capacity}
         />
       )}
 
