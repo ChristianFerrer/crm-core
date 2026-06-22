@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight, Users } from 'lucide-react'
-import { VisitMiniChart } from '@/app/panel/PanelCharts'
 import Link from 'next/link'
 
 const FALLBACK_HOURLY_RATE = 5
@@ -910,7 +909,6 @@ function VisitasPageInner() {
   const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
   const [rates, setRates] = useState<ServiceRates>({ adult: FALLBACK_HOURLY_RATE, child: FALLBACK_HOURLY_RATE, custodia: FALLBACK_HOURLY_RATE })
   const [capacity, setCapacity] = useState<number | null>(null)
-  const [chartData, setChartData] = useState<{ label: string; adultos: number; ninos: number }[]>([])
 
   useEffect(() => {
     supabase.from('members').select(MEMBER_QUERY).order('name')
@@ -918,24 +916,6 @@ function VisitasPageInner() {
     supabase.from('tenants').select('capacity').single()
       .then(({ data }) => { if (data?.capacity) setCapacity(data.capacity) })
     loadActiveVisits()
-    // Load 7-day chart data
-    ;(async () => {
-      const now = new Date()
-      const days: { label: string; adultos: number; ninos: number }[] = []
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now); d.setDate(now.getDate() - i)
-        const from = `${toLocalDate(d)}T00:00:00`
-        const to = `${toLocalDate(d)}T23:59:59`
-        const { data } = await supabase.from('visits').select('children_present').gte('checked_in_at', from).lte('checked_in_at', to)
-        const rows = (data ?? []) as { children_present: any[] | null }[]
-        days.push({
-          label: d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 2),
-          adultos: rows.length,
-          ninos: rows.reduce((s, r) => s + (r.children_present?.length ?? 0), 0),
-        })
-      }
-      setChartData(days)
-    })()
     // Load service rates
     supabase
       .from('services')
@@ -994,12 +974,42 @@ function VisitasPageInner() {
         <p className="text-sm text-fog mt-0.5">Entradas, salidas e historial</p>
       </div>
 
-      {/* Aforo chart — always visible */}
-      {chartData.length > 0 && (
-        <div style={{ height: 220 }}>
-          <VisitMiniChart data={chartData} capacity={capacity} />
-        </div>
-      )}
+      {/* Aforo gauge — always visible */}
+      {capacity != null && (() => {
+        const activeAdults = activeVisits.length
+        const activeChildren = activeVisits.reduce((s, v) => s + (v.children_present?.length ?? 0), 0)
+        const activeTotal = activeAdults + activeChildren
+        const aforoPct = Math.min(100, (activeTotal / capacity) * 100)
+        const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
+        return (
+          <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+            <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <Users size={13} /> Aforo
+            </h2>
+            <div className="flex items-end justify-between mb-3">
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
+                <span className="text-xs text-fog">de {capacity} plazas</span>
+              </div>
+              <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
+            </div>
+            <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3 flex">
+              <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
+              <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
+            </div>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
+                <span className="text-xs text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
+                <span className="text-xs text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Tab bar */}
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
