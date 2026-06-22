@@ -263,19 +263,19 @@ export default async function PanelPage() {
       {/* Charts + Stat cards grouped */}
       <div className="rounded-3xl border border-line bg-surface/40 p-4 space-y-4">
         {/* Compact stats row */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           {[
-            { icon: Users, label: 'Miembros', value: totalMembers ?? 0, accent: 'text-lime', bg: 'bg-lime/10' },
-            { icon: TrendingUp, label: 'Visitas hoy', value: todayCount ?? 0, accent: 'text-iris', bg: 'bg-iris/10' },
-            { icon: TrendingUp, label: 'Visitas este mes', value: monthCount ?? 0, accent: 'text-mint', bg: 'bg-mint/10' },
+            { icon: Users,      label: 'Miembros', value: totalMembers ?? 0, accent: 'text-lime', bg: 'bg-lime/10' },
+            { icon: TrendingUp, label: 'Hoy',      value: todayCount ?? 0,   accent: 'text-iris', bg: 'bg-iris/10' },
+            { icon: TrendingUp, label: 'Este mes',  value: monthCount ?? 0,   accent: 'text-mint', bg: 'bg-mint/10' },
           ].map(({ icon: Icon, label, value, accent, bg }) => (
-            <div key={label} className="rounded-2xl border border-line bg-surface px-4 py-3 flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                <Icon size={15} className={accent} />
+            <div key={label} className="rounded-2xl border border-line bg-surface p-3 flex flex-col gap-2">
+              <div className={`w-7 h-7 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
+                <Icon size={13} className={accent} />
               </div>
               <div>
-                <div className={`font-display text-xl font-bold leading-none ${accent}`}>{value}</div>
-                <div className="text-[11px] text-fog mt-0.5">{label}</div>
+                <div className={`font-display text-2xl font-bold leading-none ${accent}`}>{value}</div>
+                <div className="text-[11px] text-fog mt-1 leading-tight">{label}</div>
               </div>
             </div>
           ))}
