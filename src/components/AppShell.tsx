@@ -6,14 +6,16 @@ import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User, Building2, C
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
+import { useNavBadges } from '@/lib/useNavBadges'
 
-const navItems = [
-  { href: '/', label: 'Inicio', icon: Home },
-  { href: '/miembros', label: 'Miembros', icon: Users },
-  { href: '/checkin', label: 'Visitas', icon: LogIn },
-  { href: '/calendario', label: 'Agenda', icon: CalendarDays },
-  { href: '/panel', label: 'Panel', icon: BarChart2 },
-]
+function Badge({ count }: { count: number }) {
+  if (count === 0) return null
+  return (
+    <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-lime/20 text-lime text-[10px] font-bold flex items-center justify-center leading-none shrink-0">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -21,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [tenantName, setTenantName] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const badges = useNavBadges()
 
   useEffect(() => {
     async function load(email: string) {
@@ -74,7 +77,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {[
+            { href: '/',           label: 'Inicio',   icon: Home,        badge: 0 },
+            { href: '/miembros',   label: 'Miembros', icon: Users,       badge: 0 },
+            { href: '/checkin',    label: 'Visitas',  icon: LogIn,       badge: badges.visitas },
+            { href: '/calendario', label: 'Agenda',   icon: CalendarDays,badge: badges.agenda },
+            { href: '/panel',      label: 'Panel',    icon: BarChart2,   badge: badges.panel },
+          ].map(({ href, label, icon: Icon, badge }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
             return (
               <Link
@@ -88,6 +97,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} />
                 {label}
+                <Badge count={badge} />
               </Link>
             )
           })}
