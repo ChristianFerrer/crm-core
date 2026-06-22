@@ -2,7 +2,7 @@
 
 import {
   LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine,
 } from 'recharts'
 
 type GrowthPoint = { label: string; adultos: number; ninos: number }
@@ -60,6 +60,65 @@ export function MemberGrowthChart({
           <span className="w-4 h-0.5 bg-cyan-300 inline-block shrink-0" />
           <span className="text-xs text-fog">Niños acumulado</span>
         </div>
+      </div>
+    </div>
+  )
+}
+
+type VisitBucket = { label: string; adultos: number; ninos: number }
+
+export function VisitMiniChart({
+  data,
+  capacity,
+}: {
+  data: VisitBucket[]
+  capacity: number | null
+}) {
+  const max = Math.max(1, ...data.map(d => d.adultos + d.ninos), capacity ?? 0)
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5">
+      <div className="flex items-start justify-between mb-5">
+        <p className="text-sm font-semibold text-snow">Visitas · últimos 7 días</p>
+        {capacity && (
+          <span className="text-xs font-semibold text-amber">Aforo {capacity}</span>
+        )}
+      </div>
+
+      <ResponsiveContainer width="100%" height={120}>
+        <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+          <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+          <Tooltip
+            contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, color: '#f0f4f8', fontSize: 12 }}
+            labelStyle={{ color: '#6b7280', fontSize: 11 }}
+            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            formatter={(v: any, key: any) => [v, key === 'adultos' ? 'Adultos' : 'Niños']}
+          />
+          {capacity != null && (
+            <ReferenceLine y={capacity} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1.5} />
+          )}
+          <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
+          <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[3, 3, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+
+      <div className="flex gap-4 mt-3 pt-3 border-t border-line">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-sm bg-lime shrink-0" />
+          <span className="text-xs text-fog">Adultos</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-sm bg-cyan-300 shrink-0" />
+          <span className="text-xs text-fog">Niños</span>
+        </div>
+        {capacity != null && (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-4 border-t-2 border-dashed border-amber shrink-0" />
+            <span className="text-xs text-fog">Aforo máx.</span>
+          </div>
+        )}
       </div>
     </div>
   )

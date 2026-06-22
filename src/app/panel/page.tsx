@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Users, TrendingUp, BarChart2, Tag, Building2 } from 'lucide-react'
-import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
+import { MemberGrowthChart, BonoDistChart, VisitMiniChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
@@ -9,22 +9,6 @@ import { UrgentAlerts } from './UrgentAlerts'
 export const revalidate = 0
 
 
-function MiniBar({ data }: { data: { label: string; v: number }[] }) {
-  const max = Math.max(1, ...data.map(d => d.v))
-  return (
-    <div className="flex items-end justify-between gap-2 h-28">
-      {data.map((d, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-[10px] text-fog">{d.v || ''}</span>
-          <div className="w-full flex items-end" style={{ height: 80 }}>
-            <div className="w-full rounded-t-lg bg-lime transition-all" style={{ height: `${Math.max(4, (d.v / max) * 80)}px` }} />
-          </div>
-          <span className="text-[10px] text-mist">{d.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
 
 export default async function PanelPage() {
   const now = new Date()
@@ -60,7 +44,7 @@ export default async function PanelPage() {
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfMonth),
     supabase.from('memberships').select('id', { count: 'exact', head: true }).lte('sessions_remaining', 2).not('sessions_remaining', 'is', null),
-    supabase.from('visits').select('checked_in_at').gte('checked_in_at', since7.toISOString()),
+    supabase.from('visits').select('checked_in_at, children_present').gte('checked_in_at', since7.toISOString()),
     recentVisitedIds.length > 0
       ? supabase.from('members').select('id, name, families(name)').not('id', 'in', `(${recentVisitedIds.map(id => `"${id}"`).join(',')})`).limit(5)
       : supabase.from('members').select('id, name, families(name)').limit(5),
@@ -68,7 +52,7 @@ export default async function PanelPage() {
     supabase.from('memberships').select('id, sessions_remaining, membership_types(name), members(id, name, families(name))').lte('sessions_remaining', 2).not('sessions_remaining', 'is', null).limit(10),
     supabase.from('members').select('id, name, created_at, children'),
     supabase.from('memberships').select('member_id, sessions_remaining').or('sessions_remaining.is.null,sessions_remaining.gt.0').gte('expires_at', todayStr),
-    supabase.from('tenants').select('id').limit(1).single(),
+    supabase.from('tenants').select('id, capacity').limit(1).single(),
     supabase.from('birthday_leads').select('*').eq('year', now.getFullYear()),
     supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').lt('expires_at', todayStr).gte('expires_at', thirtyDaysAgo).limit(20),
     supabase.from('follow_up_leads').select('*').eq('period', currentPeriod),
@@ -79,12 +63,15 @@ export default async function PanelPage() {
   const DAY = ['D','L','M','X','J','V','S']
   const buckets = [...Array(7)].map((_, i) => {
     const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (6 - i))
-    return { label: i === 6 ? 'Hoy' : DAY[d.getDay()], v: 0, date: d.getTime() }
+    return { label: i === 6 ? 'Hoy' : DAY[d.getDay()], adultos: 0, ninos: 0, date: d.getTime() }
   })
   ;(recentVisits ?? []).forEach((row: any) => {
     const t = new Date(row.checked_in_at); t.setHours(0,0,0,0)
     const b = buckets.find(x => x.date === t.getTime())
-    if (b) b.v++
+    if (b) {
+      b.adultos++
+      b.ninos += (row.children_present as any[])?.length ?? 0
+    }
   })
 
   // ── Member growth chart ────────────────────────────────────────────────────
@@ -122,6 +109,7 @@ export default async function PanelPage() {
   const withoutBono = Math.max(0, (totalMembers ?? 0) - withFullBono - withLowBono)
 
   const tenantId = tenant?.id ?? ''
+  const capacity: number | null = (tenant as any)?.capacity ?? null
 
   // ── Birthday leads ─────────────────────────────────────────────────────────
   const thisMonth = now.getMonth() + 1
@@ -283,10 +271,7 @@ export default async function PanelPage() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr]">
           <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
           <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
-          <div className="rounded-2xl border border-line bg-surface p-5">
-            <p className="text-sm font-semibold text-snow mb-5">Visitas · últimos 7 días</p>
-            <MiniBar data={buckets} />
-          </div>
+          <VisitMiniChart data={buckets} capacity={capacity} />
         </div>
       </div>
 
