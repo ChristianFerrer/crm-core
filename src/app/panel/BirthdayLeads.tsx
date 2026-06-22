@@ -107,7 +107,9 @@ export function BirthdayLeads({ leads: initialLeads, tenantId }: { leads: Lead[]
                     </div>
                     <div className="text-left min-w-0">
                       <p className="text-sm font-medium text-snow truncate">{lead.child_name} · <span className="text-fog font-normal">{lead.age} años</span></p>
-                      <p className="text-xs text-mist truncate">{lead.member_name}</p>
+                      <p className="text-xs text-mist truncate">
+                        {lead.member_name} · {new Date(lead.child_birth_date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">

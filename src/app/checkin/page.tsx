@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight, Users } from 'lucide-react'
+import { VisitMiniChart } from '@/app/panel/PanelCharts'
 import Link from 'next/link'
 
 const FALLBACK_HOURLY_RATE = 5
@@ -518,12 +519,14 @@ function DentroTab({
   checkingOut,
   checkoutSummaries,
   rates,
+  capacity,
 }: {
   activeVisits: ActiveVisit[]
   onCheckOut: (v: ActiveVisit) => void
   checkingOut: string | null
   checkoutSummaries: CheckoutSummary[]
   rates: ServiceRates
+  capacity: number | null
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
@@ -543,23 +546,47 @@ function DentroTab({
         <span className="ml-1 rounded-full bg-lime/15 text-lime px-2 py-0.5 font-bold">{activeVisits.length}</span>
       </div>
 
-      {/* Totals summary */}
-      {activeVisits.length > 0 && (
-        <div className="flex gap-3">
-          <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
-            <p className="text-2xl font-bold text-snow">{totalAdults}</p>
-            <p className="text-xs text-fog mt-0.5">Adultos</p>
-          </div>
-          <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
-            <p className="text-2xl font-bold text-lime">{totalChildren}</p>
-            <p className="text-xs text-fog mt-0.5">Niños</p>
-          </div>
-          <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
-            <p className="text-2xl font-bold text-iris">{totalAdults + totalChildren}</p>
-            <p className="text-xs text-fog mt-0.5">Total</p>
-          </div>
-        </div>
-      )}
+      {/* Totals summary + aforo */}
+      {activeVisits.length > 0 && (() => {
+        const total = totalAdults + totalChildren
+        const pct = capacity ? Math.round((total / capacity) * 100) : 0
+        const barColor = pct >= 90 ? 'bg-rose' : pct >= 70 ? 'bg-amber' : 'bg-lime'
+        const textColor = pct >= 90 ? 'text-rose' : pct >= 70 ? 'text-amber' : 'text-lime'
+        return (
+          <>
+            <div className="flex gap-3">
+              <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
+                <p className="text-2xl font-bold text-snow">{totalAdults}</p>
+                <p className="text-xs text-fog mt-0.5">Adultos</p>
+              </div>
+              <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
+                <p className="text-2xl font-bold text-lime">{totalChildren}</p>
+                <p className="text-xs text-fog mt-0.5">Niños</p>
+              </div>
+              <div className="flex-1 rounded-xl border border-line bg-surface px-4 py-3 text-center">
+                <p className="text-2xl font-bold text-iris">{total}</p>
+                <p className="text-xs text-fog mt-0.5">Total</p>
+              </div>
+            </div>
+
+            {capacity != null && (
+              <div className="rounded-xl border border-line bg-surface px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Users size={13} className="text-mist" />
+                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Aforo</p>
+                  </div>
+                  <span className={`text-sm font-bold ${textColor}`}>{total} / {capacity}</span>
+                </div>
+                <div className="h-2 rounded-full bg-surface2 overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                </div>
+                <p className="text-xs text-mist">{pct}% del aforo ocupado</p>
+              </div>
+            )}
+          </>
+        )
+      })()}
 
       {checkoutSummaries.map(s => (
         <div key={s.visitId} className="rounded-xl border border-mint/20 bg-mint/5 px-4 py-3 flex items-center gap-3">
@@ -704,8 +731,32 @@ function DentroTab({
 
 type HistorialRange = 'day' | 'week' | 'month' | 'custom'
 
-function HistorialTab({ rates }: { rates: ServiceRates }) {
+function HistorialTab({ rates, capacity }: { rates: ServiceRates; capacity: number | null }) {
   const [range, setRange] = useState<HistorialRange>('day')
+  const [chartData, setChartData] = useState<{ label: string; adultos: number; ninos: number }[]>([])
+
+  useEffect(() => {
+    async function loadChart() {
+      const days: { label: string; adultos: number; ninos: number }[] = []
+      const now = new Date()
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now); d.setDate(now.getDate() - i)
+        const from = `${toLocalDate(d)}T00:00:00`
+        const to = `${toLocalDate(d)}T23:59:59`
+        const { data } = await supabase
+          .from('visits')
+          .select('children_present')
+          .gte('checked_in_at', from)
+          .lte('checked_in_at', to)
+        const rows = (data ?? []) as { children_present: any[] | null }[]
+        const adultos = rows.length
+        const ninos = rows.reduce((s, r) => s + (r.children_present?.length ?? 0), 0)
+        days.push({ label: d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 2), adultos, ninos })
+      }
+      setChartData(days)
+    }
+    loadChart()
+  }, [])
   const [customDate, setCustomDate] = useState(toLocalDate(new Date()))
   const [visits, setVisits] = useState<HistoryVisit[]>([])
   const [loading, setLoading] = useState(false)
@@ -772,6 +823,13 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
 
   return (
     <div className="space-y-4">
+      {/* 7-day aforo chart */}
+      {chartData.length > 0 && (
+        <div style={{ height: 220 }}>
+          <VisitMiniChart data={chartData} capacity={capacity} />
+        </div>
+      )}
+
       {/* Range selector */}
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {(['day', 'week', 'month', 'custom'] as HistorialRange[]).map(r => (
@@ -882,10 +940,13 @@ function VisitasPageInner() {
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [checkoutSummaries, setCheckoutSummaries] = useState<CheckoutSummary[]>([])
   const [rates, setRates] = useState<ServiceRates>({ adult: FALLBACK_HOURLY_RATE, child: FALLBACK_HOURLY_RATE, custodia: FALLBACK_HOURLY_RATE })
+  const [capacity, setCapacity] = useState<number | null>(null)
 
   useEffect(() => {
     supabase.from('members').select(MEMBER_QUERY).order('name')
       .then(({ data }) => setAllMembers((data as unknown as MemberRow[]) ?? []))
+    supabase.from('tenants').select('capacity').single()
+      .then(({ data }) => { if (data?.capacity) setCapacity(data.capacity) })
     loadActiveVisits()
     // Load service rates
     supabase
@@ -977,10 +1038,11 @@ function VisitasPageInner() {
           checkingOut={checkingOut}
           checkoutSummaries={checkoutSummaries}
           rates={rates}
+          capacity={capacity}
         />
       )}
 
-      {tab === 'historial' && <HistorialTab rates={rates} />}
+      {tab === 'historial' && <HistorialTab rates={rates} capacity={capacity} />}
     </div>
   )
 }
