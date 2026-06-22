@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, LogIn, CreditCard, UserX, Users, CalendarClock, Cake } from 'lucide-react'
+import { AlertTriangle, LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -115,13 +115,13 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
   })
   const chartData = buckets.slice(7, 23)
 
-  const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
-    { key: 'ninos', label: 'Niños en sala', value: activeChildren, accent: 'text-cyan-300', border: 'border-cyan-300/30', visits: [], icon: <Users size={16} /> },
-    { key: 'entradasHoy', label: 'Entradas hoy', value: todayVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-lime', border: 'border-lime/30', visits: todayVisits, icon: <LogIn size={16} /> },
-    { key: 'conBono', label: 'Con bono', value: conBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-iris', border: 'border-iris/30', visits: conBonoVisits, icon: <CreditCard size={16} /> },
-    { key: 'sinBono', label: 'Sin bono', value: sinBonoVisits.reduce((s, v) => s + persons(v), 0), accent: 'text-amber', border: 'border-amber/30', visits: sinBonoVisits, icon: <UserX size={16} /> },
-    { key: 'custodias', label: 'Custodias', value: todayCustodias.reduce((s, v) => s + persons(v), 0), accent: 'text-iris', border: 'border-iris/30', visits: todayCustodias, icon: <CalendarClock size={16} /> },
-    { key: 'cumpleanos', label: 'Cumpleaños', value: todayBirthdays.length, accent: 'text-rose', border: 'border-rose/30', visits: [], icon: <Cake size={16} /> },
+  const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; bg: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
+    { key: 'ninos',       label: 'Niños en sala', value: activeChildren,                                         accent: 'text-cyan-300', border: 'border-cyan-300/40', bg: 'bg-cyan-300/10', visits: [],             icon: <Users size={13} /> },
+    { key: 'entradasHoy', label: 'Entradas hoy',  value: todayVisits.reduce((s, v) => s + persons(v), 0),       accent: 'text-lime',     border: 'border-lime/40',     bg: 'bg-lime/10',     visits: todayVisits,    icon: <LogIn size={13} /> },
+    { key: 'conBono',     label: 'Con bono',       value: conBonoVisits.reduce((s, v) => s + persons(v), 0),     accent: 'text-iris',     border: 'border-iris/40',     bg: 'bg-iris/10',     visits: conBonoVisits,  icon: <CreditCard size={13} /> },
+    { key: 'sinBono',     label: 'Sin bono',       value: sinBonoVisits.reduce((s, v) => s + persons(v), 0),     accent: 'text-amber',    border: 'border-amber/40',    bg: 'bg-amber/10',    visits: sinBonoVisits,  icon: <UserX size={13} /> },
+    { key: 'custodias',   label: 'Custodias',      value: todayCustodias.reduce((s, v) => s + persons(v), 0),   accent: 'text-mint',     border: 'border-mint/40',     bg: 'bg-mint/10',     visits: todayCustodias, icon: <CalendarClock size={13} /> },
+    { key: 'cumpleanos',  label: 'Cumpleaños',     value: todayBirthdays.length,                                 accent: 'text-rose',     border: 'border-rose/40',     bg: 'bg-rose/10',     visits: [],             icon: <Cake size={13} /> },
   ]
 
   const drawerVisits = activeDrawer && activeDrawer !== 'ninos' && activeDrawer !== 'cumpleanos'
@@ -238,18 +238,35 @@ export default function HomeClient({ todayVisits, todayCustodias, expiringMember
       )}
 
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {stats.map(({ key, label, value, accent, border, icon }) => (
-          <button
-            key={key}
-            onClick={() => handleStatClick(key)}
-            className={`rounded-2xl border bg-surface p-4 lg:p-5 text-left transition-colors ${activeDrawer === key ? border + ' bg-surface2' : 'border-line hover:border-line2'}`}
-          >
-            <div className={`mb-1.5 ${activeDrawer === key ? accent : 'text-fog'}`}>{icon}</div>
-            <div className="font-display text-2xl lg:text-3xl font-semibold text-snow">{value}</div>
-            <div className={`text-xs lg:text-sm mt-0.5 ${activeDrawer === key ? accent : 'text-fog'}`}>{label}</div>
-          </button>
-        ))}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {stats.map(({ key, label, value, accent, border, bg, icon }) => {
+          const isOpen = activeDrawer === key
+          return (
+            <button
+              key={key}
+              onClick={() => handleStatClick(key)}
+              className={`group rounded-2xl border bg-surface p-3 flex flex-col gap-2 text-left transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
+                isOpen
+                  ? `${border} ring-1 ring-inset ${border} bg-surface2`
+                  : 'border-line hover:border-line2 hover:bg-surface2'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className={`w-6 h-6 rounded-lg ${bg} flex items-center justify-center transition-transform group-hover:scale-110 ${accent}`}>
+                  {icon}
+                </div>
+                {isOpen
+                  ? <ChevronUp size={10} className={accent} />
+                  : <ChevronDown size={10} className="text-fog group-hover:text-snow transition-colors" />
+                }
+              </div>
+              <div>
+                <div className={`font-display text-3xl font-bold leading-none ${value > 0 ? accent : 'text-fog'}`}>{value}</div>
+                <div className="text-[11px] font-semibold text-snow mt-1 leading-tight">{label}</div>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {activeDrawer && (
