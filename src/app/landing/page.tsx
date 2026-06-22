@@ -524,10 +524,6 @@ export default function LandingPage() {
               <span className="font-display text-6xl font-semibold text-snow">199,99€</span>
               <span className="text-fog text-base ml-1">/mes</span>
             </div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-mist text-sm line-through">2.399,88€/año</span>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-lime/20 text-lime">−10% anual · 2.159,89€</span>
-            </div>
             <p className="text-mist text-sm mb-8">Todo incluido · Sin permanencia</p>
             <ul className="space-y-3 w-full mb-8 text-left">
               {planFeatures.map(f => (
