@@ -91,8 +91,8 @@ export default function MiembrosPage() {
   const countLabel = view === 'miembros' ? `${count} miembros` : `${count} familias`
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4">
+    <div className="flex flex-col h-[calc(100svh-5rem)] gap-4">
+      <div className="flex items-center justify-between gap-4 shrink-0">
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Miembros</h1>
           <p className="text-sm text-fog mt-0.5">{countLabel}</p>
@@ -109,7 +109,7 @@ export default function MiembrosPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line shrink-0">
         <button
           onClick={() => { setView('miembros'); setSearch('') }}
           className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -128,7 +128,7 @@ export default function MiembrosPage() {
         </button>
       </div>
 
-      <div className="relative">
+      <div className="relative shrink-0">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist" />
         <input
           type="text"
@@ -140,11 +140,11 @@ export default function MiembrosPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto">
           {[1,2,3,4,5].map(i => <div key={i} className="h-16 rounded-2xl bg-surface border border-line animate-pulse" />)}
         </div>
       ) : view === 'miembros' ? (
-        <div className="space-y-2">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
           {filteredMembers.map((m) => {
             const { cls, label } = statusDot(m)
             const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
@@ -186,7 +186,7 @@ export default function MiembrosPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="flex-1 overflow-y-auto min-h-0 grid gap-3 lg:grid-cols-2 content-start">
           {filteredFamilies.map((family) => {
             const lowBono = family.members?.filter(m =>
               m.memberships?.[0]?.sessions_remaining != null && m.memberships[0].sessions_remaining <= 2
@@ -242,3 +242,4 @@ export default function MiembrosPage() {
     </div>
   )
 }
+
