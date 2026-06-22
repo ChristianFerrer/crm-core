@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, TrendingUp, AlertTriangle, BarChart2, Tag, Building2 } from 'lucide-react'
+import { Users, TrendingUp, BarChart2, Tag, Building2 } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
@@ -8,28 +8,6 @@ import { UrgentAlerts } from './UrgentAlerts'
 
 export const revalidate = 0
 
-function StatCard({ icon: Icon, label, value, sub, accent }: {
-  icon: typeof Users; label: string; value: string | number; sub: string; accent: 'lime' | 'iris' | 'amber' | 'rose' | 'mint'
-}) {
-  const colors = {
-    lime:  ['text-lime',  'bg-lime/10'],
-    iris:  ['text-iris',  'bg-iris/10'],
-    amber: ['text-amber', 'bg-amber/10'],
-    rose:  ['text-rose',  'bg-rose/10'],
-    mint:  ['text-mint',  'bg-mint/10'],
-  }
-  const [text, bg] = colors[accent]
-  return (
-    <div className="rounded-2xl border border-line bg-surface p-5">
-      <div className={`w-10 h-10 rounded-2xl ${bg} flex items-center justify-center mb-4`}>
-        <Icon size={20} className={text} />
-      </div>
-      <div className="font-display text-3xl font-semibold text-snow">{value}</div>
-      <div className="text-sm font-semibold text-snow mt-1">{label}</div>
-      <div className="text-xs text-mist mt-0.5">{sub}</div>
-    </div>
-  )
-}
 
 function MiniBar({ data }: { data: { label: string; v: number }[] }) {
   const max = Math.max(1, ...data.map(d => d.v))
@@ -284,6 +262,24 @@ export default async function PanelPage() {
 
       {/* Charts + Stat cards grouped */}
       <div className="rounded-3xl border border-line bg-surface/40 p-4 space-y-4">
+        {/* Compact stats row */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: Users, label: 'Miembros', value: totalMembers ?? 0, accent: 'text-lime', bg: 'bg-lime/10' },
+            { icon: TrendingUp, label: 'Visitas hoy', value: todayCount ?? 0, accent: 'text-iris', bg: 'bg-iris/10' },
+            { icon: TrendingUp, label: 'Visitas este mes', value: monthCount ?? 0, accent: 'text-mint', bg: 'bg-mint/10' },
+          ].map(({ icon: Icon, label, value, accent, bg }) => (
+            <div key={label} className="rounded-2xl border border-line bg-surface px-4 py-3 flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
+                <Icon size={15} className={accent} />
+              </div>
+              <div>
+                <div className={`font-display text-xl font-bold leading-none ${accent}`}>{value}</div>
+                <div className="text-[11px] text-fog mt-0.5">{label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr]">
           <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
           <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
@@ -291,12 +287,6 @@ export default async function PanelPage() {
             <p className="text-sm font-semibold text-snow mb-5">Visitas · últimos 7 días</p>
             <MiniBar data={buckets} />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard icon={Users} label="Miembros totales" value={totalMembers ?? 0} sub="registrados" accent="lime" />
-          <StatCard icon={TrendingUp} label="Visitas hoy" value={todayCount ?? 0} sub="entradas registradas" accent="iris" />
-          <StatCard icon={TrendingUp} label="Visitas este mes" value={monthCount ?? 0} sub="sesiones consumidas" accent="mint" />
-          <StatCard icon={AlertTriangle} label="Bonos bajos" value={expiringCount ?? 0} sub="≤2 sesiones restantes" accent="amber" />
         </div>
       </div>
 
