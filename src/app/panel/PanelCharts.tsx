@@ -28,7 +28,7 @@ export function MemberGrowthChart({
   const visible = data.slice(0, today)
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Miembros · mes en curso</p>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${delta > 0 ? 'bg-lime/15 text-lime' : delta < 0 ? 'bg-rose/15 text-rose' : 'bg-fog/15 text-fog'}`}>
@@ -39,7 +39,7 @@ export function MemberGrowthChart({
         {lastMonthAdults} adultos · {lastMonthChildren} niños al inicio del mes
       </p>
 
-      <div className="flex-1 min-h-0">
+      <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={visible} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
@@ -80,7 +80,7 @@ export function VisitMiniChart({
   const max = Math.max(1, ...data.map(d => d.adultos + d.ninos), capacity ?? 0)
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Visitas · últimos 7 días</p>
         {capacity != null && (
@@ -89,7 +89,7 @@ export function VisitMiniChart({
       </div>
       <p className="text-xs text-mist mb-4">Adultos y niños por día</p>
 
-      <div className="flex-1 min-h-0">
+      <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
@@ -143,14 +143,14 @@ export function BonoDistChart({
   const bonoPct = total > 0 ? Math.round(((withFullBono + withLowBono) / total) * 100) : 0
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Bonos activos</p>
         <span className="text-xs font-bold text-iris">{bonoPct}% con bono</span>
       </div>
       <p className="text-xs text-mist mb-4">Sobre el total de miembros</p>
 
-      <div className="flex-1 min-h-0">
+      <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 36, left: 0, bottom: 0 }}>
             <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />

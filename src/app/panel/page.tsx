@@ -285,7 +285,7 @@ export default async function PanelPage() {
             </div>
           ))}
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr] items-stretch" style={{ minHeight: 280 }}>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr]">
           <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
           <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
           <VisitMiniChart data={buckets} capacity={capacity} />
