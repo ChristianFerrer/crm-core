@@ -570,6 +570,7 @@ function DentroTab({
         <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
           {activeVisits.map(v => {
             const durationMin = calcDurationMin(v.checked_in_at, null)
+            const isStale = durationMin > 180
             const hasBono = v.membership_id !== null
             const numChildren = Math.max(1, v.children_present?.length ?? 0)
             const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin), numChildren, v.visit_type, rates)
@@ -591,7 +592,8 @@ function DentroTab({
                     <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-mist">Entrada {entryTime}</span>
-                      <span className="text-xs text-fog font-medium">{fmtDuration(durationMin)}</span>
+                      <span className={`text-xs font-medium ${isStale ? 'text-amber' : 'text-fog'}`}>{fmtDuration(durationMin)}</span>
+                      {isStale && <span className="text-[10px] text-amber font-semibold">· revisar salida</span>}
                       {kids.length > 0 && (
                         <span className="text-xs text-lime font-medium">{kids.length} niño{kids.length !== 1 ? 's' : ''}</span>
                       )}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
@@ -56,6 +56,8 @@ export default function CalendarioPage() {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
+  const [showUpcoming, setShowUpcoming] = useState(false)
+  const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -78,6 +80,17 @@ export default function CalendarioPage() {
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
   useEffect(() => { supabase.from('members').select('id, name').order('name').then(({ data }) => setMembers(data ?? [])) }, [])
+  useEffect(() => {
+    if (!showUpcoming) return
+    const from = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
+    const future = new Date(); future.setDate(future.getDate() + 60)
+    const to = toDateStr(future.getFullYear(), future.getMonth(), future.getDate())
+    supabase
+      .from('bookings')
+      .select('id, date, start_time, end_time, type, title, child_name, member_id, members(id, name, children), notes, status, guests, payment_status, amount')
+      .gte('date', from).lte('date', to).neq('status', 'cancelled').order('date').order('start_time')
+      .then(({ data }) => setUpcomingBookings((data ?? []) as unknown as Booking[]))
+  }, [showUpcoming])
 
   function prevMonth() { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1); setSelectedDate(null) }
   function nextMonth() { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1); setSelectedDate(null) }
@@ -144,13 +157,60 @@ export default function CalendarioPage() {
             <h1 className="text-2xl font-display font-bold text-snow">Agenda</h1>
             <p className="text-sm text-mist mt-0.5">Reservas y custodia</p>
           </div>
-          <button onClick={openNewBooking} className="flex items-center gap-2 bg-lime text-ink font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/90 transition-colors">
-            <Plus size={16} /> Nueva reserva
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowUpcoming(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${showUpcoming ? 'bg-iris/15 text-iris border-iris/30' : 'border-line bg-surface text-fog hover:text-snow'}`}
+            >
+              <List size={15} /> Próximas
+            </button>
+            <button onClick={openNewBooking} className="flex items-center gap-2 bg-lime text-ink font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/90 transition-colors">
+              <Plus size={16} /> Nueva reserva
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="px-4 lg:px-8 space-y-4">
+        {/* Próximas reservas */}
+        {showUpcoming && (
+          <div className="bg-surface border border-line rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-line flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-snow">Próximas reservas</p>
+                <p className="text-xs text-mist mt-0.5">{upcomingBookings.length} reserva{upcomingBookings.length !== 1 ? 's' : ''} en los próximos 60 días</p>
+              </div>
+              <button onClick={() => setShowUpcoming(false)} className="text-mist hover:text-fog"><X size={16} /></button>
+            </div>
+            {upcomingBookings.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm text-mist">Sin reservas próximas</div>
+            ) : (
+              <div className="divide-y divide-line max-h-[50vh] overflow-y-auto">
+                {upcomingBookings.map(b => (
+                  <button
+                    key={b.id}
+                    onClick={() => { setSelectedDate(b.date); setShowUpcoming(false) }}
+                    className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-surface2 transition-colors"
+                  >
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${bookingColor(b.type)}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-snow truncate">{b.child_name || b.title}</p>
+                      <p className="text-xs text-mist mt-0.5">
+                        {new Date(b.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        {b.start_time ? ` · ${b.start_time.slice(0, 5)}` : ''}
+                        {b.members?.name ? ` · ${b.members.name}` : ''}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${statusBadge(b.status)}`}>
+                      {b.status === 'confirmed' ? 'Confirmada' : 'Solicitud'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Calendar grid */}
         <div className="bg-surface border border-line rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-line">
@@ -174,8 +234,8 @@ export default function CalendarioPage() {
                   className={`min-h-[64px] p-1.5 border-r border-line/50 text-left transition-colors ${!isLastRow ? 'border-b' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'bg-lime/10' : 'hover:bg-surface2'}`}>
                   <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-lime text-ink' : isSelected ? 'text-lime' : 'text-fog'}`}>{day}</span>
                   <div className="flex flex-wrap gap-0.5">
-                    {dayBookings.slice(0, 3).map(b => <span key={b.id} className={`w-2 h-2 rounded-full ${bookingColor(b.type)}`} />)}
-                    {dayBookings.length > 3 && <span className="text-[9px] text-mist self-end">+{dayBookings.length - 3}</span>}
+                    {dayBookings.filter(b => b.status !== 'cancelled').slice(0, 3).map(b => <span key={b.id} className={`w-2 h-2 rounded-full ${bookingColor(b.type)}`} />)}
+                    {dayBookings.filter(b => b.status !== 'cancelled').length > 3 && <span className="text-[9px] text-mist self-end">+{dayBookings.filter(b => b.status !== 'cancelled').length - 3}</span>}
                   </div>
                 </button>
               )

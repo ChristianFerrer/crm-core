@@ -166,40 +166,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </Link>
       </div>
 
-      {/* Charts side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Afluencia por hora · bono / sin bono</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ stroke: '#1e2530' }} />
-              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(value) => value === 'conBono' ? 'Con bono' : 'Sin bono'} />
-              <Line type="monotone" dataKey="conBono" stroke="#8b8bff" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Adultos y niños por hora</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v, name) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
-              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(v) => v === 'adultos' ? 'Adultos' : 'Niños'} />
-              <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
-              <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Aforo */}
+      {/* Aforo — primero, es lo más urgente */}
       {capacity != null && (
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
@@ -278,6 +245,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold text-cyan-300">{m.name} · {fmtChildAge(m.birth_date)}</p>
                       <p className="text-xs text-fog mt-0.5">{m.titularName}</p>
+                      <p className="text-[10px] text-lime mt-1 font-medium">→ Ver en agenda</p>
                     </div>
                     <div className="text-right shrink-0">
                       {m.booking ? (
@@ -407,8 +375,48 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </div>
       )}
 
+      {/* Charts side by side — contexto histórico, al final */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Afluencia por hora · bono / sin bono</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ stroke: '#1e2530' }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(value) => value === 'conBono' ? 'Con bono' : 'Sin bono'} />
+              <Line type="monotone" dataKey="conBono" stroke="#8b8bff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
 
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Adultos y niños por hora</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v, name) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(v) => v === 'adultos' ? 'Adultos' : 'Niños'} />
+              <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
+              <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
+      {/* FAB */}
+      <Link
+        href="/checkin"
+        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 flex items-center gap-2 bg-lime text-ink font-semibold rounded-2xl px-4 py-3 text-sm hover:bg-lime/90 transition-all active:scale-95"
+        style={{ boxShadow: 'var(--shadow-lime)' }}
+      >
+        <LogIn size={16} strokeWidth={2.5} />
+        <span className="hidden sm:inline">Registrar entrada</span>
+      </Link>
     </div>
   )
 }

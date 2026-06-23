@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, FileText, CreditCard, Clock, Users, Calendar, AlertTriangle, Pencil } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, FileText, CreditCard, Clock, Users, Calendar, AlertTriangle, Pencil, LogIn } from 'lucide-react'
 import { MemberQr } from '@/components/MemberQr'
 import { AssignMembership } from '@/components/AssignMembership'
 
@@ -93,6 +93,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors shrink-0"
         >
           <Pencil size={13} /> Editar
+        </Link>
+        <Link
+          href={`/checkin?member=${id}`}
+          className="flex items-center gap-1.5 rounded-xl bg-lime px-3 py-2 text-xs font-semibold text-ink hover:bg-lime/90 transition-colors shrink-0"
+          style={{ boxShadow: 'var(--shadow-lime)' }}
+        >
+          <LogIn size={13} /> Entrada
         </Link>
       </div>
 
@@ -229,9 +236,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-snow">{bono.membership_types?.name}</p>
-                    {expiresAt && (
-                      <p className="text-xs text-mist mt-0.5">
-                        Vence {expiresAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {expiresAt && daysLeft !== null && (
+                      <p className={`text-xs mt-0.5 font-medium ${daysLeft <= 0 ? 'text-rose' : daysLeft <= 7 ? 'text-amber' : 'text-mist'}`}>
+                        {daysLeft <= 0 ? 'Vencido' : daysLeft === 1 ? 'Vence mañana' : `Vence en ${daysLeft} días`}
+                        {' · '}{expiresAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                       </p>
                     )}
                   </div>

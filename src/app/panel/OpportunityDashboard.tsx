@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Gift, AlertTriangle, UserMinus, RefreshCw, WalletCards, Crown, CalendarClock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Gift, AlertTriangle, UserMinus, RefreshCw, WalletCards, Crown, CalendarClock, ChevronDown, ChevronUp, ChevronRight } from 'lucide-react'
 import { BirthdayLeads } from './BirthdayLeads'
 import { FollowUpSection, FollowUpItem } from './FollowUpSection'
 
@@ -18,7 +18,7 @@ type BirthdayLead = {
   birthday_day: number
 }
 
-type Top5Member = { name: string; count: number }
+type Top5Member = { id: string; name: string; count: number }
 
 type Section = 'cumpleanos' | 'bonos_bajos' | 'bonos_semana' | 'inactivos' | 'caducados' | 'sin_bono' | 'top_activos'
 
@@ -250,11 +250,12 @@ export function OpportunityDashboard({
           ) : (
             <div className="space-y-2">
               {top5.map((m, i) => (
-                <div key={m.name} className="flex items-center gap-3 rounded-xl bg-surface2 px-3 py-2.5">
+                <a key={m.id} href={`/miembros/${m.id}`} className="flex items-center gap-3 rounded-xl bg-surface2 px-3 py-2.5 hover:bg-surface transition-colors">
                   <span className="w-6 h-6 rounded-full bg-carbon border border-line flex items-center justify-center text-xs font-bold text-lime shrink-0">{i + 1}</span>
                   <span className="flex-1 text-sm text-snow font-medium">{m.name}</span>
                   <span className="text-sm font-semibold text-fog">{m.count} vis.</span>
-                </div>
+                  <ChevronRight size={13} className="text-mist shrink-0" />
+                </a>
               ))}
             </div>
           )}

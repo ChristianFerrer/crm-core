@@ -210,7 +210,7 @@ export default async function PanelPage() {
     if (!mid || !name) return
     tally[mid] = { name, count: (tally[mid]?.count ?? 0) + 1 }
   })
-  const top5 = Object.values(tally).sort((a, b) => b.count - a.count).slice(0, 5)
+  const top5: { id: string; name: string; count: number }[] = Object.entries(tally).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.count - a.count).slice(0, 5)
 
   // ── Urgent alerts ──────────────────────────────────────────────────────────
   const tomorrowStr = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Search, Plus, User, Users, ChevronRight } from 'lucide-react'
+import { Search, Plus, User, Users, ChevronRight, LogIn } from 'lucide-react'
 import Link from 'next/link'
 
 type MemberRow = {
@@ -51,6 +51,7 @@ export default function MiembrosPage() {
   const [families, setFamilies] = useState<FamilyRow[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'todos' | 'sin_bono' | 'bono_bajo'>('todos')
 
   useEffect(() => {
     Promise.all([
@@ -72,13 +73,22 @@ export default function MiembrosPage() {
   const q = search.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const qDigits = q.replace(/\D/g, '')
 
-  const filteredMembers = q
+  const filteredMembers = (q
     ? members.filter(m => {
         const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
         return mName.includes(q) ||
           (qDigits.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qDigits))
       })
     : members
+  ).filter(m => {
+    if (filter === 'sin_bono') return !m.memberships?.[0]
+    if (filter === 'bono_bajo') {
+      const s = m.memberships?.[0]?.sessions_remaining
+      const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
+      return !isUnlimited && s != null && s <= 2
+    }
+    return true
+  })
 
   const filteredFamilies = q
     ? families.filter(f =>
@@ -129,7 +139,7 @@ export default function MiembrosPage() {
       </div>
 
       <div className="relative shrink-0">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist" />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
         <input
           type="text"
           value={search}
@@ -138,6 +148,33 @@ export default function MiembrosPage() {
           className="w-full bg-surface border border-line rounded-xl pl-9 pr-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
         />
       </div>
+
+      {view === 'miembros' && (
+        <div className="flex gap-2 shrink-0 overflow-x-auto pb-0.5">
+          {([
+            { key: 'todos', label: 'Todos' },
+            { key: 'sin_bono', label: 'Sin bono' },
+            { key: 'bono_bajo', label: 'Bono bajo' },
+          ] as { key: typeof filter; label: string }[]).map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-colors ${
+                filter === f.key
+                  ? f.key === 'sin_bono' ? 'bg-rose/20 text-rose border-rose/30'
+                  : f.key === 'bono_bajo' ? 'bg-amber/20 text-amber border-amber/30'
+                  : 'bg-lime/20 text-lime border-lime/30'
+                  : 'bg-surface border-line text-fog hover:text-snow'
+              }`}
+            >
+              {f.label}
+              {filter === f.key && f.key !== 'todos' && (
+                <span className="ml-1 opacity-70">({filteredMembers.length})</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-2 overflow-y-auto">
@@ -239,6 +276,15 @@ export default function MiembrosPage() {
           )}
         </div>
       )}
+      {/* FAB */}
+      <Link
+        href="/checkin"
+        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 flex items-center gap-2 bg-lime text-ink font-semibold rounded-2xl px-4 py-3 text-sm hover:bg-lime/90 transition-all active:scale-95"
+        style={{ boxShadow: 'var(--shadow-lime)' }}
+      >
+        <LogIn size={16} strokeWidth={2.5} />
+        <span className="hidden sm:inline">Registrar entrada</span>
+      </Link>
     </div>
   )
 }
