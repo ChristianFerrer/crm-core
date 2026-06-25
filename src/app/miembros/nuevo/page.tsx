@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Plus, X, UserPlus, Check, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Plus, X, UserPlus, Check, Loader2, AlertTriangle } from 'lucide-react'
 import { DatePickerModal } from '@/components/DatePickerModal'
 
 type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
@@ -21,6 +21,7 @@ export default function NuevoMiembroPage() {
   const [email, setEmail] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [children, setChildren] = useState<Child[]>([])
+  const [consentAccepted, setConsentAccepted] = useState(false)
 
   // Partner
   const [showPartner, setShowPartner] = useState(false)
@@ -90,6 +91,8 @@ export default function NuevoMiembroPage() {
           family_id: familyId,
           children: cleanChildren,
           children_count: cleanChildren.length,
+          consent_accepted_at: new Date().toISOString(),
+          consent_version: 'v1.0',
         })
         .select('id').single()
       if (me) throw me
@@ -272,9 +275,37 @@ export default function NuevoMiembroPage() {
           </div>
         )}
 
+        {/* Consentimiento RGPD */}
+        <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Protección de datos</p>
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <div className="relative mt-0.5 shrink-0">
+              <input
+                type="checkbox"
+                checked={consentAccepted}
+                onChange={e => setConsentAccepted(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${consentAccepted ? 'bg-lime border-lime' : 'bg-surface2 border-line group-hover:border-line2'}`}>
+                {consentAccepted && <Check size={12} className="text-ink" strokeWidth={3} />}
+              </div>
+            </div>
+            <p className="text-xs text-fog leading-relaxed">
+              El tutor legal ha sido informado y acepta el tratamiento de sus datos y los de su hijo/a según la{' '}
+              <a href="/privacidad" target="_blank" className="text-iris underline hover:text-iris/80">política de privacidad</a>.
+              Consentimiento registrado con fecha y hora.
+            </p>
+          </label>
+          {!consentAccepted && (
+            <p className="text-[11px] text-amber flex items-center gap-1">
+              <AlertTriangle size={11} /> Obligatorio para registrar al miembro
+            </p>
+          )}
+        </div>
+
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 
-        <button type="submit" disabled={saving || !firstName.trim()}
+        <button type="submit" disabled={saving || !firstName.trim() || !consentAccepted}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:bg-lime-deep active:scale-[0.99] disabled:opacity-60"
           style={{ boxShadow: 'var(--shadow-lime)' }}>
           <Save size={17} strokeWidth={2.2} />

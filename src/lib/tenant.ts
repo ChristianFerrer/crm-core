@@ -1,12 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import { trackTenantSession } from '@/lib/trackSession'
 
-export type CurrentTenant = { id: string; name: string; admin_email: string | null }
+export type CurrentTenant = { id: string; name: string; admin_email: string | null; terms_accepted_at: string | null }
 
 export async function loadAndStoreTenant(email: string): Promise<CurrentTenant | null> {
   const { data } = await supabase
     .from('tenants')
-    .select('id, name, admin_email')
+    .select('id, name, admin_email, terms_accepted_at')
     .ilike('admin_email', email.trim())
     .limit(1)
     .maybeSingle()

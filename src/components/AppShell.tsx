@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User, Building2, ChevronDown } from 'lucide-react'
+import { Home, Users, LogIn, BarChart2, CalendarDays, LogOut, User, Building2, ChevronDown, ShieldCheck, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
@@ -21,8 +21,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [tenantName, setTenantName] = useState<string | null>(null)
+  const [tenantId, setTenantId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
+  const [termsChecked, setTermsChecked] = useState(false)
+  const [termsAccepting, setTermsAccepting] = useState(false)
   const badges = useNavBadges()
 
   useEffect(() => {
@@ -36,7 +40,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       // Use cached tenant, or fetch and cache if missing
       let tenant = getStoredTenant()
       if (!tenant) tenant = await loadAndStoreTenant(email)
-      if (tenant) setTenantName(tenant.name)
+      if (tenant) {
+        setTenantName(tenant.name)
+        setTenantId(tenant.id)
+        if (!tenant.terms_accepted_at) setShowTerms(true)
+      }
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -50,11 +58,84 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  async function handleAcceptTerms() {
+    if (!termsChecked || !tenantId) return
+    setTermsAccepting(true)
+    await supabase.from('tenants').update({
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: 'v1.0',
+    }).eq('id', tenantId)
+    // Refresh cached tenant
+    if (userEmail) {
+      const updated = await loadAndStoreTenant(userEmail)
+      if (updated) setTenantName(updated.name)
+    }
+    setShowTerms(false)
+    setTermsAccepting(false)
+  }
+
   async function handleLogout() {
     localStorage.removeItem('viewingAsTenant')
     clearStoredTenant()
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  if (showTerms) {
+    return (
+      <div className="min-h-screen bg-carbon flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-2xl border border-line bg-surface p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-lime/15 flex items-center justify-center shrink-0">
+              <ShieldCheck size={20} className="text-lime" />
+            </div>
+            <div>
+              <h1 className="font-display text-lg font-bold text-snow">Antes de continuar</h1>
+              <p className="text-xs text-mist">Protección de datos · RGPD</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface2 p-4 space-y-3 text-xs text-fog leading-relaxed">
+            <p>Al usar Watermelon CRM, tu centro actúa como <strong className="text-snow">responsable del tratamiento</strong> de los datos personales de tus clientes y sus hijos.</p>
+            <p>Esto implica que:</p>
+            <ul className="space-y-1.5 list-disc list-inside ml-1">
+              <li>Debes informar a tus clientes sobre el uso de sus datos.</li>
+              <li>Debes obtener su consentimiento antes de registrarlos.</li>
+              <li>Debes atender sus solicitudes de acceso, rectificación o borrado.</li>
+            </ul>
+            <p>Watermelon CRM actúa como encargado del tratamiento y garantiza la seguridad técnica de los datos (cifrado, acceso restringido, copias de seguridad).</p>
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <div className="relative mt-0.5 shrink-0">
+              <input type="checkbox" checked={termsChecked} onChange={e => setTermsChecked(e.target.checked)} className="sr-only" />
+              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${termsChecked ? 'bg-lime border-lime' : 'bg-surface2 border-line group-hover:border-line2'}`}>
+                {termsChecked && <Check size={12} className="text-ink" strokeWidth={3} />}
+              </div>
+            </div>
+            <p className="text-xs text-fog leading-relaxed">
+              Acepto los{' '}
+              <a href="/privacidad" target="_blank" className="text-iris underline hover:text-iris/80">Términos y Condiciones</a>
+              {' '}y el Contrato de Encargo de Tratamiento de datos, asumiendo la responsabilidad como responsable del tratamiento.
+            </p>
+          </label>
+
+          <button
+            onClick={handleAcceptTerms}
+            disabled={!termsChecked || termsAccepting}
+            className="w-full rounded-xl bg-lime py-3 text-sm font-semibold text-ink transition hover:bg-lime/90 disabled:opacity-50"
+            style={{ boxShadow: 'var(--shadow-lime)' }}
+          >
+            {termsAccepting ? 'Registrando aceptación...' : 'Acepto y continúo'}
+          </button>
+
+          <p className="text-[10px] text-mist text-center">
+            Esta aceptación queda registrada con fecha y hora. Puedes consultar la{' '}
+            <a href="/privacidad" target="_blank" className="underline">política de privacidad</a>{' '}en cualquier momento.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
