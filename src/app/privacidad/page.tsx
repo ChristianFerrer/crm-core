@@ -1,8 +1,19 @@
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
+
 export const metadata = { title: 'Política de Privacidad — Watermelon CRM' }
 
 export default function PrivacidadPage() {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10 space-y-8 text-snow">
+    <div className="min-h-screen bg-carbon">
+      <div className="sticky top-0 z-10 bg-carbon border-b border-line px-4 py-3 flex items-center gap-3">
+        <Link href="/login" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
+          <ArrowLeft size={15} className="text-fog" />
+        </Link>
+        <p className="text-sm font-semibold text-snow">Política de Privacidad</p>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-10 space-y-8 text-snow">
       <div>
         <h1 className="font-display text-2xl font-bold text-snow">Política de Privacidad</h1>
         <p className="text-sm text-mist mt-1">Última actualización: junio 2025 · Versión 1.0</p>
@@ -96,6 +107,7 @@ export default function PrivacidadPage() {
           Esta política puede actualizarse. La versión vigente estará siempre disponible en esta página. Los cambios sustanciales se comunicarán a los Centros con antelación suficiente.
         </p>
       </div>
+    </div>
     </div>
   )
 }
