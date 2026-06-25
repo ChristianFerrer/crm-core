@@ -1,16 +1,13 @@
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-
 export const metadata = { title: 'Política de Privacidad — Watermelon CRM' }
 
 export default function PrivacidadPage() {
   return (
     <div className="min-h-screen bg-carbon">
-      <div className="sticky top-0 z-10 bg-carbon border-b border-line px-4 py-3 flex items-center gap-3">
-        <Link href="/login" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
-          <ArrowLeft size={15} className="text-fog" />
-        </Link>
-        <p className="text-sm font-semibold text-snow">Política de Privacidad</p>
+      <div className="border-b border-line px-4 py-4 flex items-center gap-3">
+        <div className="w-7 h-7 rounded-lg bg-lime flex items-center justify-center shrink-0">
+          <span className="text-ink font-bold text-xs">W</span>
+        </div>
+        <p className="text-sm font-semibold text-snow">Watermelon CRM</p>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-10 space-y-8 text-snow">
