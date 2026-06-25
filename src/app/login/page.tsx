@@ -116,7 +116,10 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <p className="text-center text-[10px] text-mist">Watermelon CRM · v0.1</p>
+        <p className="text-center text-[10px] text-mist">
+          Watermelon CRM · v0.1 ·{' '}
+          <a href="/privacidad" className="underline hover:text-snow transition-colors">Política de privacidad</a>
+        </p>
       </div>
     </div>
   )

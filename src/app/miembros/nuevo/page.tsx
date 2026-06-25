@@ -110,6 +110,8 @@ export default function NuevoMiembroPage() {
             family_id: familyId,
             children: cleanChildren,
             children_count: cleanChildren.length,
+            consent_accepted_at: new Date().toISOString(),
+            consent_version: 'v1.0',
           })
         }
       }

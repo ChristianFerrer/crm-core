@@ -16,7 +16,7 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
   // null = still checking, true = authenticated, false = not authenticated
   const [authed, setAuthed] = useState<boolean | null>(null)
 
-  const isPublic = pathname.startsWith('/alta') || pathname === '/login' || pathname.startsWith('/auth') || pathname === '/landing'
+  const isPublic = pathname.startsWith('/alta') || pathname === '/login' || pathname.startsWith('/auth') || pathname === '/landing' || pathname === '/privacidad'
   const isAdmin = pathname.startsWith('/admin')
 
   // Single auth listener on mount — never re-runs on navigation
