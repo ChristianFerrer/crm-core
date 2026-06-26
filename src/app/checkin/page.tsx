@@ -544,7 +544,6 @@ function DentroTab({
       <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">
         <Timer size={13} className="text-lime" />
         Dentro ahora
-        <span className="ml-1 rounded-full bg-lime/15 text-lime px-2 py-0.5 font-bold">{activeVisits.length}</span>
       </div>
 
       {checkoutSummaries.map(s => (
