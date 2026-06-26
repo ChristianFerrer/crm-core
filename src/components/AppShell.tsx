@@ -161,7 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {[
             { href: '/',           label: 'Inicio',   icon: Home,        badge: 0 },
             { href: '/miembros',   label: 'Miembros', icon: Users,       badge: 0 },
-            { href: '/checkin',    label: 'Visitas',  icon: LogIn,       badge: badges.visitas },
+            { href: '/checkin',    label: 'Visitas',  icon: LogIn,       badge: 0 },
             { href: '/calendario', label: 'Agenda',   icon: CalendarDays,badge: badges.agenda },
             { href: '/panel',      label: 'Panel',    icon: BarChart2,   badge: badges.panel },
           ].map(({ href, label, icon: Icon, badge }) => {
