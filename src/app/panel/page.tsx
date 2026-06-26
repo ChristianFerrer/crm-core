@@ -254,7 +254,7 @@ export default async function PanelPage() {
       {urgentAlerts.length > 0 && <UrgentAlerts alerts={urgentAlerts} />}
 
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line mb-6">
-        <div className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">
+        <div className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-lime text-ink">
           <BarChart2 size={13} /> Resumen
         </div>
         <Link href="/panel/servicios" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">

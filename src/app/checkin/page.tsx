@@ -764,7 +764,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {(['day', 'week', 'month', 'custom'] as HistorialRange[]).map(r => (
           <button key={r} onClick={() => { setRange(r); setWeekOffset(0); setMonthOffset(0) }}
-            className={`flex-1 lg:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${range === r ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
+            className={`flex-1 lg:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${range === r ? 'bg-lime text-ink' : 'text-fog hover:text-snow'}`}>
             {r === 'day' ? 'Hoy' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : 'Fecha'}
           </button>
         ))}
@@ -977,7 +977,7 @@ function VisitasPageInner() {
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
         {tabs.map(({ id, label, icon: Icon, badge }) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors relative ${tab === id ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'}`}>
+            className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors relative ${tab === id ? 'bg-lime text-ink' : 'text-fog hover:text-snow'}`}>
             <Icon size={14} />
             {label}
             {badge != null && (

@@ -123,7 +123,7 @@ export default function MiembrosPage() {
         <button
           onClick={() => { setView('miembros'); setSearch('') }}
           className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            view === 'miembros' ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'
+            view === 'miembros' ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
           }`}
         >
           <User size={14} /> Titulares
@@ -131,7 +131,7 @@ export default function MiembrosPage() {
         <button
           onClick={() => { setView('familias'); setSearch('') }}
           className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            view === 'familias' ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'
+            view === 'familias' ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
           }`}
         >
           <Users size={14} /> Familias

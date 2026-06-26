@@ -142,7 +142,7 @@ export default function PerfilPage() {
         <Link href="/panel/servicios" className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <Tag size={13} /> Servicios
         </Link>
-        <div className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-surface2 text-snow">
+        <div className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-lime text-ink">
           <Building2 size={13} /> Perfil
         </div>
       </div>
