@@ -162,7 +162,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
           style={{ boxShadow: 'var(--shadow-lime)' }}
         >
           <LogIn size={15} strokeWidth={2.4} />
-          Registrar entrada
+          Registrar visita
         </Link>
       </div>
 
