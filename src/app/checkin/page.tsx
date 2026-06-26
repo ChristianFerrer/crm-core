@@ -980,11 +980,6 @@ function VisitasPageInner() {
             className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors relative ${tab === id ? 'bg-lime text-ink' : 'text-fog hover:text-snow'}`}>
             <Icon size={14} />
             {label}
-            {badge != null && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime text-ink text-[9px] font-bold flex items-center justify-center">
-                {badge}
-              </span>
-            )}
           </button>
         ))}
       </div>
