@@ -408,15 +408,6 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </div>
       </div>
 
-      {/* FAB */}
-      <Link
-        href="/checkin"
-        className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 z-40 flex items-center gap-2 bg-lime text-ink font-semibold rounded-2xl px-4 py-3 text-sm hover:bg-lime/90 transition-all active:scale-95"
-        style={{ boxShadow: 'var(--shadow-lime)' }}
-      >
-        <LogIn size={16} strokeWidth={2.5} />
-        <span className="hidden sm:inline">Registrar entrada</span>
-      </Link>
     </div>
   )
 }
