@@ -925,7 +925,7 @@ function VisitasPageInner() {
 
   const tabs = [
     { id: 'checkin' as const, label: 'Check-in', icon: LogIn },
-    { id: 'dentro' as const, label: 'Dentro', icon: Timer, badge: activeVisits.length > 0 ? activeVisits.length : undefined },
+    { id: 'dentro' as const, label: 'Dentro', icon: Timer },
     { id: 'historial' as const, label: 'Historial', icon: History },
   ]
 
