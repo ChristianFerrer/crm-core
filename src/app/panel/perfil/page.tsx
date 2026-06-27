@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X } from 'lucide-react'
+import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -141,6 +141,9 @@ export default function PerfilPage() {
         </Link>
         <Link href="/panel/servicios" className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <Tag size={13} /> Servicios
+        </Link>
+        <Link href="/panel/tienda" className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
+          <ShoppingBag size={13} /> Tienda
         </Link>
         <div className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-lime text-ink">
           <Building2 size={13} /> Perfil

@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, TrendingUp, BarChart2, Tag, Building2 } from 'lucide-react'
+import { Users, TrendingUp, BarChart2, Tag, Building2, ShoppingBag } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart, VisitMiniChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
@@ -259,6 +259,9 @@ export default async function PanelPage() {
         </div>
         <Link href="/panel/servicios" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <Tag size={13} /> Servicios
+        </Link>
+        <Link href="/panel/tienda" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
+          <ShoppingBag size={13} /> Tienda
         </Link>
         <Link href="/panel/perfil" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <Building2 size={13} /> Perfil

@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List, LogIn, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { getStoredTenant } from '@/lib/tenant'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
@@ -23,6 +24,7 @@ interface Booking {
   guests: number | null
   payment_status: PaymentStatus
   amount: number | null
+  executed_at: string | null
 }
 
 interface Member { id: string; name: string }
@@ -67,16 +69,34 @@ export default function CalendarioPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({ guests: '', member_id: '', status: 'pending', payment_status: 'pending', notes: '' })
   const [saving, setSaving] = useState(false)
+  const [executingId, setExecutingId] = useState<string | null>(null)
 
   const fetchBookings = useCallback(async () => {
     const from = `${year}-${String(month + 1).padStart(2, '0')}-01`
     const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(getDaysInMonth(year, month)).padStart(2, '0')}`
     const { data } = await supabase
       .from('bookings')
-      .select('id, date, start_time, end_time, type, title, child_name, member_id, members(id, name, children), notes, status, guests, payment_status, amount')
+      .select('id, date, start_time, end_time, type, title, child_name, member_id, members(id, name, children), notes, status, guests, payment_status, amount, executed_at')
       .gte('date', from).lte('date', to).order('start_time')
     setBookings((data ?? []) as unknown as Booking[])
   }, [year, month])
+
+  async function handleExecute(b: Booking) {
+    if (!b.member_id) return
+    const tenant = getStoredTenant()
+    if (!tenant) return
+    setExecutingId(b.id)
+    await supabase.from('visits').insert({
+      tenant_id: tenant.id,
+      member_id: b.member_id,
+      checked_in_at: new Date().toISOString(),
+      visit_type: 'entrada',
+      booking_id: b.id,
+    })
+    await supabase.from('bookings').update({ executed_at: new Date().toISOString(), status: 'confirmed' }).eq('id', b.id)
+    setExecutingId(null)
+    fetchBookings()
+  }
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
   useEffect(() => { supabase.from('members').select('id, name').order('name').then(({ data }) => setMembers(data ?? [])) }, [])
@@ -305,6 +325,25 @@ export default function CalendarioPage() {
                           <p className="text-lg font-bold text-snow shrink-0">{b.amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</p>
                         )}
                       </div>
+
+                      {/* Execute reservation button */}
+                      {!isEditing && b.status !== 'cancelled' && b.member_id && selectedDate === toDateStr(today.getFullYear(), today.getMonth(), today.getDate()) && (
+                        <div className="mb-3">
+                          {b.executed_at ? (
+                            <div className="flex items-center gap-1.5 text-xs text-lime font-semibold">
+                              <CheckCircle size={13} /> Ejecutada · check-in registrado
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleExecute(b)}
+                              disabled={executingId === b.id}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-lime/15 text-lime border border-lime/30 text-xs font-semibold hover:bg-lime/25 transition-colors disabled:opacity-50"
+                            >
+                              <LogIn size={13} /> {executingId === b.id ? 'Ejecutando...' : 'Ejecutar reserva · registrar entrada'}
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {/* Inline edit form */}
                       {isEditing && (

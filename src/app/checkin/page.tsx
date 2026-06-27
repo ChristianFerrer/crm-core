@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight, Users } from 'lucide-react'
+import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight, Users, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
+import { OpenCheckPanel } from './OpenCheckPanel'
 
 const FALLBACK_HOURLY_RATE = 5
 
@@ -533,6 +534,7 @@ function DentroTab({
   rates: ServiceRates
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [openCheckVisitId, setOpenCheckVisitId] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000)
@@ -668,14 +670,32 @@ function DentroTab({
                       )
                     })()}
 
-                    <button
-                      onClick={() => onCheckOut(v)}
-                      disabled={checkingOut === v.id}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose/30 bg-rose/10 px-3 py-2 text-xs font-semibold text-rose hover:bg-rose/20 transition-colors disabled:opacity-50"
-                    >
-                      <LogOut size={13} />
-                      {checkingOut === v.id ? 'Registrando salida...' : 'Registrar salida'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setOpenCheckVisitId(openCheckVisitId === v.id ? null : v.id)}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-surface2 px-3 py-2 text-xs font-semibold text-fog hover:text-snow transition-colors"
+                      >
+                        <ShoppingBag size={13} /> Ver cuenta
+                      </button>
+                      <button
+                        onClick={() => onCheckOut(v)}
+                        disabled={checkingOut === v.id}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose/30 bg-rose/10 px-3 py-2 text-xs font-semibold text-rose hover:bg-rose/20 transition-colors disabled:opacity-50"
+                      >
+                        <LogOut size={13} />
+                        {checkingOut === v.id ? 'Salida...' : 'Registrar salida'}
+                      </button>
+                    </div>
+
+                    {openCheckVisitId === v.id && (
+                      <OpenCheckPanel
+                        visitId={v.id}
+                        memberName={v.members?.name ?? '—'}
+                        durationMin={durationMin}
+                        timeCost={hasBono ? null : calcCost(Math.max(30, durationMin), Math.max(1, v.children_present?.length ?? 0), v.visit_type, rates)}
+                        onClose={() => setOpenCheckVisitId(null)}
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -974,7 +994,7 @@ function VisitasPageInner() {
 
       {/* Tab bar */}
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
-        {tabs.map(({ id, label, icon: Icon, badge }) => (
+        {tabs.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setTab(id)}
             className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors relative ${tab === id ? 'bg-lime text-ink' : 'text-fog hover:text-snow'}`}>
             <Icon size={14} />
