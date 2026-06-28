@@ -86,24 +86,13 @@ export default function CalendarioPage() {
     if (!b.member_id) return
     setExecutingId(b.id)
 
-    // Build children_present: birthday child first, then placeholders for remaining guests
-    let children_present: { name: string }[] | null = null
-    if (b.type === 'birthday') {
-      const entries: { name: string }[] = []
-      if (b.child_name) entries.push({ name: b.child_name })
-      const extraGuests = (b.guests ?? 0) - (b.child_name ? 1 : 0)
-      for (let i = 0; i < Math.max(0, extraGuests); i++) entries.push({ name: `Invitado ${i + 1}` })
-      if (entries.length > 0) children_present = entries
-    } else if (b.type === 'custodia' && b.child_name) {
-      children_present = [{ name: b.child_name }]
-    }
-
     const { error } = await supabase.from('visits').insert({
       member_id: b.member_id,
       checked_in_at: new Date().toISOString(),
       visit_type: b.type === 'custodia' ? 'custodia' : 'entrada',
       booking_id: b.id,
-      ...(children_present ? { children_present } : {}),
+      adults_count: 1,
+      children_count: 0,
     })
 
     if (error) {

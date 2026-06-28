@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from('visits')
-      .select('id, checked_in_at, checked_out_at, member_id, membership_id, visit_type, children_present, members(name)')
+      .select('id, checked_in_at, checked_out_at, member_id, membership_id, visit_type, children_present, adults_count, children_count, members(name)')
       .gte('checked_in_at', todayStart.toISOString())
       .order('checked_in_at', { ascending: false }),
     supabase

@@ -26,6 +26,8 @@ type TodayVisit = {
   member_id: string
   visit_type: string
   children_present: { name: string; age?: number; birth_date?: string }[] | null
+  adults_count: number
+  children_count: number
   members: { name: string } | null
 }
 
@@ -83,12 +85,12 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const persons = (v: TodayVisit) => 1 + (v.children_present?.length ?? 0)
 
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
-  const activeAdults = activeVisits.length
+  const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
+  const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
+  const activeTotal = activeAdults + activeChildren
   const childrenInSala: ChildInSala[] = activeVisits.flatMap(v =>
     (v.children_present ?? []).map(c => ({ ...c, memberName: v.members?.name ?? '—' }))
   )
-  const activeChildren = childrenInSala.length
-  const activeTotal = activeAdults + activeChildren
 
   const conBonoVisits = todayVisits.filter(v => v.membership_id)
   const sinBonoVisits = todayVisits.filter(v => !v.membership_id)

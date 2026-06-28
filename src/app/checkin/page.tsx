@@ -38,6 +38,10 @@ type ActiveVisit = {
   membership_id: string | null
   visit_type: VisitType
   children_present: { name: string }[] | null
+  adults_count: number
+  children_count: number
+  booking_id: string | null
+  bookings: { type: string; title: string; guests: number | null; child_name: string | null } | null
   members: { id: string; name: string } | null
 }
 
@@ -520,26 +524,45 @@ function CheckInTab({
 
 // ─── Tab: Dentro ahora ───────────────────────────────────────────────────────
 
+const BOOKING_TAG: Record<string, { label: string; emoji: string; color: string; bg: string; border: string }> = {
+  birthday: { label: 'Cumpleaños', emoji: '🎂', color: 'text-iris', bg: 'bg-iris/10', border: 'border-iris/30' },
+  custodia: { label: 'Custodia',   emoji: '👶', color: 'text-amber', bg: 'bg-amber/10', border: 'border-amber/30' },
+  other:    { label: 'Otro',       emoji: '📋', color: 'text-fog',   bg: 'bg-fog/10',  border: 'border-fog/30' },
+}
+
 function DentroTab({
   activeVisits,
   onCheckOut,
   checkingOut,
   checkoutSummaries,
   rates,
+  onReloadVisits,
 }: {
   activeVisits: ActiveVisit[]
   onCheckOut: (v: ActiveVisit) => void
   checkingOut: string | null
   checkoutSummaries: CheckoutSummary[]
   rates: ServiceRates
+  onReloadVisits: () => void
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [openCheckVisitId, setOpenCheckVisitId] = useState<string | null>(null)
+  const [updating, setUpdating] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000)
     return () => clearInterval(t)
   }, [])
+
+  async function updateCount(v: ActiveVisit, field: 'adults_count' | 'children_count', delta: number) {
+    const current = field === 'adults_count' ? v.adults_count : v.children_count
+    const next = Math.max(field === 'adults_count' ? 1 : 0, current + delta)
+    if (next === current) return
+    setUpdating(v.id + field)
+    await supabase.from('visits').update({ [field]: next }).eq('id', v.id)
+    await onReloadVisits()
+    setUpdating(null)
+  }
 
   return (
     <div className="flex flex-col gap-3 h-[calc(100svh-20rem)] min-h-[22rem]">
@@ -573,10 +596,17 @@ function DentroTab({
             const durationMin = calcDurationMin(v.checked_in_at, null)
             const isStale = durationMin > 180
             const hasBono = v.membership_id !== null
-            const numChildren = Math.max(1, v.children_present?.length ?? 0)
-            const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin), numChildren, v.visit_type, rates)
-            const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+            const adultsCount = v.adults_count ?? 1
+            const childrenCount = v.children_count ?? (v.children_present?.length ?? 0)
+            const totalPeople = adultsCount + childrenCount
             const kids = v.children_present ?? []
+            const isEvent = !!v.booking_id
+            const bookingTag = v.bookings ? BOOKING_TAG[v.bookings.type] ?? BOOKING_TAG.other : null
+            const expectedGuests = v.bookings?.guests ?? null
+            // Cost uses adults+children for events, fallback to children_present for legacy
+            const costChildren = isEvent ? childrenCount : Math.max(0, (v.children_present?.length ?? 0))
+            const estimatedCost = hasBono ? null : calcCost(Math.max(30, durationMin), costChildren, v.visit_type, rates)
+            const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
             const isExpanded = expandedId === v.id
 
             return (
@@ -590,13 +620,25 @@ function DentroTab({
                     <span className="text-xs font-bold text-fog">{(v.members?.name ?? '?')[0]}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
+                      {bookingTag && (
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${bookingTag.color} ${bookingTag.bg} ${bookingTag.border} shrink-0`}>
+                          {bookingTag.emoji} {bookingTag.label}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-xs text-mist">Entrada {entryTime}</span>
                       <span className={`text-xs font-medium ${isStale ? 'text-amber' : 'text-fog'}`}>{fmtDuration(durationMin)}</span>
                       {isStale && <span className="text-[10px] text-amber font-semibold">· revisar salida</span>}
-                      {kids.length > 0 && (
-                        <span className="text-xs text-lime font-medium">{kids.length} niño{kids.length !== 1 ? 's' : ''}</span>
+                      <span className="text-xs text-lime font-medium">
+                        {adultsCount} adulto{adultsCount !== 1 ? 's' : ''}{childrenCount > 0 ? ` · ${childrenCount} niño${childrenCount !== 1 ? 's' : ''}` : ''}
+                      </span>
+                      {expectedGuests && (
+                        <span className={`text-[10px] font-semibold ${totalPeople >= expectedGuests ? 'text-lime' : 'text-fog'}`}>
+                          {totalPeople}/{expectedGuests}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -624,29 +666,78 @@ function DentroTab({
                       <span className="flex items-center gap-1"><Timer size={11} className="text-mist" /> <span className="text-snow font-semibold">{fmtDuration(durationMin)}</span></span>
                     </div>
 
-                    {kids.length > 0 ? (
-                      <div>
-                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Niños presentes</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {kids.map((k, i) => (
-                            <span key={i} className="rounded-full bg-lime/10 border border-lime/20 text-lime text-xs px-2.5 py-1 font-medium">{k.name}</span>
-                          ))}
+                    {/* Guest counters — always visible, prominent for events */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Asistentes</p>
+                        {expectedGuests && (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${totalPeople >= expectedGuests ? 'bg-lime/10 text-lime' : 'bg-fog/10 text-fog'}`}>
+                            {totalPeople} / {expectedGuests} esperados
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Adults */}
+                        <div className="rounded-xl border border-line bg-surface p-3">
+                          <p className="text-[10px] text-fog font-semibold uppercase tracking-wide mb-2">Adultos</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              onClick={() => updateCount(v, 'adults_count', -1)}
+                              disabled={adultsCount <= 1 || updating === v.id + 'adults_count'}
+                              className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30"
+                            >−</button>
+                            <span className="font-display text-2xl font-bold text-snow">{adultsCount}</span>
+                            <button
+                              onClick={() => updateCount(v, 'adults_count', +1)}
+                              disabled={updating === v.id + 'adults_count'}
+                              className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-50"
+                            >+</button>
+                          </div>
+                        </div>
+                        {/* Children */}
+                        <div className="rounded-xl border border-line bg-surface p-3">
+                          <p className="text-[10px] text-fog font-semibold uppercase tracking-wide mb-2">Niños</p>
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              onClick={() => updateCount(v, 'children_count', -1)}
+                              disabled={childrenCount <= 0 || updating === v.id + 'children_count'}
+                              className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30"
+                            >−</button>
+                            <span className="font-display text-2xl font-bold text-snow">{childrenCount}</span>
+                            <button
+                              onClick={() => updateCount(v, 'children_count', +1)}
+                              disabled={updating === v.id + 'children_count'}
+                              className="w-8 h-8 rounded-lg border border-cyan-300/40 bg-cyan-300/10 text-cyan-300 hover:bg-cyan-300/20 flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-50"
+                            >+</button>
+                          </div>
                         </div>
                       </div>
-                    ) : (
-                      <p className="text-xs text-mist">Sin niños registrados</p>
+                    </div>
+
+                    {/* Named children chips — only for non-event regular visits */}
+                    {!isEvent && kids.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {kids.map((k, i) => (
+                          <span key={i} className="rounded-full bg-lime/10 border border-lime/20 text-lime text-xs px-2.5 py-1 font-medium">{k.name}</span>
+                        ))}
+                      </div>
                     )}
 
                     {/* Cost breakdown */}
                     {!hasBono && (() => {
                       const fractions = Math.ceil(Math.max(1, durationMin) / 60)
                       const isCustodia = v.visit_type === 'custodia'
-                      const lines = isCustodia
-                        ? kids.map(k => ({ label: k.name, unit: `${rates.custodia}€ × ${fractions}h`, cost: fractions * rates.custodia }))
-                        : [
-                            { label: v.members?.name ?? 'Adulto', unit: `${rates.adult}€ × ${fractions}h`, cost: fractions * rates.adult },
-                            ...kids.map(k => ({ label: k.name, unit: `${rates.child}€ × ${fractions}h`, cost: fractions * rates.child })),
+                      const lines = isEvent
+                        ? [
+                            ...(adultsCount > 0 ? [{ label: `${adultsCount} adulto${adultsCount !== 1 ? 's' : ''}`, unit: `${rates.adult}€ × ${fractions}h`, cost: fractions * rates.adult * adultsCount }] : []),
+                            ...(childrenCount > 0 ? [{ label: `${childrenCount} niño${childrenCount !== 1 ? 's' : ''}`, unit: `${rates.child}€ × ${fractions}h`, cost: fractions * rates.child * childrenCount }] : []),
                           ]
+                        : isCustodia
+                          ? kids.map(k => ({ label: k.name, unit: `${rates.custodia}€ × ${fractions}h`, cost: fractions * rates.custodia }))
+                          : [
+                              { label: v.members?.name ?? 'Adulto', unit: `${rates.adult}€ × ${fractions}h`, cost: fractions * rates.adult },
+                              ...kids.map(k => ({ label: k.name, unit: `${rates.child}€ × ${fractions}h`, cost: fractions * rates.child })),
+                            ]
                       const total = lines.reduce((s, l) => s + l.cost, 0)
                       return (
                         <div className="rounded-xl border border-line bg-surface divide-y divide-line overflow-hidden">
@@ -692,7 +783,7 @@ function DentroTab({
                         visitId={v.id}
                         memberName={v.members?.name ?? '—'}
                         durationMin={durationMin}
-                        timeCost={hasBono ? null : calcCost(Math.max(30, durationMin), Math.max(1, v.children_present?.length ?? 0), v.visit_type, rates)}
+                        timeCost={hasBono ? null : calcCost(Math.max(30, durationMin), costChildren, v.visit_type, rates)}
                         onClose={() => setOpenCheckVisitId(null)}
                       />
                     )}
@@ -919,7 +1010,7 @@ function VisitasPageInner() {
   async function loadActiveVisits() {
     const { data } = await supabase
       .from('visits')
-      .select('id, checked_in_at, membership_id, visit_type, children_present, members(id, name)')
+      .select('id, checked_in_at, membership_id, visit_type, children_present, adults_count, children_count, booking_id, bookings(type, title, guests, child_name), members(id, name)')
       .is('checked_out_at', null)
       .order('checked_in_at', { ascending: true })
     setActiveVisits((data as unknown as ActiveVisit[]) ?? [])
@@ -1019,6 +1110,7 @@ function VisitasPageInner() {
           checkingOut={checkingOut}
           checkoutSummaries={checkoutSummaries}
           rates={rates}
+          onReloadVisits={loadActiveVisits}
         />
       )}
 
