@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List, LogIn, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { getStoredTenant } from '@/lib/tenant'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
@@ -55,6 +55,7 @@ const EMPTY_FORM = { type: 'birthday' as BookingType, title: '', child_name: '',
 type EditForm = { guests: string; member_id: string; status: BookingStatus; payment_status: PaymentStatus; notes: string }
 
 export default function CalendarioPage() {
+  const router = useRouter()
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -83,19 +84,38 @@ export default function CalendarioPage() {
 
   async function handleExecute(b: Booking) {
     if (!b.member_id) return
-    const tenant = getStoredTenant()
-    if (!tenant) return
     setExecutingId(b.id)
-    await supabase.from('visits').insert({
-      tenant_id: tenant.id,
+
+    // Build children_present: birthday child first, then placeholders for remaining guests
+    let children_present: { name: string }[] | null = null
+    if (b.type === 'birthday') {
+      const entries: { name: string }[] = []
+      if (b.child_name) entries.push({ name: b.child_name })
+      const extraGuests = (b.guests ?? 0) - (b.child_name ? 1 : 0)
+      for (let i = 0; i < Math.max(0, extraGuests); i++) entries.push({ name: `Invitado ${i + 1}` })
+      if (entries.length > 0) children_present = entries
+    } else if (b.type === 'custodia' && b.child_name) {
+      children_present = [{ name: b.child_name }]
+    }
+
+    const { error } = await supabase.from('visits').insert({
       member_id: b.member_id,
       checked_in_at: new Date().toISOString(),
-      visit_type: 'entrada',
+      visit_type: b.type === 'custodia' ? 'custodia' : 'entrada',
       booking_id: b.id,
+      ...(children_present ? { children_present } : {}),
     })
+
+    if (error) {
+      alert(`Error al registrar la visita: ${error.message}`)
+      setExecutingId(null)
+      return
+    }
+
     await supabase.from('bookings').update({ executed_at: new Date().toISOString(), status: 'confirmed' }).eq('id', b.id)
     setExecutingId(null)
-    fetchBookings()
+    // Navigate to dentro tab so the user sees the active visit and updated aforo
+    router.push('/checkin?tab=dentro')
   }
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
