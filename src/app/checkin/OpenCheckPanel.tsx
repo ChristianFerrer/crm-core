@@ -182,7 +182,7 @@ export function OpenCheckPanel({
                     <Plus size={10} />
                   </button>
                 </div>
-                <span className="text-sm font-semibold text-snow shrink-0 w-14 text-right">{item.total.toFixed(2)} €</span>
+                <span className="text-sm font-semibold text-snow shrink-0 min-w-[4rem] text-right">{item.total.toFixed(2)} €</span>
                 <button onClick={() => removeItem(item)} className="text-mist hover:text-rose transition-colors shrink-0"><Trash2 size={12} /></button>
               </div>
             ))}

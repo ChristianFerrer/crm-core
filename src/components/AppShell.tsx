@@ -213,12 +213,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-line px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Brand + tenant */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-lime flex items-center justify-center shrink-0">
               <span className="text-ink font-bold text-xs">W</span>
             </div>
-            <div>
-              <p className="text-xs font-bold text-snow leading-tight">{tenantName ?? 'Watermelon'}</p>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-snow leading-tight truncate">{tenantName ?? 'Watermelon'}</p>
               <p className="text-[10px] text-mist leading-tight">CRM</p>
             </div>
           </div>

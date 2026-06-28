@@ -123,7 +123,7 @@ export default function NuevoMiembroPage() {
     }
   }
 
-  const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
+  const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
   const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5'
 
   return (

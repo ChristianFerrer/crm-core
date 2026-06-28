@@ -145,7 +145,7 @@ export default function MiembrosPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder={view === 'miembros' ? 'Buscar por nombre o teléfono...' : 'Buscar por familia o miembro...'}
-          className="w-full bg-surface border border-line rounded-xl pl-9 pr-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
+          className="w-full bg-surface border border-line rounded-xl pl-9 pr-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
         />
       </div>
 

@@ -36,7 +36,7 @@ const CATEGORIES = [
 
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 
-const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
+const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
 function getCat(value: string) {
   return CATEGORIES.find(c => c.value === value) ?? CATEGORIES[4]
@@ -143,7 +143,7 @@ export default function ServiciosPage() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line overflow-x-auto">
         <Link href="/panel" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <BarChart2 size={13} /> Resumen
         </Link>
@@ -194,7 +194,7 @@ export default function ServiciosPage() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold ${s.active ? 'text-snow' : 'text-fog'}`}>{s.name}</p>
+                      <p className={`text-sm font-semibold truncate ${s.active ? 'text-snow' : 'text-fog'}`}>{s.name}</p>
                       {s.description && <p className="text-xs text-mist truncate">{s.description}</p>}
                     </div>
 
@@ -237,7 +237,7 @@ export default function ServiciosPage() {
       {/* Add / Edit Modal */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl">
+          <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-snow">
                 {modal === 'add' ? 'Nuevo servicio' : 'Editar servicio'}

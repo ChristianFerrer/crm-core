@@ -658,7 +658,7 @@ function DentroTab({
                               <span className="text-xs text-fog">{l.label}</span>
                               <div className="flex items-center gap-3">
                                 <span className="text-[10px] text-mist">{l.unit}</span>
-                                <span className="text-xs font-semibold text-snow w-14 text-right">{fmtCost(l.cost)}</span>
+                                <span className="text-xs font-semibold text-snow min-w-[3.5rem] text-right">{fmtCost(l.cost)}</span>
                               </div>
                             </div>
                           ))}
@@ -813,7 +813,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
           value={customDate}
           max={toLocalDate(new Date())}
           onChange={e => setCustomDate(e.target.value)}
-          className="w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow outline-none focus:border-line2"
+          className="w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow outline-none focus:border-line2"
         />
       )}
 

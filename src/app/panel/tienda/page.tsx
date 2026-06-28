@@ -24,7 +24,7 @@ const CATEGORIES = [
   { value: 'otro', label: 'Otro', emoji: '🛒' },
 ]
 
-const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
+const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
 function categoryFromTags(tags: string[]): string {
   const s = tags.join(' ').toLowerCase()
@@ -174,7 +174,7 @@ export default function TiendaPage() {
   return (
     <div className="space-y-5">
       {/* Sub-nav panel */}
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line overflow-x-auto">
         <Link href="/panel" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <BarChart2 size={13} /> Resumen
         </Link>
@@ -222,30 +222,34 @@ export default function TiendaPage() {
       ) : (
         <div className="space-y-2">
           {products.map(p => (
-            <div key={p.id} className={`rounded-2xl border bg-surface p-4 flex items-center gap-4 ${p.active ? 'border-line' : 'border-line opacity-50'}`}>
-              <span className="text-2xl shrink-0">{p.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-snow">{p.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</p>
-                  {p.barcode && <span className="text-[10px] text-mist font-mono bg-surface2 px-1.5 py-0.5 rounded">{p.barcode}</span>}
+            <div key={p.id} className={`rounded-2xl border bg-surface p-4 ${p.active ? 'border-line' : 'border-line opacity-50'}`}>
+              {/* Fila principal */}
+              <div className="flex items-center gap-3">
+                <span className="text-2xl shrink-0">{p.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-snow truncate">{p.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <p className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</p>
+                    {p.barcode && <span className="text-[10px] text-mist font-mono bg-surface2 px-1.5 py-0.5 rounded truncate max-w-[120px]">{p.barcode}</span>}
+                  </div>
                 </div>
+                <p className="text-base font-bold text-lime shrink-0">{p.price.toFixed(2)} €</p>
               </div>
-              {/* Stock badge */}
-              <button
-                onClick={() => { setStockProduct(p); setStockEntry('1') }}
-                className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-                  p.stock === 0 ? 'bg-rose/10 border-rose/30 text-rose' :
-                  p.stock <= 3 ? 'bg-amber/10 border-amber/30 text-amber' :
-                  'bg-surface2 border-line text-fog hover:border-line2'
-                }`}
-                title="Añadir unidades"
-              >
-                <PackagePlus size={11} />
-                {p.stock} ud.
-              </button>
-              <p className="text-base font-bold text-lime shrink-0">{p.price.toFixed(2)} €</p>
-              <div className="flex items-center gap-1.5 shrink-0">
+              {/* Fila acciones */}
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line/50">
+                <button
+                  onClick={() => { setStockProduct(p); setStockEntry('1') }}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                    p.stock === 0 ? 'bg-rose/10 border-rose/30 text-rose' :
+                    p.stock <= 3 ? 'bg-amber/10 border-amber/30 text-amber' :
+                    'bg-surface2 border-line text-fog hover:border-line2'
+                  }`}
+                  title="Añadir unidades"
+                >
+                  <PackagePlus size={11} />
+                  {p.stock} ud.
+                </button>
+                <div className="flex-1" />
                 <button onClick={() => handleToggle(p)} className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-colors ${p.active ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'}`}>
                   {p.active ? 'Activo' : 'Inactivo'}
                 </button>
@@ -264,7 +268,7 @@ export default function TiendaPage() {
       {/* Product modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
-          <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-5 space-y-4" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-semibold text-snow">{editing ? 'Editar producto' : 'Nuevo producto'}</h2>
               <button onClick={() => setShowModal(false)} className="text-mist hover:text-snow"><X size={16} /></button>

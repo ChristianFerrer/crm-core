@@ -310,11 +310,11 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         ) : (
           <div className="space-y-1">
             {(visits as any[]).map((v) => (
-              <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex justify-between text-sm">
-                <span className="text-fog">
+              <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex justify-between gap-2 text-sm">
+                <span className="text-fog truncate min-w-0">
                   {new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                 </span>
-                <span className="text-mist">
+                <span className="text-mist shrink-0">
                   {new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>

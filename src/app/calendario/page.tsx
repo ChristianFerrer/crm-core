@@ -29,7 +29,7 @@ interface Booking {
 
 interface Member { id: string; name: string }
 
-const inputClass = 'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
+const inputClass = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -399,13 +399,13 @@ export default function CalendarioPage() {
                               className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2 resize-none" />
                           </div>
                           {/* Actions */}
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
                             <button onClick={handleSaveEdit} disabled={saving}
-                              className="flex-1 bg-lime text-ink font-semibold py-2 rounded-lg text-xs hover:bg-lime/90 transition-colors disabled:opacity-50">
+                              className="flex-1 min-w-[120px] bg-lime text-ink font-semibold py-2 rounded-lg text-xs hover:bg-lime/90 transition-colors disabled:opacity-50">
                               {saving ? 'Guardando...' : 'Guardar cambios'}
                             </button>
                             <button onClick={() => handleCancel(b.id)}
-                              className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-rose border border-rose/30 hover:bg-rose/10 transition-colors">
+                              className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-rose border border-rose/30 hover:bg-rose/10 transition-colors whitespace-nowrap">
                               <Trash2 size={12} /> Cancelar reserva
                             </button>
                             <button onClick={() => setEditingId(null)}

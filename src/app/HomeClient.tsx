@@ -152,8 +152,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{tenantName ?? 'Mi establecimiento'}</h1>
+        <div className="min-w-0">
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? 'Mi establecimiento'}</h1>
           <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
         </div>
         <Link

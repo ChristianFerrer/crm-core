@@ -135,7 +135,7 @@ export default function PerfilPage() {
         </p>
       </div>
 
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
+      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line overflow-x-auto">
         <Link href="/panel" className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
           <BarChart2 size={13} /> Resumen
         </Link>
