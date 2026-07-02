@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag } from 'lucide-react'
+import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag, FolderPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type Service = {
@@ -17,6 +17,14 @@ type Service = {
   sort_order: number | null
 }
 
+type Category = {
+  value: string
+  label: string
+  color: string
+  bg: string
+  border: string
+}
+
 type FormData = {
   name: string
   description: string
@@ -26,39 +34,62 @@ type FormData = {
   duration_min: string
 }
 
-const CATEGORIES = [
-  { value: 'entrada', label: 'Entrada', color: 'text-lime', bg: 'bg-lime/10', border: 'border-lime/30' },
-  { value: 'bono', label: 'Bono', color: 'text-iris', bg: 'bg-iris/10', border: 'border-iris/30' },
-  { value: 'sala', label: 'Sala privada', color: 'text-amber', bg: 'bg-amber/10', border: 'border-amber/30' },
-  { value: 'custodia', label: 'Custodia', color: 'text-mint', bg: 'bg-mint/10', border: 'border-mint/30' },
-  { value: 'general', label: 'General', color: 'text-fog', bg: 'bg-fog/10', border: 'border-fog/30' },
+const DEFAULT_CATEGORIES: Category[] = [
+  { value: 'entrada', label: 'Entrada',      color: 'text-lime',  bg: 'bg-lime/10',  border: 'border-lime/30' },
+  { value: 'bono',    label: 'Bono',         color: 'text-iris',  bg: 'bg-iris/10',  border: 'border-iris/30' },
+  { value: 'sala',    label: 'Sala privada', color: 'text-amber', bg: 'bg-amber/10', border: 'border-amber/30' },
+  { value: 'custodia',label: 'Custodia',     color: 'text-mint',  bg: 'bg-mint/10',  border: 'border-mint/30' },
+  { value: 'general', label: 'General',      color: 'text-fog',   bg: 'bg-fog/10',   border: 'border-fog/30' },
+]
+
+const CAT_COLORS = [
+  { color: 'text-lime',     bg: 'bg-lime/10',     border: 'border-lime/30' },
+  { color: 'text-iris',     bg: 'bg-iris/10',     border: 'border-iris/30' },
+  { color: 'text-amber',    bg: 'bg-amber/10',    border: 'border-amber/30' },
+  { color: 'text-mint',     bg: 'bg-mint/10',     border: 'border-mint/30' },
+  { color: 'text-cyan-300', bg: 'bg-cyan-300/10', border: 'border-cyan-300/30' },
+  { color: 'text-rose',     bg: 'bg-rose/10',     border: 'border-rose/30' },
+  { color: 'text-fog',      bg: 'bg-fog/10',      border: 'border-fog/30' },
 ]
 
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
-
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-function getCat(value: string) {
-  return CATEGORIES.find(c => c.value === value) ?? CATEGORIES[4]
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '' }
+
+const STORAGE_KEY = 'wm_service_categories'
+
+function loadCategories(): Category[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return DEFAULT_CATEGORIES
 }
 
-const EMPTY_FORM: FormData = {
-  name: '',
-  description: '',
-  category: 'general',
-  price: '',
-  price_unit: 'sesión',
-  duration_min: '',
+function saveCategories(cats: Category[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cats))
 }
 
 export default function ServiciosPage() {
   const [services, setServices] = useState<Service[]>([])
+  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES)
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'add' | 'edit' | null>(null)
   const [editTarget, setEditTarget] = useState<Service | null>(null)
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  // Category management
+  const [showCatModal, setShowCatModal] = useState(false)
+  const [catForm, setCatForm] = useState({ label: '', value: '' })
+  const [editCat, setEditCat] = useState<Category | null>(null)
+  const [deleteCat, setDeleteCat] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCategories(loadCategories())
+  }, [])
 
   async function load() {
     setLoading(true)
@@ -73,50 +104,28 @@ export default function ServiciosPage() {
 
   useEffect(() => { load() }, [])
 
-  function openAdd() {
-    setForm(EMPTY_FORM)
-    setEditTarget(null)
-    setModal('add')
+  function getCat(value: string): Category {
+    return categories.find(c => c.value === value) ?? categories[categories.length - 1] ?? DEFAULT_CATEGORIES[4]
   }
 
+  function openAdd() { setForm(EMPTY_FORM); setEditTarget(null); setModal('add') }
   function openEdit(s: Service) {
-    setForm({
-      name: s.name,
-      description: s.description ?? '',
-      category: s.category,
-      price: String(s.price),
-      price_unit: s.price_unit,
-      duration_min: s.duration_min != null ? String(s.duration_min) : '',
-    })
-    setEditTarget(s)
-    setModal('edit')
+    setForm({ name: s.name, description: s.description ?? '', category: s.category, price: String(s.price), price_unit: s.price_unit, duration_min: s.duration_min != null ? String(s.duration_min) : '' })
+    setEditTarget(s); setModal('edit')
   }
-
-  function closeModal() {
-    setModal(null)
-    setEditTarget(null)
-    setForm(EMPTY_FORM)
-  }
+  function closeModal() { setModal(null); setEditTarget(null); setForm(EMPTY_FORM) }
 
   async function saveForm() {
     if (!form.name.trim() || !form.price) return
     setSaving(true)
     const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
-      category: form.category,
-      price: parseFloat(form.price),
-      price_unit: form.price_unit,
-      duration_min: form.duration_min ? parseInt(form.duration_min) : null,
+      name: form.name.trim(), description: form.description.trim() || null,
+      category: form.category, price: parseFloat(form.price),
+      price_unit: form.price_unit, duration_min: form.duration_min ? parseInt(form.duration_min) : null,
     }
-    if (modal === 'add') {
-      await supabase.from('services').insert({ ...payload, active: true })
-    } else if (editTarget) {
-      await supabase.from('services').update(payload).eq('id', editTarget.id)
-    }
-    setSaving(false)
-    closeModal()
-    load()
+    if (modal === 'add') await supabase.from('services').insert({ ...payload, active: true })
+    else if (editTarget) await supabase.from('services').update(payload).eq('id', editTarget.id)
+    setSaving(false); closeModal(); load()
   }
 
   async function toggleActive(s: Service) {
@@ -130,10 +139,42 @@ export default function ServiciosPage() {
     setServices(prev => prev.filter(x => x.id !== id))
   }
 
-  const grouped = CATEGORIES.map(cat => ({
+  // Category CRUD
+  function openNewCat() { setCatForm({ label: '', value: '' }); setEditCat(null); setShowCatModal(true) }
+  function openEditCat(c: Category) { setCatForm({ label: c.label, value: c.value }); setEditCat(c); setShowCatModal(true) }
+
+  function saveCat() {
+    if (!catForm.label.trim()) return
+    const slug = catForm.value.trim() || catForm.label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+    const colorIdx = categories.length % CAT_COLORS.length
+    if (editCat) {
+      const updated = categories.map(c => c.value === editCat.value
+        ? { ...c, label: catForm.label.trim(), value: slug }
+        : c)
+      setCategories(updated); saveCategories(updated)
+    } else {
+      const newCat: Category = { value: slug, label: catForm.label.trim(), ...CAT_COLORS[colorIdx] }
+      const updated = [...categories, newCat]
+      setCategories(updated); saveCategories(updated)
+    }
+    setShowCatModal(false)
+  }
+
+  function confirmDeleteCat(value: string) { setDeleteCat(value) }
+  function doDeleteCat() {
+    if (!deleteCat) return
+    const updated = categories.filter(c => c.value !== deleteCat)
+    setCategories(updated); saveCategories(updated); setDeleteCat(null)
+  }
+
+  const grouped = categories.map(cat => ({
     ...cat,
     items: services.filter(s => s.category === cat.value),
   })).filter(g => g.items.length > 0)
+
+  // Uncategorized services (category not in list)
+  const knownValues = new Set(categories.map(c => c.value))
+  const uncategorized = services.filter(s => !knownValues.has(s.category))
 
   return (
     <div className="space-y-6">
@@ -159,14 +200,49 @@ export default function ServiciosPage() {
       </div>
 
       {/* Header row */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-fog">{services.length} servicios configurados</p>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-1.5 bg-lime text-carbon text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/90 transition-colors"
-        >
-          <Plus size={13} /> Nuevo servicio
-        </button>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-fog">{services.length} servicios · {categories.length} categorías</p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openNewCat}
+            className="flex items-center gap-1.5 border border-line bg-surface text-fog text-xs font-semibold px-3 py-2 rounded-xl hover:text-snow hover:border-line2 transition-colors"
+          >
+            <FolderPlus size={13} /> Categoría
+          </button>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-1.5 bg-lime text-carbon text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/90 transition-colors"
+          >
+            <Plus size={13} /> Nuevo servicio
+          </button>
+        </div>
+      </div>
+
+      {/* Categories management strip */}
+      <div className="rounded-2xl border border-line bg-surface p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Categorías</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {categories.map(cat => (
+            <div key={cat.value} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 ${cat.bg} ${cat.border}`}>
+              <span className={`text-xs font-semibold ${cat.color}`}>{cat.label}</span>
+              <span className="text-xs text-fog/60">({services.filter(s => s.category === cat.value).length})</span>
+              <button onClick={() => openEditCat(cat)} className={`${cat.color} opacity-60 hover:opacity-100 transition-opacity ml-0.5`}>
+                <Pencil size={10} />
+              </button>
+              <button onClick={() => confirmDeleteCat(cat.value)} className="text-rose/50 hover:text-rose transition-colors">
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={openNewCat}
+            className="flex items-center gap-1 rounded-full border border-dashed border-line px-3 py-1.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
+          >
+            <Plus size={11} /> Nueva
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -183,46 +259,28 @@ export default function ServiciosPage() {
               <div className="space-y-2">
                 {cat.items.map(s => (
                   <div key={s.id} className={`flex items-center gap-3 rounded-2xl border ${s.active ? 'border-line bg-surface' : 'border-line/50 bg-surface/50'} px-4 py-3`}>
-                    {/* Toggle */}
                     <button
                       onClick={() => toggleActive(s)}
                       className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${s.active ? 'bg-lime' : 'bg-line'}`}
-                      title={s.active ? 'Desactivar' : 'Activar'}
                     >
                       <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${s.active ? 'translate-x-4' : ''}`} />
                     </button>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-semibold truncate ${s.active ? 'text-snow' : 'text-fog'}`}>{s.name}</p>
                       {s.description && <p className="text-xs text-mist truncate">{s.description}</p>}
                     </div>
-
-                    {/* Price */}
                     <div className="text-right shrink-0">
                       <p className="text-sm font-semibold text-snow">{s.price}€</p>
                       <p className="text-xs text-mist">/ {s.price_unit}</p>
                     </div>
-
-                    {/* Duration */}
                     {s.duration_min != null && (
                       <div className="text-xs text-fog shrink-0">{s.duration_min} min</div>
                     )}
-
-                    {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => openEdit(s)}
-                        className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"
-                        title="Editar"
-                      >
+                      <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors">
                         <Pencil size={13} />
                       </button>
-                      <button
-                        onClick={() => setDeleteId(s.id)}
-                        className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"
-                        title="Eliminar"
-                      >
+                      <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -231,113 +289,71 @@ export default function ServiciosPage() {
               </div>
             </div>
           ))}
+          {uncategorized.length > 0 && (
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-fog bg-fog/10 px-3 py-1 rounded-full mb-3">Sin categoría</div>
+              <div className="space-y-2">
+                {uncategorized.map(s => (
+                  <div key={s.id} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-snow truncate">{s.name}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-snow shrink-0">{s.price}€</p>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
+                      <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Add / Edit Modal */}
+      {/* Add / Edit Service Modal */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-snow">
-                {modal === 'add' ? 'Nuevo servicio' : 'Editar servicio'}
-              </h2>
-              <button onClick={closeModal} className="text-fog hover:text-snow transition-colors">
-                <X size={18} />
-              </button>
+              <h2 className="text-base font-semibold text-snow">{modal === 'add' ? 'Nuevo servicio' : 'Editar servicio'}</h2>
+              <button onClick={closeModal} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
             </div>
-
             <div className="space-y-4">
-              {/* Nombre */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5">Nombre *</label>
-                <input
-                  className={INPUT_CLASS}
-                  placeholder="Ej. Entrada diaria"
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                />
+                <input className={INPUT_CLASS} placeholder="Ej. Entrada diaria" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
-
-              {/* Descripción */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5">Descripción (opcional)</label>
-                <input
-                  className={INPUT_CLASS}
-                  placeholder="Breve descripción"
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                />
+                <input className={INPUT_CLASS} placeholder="Breve descripción" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
-
-              {/* Categoría */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5">Categoría</label>
-                <select
-                  className={INPUT_CLASS}
-                  value={form.category}
-                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                >
-                  {CATEGORIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
+                <select className={INPUT_CLASS} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                  {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
-
-              {/* Precio + Unidad */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
-                  <input
-                    className={INPUT_CLASS}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={form.price}
-                    onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                  />
+                  <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-fog mb-1.5">Unidad de precio</label>
-                  <select
-                    className={INPUT_CLASS}
-                    value={form.price_unit}
-                    onChange={e => setForm(f => ({ ...f, price_unit: e.target.value }))}
-                  >
-                    {PRICE_UNITS.map(u => (
-                      <option key={u} value={u}>{u}</option>
-                    ))}
+                  <select className={INPUT_CLASS} value={form.price_unit} onChange={e => setForm(f => ({ ...f, price_unit: e.target.value }))}>
+                    {PRICE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
               </div>
-
-              {/* Duración */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5">Duración en minutos (opcional)</label>
-                <input
-                  className={INPUT_CLASS}
-                  type="number"
-                  min="0"
-                  placeholder="Ej. 60"
-                  value={form.duration_min}
-                  onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))}
-                />
+                <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 60" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
               </div>
             </div>
-
             <div className="flex gap-2 mt-6">
-              <button
-                onClick={closeModal}
-                className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={saveForm}
-                disabled={saving || !form.name.trim() || !form.price}
-                className="flex-1 py-2.5 rounded-xl bg-lime text-carbon text-sm font-semibold hover:bg-lime/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-              >
+              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={saveForm} disabled={saving || !form.name.trim() || !form.price} className="flex-1 py-2.5 rounded-xl bg-lime text-carbon text-sm font-semibold hover:bg-lime/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
                 <Check size={14} /> {saving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
@@ -345,25 +361,70 @@ export default function ServiciosPage() {
         </div>
       )}
 
-      {/* Delete confirmation */}
+      {/* Category Add/Edit Modal */}
+      {showCatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-snow">{editCat ? 'Editar categoría' : 'Nueva categoría'}</h2>
+              <button onClick={() => setShowCatModal(false)} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Nombre de la categoría *</label>
+                <input
+                  className={INPUT_CLASS}
+                  placeholder="Ej. Taller, Evento especial..."
+                  value={catForm.label}
+                  onChange={e => setCatForm(f => ({ ...f, label: e.target.value }))}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Identificador (opcional)</label>
+                <input
+                  className={INPUT_CLASS}
+                  placeholder="Se genera automáticamente"
+                  value={catForm.value}
+                  onChange={e => setCatForm(f => ({ ...f, value: e.target.value }))}
+                />
+                <p className="text-xs text-mist mt-1">Solo letras minúsculas y guión bajo. Déjalo vacío para generarlo automáticamente.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowCatModal(false)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={saveCat} disabled={!catForm.label.trim()} className="flex-1 py-2.5 rounded-xl bg-lime text-carbon text-sm font-semibold hover:bg-lime/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <Check size={14} /> {editCat ? 'Guardar' : 'Crear categoría'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete category confirmation */}
+      {deleteCat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
+            <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar categoría?</h2>
+            <p className="text-sm text-fog mb-1">Los servicios con esta categoría quedarán sin categorizar.</p>
+            <p className="text-sm text-fog mb-6">Esta acción no elimina los servicios.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteCat(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={doDeleteCat} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete service confirmation */}
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
             <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar servicio?</h2>
             <p className="text-sm text-fog mb-6">Esta acción no se puede deshacer.</p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => deleteService(deleteId)}
-                className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors"
-              >
-                Eliminar
-              </button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => deleteService(deleteId)} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
             </div>
           </div>
         </div>

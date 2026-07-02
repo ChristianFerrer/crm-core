@@ -220,48 +220,73 @@ export default function TiendaPage() {
           <p className="text-xs text-mist mt-1">Añade agua, snacks u otros artículos para vender durante las visitas</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {products.map(p => (
-            <div key={p.id} className={`rounded-2xl border bg-surface p-4 ${p.active ? 'border-line' : 'border-line opacity-50'}`}>
-              {/* Fila principal */}
-              <div className="flex items-center gap-3">
-                <span className="text-2xl shrink-0">{p.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-snow truncate">{p.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <p className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</p>
-                    {p.barcode && <span className="text-[10px] text-mist font-mono bg-surface2 px-1.5 py-0.5 rounded truncate max-w-[120px]">{p.barcode}</span>}
-                  </div>
-                </div>
-                <p className="text-base font-bold text-lime shrink-0">{p.price.toFixed(2)} €</p>
-              </div>
-              {/* Fila acciones */}
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-line/50">
-                <button
-                  onClick={() => { setStockProduct(p); setStockEntry('1') }}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
-                    p.stock === 0 ? 'bg-rose/10 border-rose/30 text-rose' :
-                    p.stock <= 3 ? 'bg-amber/10 border-amber/30 text-amber' :
-                    'bg-surface2 border-line text-fog hover:border-line2'
-                  }`}
-                  title="Añadir unidades"
-                >
-                  <PackagePlus size={11} />
-                  {p.stock} ud.
-                </button>
-                <div className="flex-1" />
-                <button onClick={() => handleToggle(p)} className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-colors ${p.active ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'}`}>
-                  {p.active ? 'Activo' : 'Inactivo'}
-                </button>
-                <button onClick={() => openEdit(p)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
-                  <Pencil size={12} />
-                </button>
-                <button onClick={() => handleDelete(p.id)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Producto</th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">Categoría</th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden md:table-cell">Código</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Stock</th>
+                  <th className="text-right px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Precio</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">Estado</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line/50">
+                {products.map(p => (
+                  <tr key={p.id} className={`hover:bg-surface2/40 transition-colors ${!p.active ? 'opacity-50' : ''}`}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-lg shrink-0">{p.emoji}</span>
+                        <span className="font-semibold text-snow truncate max-w-[140px]">{p.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 hidden sm:table-cell">
+                      <span className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</span>
+                    </td>
+                    <td className="px-3 py-3 hidden md:table-cell">
+                      {p.barcode
+                        ? <span className="text-[10px] font-mono text-mist bg-surface2 px-1.5 py-0.5 rounded">{p.barcode}</span>
+                        : <span className="text-xs text-line2">—</span>}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <button
+                        onClick={() => { setStockProduct(p); setStockEntry('1') }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-semibold border transition-colors ${
+                          p.stock === 0 ? 'bg-rose/10 border-rose/30 text-rose' :
+                          p.stock <= 3 ? 'bg-amber/10 border-amber/30 text-amber' :
+                          'bg-surface2 border-line text-fog hover:border-line2'
+                        }`}
+                        title="Añadir unidades"
+                      >
+                        <PackagePlus size={10} />{p.stock}
+                      </button>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <span className="font-bold text-lime">{p.price.toFixed(2)} €</span>
+                    </td>
+                    <td className="px-3 py-3 text-center hidden sm:table-cell">
+                      <button onClick={() => handleToggle(p)} className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-colors ${p.active ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'}`}>
+                        {p.active ? 'Activo' : 'Inactivo'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button onClick={() => openEdit(p)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
+                          <Pencil size={12} />
+                        </button>
+                        <button onClick={() => handleDelete(p.id)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
