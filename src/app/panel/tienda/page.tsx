@@ -16,6 +16,8 @@ type Product = {
   active: boolean
   barcode: string | null
   stock: number
+  image_url: string | null
+  weight: string | null
 }
 
 const CATEGORIES = [
@@ -103,7 +105,7 @@ export default function TiendaPage() {
         const img: string | null = p.image_front_url || p.image_url || null
         const qty: string | null = p.quantity || p.product_quantity || null
         setLookupImage(img)
-        setLookupWeight(qty)
+        setLookupWeight(qty ?? null)
         setLookupMsg(pname ? `✓ Encontrado: ${pname}` : '✓ Producto encontrado (sin nombre en español)')
       } else {
         setLookupMsg('Producto no encontrado en la base de datos. Rellena los datos manualmente.')
@@ -144,6 +146,8 @@ export default function TiendaPage() {
       name: name.trim(), category, price: parseFloat(price), emoji,
       tenant_id: tenant.id, active: true,
       barcode: barcode.trim() || null,
+      image_url: lookupImage || null,
+      weight: lookupWeight || null,
     }
     if (editing) {
       const delta = parseInt(stockInput) || 0
@@ -235,6 +239,7 @@ export default function TiendaPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line">
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide w-8">#</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Producto</th>
                   <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">Categoría</th>
                   <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden md:table-cell">Código</th>
@@ -245,12 +250,31 @@ export default function TiendaPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/50">
-                {products.map(p => (
+                {products.map((p, idx) => (
                   <tr key={p.id} className={`hover:bg-surface2/40 transition-colors ${!p.active ? 'opacity-50' : ''}`}>
+                    <td className="px-3 py-3 text-center">
+                      <span className="text-xs text-mist font-mono">{idx + 1}</span>
+                    </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-lg shrink-0">{p.emoji}</span>
-                        <span className="font-semibold text-snow truncate max-w-[140px]">{p.name}</span>
+                      <div className="flex items-center gap-3">
+                        {/* Product image or flat icon */}
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.image_url}
+                            alt={p.name}
+                            className="w-10 h-10 object-contain rounded-lg bg-white shrink-0"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-surface2 border border-line flex items-center justify-center shrink-0 text-xl">
+                            {p.emoji}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-snow truncate max-w-[130px]">{p.name}</p>
+                          {p.weight && <p className="text-[10px] text-mist mt-0.5">{p.weight}</p>}
+                        </div>
                       </div>
                     </td>
                     <td className="px-3 py-3 hidden sm:table-cell">
