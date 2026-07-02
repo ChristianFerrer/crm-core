@@ -108,7 +108,7 @@ export default function TiendaPage() {
   function openEdit(p: Product) {
     setEditing(p)
     setName(p.name); setCategory(p.category); setPrice(String(p.price))
-    setBarcode(p.barcode ?? ''); setStockInput('0')
+    setBarcode(p.barcode ?? ''); setStockInput(String(p.stock))
     setLookupMsg(null); setLookupImage(p.image_url); setLookupWeight(p.weight)
     setShowModal(true)
   }
@@ -171,8 +171,7 @@ export default function TiendaPage() {
       weight: lookupWeight || null,
     }
     if (editing) {
-      const delta = parseInt(stockInput) || 0
-      if (delta > 0) payload.stock = editing.stock + delta
+      payload.stock = Math.max(0, parseInt(stockInput) || 0)
       await supabase.from('products').update(payload).eq('id', editing.id)
     } else {
       payload.stock = parseInt(stockInput) || 0
@@ -262,6 +261,7 @@ export default function TiendaPage() {
                 <tr className="border-b border-line">
                   <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide w-8">#</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Producto</th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden lg:table-cell">Peso</th>
                   <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">Categoría</th>
                   <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden md:table-cell">Código</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Stock</th>
@@ -281,11 +281,11 @@ export default function TiendaPage() {
                         <div className="shrink-0">
                           <ProductThumb src={p.image_url} name={p.name} />
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-snow truncate max-w-[130px]">{p.name}</p>
-                          {p.weight && <p className="text-[10px] text-mist mt-0.5">{p.weight}</p>}
-                        </div>
+                        <p className="font-semibold text-snow truncate max-w-[130px]">{p.name}</p>
                       </div>
+                    </td>
+                    <td className="px-3 py-3 hidden lg:table-cell">
+                      <span className="text-xs text-mist">{p.weight ?? '—'}</span>
                     </td>
                     <td className="px-3 py-3 hidden sm:table-cell">
                       <span className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</span>
@@ -372,14 +372,10 @@ export default function TiendaPage() {
 
               {/* Product image preview (from lookup or editing) */}
               <div className="flex items-center gap-4">
-                <div className="relative w-16 h-16 shrink-0">
+                <div className="w-16 h-16 shrink-0">
                   {lookupImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={lookupImage}
-                      alt="producto"
-                      className="w-16 h-16 object-contain rounded-xl bg-white"
-                    />
+                    <img src={lookupImage} alt="producto" className="w-16 h-16 object-contain rounded-xl bg-white" />
                   ) : (
                     <div className="w-16 h-16 rounded-xl bg-surface2 border border-line flex items-center justify-center">
                       <Package size={28} className="text-mist" />
@@ -390,10 +386,7 @@ export default function TiendaPage() {
                   {lookupMsg && (
                     <p className={`text-xs font-medium ${lookupMsg.startsWith('✓') ? 'text-lime' : 'text-amber'}`}>{lookupMsg}</p>
                   )}
-                  {lookupWeight && (
-                    <p className="text-xs text-fog mt-1">Peso / cantidad: <span className="text-snow font-medium">{lookupWeight}</span></p>
-                  )}
-                  {!lookupMsg && !lookupWeight && (
+                  {!lookupMsg && !lookupImage && (
                     <p className="text-xs text-mist">Escanea el código para cargar la imagen y datos del producto.</p>
                   )}
                 </div>
@@ -419,10 +412,21 @@ export default function TiendaPage() {
                 </div>
               </div>
 
+              {/* Peso / cantidad */}
+              <div>
+                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Peso / cantidad</p>
+                <input
+                  value={lookupWeight ?? ''}
+                  onChange={e => setLookupWeight(e.target.value || null)}
+                  placeholder="Ej: 330 ml, 100 g"
+                  className={inputCls}
+                />
+              </div>
+
               {/* Stock */}
               <div>
                 <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">
-                  {editing ? `Añadir unidades (stock actual: ${editing.stock})` : 'Unidades iniciales en stock'}
+                  {editing ? 'Unidades (stock actual)' : 'Unidades iniciales en stock'}
                 </p>
                 <div className="flex items-center gap-3">
                   <button
@@ -443,14 +447,16 @@ export default function TiendaPage() {
                     className="w-10 h-10 rounded-xl border border-line bg-surface2 text-lg font-bold text-fog hover:text-snow flex items-center justify-center transition-colors"
                   >+</button>
                 </div>
-                <div className="flex gap-1.5 mt-2">
-                  {[6, 12, 24, 48].map(n => (
-                    <button key={n} type="button" onClick={() => setStockInput(String(n))}
-                      className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
-                      +{n}
-                    </button>
-                  ))}
-                </div>
+                {!editing && (
+                  <div className="flex gap-1.5 mt-2">
+                    {[6, 12, 24, 48].map(n => (
+                      <button key={n} type="button" onClick={() => setStockInput(String(n))}
+                        className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
+                        +{n}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
