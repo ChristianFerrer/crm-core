@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { BarChart2, Tag, ShoppingBag, Plus, Pencil, Trash2, X, Check, Building2, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
+import { BarChart2, Tag, ShoppingBag, Plus, Pencil, Trash2, X, Check, Building2, ScanBarcode, PackagePlus, Loader2, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { BarcodeScanner } from '@/components/BarcodeScanner'
@@ -48,11 +48,12 @@ export default function TiendaPage() {
   const [barcode, setBarcode] = useState('')
   const [stockInput, setStockInput] = useState('0')
 
-  // UX states
+  // Lookup state
   const [showScanner, setShowScanner] = useState(false)
-  const [scannerTarget, setScannerTarget] = useState<'form' | 'stock'>('form')
   const [lookingUp, setLookingUp] = useState(false)
   const [lookupMsg, setLookupMsg] = useState<string | null>(null)
+  const [lookupImage, setLookupImage] = useState<string | null>(null)
+  const [lookupWeight, setLookupWeight] = useState<string | null>(null)
 
   // Stock entry modal
   const [stockProduct, setStockProduct] = useState<Product | null>(null)
@@ -70,13 +71,14 @@ export default function TiendaPage() {
   useEffect(() => { load() }, [load])
 
   function openNew() {
-    setEditing(null); setName(''); setCategory('bebida'); setPrice(''); setEmoji('🥤'); setBarcode(''); setStockInput('0'); setLookupMsg(null)
+    setEditing(null); setName(''); setCategory('bebida'); setPrice(''); setEmoji('🥤'); setBarcode('')
+    setStockInput('0'); setLookupMsg(null); setLookupImage(null); setLookupWeight(null)
     setShowModal(true)
   }
 
   function openEdit(p: Product) {
     setEditing(p); setName(p.name); setCategory(p.category); setPrice(String(p.price)); setEmoji(p.emoji)
-    setBarcode(p.barcode ?? ''); setStockInput('0'); setLookupMsg(null)
+    setBarcode(p.barcode ?? ''); setStockInput('0'); setLookupMsg(null); setLookupImage(null); setLookupWeight(null)
     setShowModal(true)
   }
 
@@ -84,6 +86,8 @@ export default function TiendaPage() {
     if (!code.trim()) return
     setLookingUp(true)
     setLookupMsg(null)
+    setLookupImage(null)
+    setLookupWeight(null)
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code.trim()}.json`)
       const json = await res.json()
@@ -91,12 +95,15 @@ export default function TiendaPage() {
         const p = json.product
         const pname = p.product_name_es || p.product_name || p.generic_name || ''
         const tags: string[] = p.categories_tags ?? []
-        if (pname) setName(pname)
-        setCategory(categoryFromTags(tags))
-        // Emoji heuristic
         const cat = categoryFromTags(tags)
+        if (pname) setName(pname)
+        setCategory(cat)
         if (cat === 'bebida') setEmoji('🥤')
         else if (cat === 'snack') setEmoji('🍪')
+        const img: string | null = p.image_front_url || p.image_url || null
+        const qty: string | null = p.quantity || p.product_quantity || null
+        setLookupImage(img)
+        setLookupWeight(qty)
         setLookupMsg(pname ? `✓ Encontrado: ${pname}` : '✓ Producto encontrado (sin nombre en español)')
       } else {
         setLookupMsg('Producto no encontrado en la base de datos. Rellena los datos manualmente.')
@@ -107,20 +114,24 @@ export default function TiendaPage() {
     setLookingUp(false)
   }
 
+  // Unified scan handler: if barcode matches existing product → stock modal; otherwise → fill form
   function handleScanDetected(code: string) {
     setShowScanner(false)
-    if (scannerTarget === 'form') {
+    const found = products.find(p => p.barcode === code)
+    if (found) {
+      // Known product → quick stock entry
+      if (showModal) setShowModal(false)
+      setStockProduct(found)
+      setStockEntry('1')
+    } else {
+      // Unknown product → open/keep form and lookup
       setBarcode(code)
-      lookupBarcode(code)
-    } else if (scannerTarget === 'stock') {
-      // Find product by barcode and open stock entry
-      const found = products.find(p => p.barcode === code)
-      if (found) {
-        setStockProduct(found)
-        setStockEntry('1')
-      } else {
-        alert(`Código ${code} no encontrado en la tienda.`)
+      if (!showModal) {
+        setEditing(null); setName(''); setCategory('bebida'); setPrice(''); setEmoji('🥤')
+        setStockInput('0'); setLookupMsg(null); setLookupImage(null); setLookupWeight(null)
+        setShowModal(true)
       }
+      lookupBarcode(code)
     }
   }
 
@@ -135,7 +146,6 @@ export default function TiendaPage() {
       barcode: barcode.trim() || null,
     }
     if (editing) {
-      // Stock delta: add stockInput units to existing stock
       const delta = parseInt(stockInput) || 0
       if (delta > 0) payload.stock = editing.stock + delta
       await supabase.from('products').update(payload).eq('id', editing.id)
@@ -196,11 +206,11 @@ export default function TiendaPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setScannerTarget('stock'); setShowScanner(true) }}
+            onClick={() => setShowScanner(true)}
             className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
-            title="Entrada de stock por código de barras"
+            title="Escanear código — añade stock si el producto existe, o crea uno nuevo"
           >
-            <PackagePlus size={15} />
+            <ScanBarcode size={15} />
           </button>
           <button
             onClick={openNew}
@@ -312,7 +322,7 @@ export default function TiendaPage() {
                     className={inputCls + ' flex-1'}
                   />
                   <button
-                    onClick={() => { setScannerTarget('form'); setShowScanner(true) }}
+                    onClick={() => setShowScanner(true)}
                     className="px-3 rounded-xl border border-line bg-surface2 text-fog hover:text-lime hover:border-lime/40 transition-colors"
                     title="Abrir cámara"
                   >
@@ -324,8 +334,34 @@ export default function TiendaPage() {
                     <Loader2 size={11} className="animate-spin" /> Consultando base de datos...
                   </div>
                 )}
-                {lookupMsg && (
-                  <p className={`text-xs mt-1.5 ${lookupMsg.startsWith('✓') ? 'text-lime' : 'text-amber'}`}>{lookupMsg}</p>
+
+                {/* Product preview card from lookup */}
+                {!lookingUp && (lookupImage || lookupWeight || lookupMsg) && (
+                  <div className={`mt-2 rounded-xl border p-3 flex items-center gap-3 ${lookupMsg?.startsWith('✓') ? 'border-lime/30 bg-lime/5' : 'border-amber/30 bg-amber/5'}`}>
+                    {lookupMsg?.startsWith('✓') ? (
+                      <>
+                        {lookupImage ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={lookupImage}
+                            alt="producto"
+                            className="w-14 h-14 object-contain rounded-lg bg-white shrink-0"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-lg bg-surface2 border border-line flex items-center justify-center shrink-0">
+                            <Package size={24} className="text-mist" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-lime">Producto encontrado</p>
+                          {lookupWeight && <p className="text-xs text-fog mt-0.5">Peso / cantidad: <span className="text-snow font-medium">{lookupWeight}</span></p>}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-amber">{lookupMsg}</p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -379,7 +415,6 @@ export default function TiendaPage() {
                     className="w-10 h-10 rounded-xl border border-line bg-surface2 text-lg font-bold text-fog hover:text-snow flex items-center justify-center transition-colors"
                   >+</button>
                 </div>
-                {/* Quick presets */}
                 <div className="flex gap-1.5 mt-2">
                   {[6, 12, 24, 48].map(n => (
                     <button key={n} type="button" onClick={() => setStockInput(String(n))}
@@ -438,7 +473,7 @@ export default function TiendaPage() {
         </div>
       )}
 
-      {/* Barcode scanner */}
+      {/* Barcode scanner — unified: stock if product known, new product form if unknown */}
       {showScanner && (
         <BarcodeScanner
           onDetected={handleScanDetected}
