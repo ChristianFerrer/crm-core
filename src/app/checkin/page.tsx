@@ -1050,8 +1050,8 @@ function VisitasPageInner() {
 
       {/* Aforo gauge — always visible */}
       {capacity != null && (() => {
-        const activeAdults = activeVisits.length
-        const activeChildren = activeVisits.reduce((s, v) => s + (v.children_present?.length ?? 0), 0)
+        const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
+        const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
         const activeTotal = activeAdults + activeChildren
         const aforoPct = Math.min(100, (activeTotal / capacity) * 100)
         const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
