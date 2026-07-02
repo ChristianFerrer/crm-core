@@ -185,7 +185,7 @@ function CheckInTab({
       ...childrenPresent,
       ...extraChildren.filter(n => n.trim()).map(n => ({ name: n.trim() })),
     ]
-    const numChildren = Math.max(1, allChildrenPresent.length)
+    const numChildren = allChildrenPresent.length
 
     await supabase.from('visits').insert({
       member_id: member.id,
@@ -193,6 +193,8 @@ function CheckInTab({
       checked_in_at: new Date().toISOString(),
       visit_type: visitType,
       children_present: allChildrenPresent,
+      adults_count: 1,
+      children_count: numChildren,
     })
 
     if (b?.ok && !b.unlimited && m?.sessions_remaining != null) {

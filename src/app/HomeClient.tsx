@@ -82,7 +82,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
 
-  const persons = (v: TodayVisit) => 1 + (v.children_present?.length ?? 0)
+  const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
 
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
   const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
@@ -97,8 +97,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
 
   const buckets = Array.from({ length: 24 }, (_, h) => {
     const hourVisits = todayVisits.filter(v => new Date(v.checked_in_at).getHours() === h)
-    const adultos = hourVisits.length
-    const ninos = hourVisits.reduce((s, v) => s + (v.children_present?.length ?? 0), 0)
+    const adultos = hourVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
+    const ninos = hourVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
     return {
       hour: `${String(h).padStart(2, '0')}h`,
       adultos,
