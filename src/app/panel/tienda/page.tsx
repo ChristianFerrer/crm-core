@@ -12,7 +12,6 @@ type Product = {
   name: string
   category: string
   price: number
-  emoji: string
   active: boolean
   barcode: string | null
   stock: number
@@ -21,9 +20,9 @@ type Product = {
 }
 
 const CATEGORIES = [
-  { value: 'bebida', label: 'Bebida', emoji: '🥤' },
-  { value: 'snack', label: 'Snack', emoji: '🍪' },
-  { value: 'otro', label: 'Otro', emoji: '🛒' },
+  { value: 'bebida', label: 'Bebida' },
+  { value: 'snack', label: 'Snack' },
+  { value: 'otro', label: 'Otro' },
 ]
 
 const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
@@ -33,6 +32,30 @@ function categoryFromTags(tags: string[]): string {
   if (s.includes('beverage') || s.includes('drink') || s.includes('water') || s.includes('juice') || s.includes('soda')) return 'bebida'
   if (s.includes('snack') || s.includes('chip') || s.includes('crisp') || s.includes('biscuit') || s.includes('cookie')) return 'snack'
   return 'otro'
+}
+
+function ProductThumb({ src, name }: { src: string | null; name: string }) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt={name}
+        className="w-10 h-10 object-contain rounded-lg bg-white shrink-0"
+        onError={e => {
+          const img = e.currentTarget
+          img.style.display = 'none'
+          const fb = img.parentElement?.querySelector('.img-fallback') as HTMLElement | null
+          if (fb) fb.style.display = 'flex'
+        }}
+      />
+    )
+  }
+  return (
+    <div className="w-10 h-10 rounded-lg bg-surface2 border border-line flex items-center justify-center shrink-0">
+      <Package size={18} className="text-mist" />
+    </div>
+  )
 }
 
 export default function TiendaPage() {
@@ -46,7 +69,6 @@ export default function TiendaPage() {
   const [name, setName] = useState('')
   const [category, setCategory] = useState('bebida')
   const [price, setPrice] = useState('')
-  const [emoji, setEmoji] = useState('🥤')
   const [barcode, setBarcode] = useState('')
   const [stockInput, setStockInput] = useState('0')
 
@@ -72,15 +94,22 @@ export default function TiendaPage() {
 
   useEffect(() => { load() }, [load])
 
-  function openNew() {
-    setEditing(null); setName(''); setCategory('bebida'); setPrice(''); setEmoji('🥤'); setBarcode('')
+  function resetForm() {
+    setName(''); setCategory('bebida'); setPrice(''); setBarcode('')
     setStockInput('0'); setLookupMsg(null); setLookupImage(null); setLookupWeight(null)
+  }
+
+  function openNew() {
+    setEditing(null)
+    resetForm()
     setShowModal(true)
   }
 
   function openEdit(p: Product) {
-    setEditing(p); setName(p.name); setCategory(p.category); setPrice(String(p.price)); setEmoji(p.emoji)
-    setBarcode(p.barcode ?? ''); setStockInput('0'); setLookupMsg(null); setLookupImage(null); setLookupWeight(null)
+    setEditing(p)
+    setName(p.name); setCategory(p.category); setPrice(String(p.price))
+    setBarcode(p.barcode ?? ''); setStockInput('0')
+    setLookupMsg(null); setLookupImage(p.image_url); setLookupWeight(p.weight)
     setShowModal(true)
   }
 
@@ -97,40 +126,32 @@ export default function TiendaPage() {
         const p = json.product
         const pname = p.product_name_es || p.product_name || p.generic_name || ''
         const tags: string[] = p.categories_tags ?? []
-        const cat = categoryFromTags(tags)
         if (pname) setName(pname)
-        setCategory(cat)
-        if (cat === 'bebida') setEmoji('🥤')
-        else if (cat === 'snack') setEmoji('🍪')
-        const img: string | null = p.image_front_url || p.image_url || null
-        const qty: string | null = p.quantity || p.product_quantity || null
-        setLookupImage(img)
-        setLookupWeight(qty ?? null)
-        setLookupMsg(pname ? `✓ Encontrado: ${pname}` : '✓ Producto encontrado (sin nombre en español)')
+        setCategory(categoryFromTags(tags))
+        setLookupImage(p.image_front_url || p.image_url || null)
+        setLookupWeight(p.quantity || p.product_quantity || null)
+        setLookupMsg(pname ? `✓ ${pname}` : '✓ Producto encontrado')
       } else {
-        setLookupMsg('Producto no encontrado en la base de datos. Rellena los datos manualmente.')
+        setLookupMsg('No encontrado. Rellena los datos manualmente.')
       }
     } catch {
-      setLookupMsg('Error al consultar la base de datos. Rellena los datos manualmente.')
+      setLookupMsg('Error al consultar. Rellena los datos manualmente.')
     }
     setLookingUp(false)
   }
 
-  // Unified scan handler: if barcode matches existing product → stock modal; otherwise → fill form
   function handleScanDetected(code: string) {
     setShowScanner(false)
     const found = products.find(p => p.barcode === code)
     if (found) {
-      // Known product → quick stock entry
       if (showModal) setShowModal(false)
       setStockProduct(found)
       setStockEntry('1')
     } else {
-      // Unknown product → open/keep form and lookup
       setBarcode(code)
       if (!showModal) {
-        setEditing(null); setName(''); setCategory('bebida'); setPrice(''); setEmoji('🥤')
-        setStockInput('0'); setLookupMsg(null); setLookupImage(null); setLookupWeight(null)
+        setEditing(null)
+        resetForm()
         setShowModal(true)
       }
       lookupBarcode(code)
@@ -143,7 +164,7 @@ export default function TiendaPage() {
     const tenant = getStoredTenant()
     if (!tenant) return
     const payload: Record<string, unknown> = {
-      name: name.trim(), category, price: parseFloat(price), emoji,
+      name: name.trim(), category, price: parseFloat(price),
       tenant_id: tenant.id, active: true,
       barcode: barcode.trim() || null,
       image_url: lookupImage || null,
@@ -212,7 +233,7 @@ export default function TiendaPage() {
           <button
             onClick={() => setShowScanner(true)}
             className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
-            title="Escanear código — añade stock si el producto existe, o crea uno nuevo"
+            title="Escanear — añade stock si existe, crea producto si es nuevo"
           >
             <ScanBarcode size={15} />
           </button>
@@ -257,20 +278,9 @@ export default function TiendaPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {/* Product image or flat icon */}
-                        {p.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.image_url}
-                            alt={p.name}
-                            className="w-10 h-10 object-contain rounded-lg bg-white shrink-0"
-                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-surface2 border border-line flex items-center justify-center shrink-0 text-xl">
-                            {p.emoji}
-                          </div>
-                        )}
+                        <div className="shrink-0">
+                          <ProductThumb src={p.image_url} name={p.name} />
+                        </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-snow truncate max-w-[130px]">{p.name}</p>
                           {p.weight && <p className="text-[10px] text-mist mt-0.5">{p.weight}</p>}
@@ -358,47 +368,41 @@ export default function TiendaPage() {
                     <Loader2 size={11} className="animate-spin" /> Consultando base de datos...
                   </div>
                 )}
-
-                {/* Product preview card from lookup */}
-                {!lookingUp && (lookupImage || lookupWeight || lookupMsg) && (
-                  <div className={`mt-2 rounded-xl border p-3 flex items-center gap-3 ${lookupMsg?.startsWith('✓') ? 'border-lime/30 bg-lime/5' : 'border-amber/30 bg-amber/5'}`}>
-                    {lookupMsg?.startsWith('✓') ? (
-                      <>
-                        {lookupImage ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={lookupImage}
-                            alt="producto"
-                            className="w-14 h-14 object-contain rounded-lg bg-white shrink-0"
-                            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                          />
-                        ) : (
-                          <div className="w-14 h-14 rounded-lg bg-surface2 border border-line flex items-center justify-center shrink-0">
-                            <Package size={24} className="text-mist" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-lime">Producto encontrado</p>
-                          {lookupWeight && <p className="text-xs text-fog mt-0.5">Peso / cantidad: <span className="text-snow font-medium">{lookupWeight}</span></p>}
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-xs text-amber">{lookupMsg}</p>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {/* Emoji + nombre */}
-              <div className="flex gap-2">
-                <div className="shrink-0">
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Emoji</p>
-                  <input value={emoji} onChange={e => setEmoji(e.target.value)} className="w-14 bg-surface2 border border-line rounded-xl px-2 py-3 text-center text-xl outline-none focus:border-line2" maxLength={2} />
+              {/* Product image preview (from lookup or editing) */}
+              <div className="flex items-center gap-4">
+                <div className="relative w-16 h-16 shrink-0">
+                  {lookupImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={lookupImage}
+                      alt="producto"
+                      className="w-16 h-16 object-contain rounded-xl bg-white"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-surface2 border border-line flex items-center justify-center">
+                      <Package size={28} className="text-mist" />
+                    </div>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Nombre *</p>
-                  <input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Agua mineral" className={inputCls} />
+                <div className="flex-1 min-w-0">
+                  {lookupMsg && (
+                    <p className={`text-xs font-medium ${lookupMsg.startsWith('✓') ? 'text-lime' : 'text-amber'}`}>{lookupMsg}</p>
+                  )}
+                  {lookupWeight && (
+                    <p className="text-xs text-fog mt-1">Peso / cantidad: <span className="text-snow font-medium">{lookupWeight}</span></p>
+                  )}
+                  {!lookupMsg && !lookupWeight && (
+                    <p className="text-xs text-mist">Escanea el código para cargar la imagen y datos del producto.</p>
+                  )}
                 </div>
+              </div>
+
+              {/* Nombre */}
+              <div>
+                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Nombre *</p>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Agua mineral" className={inputCls} />
               </div>
 
               {/* Categoría + Precio */}
@@ -406,7 +410,7 @@ export default function TiendaPage() {
                 <div>
                   <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Categoría</p>
                   <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>)}
+                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>
                 <div>
@@ -461,12 +465,22 @@ export default function TiendaPage() {
       {stockProduct && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setStockProduct(null)}>
           <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-5 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-snow">{stockProduct.emoji} {stockProduct.name}</p>
-                <p className="text-xs text-fog mt-0.5">Stock actual: <span className="font-semibold text-snow">{stockProduct.stock} unidades</span></p>
+            <div className="flex items-center gap-3">
+              <div className="relative w-12 h-12 shrink-0">
+                {stockProduct.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={stockProduct.image_url} alt={stockProduct.name} className="w-12 h-12 object-contain rounded-xl bg-white" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-surface2 border border-line flex items-center justify-center">
+                    <Package size={22} className="text-mist" />
+                  </div>
+                )}
               </div>
-              <button onClick={() => setStockProduct(null)} className="text-mist hover:text-snow"><X size={16} /></button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-snow truncate">{stockProduct.name}</p>
+                <p className="text-xs text-fog mt-0.5">Stock actual: <span className="font-semibold text-snow">{stockProduct.stock} ud.</span></p>
+              </div>
+              <button onClick={() => setStockProduct(null)} className="text-mist hover:text-snow shrink-0"><X size={16} /></button>
             </div>
 
             <div>
@@ -497,7 +511,7 @@ export default function TiendaPage() {
         </div>
       )}
 
-      {/* Barcode scanner — unified: stock if product known, new product form if unknown */}
+      {/* Barcode scanner */}
       {showScanner && (
         <BarcodeScanner
           onDetected={handleScanDetected}
