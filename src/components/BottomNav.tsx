@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Users, DoorOpen, CalendarDays, Settings } from 'lucide-react'
+import { Home, Users, LogIn, BarChart2, CalendarDays } from 'lucide-react'
 import { useNavBadges } from '@/lib/useNavBadges'
 
 function Badge({ count }: { count: number }) {
@@ -21,9 +21,9 @@ export function BottomNav() {
   const navItems = [
     { href: '/',          label: 'Inicio',   icon: Home,       badge: 0 },
     { href: '/miembros',  label: 'Miembros', icon: Users,      badge: 0 },
-    { href: '/checkin',   label: 'Sala',     icon: DoorOpen,   badge: 0 },
+    { href: '/checkin',   label: 'Visitas',  icon: LogIn,      badge: 0 },
     { href: '/calendario',label: 'Agenda',   icon: CalendarDays, badge: badges.agenda },
-    { href: '/panel',     label: '',         icon: Settings,   badge: badges.panel },
+    { href: '/panel',     label: 'Panel',    icon: BarChart2,  badge: badges.panel },
   ]
 
   return (

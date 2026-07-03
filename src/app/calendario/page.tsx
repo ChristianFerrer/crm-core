@@ -262,17 +262,10 @@ export default function CalendarioPage() {
                 <button key={dateStr} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                   className={`min-h-[64px] p-1.5 border-r border-line/50 text-left transition-colors ${!isLastRow ? 'border-b' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'bg-lime/10' : 'hover:bg-surface2'}`}>
                   <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-lime text-ink' : isSelected ? 'text-lime' : 'text-fog'}`}>{day}</span>
-                  {(() => {
-                    const active = dayBookings.filter(b => b.status !== 'cancelled')
-                    if (active.length === 0) return null
-                    return (
-                      <span className={`text-[9px] font-bold px-1 py-0.5 rounded-md leading-none ${
-                        active.some(b => b.type === 'birthday') ? 'bg-iris/20 text-iris' :
-                        active.some(b => b.type === 'custodia') ? 'bg-amber-400/20 text-amber-300' :
-                        'bg-fog/20 text-fog'
-                      }`}>{active.length}</span>
-                    )
-                  })()}
+                  <div className="flex flex-wrap gap-0.5">
+                    {dayBookings.filter(b => b.status !== 'cancelled').slice(0, 3).map(b => <span key={b.id} className={`w-2 h-2 rounded-full ${bookingColor(b.type)}`} />)}
+                    {dayBookings.filter(b => b.status !== 'cancelled').length > 3 && <span className="text-[9px] text-mist self-end">+{dayBookings.filter(b => b.status !== 'cancelled').length - 3}</span>}
+                  </div>
                 </button>
               )
             })}

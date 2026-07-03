@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react'
+import { LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -80,7 +80,6 @@ type ChildInSala = { name: string; age?: number; birth_date?: string; memberName
 
 export default function HomeClient({ todayVisits, todayCustodias, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
-  const [showCharts, setShowCharts] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
@@ -378,16 +377,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </div>
       )}
 
-      {/* Charts — collapsible on mobile */}
-      <button
-        onClick={() => setShowCharts(v => !v)}
-        className="flex items-center gap-2 text-xs font-semibold text-fog hover:text-snow transition-colors md:hidden"
-      >
-        <BarChart2 size={13} />
-        Gráficas del día
-        {showCharts ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-      </button>
-      <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${showCharts ? '' : 'hidden md:grid'}`}>
+      {/* Charts side by side — contexto histórico, al final */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Afluencia por hora · bono / sin bono</h2>
           <ResponsiveContainer width="100%" height={180}>

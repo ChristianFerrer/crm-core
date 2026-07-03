@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight, Users, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
@@ -206,20 +205,19 @@ function CheckInTab({
 
     const typeLabel = visitType === 'custodia' ? 'Custodia' : 'Entrada'
     clearTimeout(flashTimer.current)
-    let flashMsg: string
     if (b?.ok) {
-      flashMsg = b.unlimited
-        ? `✓ ${typeLabel} registrada · bono ilimitado · ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
-        : `✓ ${typeLabel} registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
+      setFlash(
+        b.unlimited
+          ? `✓ ${typeLabel} registrada · bono ilimitado · ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+          : `✓ ${typeLabel} registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
+      )
     } else {
       const rateLabel = visitType === 'custodia'
         ? `${rates.custodia}€/h × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
         : `${rates.adult}€ adulto + ${numChildren} × ${rates.child}€ niño/h`
-      flashMsg = `✓ ${typeLabel} registrada · sin bono — ${rateLabel}`
+      setFlash(`✓ ${typeLabel} registrada · sin bono — ${rateLabel}`)
     }
-    setFlash(flashMsg)
     flashTimer.current = setTimeout(() => setFlash(null), 6000)
-    toast.success(flashMsg, { duration: 4000 })
     setRegistering(false)
 
     const { data } = await supabase.from('members').select(MEMBER_QUERY).eq('id', member.id).single()
@@ -978,7 +976,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
 function VisitasPageInner() {
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') as 'checkin' | 'dentro' | 'historial' | null
-  const [tab, setTab] = useState<'checkin' | 'dentro' | 'historial'>(initialTab ?? 'dentro')
+  const [tab, setTab] = useState<'checkin' | 'dentro' | 'historial'>(initialTab ?? 'checkin')
   const [allMembers, setAllMembers] = useState<MemberRow[]>([])
   const [activeVisits, setActiveVisits] = useState<ActiveVisit[]>([])
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
@@ -1033,10 +1031,6 @@ function VisitasPageInner() {
       durationMin: dmin,
       cost,
     }, ...prev.slice(0, 4)])
-    const dh = Math.floor(dmin / 60), dm = dmin % 60
-    const durLabel = dh > 0 ? `${dh}h ${dm}min` : `${dmin}min`
-    const costLabel = cost != null ? ` · ${cost.toFixed(2)}€` : ' · bono'
-    toast.success(`Salida — ${visit.members?.name ?? '—'} · ${durLabel}${costLabel}`, { duration: 4000 })
     setCheckingOut(null)
     await loadActiveVisits()
   }
@@ -1050,7 +1044,7 @@ function VisitasPageInner() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Sala</h1>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Visitas</h1>
         <p className="text-sm text-fog mt-0.5">Entradas, salidas e historial</p>
       </div>
 
