@@ -105,8 +105,6 @@ type ChildInSala = { name: string; age?: number; birth_date?: string; memberName
 export default function HomeClient({ todayVisits, todayCustodias, monthCount, dateLabel, capacity, todayBirthdays, todayBookings }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
-  const [clickedHour, setClickedHour] = useState<string | null>(null)
-
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
 
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -287,90 +285,66 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
             <BarChart2 size={13} /> Aforo por hora
           </h2>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart
-              data={chartData}
-              margin={{ top: 12, right: 8, left: -24, bottom: 0 }}
-              style={{ cursor: 'pointer' }}
-              onClick={(data: any) => {
-                const label = data?.activeLabel
-                if (label) setClickedHour(prev => prev === label ? null : label)
-              }}
-            >
+            <BarChart data={chartData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
               <XAxis dataKey="hour" tick={({ x, y, payload }: any) => (
                 <text x={x} y={y + 10} textAnchor="middle" fontSize={10}
-                  fill={payload.value === currentHourLabel ? '#c6f24e' : payload.value === clickedHour ? '#f0f4f8' : '#6b7280'}
-                  fontWeight={payload.value === currentHourLabel || payload.value === clickedHour ? 700 : 400}>
+                  fill={payload.value === currentHourLabel ? '#c6f24e' : '#6b7280'}
+                  fontWeight={payload.value === currentHourLabel ? 700 : 400}>
                   {payload.value}
                 </text>
               )} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip
-                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px' }}
-                labelStyle={{ color: '#6b7280', fontSize: 11 }}
-                itemStyle={{ color: '#f0f4f8', fontSize: 11 }}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                formatter={(v: any, name: any) => [v, name === 'alcanzado' ? 'Alcanzado' : 'Reservado']}
+                content={({ active, label }: any) => {
+                  if (!active) return null
+                  const entry = chartData.find(d => d.hour === label)
+                  if (!entry) return null
+                  return (
+                    <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, padding: '10px 14px', fontSize: 11 }}>
+                      <p style={{ color: '#9ca3af', marginBottom: 6 }}>{label}</p>
+                      {entry.alcanzado != null ? (
+                        <>
+                          <p style={{ color: '#6ee7b7', fontWeight: 600 }}>Alcanzado: {entry.alcanzado}</p>
+                          <p style={{ color: '#6b7280', marginTop: 4 }}>
+                            {entry.adultos} adulto{entry.adultos !== 1 ? 's' : ''} · {entry.ninos} niño{entry.ninos !== 1 ? 's' : ''}
+                          </p>
+                        </>
+                      ) : entry.reservado != null ? (
+                        <>
+                          <p style={{ color: '#c084fc', fontWeight: 600 }}>Reservado: {entry.reservado}</p>
+                          {entry.planBirthday ? <p style={{ color: '#6b7280', marginTop: 4 }}>Cumpleaños: {entry.planBirthday}</p> : null}
+                          {entry.planCustodia ? <p style={{ color: '#6b7280', marginTop: 2 }}>Custodias: {entry.planCustodia}</p> : null}
+                          {entry.planOther    ? <p style={{ color: '#6b7280', marginTop: 2 }}>Otros: {entry.planOther}</p>         : null}
+                        </>
+                      ) : (
+                        <p style={{ color: '#6b7280' }}>Sin datos</p>
+                      )}
+                    </div>
+                  )
+                }}
               />
               <Legend
                 wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                formatter={(v) => (
-                  <span style={{ color: '#9ca3af' }}>{v === 'alcanzado' ? 'Alcanzado' : 'Reservado'}</span>
-                )}
+                formatter={(v) => <span style={{ color: '#9ca3af' }}>{v}</span>}
               />
-              <Bar dataKey="alcanzado" stackId="a" fill="#c6f24e" name="Alcanzado"
+              <Bar dataKey="alcanzado" stackId="a" fill="#6ee7b7" name="Alcanzado"
                 shape={(p: any) => <StackedBar {...p} roundTop={!p.reservado} />}>
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#c6f24e' : 'rgba(198,242,78,0.6)'} />
+                  <Cell key={i} fill={i + 7 === currentHour ? '#6ee7b7' : 'rgba(110,231,183,0.6)'} />
                 ))}
                 <LabelList dataKey="_alcanzadoLabel" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="reservado" stackId="a" fill="#818cf8" name="Reservado"
+              <Bar dataKey="reservado" stackId="a" fill="#c084fc" name="Reservado"
                 shape={(p: any) => <StackedBar {...p} roundTop />}>
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#818cf8' : 'rgba(129,140,248,0.6)'} />
+                  <Cell key={i} fill={i + 7 === currentHour ? '#c084fc' : 'rgba(192,132,252,0.6)'} />
                 ))}
                 <LabelList dataKey="_reservadoLabel" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-
-          {/* Detalle al hacer clic en una barra */}
-          {clickedHour && (() => {
-            const entry = chartData.find(d => d.hour === clickedHour)
-            if (!entry) return null
-            return (
-              <div className="mt-3 pt-3 border-t border-line">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-snow">{clickedHour}</span>
-                  <button onClick={() => setClickedHour(null)} className="text-mist hover:text-fog transition-colors">
-                    <X size={12} />
-                  </button>
-                </div>
-                {entry.alcanzado != null ? (
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-fog">
-                      Total alcanzado: <span className="text-lime font-semibold">{entry.alcanzado}</span>
-                    </p>
-                    <p className="text-xs text-mist">
-                      {entry.adultos} adulto{entry.adultos !== 1 ? 's' : ''} · {entry.ninos} niño{entry.ninos !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                ) : entry.reservado != null ? (
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-fog">
-                      Total reservado: <span className="text-iris font-semibold">{entry.reservado}</span>
-                    </p>
-                    {entry.planBirthday ? <p className="text-xs text-mist">Cumpleaños: {entry.planBirthday}</p> : null}
-                    {entry.planCustodia ? <p className="text-xs text-mist">Custodias: {entry.planCustodia}</p> : null}
-                    {entry.planOther    ? <p className="text-xs text-mist">Otros: {entry.planOther}</p>         : null}
-                  </div>
-                ) : (
-                  <p className="text-xs text-mist">Sin datos para esta hora</p>
-                )}
-              </div>
-            )
-          })()}
         </div>
       </div>
 
