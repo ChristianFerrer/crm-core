@@ -61,6 +61,19 @@ type HomeClientProps = {
 
 type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
 
+function StackedBar({ x, y, width, height, fill, roundTop }: { x?: number; y?: number; width?: number; height?: number; fill?: string; roundTop?: boolean }) {
+  const _x = x ?? 0, _y = y ?? 0, _w = width ?? 0, _h = height ?? 0
+  if (_h <= 0 || _w <= 0) return null
+  const r = roundTop ? Math.min(4, _w / 2, _h) : 0
+  if (r === 0) return <rect x={_x} y={_y} width={_w} height={_h} fill={fill} />
+  return (
+    <path
+      d={`M${_x},${_y + _h} L${_x},${_y + r} Q${_x},${_y} ${_x + r},${_y} L${_x + _w - r},${_y} Q${_x + _w},${_y} ${_x + _w},${_y + r} L${_x + _w},${_y + _h} Z`}
+      fill={fill}
+    />
+  )
+}
+
 function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
   if (birth_date) {
     const now = new Date()
@@ -494,30 +507,35 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                   </span>
                 )}
               />
-              <Bar dataKey="adultos" stackId="a" fill="#c6f24e" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="adultos" stackId="a" fill="#c6f24e"
+                shape={(p: any) => <StackedBar {...p} roundTop={!p.ninos && !p.planBirthday && !p.planCustodia && !p.planOther} />}>
                 {chartData.map((_, i) => (
                   <Cell key={i} fill={i + 7 === currentHour ? '#c6f24e' : 'rgba(198,242,78,0.6)'} />
                 ))}
               </Bar>
-              <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="ninos" stackId="a" fill="#67e8f9"
+                shape={(p: any) => <StackedBar {...p} roundTop={!p.planBirthday && !p.planCustodia && !p.planOther} />}>
                 {chartData.map((_, i) => (
                   <Cell key={i} fill={i + 7 === currentHour ? '#67e8f9' : 'rgba(103,232,249,0.6)'} />
                 ))}
                 <LabelList dataKey="_actualTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="planBirthday" stackId="a" fill="#818cf8" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="planBirthday" stackId="a" fill="#818cf8"
+                shape={(p: any) => <StackedBar {...p} roundTop={!p.planCustodia && !p.planOther} />}>
                 {chartData.map((_, i) => (
                   <Cell key={i} fill={i + 7 === currentHour ? '#818cf8' : 'rgba(129,140,248,0.6)'} />
                 ))}
                 <LabelList dataKey="_labelBirthday" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="planCustodia" stackId="a" fill="#fb923c" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="planCustodia" stackId="a" fill="#fb923c"
+                shape={(p: any) => <StackedBar {...p} roundTop={!p.planOther} />}>
                 {chartData.map((_, i) => (
                   <Cell key={i} fill={i + 7 === currentHour ? '#fb923c' : 'rgba(251,146,60,0.6)'} />
                 ))}
                 <LabelList dataKey="_labelCustodia" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="planOther" stackId="a" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="planOther" stackId="a" fill="#94a3b8"
+                shape={(p: any) => <StackedBar {...p} roundTop />}>
                 {chartData.map((_, i) => (
                   <Cell key={i} fill={i + 7 === currentHour ? '#94a3b8' : 'rgba(148,163,184,0.6)'} />
                 ))}
