@@ -107,8 +107,10 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const conBonoVisits = todayVisits.filter(v => v.membership_id)
   const sinBonoVisits = todayVisits.filter(v => !v.membership_id)
 
-  // Ocupación planificada por hora (custodias + cumpleaños de hoy)
-  const planByHour = Array(24).fill(0)
+  // Ocupación planificada por hora separada por tipo
+  const planByBirthday = Array(24).fill(0)
+  const planByCustodia = Array(24).fill(0)
+  const planByOther    = Array(24).fill(0)
   for (const b of todayBookings) {
     if (!b.start_time) continue
     // Already executed custodia/other → real visit already counted, don't show as planificado
@@ -116,8 +118,9 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
     const startH = parseInt(b.start_time.split(':')[0])
     const endH = b.end_time ? parseInt(b.end_time.split(':')[0]) : startH + 2
     const expected = b.type === 'birthday' ? (b.guests ?? 10) : 2
+    const arr = b.type === 'birthday' ? planByBirthday : b.type === 'custodia' ? planByCustodia : planByOther
     for (let h = startH; h < Math.min(endH, 24); h++) {
-      planByHour[h] += expected
+      arr[h] += expected
     }
   }
 
@@ -139,26 +142,33 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       ninos,
       conBono: hourVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0),
       sinBono: hourVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0),
-      planificado: planByHour[h] || null,
+      planBirthday: planByBirthday[h] || null,
+      planCustodia: planByCustodia[h] || null,
+      planOther:    planByOther[h]    || null,
     }
   })
   const chartData = buckets.slice(7, 23).map((b, i) => {
     const h = i + 7
     const isFuture = h > currentHour
-    const adultos     = isFuture ? null : b.adultos
-    const ninos       = isFuture ? null : b.ninos
-    const planificado = isFuture ? (b.planificado || null) : null
+    const adultos      = isFuture ? null : b.adultos
+    const ninos        = isFuture ? null : b.ninos
+    const planBirthday = isFuture ? (b.planBirthday || null) : null
+    const planCustodia = isFuture ? (b.planCustodia || null) : null
+    const planOther    = isFuture ? (b.planOther    || null) : null
     const actualTotal = !isFuture && (adultos ?? 0) + (ninos ?? 0) > 0 ? (adultos ?? 0) + (ninos ?? 0) : null
-    const planTotal   = isFuture && (planificado ?? 0) > 0 ? planificado : null
+    const pb = planBirthday ?? 0, pc = planCustodia ?? 0, po = planOther ?? 0
+    const totalPlan = pb + pc + po
     return {
       hour: b.hour,
-      adultos,
-      ninos,
-      conBono:     isFuture ? null : b.conBono,
-      sinBono:     isFuture ? null : b.sinBono,
-      planificado,
+      adultos, ninos,
+      conBono: isFuture ? null : b.conBono,
+      sinBono: isFuture ? null : b.sinBono,
+      planBirthday, planCustodia, planOther,
       _actualTotal: actualTotal,
-      _planTotal:   planTotal,
+      // Each plan bar type only shows the label if it is the topmost visible segment
+      _labelBirthday: totalPlan > 0 && pb > 0 && !pc && !po ? totalPlan : null,
+      _labelCustodia: totalPlan > 0 && pc > 0 && !po         ? totalPlan : null,
+      _labelOther:    totalPlan > 0 && po > 0                 ? totalPlan : null,
     }
   })
 
@@ -465,29 +475,53 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
               )} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip
-                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }}
+                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px' }}
                 labelStyle={{ color: '#6b7280', fontSize: 11 }}
+                itemStyle={{ color: '#f0f4f8', fontSize: 11 }}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                formatter={(v: any, name: any) => [v, name === 'adultos' ? 'Adultos' : name === 'ninos' ? 'Niños' : 'Planificado']}
+                formatter={(v: any, name: any) => [v,
+                  name === 'adultos'      ? 'Adultos'    :
+                  name === 'ninos'        ? 'Niños'      :
+                  name === 'planBirthday' ? 'Cumpleaños' :
+                  name === 'planCustodia' ? 'Custodias'  : 'Otros'
+                ]}
               />
-              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }}
-                formatter={(v) => v === 'adultos' ? 'Adultos' : v === 'ninos' ? 'Niños' : 'Planificado'} />
-              <Bar dataKey="adultos" stackId="a">
+              <Legend
+                wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                formatter={(v) => (
+                  <span style={{ color: '#9ca3af' }}>
+                    {v === 'adultos' ? 'Adultos' : v === 'ninos' ? 'Niños' : v === 'planBirthday' ? 'Cumpleaños' : v === 'planCustodia' ? 'Custodias' : 'Otros'}
+                  </span>
+                )}
+              />
+              <Bar dataKey="adultos" stackId="a" fill="#c6f24e" radius={[4, 4, 0, 0]}>
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#c6f24e' : 'rgba(198,242,78,0.28)'} />
+                  <Cell key={i} fill={i + 7 === currentHour ? '#c6f24e' : 'rgba(198,242,78,0.6)'} />
                 ))}
               </Bar>
-              <Bar dataKey="ninos" stackId="a">
+              <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]}>
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#67e8f9' : 'rgba(103,232,249,0.28)'} />
+                  <Cell key={i} fill={i + 7 === currentHour ? '#67e8f9' : 'rgba(103,232,249,0.6)'} />
                 ))}
                 <LabelList dataKey="_actualTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="planificado" stackId="a" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="planBirthday" stackId="a" fill="#818cf8" radius={[4, 4, 0, 0]}>
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#a78bfa' : 'rgba(167,139,250,0.28)'} />
+                  <Cell key={i} fill={i + 7 === currentHour ? '#818cf8' : 'rgba(129,140,248,0.6)'} />
                 ))}
-                <LabelList dataKey="_planTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
+                <LabelList dataKey="_labelBirthday" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
+              </Bar>
+              <Bar dataKey="planCustodia" stackId="a" fill="#fb923c" radius={[4, 4, 0, 0]}>
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={i + 7 === currentHour ? '#fb923c' : 'rgba(251,146,60,0.6)'} />
+                ))}
+                <LabelList dataKey="_labelCustodia" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
+              </Bar>
+              <Bar dataKey="planOther" stackId="a" fill="#94a3b8" radius={[4, 4, 0, 0]}>
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={i + 7 === currentHour ? '#94a3b8' : 'rgba(148,163,184,0.6)'} />
+                ))}
+                <LabelList dataKey="_labelOther" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
