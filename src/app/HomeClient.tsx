@@ -16,7 +16,6 @@ import {
   Legend,
   BarChart,
   Bar,
-  ReferenceLine,
   LabelList,
 } from 'recharts'
 
@@ -142,13 +141,20 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const chartData = buckets.slice(7, 23).map((b, i) => {
     const h = i + 7
     const isFuture = h > currentHour
+    const adultos     = isFuture ? null : b.adultos
+    const ninos       = isFuture ? null : b.ninos
+    const planificado = isFuture ? (b.planificado || null) : null
+    const actualTotal = !isFuture && (adultos ?? 0) + (ninos ?? 0) > 0 ? (adultos ?? 0) + (ninos ?? 0) : null
+    const planTotal   = isFuture && (planificado ?? 0) > 0 ? planificado : null
     return {
       hour: b.hour,
-      adultos:     isFuture ? null : b.adultos,
-      ninos:       isFuture ? null : b.ninos,
+      adultos,
+      ninos,
       conBono:     isFuture ? null : b.conBono,
       sinBono:     isFuture ? null : b.sinBono,
-      planificado: isFuture ? (b.planificado || null) : null,
+      planificado,
+      _actualTotal: actualTotal,
+      _planTotal:   planTotal,
     }
   })
 
@@ -462,27 +468,12 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
               />
               <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }}
                 formatter={(v) => v === 'adultos' ? 'Adultos' : v === 'ninos' ? 'Niños' : 'Planificado'} />
-              <ReferenceLine x={currentHourLabel} stroke="#c6f24e" strokeWidth={1.5} strokeDasharray="3 3" />
               <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
               <Bar dataKey="ninos" stackId="a" fill="#67e8f9">
-                <LabelList content={(props: any) => {
-                  const { x, y, width, index } = props
-                  const d = chartData[index]
-                  if (!d || d.ninos === null) return null
-                  const total = (d.adultos ?? 0) + (d.ninos ?? 0)
-                  if (total === 0) return null
-                  return <text x={(x ?? 0) + (width ?? 0) / 2} y={(y ?? 0) - 3} textAnchor="middle" fill="#9ca3af" fontSize={9} fontWeight={600}>{total}</text>
-                }} />
+                <LabelList dataKey="_actualTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
               <Bar dataKey="planificado" stackId="a" fill="#a78bfa" radius={[4, 4, 0, 0]}>
-                <LabelList content={(props: any) => {
-                  const { x, y, width, index } = props
-                  const d = chartData[index]
-                  if (!d || d.planificado === null) return null
-                  const total = d.planificado ?? 0
-                  if (total === 0) return null
-                  return <text x={(x ?? 0) + (width ?? 0) / 2} y={(y ?? 0) - 3} textAnchor="middle" fill="#9ca3af" fontSize={9} fontWeight={600}>{total}</text>
-                }} />
+                <LabelList dataKey="_planTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
