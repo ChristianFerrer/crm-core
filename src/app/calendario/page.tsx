@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List, LogIn, CheckCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List, LogIn, CheckCircle, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
@@ -27,7 +27,8 @@ interface Booking {
   executed_at: string | null
 }
 
-interface Member { id: string; name: string }
+interface MemberChild { name: string; birth_date?: string }
+interface Member { id: string; name: string; children?: MemberChild[] }
 
 const inputClass = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -51,6 +52,7 @@ function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'bg-lime/20 
 function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'bg-mint/20 text-mint border border-mint/30' : 'bg-amber/20 text-amber border border-amber/30' }
 
 const EMPTY_FORM = { type: 'birthday' as BookingType, title: '', child_name: '', date: '', start_time: '', end_time: '', member_id: '', guests: '', amount: '', notes: '' }
+const EMPTY_NEW_MEMBER = { name: '', phone: '', birth_date: '' }
 
 type EditForm = { guests: string; member_id: string; status: BookingStatus; payment_status: PaymentStatus; notes: string }
 
@@ -67,10 +69,16 @@ export default function CalendarioPage() {
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
+  // For custodia: independently track selected children names
+  const [custodiaChildren, setCustodiaChildren] = useState<string[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({ guests: '', member_id: '', status: 'pending', payment_status: 'pending', notes: '' })
   const [saving, setSaving] = useState(false)
   const [executingId, setExecutingId] = useState<string | null>(null)
+  // Add-member popup
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [newMemberForm, setNewMemberForm] = useState(EMPTY_NEW_MEMBER)
+  const [savingMember, setSavingMember] = useState(false)
 
   const fetchBookings = useCallback(async () => {
     const from = `${year}-${String(month + 1).padStart(2, '0')}-01`
@@ -82,17 +90,28 @@ export default function CalendarioPage() {
     setBookings((data ?? []) as unknown as Booking[])
   }, [year, month])
 
+  const fetchMembers = useCallback(() => {
+    supabase.from('members').select('id, name, children').order('name').then(({ data }) => setMembers((data ?? []) as Member[]))
+  }, [])
+
   async function handleExecute(b: Booking) {
     if (!b.member_id) return
     setExecutingId(b.id)
+
+    const guestsCount = b.guests ?? 0
+    // For birthday: 1 adult (titular) + guests as children (party attendees)
+    // For custodia: 0 adults (no parent stays) + guests as children (kids left in custody)
+    // For other: 1 adult + guests as guests
+    const adultsCount = b.type === 'custodia' ? 0 : 1
+    const childrenCount = b.type === 'other' ? 0 : guestsCount
 
     const { error } = await supabase.from('visits').insert({
       member_id: b.member_id,
       checked_in_at: new Date().toISOString(),
       visit_type: b.type === 'custodia' ? 'custodia' : 'entrada',
       booking_id: b.id,
-      adults_count: 1,
-      children_count: 0,
+      adults_count: adultsCount,
+      children_count: childrenCount,
     })
 
     if (error) {
@@ -103,12 +122,11 @@ export default function CalendarioPage() {
 
     await supabase.from('bookings').update({ executed_at: new Date().toISOString(), status: 'confirmed' }).eq('id', b.id)
     setExecutingId(null)
-    // Navigate to dentro tab so the user sees the active visit and updated aforo
     router.push('/checkin?tab=dentro')
   }
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
-  useEffect(() => { supabase.from('members').select('id, name').order('name').then(({ data }) => setMembers(data ?? [])) }, [])
+  useEffect(() => { fetchMembers() }, [fetchMembers])
   useEffect(() => {
     if (!showUpcoming) return
     const from = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
@@ -126,6 +144,7 @@ export default function CalendarioPage() {
 
   function openNewBooking() {
     setForm({ ...EMPTY_FORM, type: 'birthday', date: selectedDate ?? toDateStr(year, month, today.getDate()) })
+    setCustodiaChildren([])
     setShowModal(true)
   }
 
@@ -140,14 +159,51 @@ export default function CalendarioPage() {
     })
   }
 
+  // Derived member data for the form
+  const selectedMember = members.find(m => m.id === form.member_id) ?? null
+  const memberChildren: MemberChild[] = selectedMember?.children ?? []
+
+  function handleMemberChange(memberId: string) {
+    const member = members.find(m => m.id === memberId) ?? null
+    setForm(f => ({
+      ...f,
+      member_id: memberId,
+      // Auto-fill title for custodia
+      title: f.type === 'custodia' && member ? `Custodia · ${member.name}` : f.title,
+      // Clear child_name when member changes
+      child_name: '',
+    }))
+    setCustodiaChildren([])
+  }
+
+  function handleChildSelect(childName: string) {
+    setForm(f => ({
+      ...f,
+      child_name: childName,
+      title: childName ? `Cumple de ${childName}` : f.title,
+    }))
+  }
+
+  function toggleCustodiaChild(name: string) {
+    setCustodiaChildren(prev =>
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    )
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setLoading(true)
+    let guestsValue: number | null = form.guests ? parseInt(form.guests) : null
+    if (form.type === 'custodia') {
+      // guests = selected children + additional invitados
+      const extra = form.guests ? parseInt(form.guests) : 0
+      guestsValue = custodiaChildren.length + extra || null
+    }
     await supabase.from('bookings').insert({
       type: form.type, title: form.title, date: form.date,
       child_name: form.child_name || null,
       start_time: form.start_time || null, end_time: form.end_time || null,
       member_id: form.member_id || null,
-      guests: form.guests ? parseInt(form.guests) : null,
+      guests: guestsValue,
       amount: form.amount ? parseFloat(form.amount) : null,
       notes: form.notes || null, status: 'pending', payment_status: 'pending',
     })
@@ -169,6 +225,27 @@ export default function CalendarioPage() {
   async function handleCancel(id: string) {
     await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', id)
     setEditingId(null); fetchBookings()
+  }
+
+  async function handleAddMember(e: React.FormEvent) {
+    e.preventDefault(); setSavingMember(true)
+    const { data } = await supabase.from('members').insert({
+      name: newMemberForm.name,
+      phone: newMemberForm.phone || null,
+      birth_date: newMemberForm.birth_date || null,
+    }).select('id, name, children').single()
+    setSavingMember(false)
+    if (data) {
+      fetchMembers()
+      const member = data as Member
+      setForm(f => ({
+        ...f,
+        member_id: member.id,
+        title: f.type === 'custodia' ? `Custodia · ${member.name}` : f.title,
+      }))
+    }
+    setShowAddMember(false)
+    setNewMemberForm(EMPTY_NEW_MEMBER)
   }
 
   const cells: (number | null)[] = [...Array(getFirstDayOfWeek(year, month)).fill(null), ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1)]
@@ -313,7 +390,7 @@ export default function CalendarioPage() {
                         )}
                       </div>
 
-                      {/* Main info (always visible) */}
+                      {/* Main info */}
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <div className="min-w-0 space-y-1">
                           {b.child_name ? (
@@ -327,7 +404,11 @@ export default function CalendarioPage() {
                               <Clock size={11} />{b.start_time?.slice(0, 5)}{b.end_time ? ` → ${b.end_time.slice(0, 5)}` : ''}
                             </p>
                           )}
-                          {b.guests && <p className="text-xs text-mist flex items-center gap-1"><Users size={11} /> {b.guests} invitados</p>}
+                          {b.guests != null && b.guests > 0 && (
+                            <p className="text-xs text-mist flex items-center gap-1">
+                              <Users size={11} /> {b.guests} {b.type === 'custodia' ? 'niño' + (b.guests !== 1 ? 's' : '') : 'invitado' + (b.guests !== 1 ? 's' : '')}
+                            </p>
+                          )}
                           {b.notes && <p className="text-xs text-fog italic">{b.notes}</p>}
                         </div>
                         {b.amount != null && (
@@ -335,7 +416,7 @@ export default function CalendarioPage() {
                         )}
                       </div>
 
-                      {/* Execute reservation button */}
+                      {/* Execute reservation */}
                       {!isEditing && b.status !== 'cancelled' && b.member_id && selectedDate === toDateStr(today.getFullYear(), today.getMonth(), today.getDate()) && (
                         <div className="mb-3">
                           {b.executed_at ? (
@@ -358,7 +439,6 @@ export default function CalendarioPage() {
                       {isEditing && (
                         <div className="mt-3 pt-3 border-t border-line space-y-3">
                           <div className="grid grid-cols-2 gap-3">
-                            {/* Status */}
                             <div>
                               <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Estado</label>
                               <div className="flex gap-1.5">
@@ -370,7 +450,6 @@ export default function CalendarioPage() {
                                 ))}
                               </div>
                             </div>
-                            {/* Payment */}
                             <div>
                               <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Pago</label>
                               <div className="flex gap-1.5">
@@ -383,7 +462,6 @@ export default function CalendarioPage() {
                               </div>
                             </div>
                           </div>
-                          {/* Guests */}
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Nº invitados</label>
@@ -391,7 +469,6 @@ export default function CalendarioPage() {
                                 onChange={e => setEditForm(f => ({ ...f, guests: e.target.value }))}
                                 className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
                             </div>
-                            {/* Contact */}
                             <div>
                               <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Titular de contacto</label>
                               <select value={editForm.member_id} onChange={e => setEditForm(f => ({ ...f, member_id: e.target.value }))}
@@ -401,13 +478,11 @@ export default function CalendarioPage() {
                               </select>
                             </div>
                           </div>
-                          {/* Notes */}
                           <div>
                             <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</label>
                             <textarea rows={2} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
                               className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2 resize-none" />
                           </div>
-                          {/* Actions */}
                           <div className="flex flex-wrap gap-2">
                             <button onClick={handleSaveEdit} disabled={saving}
                               className="flex-1 min-w-[120px] bg-lime text-ink font-semibold py-2 rounded-lg text-xs hover:bg-lime/90 transition-colors disabled:opacity-50">
@@ -433,7 +508,7 @@ export default function CalendarioPage() {
         )}
       </div>
 
-      {/* New booking modal */}
+      {/* ── New booking modal ── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
@@ -442,28 +517,159 @@ export default function CalendarioPage() {
               <h2 className="text-base font-semibold text-snow">Nueva reserva</h2>
               <button onClick={() => setShowModal(false)} className="text-mist hover:text-fog"><X size={18} /></button>
             </div>
+
             <form onSubmit={handleSubmit} className="overflow-y-auto p-5 space-y-4">
+              {/* Type selector */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5"><Tag size={11} className="inline mr-1" />Tipo</label>
                 <div className="flex gap-2">
                   {[{ value: 'birthday', label: 'Cumpleaños' }, { value: 'custodia', label: 'Custodia' }, { value: 'other', label: 'Otro' }].map(opt => (
-                    <button key={opt.value} type="button" onClick={() => setForm(f => ({ ...f, type: opt.value as BookingType }))}
+                    <button key={opt.value} type="button"
+                      onClick={() => {
+                        const type = opt.value as BookingType
+                        setForm(f => ({ ...f, type, title: '', child_name: '' }))
+                        setCustodiaChildren([])
+                      }}
                       className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${form.type === opt.value ? opt.value === 'birthday' ? 'bg-iris/20 text-iris border-iris/40' : opt.value === 'custodia' ? 'bg-amber-400/20 text-amber-300 border-amber-400/40' : 'bg-fog/20 text-fog border-fog/40' : 'bg-surface2 text-mist border-line hover:text-snow'}`}>
                       {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Título *</label>
-                <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ej: Cumple de Martina" className={inputClass} />
-              </div>
-              {form.type === 'birthday' && (
+
+              {/* Title — shown only for "other"; auto-generated for birthday/custodia */}
+              {form.type === 'other' && (
                 <div>
-                  <label className="block text-xs font-semibold text-fog mb-1.5">Nombre del niño/a</label>
-                  <input value={form.child_name} onChange={e => setForm(f => ({ ...f, child_name: e.target.value }))} placeholder="Ej: Martina" className={inputClass} />
+                  <label className="block text-xs font-semibold text-fog mb-1.5">Título *</label>
+                  <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ej: Evento especial" className={inputClass} />
                 </div>
               )}
+
+              {/* Titular de contacto — all types */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-fog"><User size={11} className="inline mr-1" />Titular de contacto</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMember(true)}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-iris hover:text-iris/80 transition-colors"
+                  >
+                    <UserPlus size={11} /> Agregar titular
+                  </button>
+                </div>
+                <select
+                  value={form.member_id}
+                  onChange={e => handleMemberChange(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Sin asignar</option>
+                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+
+              {/* ── BIRTHDAY specific fields ── */}
+              {form.type === 'birthday' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">Niño/a festejado/a</label>
+                    {memberChildren.length > 0 ? (
+                      <select
+                        value={form.child_name}
+                        onChange={e => handleChildSelect(e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">Selecciona un hijo/a...</option>
+                        {memberChildren.map(c => (
+                          <option key={c.name} value={c.name}>
+                            {c.name}{c.birth_date ? ` · ${calcAge(c.birth_date)}` : ''}
+                          </option>
+                        ))}
+                        <option value="__manual__">Otro (escribir nombre)</option>
+                      </select>
+                    ) : null}
+                    {(memberChildren.length === 0 || form.child_name === '__manual__' || (form.child_name && !memberChildren.some(c => c.name === form.child_name))) && (
+                      <input
+                        value={form.child_name === '__manual__' ? '' : form.child_name}
+                        onChange={e => setForm(f => ({ ...f, child_name: e.target.value, title: e.target.value ? `Cumple de ${e.target.value}` : f.title }))}
+                        placeholder="Nombre del niño/a"
+                        className={`${inputClass} ${memberChildren.length > 0 ? 'mt-2' : ''}`}
+                      />
+                    )}
+                  </div>
+                  {/* Title auto-filled but editable */}
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">Título de la reserva *</label>
+                    <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ej: Cumple de Martina" className={inputClass} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5"><Users size={11} className="inline mr-1" />Nº invitados</label>
+                      <input type="number" min="1" value={form.guests} onChange={e => setForm(f => ({ ...f, guests: e.target.value }))} placeholder="12" className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5"><Euro size={11} className="inline mr-1" />Importe (€)</label>
+                      <input type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="120.00" className={inputClass} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ── CUSTODIA specific fields ── */}
+              {form.type === 'custodia' && (
+                <>
+                  {/* Children selector */}
+                  {memberChildren.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-2">Hijos que entran en custodia</label>
+                      <div className="space-y-1.5">
+                        {memberChildren.map(c => {
+                          const selected = custodiaChildren.includes(c.name)
+                          return (
+                            <button
+                              key={c.name}
+                              type="button"
+                              onClick={() => toggleCustodiaChild(c.name)}
+                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${selected ? 'bg-amber-400/15 border-amber-400/40 text-amber-300' : 'bg-surface2 border-line text-fog hover:text-snow hover:border-line2'}`}
+                            >
+                              <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-amber-400 border-amber-400' : 'border-line2'}`}>
+                                {selected && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="#1a1f26" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                              </span>
+                              <span className="text-sm font-medium">
+                                {c.name}{c.birth_date ? <span className="text-xs text-mist ml-1">· {calcAge(c.birth_date)}</span> : null}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {/* Title auto-filled but editable */}
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">Título de la reserva *</label>
+                    <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ej: Custodia tarde" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5"><Users size={11} className="inline mr-1" />Invitados adicionales</label>
+                    <input type="number" min="0" value={form.guests} onChange={e => setForm(f => ({ ...f, guests: e.target.value }))} placeholder="0" className={inputClass} />
+                    {custodiaChildren.length > 0 && (
+                      <p className="text-[10px] text-mist mt-1">
+                        Total: {custodiaChildren.length} hijo{custodiaChildren.length !== 1 ? 's' : ''} seleccionado{custodiaChildren.length !== 1 ? 's' : ''}
+                        {form.guests ? ` + ${form.guests} invitado${parseInt(form.guests) !== 1 ? 's' : ''}` : ''}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* ── OTHER specific fields ── */}
+              {form.type === 'other' && (
+                <div>
+                  <label className="block text-xs font-semibold text-fog mb-1.5"><Users size={11} className="inline mr-1" />Nº invitados</label>
+                  <input type="number" min="0" value={form.guests} onChange={e => setForm(f => ({ ...f, guests: e.target.value }))} placeholder="0" className={inputClass} />
+                </div>
+              )}
+
+              {/* Date & time — all types */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5"><Calendar size={11} className="inline mr-1" />Fecha *</label>
                 <input required type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputClass} />
@@ -478,31 +684,67 @@ export default function CalendarioPage() {
                   <input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inputClass} />
                 </div>
               </div>
-              {form.type === 'birthday' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5"><Users size={11} className="inline mr-1" />Nº invitados</label>
-                    <input type="number" min="1" value={form.guests} onChange={e => setForm(f => ({ ...f, guests: e.target.value }))} placeholder="12" className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5"><Euro size={11} className="inline mr-1" />Importe (€)</label>
-                    <input type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="120.00" className={inputClass} />
-                  </div>
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5"><User size={11} className="inline mr-1" />Titular de contacto</label>
-                <select value={form.member_id} onChange={e => setForm(f => ({ ...f, member_id: e.target.value }))} className={inputClass}>
-                  <option value="">Sin asignar</option>
-                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
-              </div>
+
+              {/* Notes — all types */}
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5"><FileText size={11} className="inline mr-1" />Notas (opcional)</label>
-                <textarea rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Observaciones..." className={inputClass + ' resize-none'} />
+                <textarea rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Observaciones..." className={inputClass + ' resize-none'} />
               </div>
+
               <button type="submit" disabled={loading} className="w-full bg-lime text-ink font-semibold py-3 rounded-xl hover:bg-lime/90 transition-colors disabled:opacity-50 text-sm">
                 {loading ? 'Guardando...' : 'Crear reserva'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add member popup (on top of booking modal) ── */}
+      {showAddMember && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAddMember(false)} />
+          <div className="relative w-full max-w-sm bg-surface border border-line rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+              <h3 className="text-sm font-semibold text-snow">Nuevo titular</h3>
+              <button onClick={() => setShowAddMember(false)} className="text-mist hover:text-fog"><X size={16} /></button>
+            </div>
+            <form onSubmit={handleAddMember} className="p-5 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Nombre completo *</label>
+                <input
+                  required
+                  value={newMemberForm.name}
+                  onChange={e => setNewMemberForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Ej: Ana García"
+                  className={inputClass}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Teléfono</label>
+                <input
+                  type="tel"
+                  value={newMemberForm.phone}
+                  onChange={e => setNewMemberForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="Ej: 612 345 678"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Fecha de nacimiento</label>
+                <input
+                  type="date"
+                  value={newMemberForm.birth_date}
+                  onChange={e => setNewMemberForm(f => ({ ...f, birth_date: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingMember}
+                className="w-full bg-iris text-snow font-semibold py-2.5 rounded-xl text-sm hover:bg-iris/80 transition-colors disabled:opacity-50"
+              >
+                {savingMember ? 'Guardando...' : 'Crear titular'}
               </button>
             </form>
           </div>
