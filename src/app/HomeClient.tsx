@@ -138,7 +138,11 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       planificado: planByHour[h] || null,
     }
   })
-  const chartData = buckets.slice(7, Math.min(currentHour + 1, 23))
+  const chartData = buckets.slice(7, 23).map((b, i) => {
+    const h = i + 7
+    if (h > currentHour) return { hour: b.hour, adultos: null, ninos: null, conBono: null, sinBono: null, planificado: b.planificado }
+    return b
+  })
 
   const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; bg: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
     { key: 'ninos',       label: 'Niños en sala', value: activeChildren,                                         accent: 'text-cyan-300', border: 'border-cyan-300/40', bg: 'bg-cyan-300/10', visits: [],             icon: <Users size={13} /> },
