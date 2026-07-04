@@ -248,9 +248,19 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         {/* Aforo por hora */}
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4 flex items-center gap-1.5">
-            <BarChart2 size={13} /> Aforo por hora
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+              <BarChart2 size={13} /> Aforo por hora
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[11px] text-fog">
+                <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0" /> Alcanzado
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] text-fog">
+                <span className="w-2 h-2 rounded-full bg-[#fb923c] shrink-0" /> Reservado
+              </span>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
@@ -293,13 +303,6 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                   )
                 }}
               />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                align="left"
-                wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                formatter={(v) => <span style={{ color: '#9ca3af' }}>{v}</span>}
-              />
               <Bar dataKey="alcanzado" stackId="a" fill="#38bdf8" name="Alcanzado"
                 shape={(p: any) => <StackedBar {...p} roundTop={!p.reservado} />}>
                 {chartData.map((_, i) => (
@@ -320,9 +323,19 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
 
         {/* Afluencia bono/sin bono */}
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4 flex items-center gap-1.5">
-            <Activity size={13} /> Afluencia por hora · bono / sin bono
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+              <Activity size={13} /> Afluencia por hora
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 text-[11px] text-fog">
+                <span className="w-2 h-2 rounded-full bg-[#8b8bff] shrink-0" /> Con bono
+              </span>
+              <span className="flex items-center gap-1.5 text-[11px] text-fog">
+                <span className="w-2 h-2 rounded-full bg-[#f59e0b] shrink-0" /> Sin bono
+              </span>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
@@ -334,15 +347,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 itemStyle={{ color: '#f0f4f8', fontSize: 11 }}
                 cursor={{ stroke: '#1e2530' }}
               />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                align="left"
-                wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                formatter={(v) => <span style={{ color: '#9ca3af' }}>{v === 'conBono' ? 'Con bono' : 'Sin bono'}</span>}
-              />
-              <Line type="monotone" dataKey="conBono" stroke="#8b8bff" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="conBono" name="Con bono" stroke="#8b8bff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="sinBono" name="Sin bono" stroke="#f59e0b" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
