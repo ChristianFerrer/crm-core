@@ -306,14 +306,14 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                       <p style={{ color: '#9ca3af', marginBottom: 6 }}>{label}</p>
                       {entry.alcanzado != null ? (
                         <>
-                          <p style={{ color: '#6ee7b7', fontWeight: 600 }}>Alcanzado: {entry.alcanzado}</p>
+                          <p style={{ color: '#38bdf8', fontWeight: 600 }}>Alcanzado: {entry.alcanzado}</p>
                           <p style={{ color: '#6b7280', marginTop: 4 }}>
                             {entry.adultos} adulto{entry.adultos !== 1 ? 's' : ''} · {entry.ninos} niño{entry.ninos !== 1 ? 's' : ''}
                           </p>
                         </>
                       ) : entry.reservado != null ? (
                         <>
-                          <p style={{ color: '#c084fc', fontWeight: 600 }}>Reservado: {entry.reservado}</p>
+                          <p style={{ color: '#fb923c', fontWeight: 600 }}>Reservado: {entry.reservado}</p>
                           {entry.planBirthday ? <p style={{ color: '#6b7280', marginTop: 4 }}>Cumpleaños: {entry.planBirthday}</p> : null}
                           {entry.planCustodia ? <p style={{ color: '#6b7280', marginTop: 2 }}>Custodias: {entry.planCustodia}</p> : null}
                           {entry.planOther    ? <p style={{ color: '#6b7280', marginTop: 2 }}>Otros: {entry.planOther}</p>         : null}
@@ -329,17 +329,17 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                 formatter={(v) => <span style={{ color: '#9ca3af' }}>{v}</span>}
               />
-              <Bar dataKey="alcanzado" stackId="a" fill="#6ee7b7" name="Alcanzado"
+              <Bar dataKey="alcanzado" stackId="a" fill="#38bdf8" name="Alcanzado"
                 shape={(p: any) => <StackedBar {...p} roundTop={!p.reservado} />}>
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#6ee7b7' : 'rgba(110,231,183,0.6)'} />
+                  <Cell key={i} fill={i + 7 === currentHour ? '#38bdf8' : 'rgba(56,189,248,0.6)'} />
                 ))}
                 <LabelList dataKey="_alcanzadoLabel" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="reservado" stackId="a" fill="#c084fc" name="Reservado"
+              <Bar dataKey="reservado" stackId="a" fill="#fb923c" name="Reservado"
                 shape={(p: any) => <StackedBar {...p} roundTop />}>
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#c084fc' : 'rgba(192,132,252,0.6)'} />
+                  <Cell key={i} fill={i + 7 === currentHour ? '#fb923c' : 'rgba(251,146,60,0.6)'} />
                 ))}
                 <LabelList dataKey="_reservadoLabel" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
