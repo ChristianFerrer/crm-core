@@ -16,6 +16,7 @@ import {
   Legend,
   BarChart,
   Bar,
+  Cell,
   LabelList,
 } from 'recharts'
 
@@ -471,11 +472,21 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
               />
               <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }}
                 formatter={(v) => v === 'adultos' ? 'Adultos' : v === 'ninos' ? 'Niños' : 'Planificado'} />
-              <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
-              <Bar dataKey="ninos" stackId="a" fill="#67e8f9">
+              <Bar dataKey="adultos" stackId="a">
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={i + 7 === currentHour ? '#c6f24e' : 'rgba(198,242,78,0.28)'} />
+                ))}
+              </Bar>
+              <Bar dataKey="ninos" stackId="a">
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={i + 7 === currentHour ? '#67e8f9' : 'rgba(103,232,249,0.28)'} />
+                ))}
                 <LabelList dataKey="_actualTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="planificado" stackId="a" fill="#a78bfa" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="planificado" stackId="a" radius={[4, 4, 0, 0]}>
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={i + 7 === currentHour ? '#a78bfa' : 'rgba(167,139,250,0.28)'} />
+                ))}
                 <LabelList dataKey="_planTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
             </BarChart>
