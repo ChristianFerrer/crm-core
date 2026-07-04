@@ -1,11 +1,22 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { LogIn, LogOut, Users, CalendarDays, Cake, AlertTriangle, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
-import { toast } from 'sonner'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  BarChart,
+  Bar,
+} from 'recharts'
 
 type TodayVisit = {
   id: string
@@ -17,18 +28,6 @@ type TodayVisit = {
   children_present: { name: string; age?: number; birth_date?: string }[] | null
   adults_count: number
   children_count: number
-  members: { name: string } | null
-}
-
-type TodayBooking = {
-  id: string
-  title: string
-  type: 'birthday' | 'custodia' | 'other'
-  start_time: string | null
-  end_time: string | null
-  status: string
-  child_name: string | null
-  guests: number | null
   members: { name: string } | null
 }
 
@@ -46,15 +45,9 @@ type HomeClientProps = {
   dateLabel: string
   capacity: number | null
   todayBirthdays: BirthdayMember[]
-  todayBookings: TodayBooking[]
 }
 
-function fmtElapsed(checkedInAt: string): string {
-  const mins = Math.floor((Date.now() - new Date(checkedInAt).getTime()) / 60000)
-  const h = Math.floor(mins / 60), m = mins % 60
-  if (h === 0) return `${m}min`
-  return m > 0 ? `${h}h ${m}min` : `${h}h`
-}
+type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
 
 function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
   if (birth_date) {
@@ -72,14 +65,64 @@ function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
   return ''
 }
 
-export default function HomeClient({ todayVisits, dateLabel, capacity, todayBirthdays, todayBookings }: HomeClientProps) {
-  const [allVisits, setAllVisits] = useState<TodayVisit[]>(todayVisits)
-  const [checkingOut, setCheckingOut] = useState<string | null>(null)
-  const [tenantName, setTenantName] = useState<string | null>(null)
-  const [showResumen, setShowResumen] = useState(false)
-  const [tick, setTick] = useState(0)
+function fmtElapsed(checkedInAt: string): string {
+  const mins = Math.floor((Date.now() - new Date(checkedInAt).getTime()) / 60000)
+  const h = Math.floor(mins / 60), m = mins % 60
+  if (h === 0) return `${m}min`
+  return m > 0 ? `${h}h ${m}min` : `${h}h`
+}
 
-  // Tenant name
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+}
+
+type ChildInSala = { name: string; age?: number; birth_date?: string; memberName: string }
+
+export default function HomeClient({ todayVisits, todayCustodias, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
+  const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
+  const drawerRef = useRef<HTMLDivElement>(null)
+
+  const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
+
+  const activeVisits = todayVisits.filter(v => !v.checked_out_at)
+  const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
+  const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
+  const activeTotal = activeAdults + activeChildren
+  const childrenInSala: ChildInSala[] = activeVisits.flatMap(v =>
+    (v.children_present ?? []).map(c => ({ ...c, memberName: v.members?.name ?? '—' }))
+  )
+
+  const conBonoVisits = todayVisits.filter(v => v.membership_id)
+  const sinBonoVisits = todayVisits.filter(v => !v.membership_id)
+
+  const buckets = Array.from({ length: 24 }, (_, h) => {
+    const hourVisits = todayVisits.filter(v => new Date(v.checked_in_at).getHours() === h)
+    const adultos = hourVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
+    const ninos = hourVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
+    return {
+      hour: `${String(h).padStart(2, '0')}h`,
+      adultos,
+      ninos,
+      conBono: hourVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0),
+      sinBono: hourVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0),
+    }
+  })
+  const chartData = buckets.slice(7, 23)
+
+  const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; bg: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
+    { key: 'ninos',       label: 'Niños en sala', value: activeChildren,                                         accent: 'text-cyan-300', border: 'border-cyan-300/40', bg: 'bg-cyan-300/10', visits: [],             icon: <Users size={13} /> },
+    { key: 'entradasHoy', label: 'Entradas hoy',  value: todayVisits.reduce((s, v) => s + persons(v), 0),       accent: 'text-lime',     border: 'border-lime/40',     bg: 'bg-lime/10',     visits: todayVisits,    icon: <LogIn size={13} /> },
+    { key: 'conBono',     label: 'Con bono',       value: conBonoVisits.reduce((s, v) => s + persons(v), 0),     accent: 'text-iris',     border: 'border-iris/40',     bg: 'bg-iris/10',     visits: conBonoVisits,  icon: <CreditCard size={13} /> },
+    { key: 'sinBono',     label: 'Sin bono',       value: sinBonoVisits.reduce((s, v) => s + persons(v), 0),     accent: 'text-amber',    border: 'border-amber/40',    bg: 'bg-amber/10',    visits: sinBonoVisits,  icon: <UserX size={13} /> },
+    { key: 'custodias',   label: 'Custodias',      value: todayCustodias.reduce((s, v) => s + persons(v), 0),   accent: 'text-mint',     border: 'border-mint/40',     bg: 'bg-mint/10',     visits: todayCustodias, icon: <CalendarClock size={13} /> },
+    { key: 'cumpleanos',  label: 'Cumpleaños',     value: todayBirthdays.length,                                 accent: 'text-rose',     border: 'border-rose/40',     bg: 'bg-rose/10',     visits: [],             icon: <Cake size={13} /> },
+  ]
+
+  const drawerVisits = activeDrawer && activeDrawer !== 'ninos' && activeDrawer !== 'cumpleanos'
+    ? (stats.find(s => s.key === activeDrawer)?.visits ?? [])
+    : []
+
+  const [tenantName, setTenantName] = useState<string | null>(null)
   useEffect(() => {
     const impersonating = localStorage.getItem('viewingAsTenant')
     if (impersonating) {
@@ -96,253 +139,275 @@ export default function HomeClient({ todayVisits, dateLabel, capacity, todayBirt
     })
   }, [])
 
-  // Tick every minute to refresh elapsed times
-  useEffect(() => {
-    const t = setInterval(() => setTick(n => n + 1), 60000)
-    return () => clearInterval(t)
-  }, [])
-
-  // Poll visits every 30s
-  const refreshVisits = useCallback(async () => {
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    const { data } = await supabase
-      .from('visits')
-      .select('id, checked_in_at, checked_out_at, member_id, membership_id, visit_type, children_present, adults_count, children_count, members(name)')
-      .gte('checked_in_at', todayStart.toISOString())
-      .order('checked_in_at', { ascending: true })
-    if (data) setAllVisits(data as unknown as TodayVisit[])
-  }, [])
-
-  useEffect(() => {
-    const interval = setInterval(refreshVisits, 30000)
-    return () => clearInterval(interval)
-  }, [refreshVisits])
-
-  async function handleCheckOut(visit: TodayVisit) {
-    setCheckingOut(visit.id)
-    await supabase.from('visits').update({ checked_out_at: new Date().toISOString() }).eq('id', visit.id)
-    const dmin = Math.max(1, Math.floor((Date.now() - new Date(visit.checked_in_at).getTime()) / 60000))
-    const dh = Math.floor(dmin / 60), dm = dmin % 60
-    toast.success(`Salida — ${visit.members?.name ?? '—'} · ${dh > 0 ? `${dh}h ${dm}min` : `${dmin}min`}`)
-    setCheckingOut(null)
-    await refreshVisits()
+  function handleStatClick(key: DrawerKey) {
+    setActiveDrawer(prev => {
+      const next = prev === key ? null : key
+      if (next) setTimeout(() => drawerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
+      return next
+    })
   }
 
-  // Derived values — depend on tick so elapsed updates every minute
-  void tick
-  const activeVisits = allVisits.filter(v => !v.checked_out_at)
-    .sort((a, b) => new Date(a.checked_in_at).getTime() - new Date(b.checked_in_at).getTime())
-
-  const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
-  const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
-  const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
-  const activeTotal = activeAdults + activeChildren
-
   const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
+  const aforoColor = aforoPct < 70 ? 'bg-lime' : aforoPct <= 90 ? 'bg-amber' : 'bg-rose-500'
   const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
 
-  const totalHoy = allVisits.reduce((s, v) => s + persons(v), 0)
-  const conBonoHoy = allVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0)
-  const sinBonoHoy = allVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0)
-  const custodiasHoy = allVisits.filter(v => v.visit_type === 'custodia').length
-
-  const agendaItems = todayBookings.filter(b => b.type !== 'birthday')
-  const hasAgenda = todayBookings.length > 0 || todayBirthdays.length > 0
-
   return (
-    <div className="space-y-5 pb-4">
-
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? 'Mi establecimiento'}</h1>
           <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
         </div>
         <Link
-          href="/checkin?tab=checkin"
+          href="/checkin"
           className="flex items-center gap-1.5 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm shrink-0 active:scale-95 transition-transform"
           style={{ boxShadow: 'var(--shadow-lime)' }}
         >
           <LogIn size={15} strokeWidth={2.4} />
-          Nueva entrada
+          Registrar visita
         </Link>
       </div>
 
-      {/* Aforo compacto */}
+      {/* Aforo — primero, es lo más urgente */}
       {capacity != null && (
-        <div className="rounded-2xl border border-line bg-surface px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-fog flex items-center gap-1.5">
-              <Users size={12} /> Aforo
-            </span>
-            <div className="flex items-center gap-3 text-xs text-fog">
-              <span><span className="text-lime font-semibold">{activeAdults}</span> adultos</span>
-              <span><span className="text-cyan-300 font-semibold">{activeChildren}</span> niños</span>
-              <span className={`font-bold ${aforoTextColor}`}>{activeTotal}/{capacity}</span>
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Users size={13} /> Aforo
+          </h2>
+          <div className="flex items-end justify-between mb-3">
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
+              <span className="text-xs text-fog">de {capacity} plazas</span>
+            </div>
+            <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3 flex">
+            <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
+            <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
+          </div>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
+              <span className="text-xs text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
+              <span className="text-xs text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
             </div>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-line overflow-hidden flex">
-            <div className="h-full bg-lime transition-all duration-500"
-              style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
-            <div className="h-full bg-cyan-300 transition-all duration-500"
-              style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
-          </div>
         </div>
       )}
 
-      {/* Dentro ahora */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-            <Clock size={12} />
-            Dentro ahora
-            {activeVisits.length > 0 && (
-              <span className="ml-0.5 text-lime font-bold">{activeVisits.length}</span>
-            )}
-          </h2>
-          {activeVisits.length > 0 && (
-            <Link href="/checkin?tab=dentro" className="text-[11px] text-fog hover:text-snow transition-colors">
-              Ver sala →
-            </Link>
-          )}
-        </div>
-
-        {activeVisits.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line bg-surface/50 px-4 py-8 text-center">
-            <p className="text-sm text-mist">La sala está vacía</p>
-            <p className="text-xs text-fog mt-1">Registra la primera entrada del día</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {activeVisits.map(visit => {
-              const dmin = Math.floor((Date.now() - new Date(visit.checked_in_at).getTime()) / 60000)
-              const isLong = dmin >= 120
-              const isVeryLong = dmin >= 180
-              const kids = visit.children_present ?? []
-
-              return (
-                <div
-                  key={visit.id}
-                  className={`rounded-2xl border bg-surface px-4 py-3 flex items-center gap-3 transition-colors ${
-                    isVeryLong ? 'border-rose/40 bg-rose/5' : isLong ? 'border-amber/30' : 'border-line'
-                  }`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      {(isLong || isVeryLong) && (
-                        <AlertTriangle size={12} className={isVeryLong ? 'text-rose shrink-0' : 'text-amber shrink-0'} />
-                      )}
-                      <p className="font-semibold text-sm text-snow truncate">{visit.members?.name ?? '—'}</p>
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
-                    </div>
-                    {kids.length > 0 && (
-                      <p className="text-xs text-mist truncate">
-                        {kids.map(c => {
-                          const age = fmtChildAge(c.birth_date, c.age)
-                          return c.name + (age ? ` · ${age}` : '')
-                        }).join(', ')}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-semibold tabular-nums ${
-                      isVeryLong ? 'text-rose' : isLong ? 'text-amber' : 'text-fog'
-                    }`}>
-                      {fmtElapsed(visit.checked_in_at)}
-                    </span>
-                    <button
-                      onClick={() => handleCheckOut(visit)}
-                      disabled={checkingOut === visit.id}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface2 border border-line text-xs font-semibold text-fog hover:text-snow hover:border-line2 active:scale-95 transition-all disabled:opacity-40"
-                    >
-                      <LogOut size={11} strokeWidth={2.2} />
-                      {checkingOut === visit.id ? '...' : 'Salida'}
-                    </button>
-                  </div>
+      {/* Stat boxes */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {stats.map(({ key, label, value, accent, border, bg, icon }) => {
+          const isOpen = activeDrawer === key
+          return (
+            <button
+              key={key}
+              onClick={() => handleStatClick(key)}
+              className={`group rounded-2xl border bg-surface p-3 flex flex-col gap-2 text-left transition-all duration-200 hover:scale-[1.03] active:scale-[0.98] ${
+                isOpen
+                  ? `${border} ring-1 ring-inset ${border} bg-surface2`
+                  : 'border-line hover:border-line2 hover:bg-surface2'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className={`w-6 h-6 rounded-lg ${bg} flex items-center justify-center transition-transform group-hover:scale-110 ${accent}`}>
+                  {icon}
                 </div>
-              )
-            })}
-          </div>
-        )}
+                {isOpen
+                  ? <ChevronUp size={10} className={accent} />
+                  : <ChevronDown size={10} className="text-fog group-hover:text-snow transition-colors" />
+                }
+              </div>
+              <div>
+                <div className={`font-display text-3xl font-bold leading-none ${value > 0 ? accent : 'text-fog'}`}>{value}</div>
+                <div className="text-[11px] font-semibold text-snow mt-1 leading-tight">{label}</div>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Agenda de hoy */}
-      {hasAgenda && (
-        <div>
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5 mb-3">
-            <CalendarDays size={12} /> Hoy
-          </h2>
-          <div className="space-y-2">
-            {/* Cumpleaños */}
-            {todayBirthdays.map((b, i) => (
-              <Link key={`bday-${i}`} href="/calendario"
-                className="flex items-center gap-3 rounded-2xl border border-rose/30 bg-rose/5 px-4 py-3 hover:border-rose/50 transition-colors"
-              >
-                <Cake size={14} className="text-rose shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-snow truncate">{b.name}</p>
-                  <p className="text-xs text-fog">{b.titularName}</p>
-                </div>
-                {b.booking?.start_time && (
-                  <span className="text-xs font-semibold text-rose shrink-0">
-                    {b.booking.start_time.slice(0, 5)}
-                  </span>
-                )}
-              </Link>
-            ))}
-            {/* Reservas (custodias, otros — excluye birthday ya mostrados arriba) */}
-            {agendaItems.map(booking => (
-              <Link key={booking.id} href="/calendario"
-                className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 hover:border-line2 transition-colors"
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${
-                  booking.type === 'birthday' ? 'bg-iris' : booking.type === 'custodia' ? 'bg-amber' : 'bg-fog'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-snow truncate">{booking.child_name || booking.title}</p>
-                  {booking.members?.name && <p className="text-xs text-fog">{booking.members.name}</p>}
-                </div>
-                <div className="text-right shrink-0">
-                  {booking.start_time && (
-                    <p className="text-xs font-semibold text-mist">
-                      {booking.start_time.slice(0, 5)}{booking.end_time ? `–${booking.end_time.slice(0, 5)}` : ''}
-                    </p>
-                  )}
-                  {booking.guests != null && (
-                    <p className="text-[11px] text-fog">{booking.guests} inv.</p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+      {activeDrawer && (
+        <div ref={drawerRef} className="rounded-2xl border border-line bg-surface p-4">
+          <h3 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3">
+            {stats.find(s => s.key === activeDrawer)?.label}
+          </h3>
+          {activeDrawer === 'cumpleanos' ? (
+            todayBirthdays.length === 0 ? (
+              <p className="text-sm text-mist">Sin cumpleaños hoy</p>
+            ) : (
+              <div className="space-y-2">
+                {todayBirthdays.map((m, i) => (
+                  <Link key={i} href="/calendario"
+                    className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-cyan-300">{m.name} · {fmtChildAge(m.birth_date)}</p>
+                      <p className="text-xs text-fog mt-0.5">{m.titularName}</p>
+                      <p className="text-[10px] text-lime mt-1 font-medium">→ Ver en agenda</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {m.booking ? (
+                        <>
+                          <p className="text-xs text-mist">
+                            {m.booking.start_time?.slice(0, 5) ?? '—'}
+                            {m.booking.end_time ? ` → ${m.booking.end_time.slice(0, 5)}` : ''}
+                          </p>
+                          {m.booking.guests && (
+                            <p className="text-[11px] text-fog">{m.booking.guests} invitados</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-[11px] text-fog">Sin reserva</p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
+          ) : activeDrawer === 'ninos' ? (
+            childrenInSala.length === 0 ? (
+              <p className="text-sm text-mist">Sin niños en sala</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {activeVisits.filter(v => (v.children_present?.length ?? 0) > 0).map(visit => (
+                    <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
+                            {(visit.children_present ?? []).map((c, i) => (
+                              <span key={i} className="text-[11px] font-semibold text-cyan-300">
+                                {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                          <div className="text-right">
+                            <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
+                            <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>
+                          </div>
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )
+          ) : activeDrawer === 'custodias' ? (
+            drawerVisits.length === 0 ? (
+              <p className="text-sm text-mist">Sin custodias hoy</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {drawerVisits.map(visit => {
+                  const kids = visit.children_present ?? []
+                  const isActive = !visit.checked_out_at
+                  return (
+                    <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          {kids.length > 0 && (
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
+                              {kids.map((c, i) => (
+                                <span key={i} className="text-[11px] font-semibold text-cyan-300">
+                                  {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                          <div className="text-right">
+                            <p className="text-xs text-mist">
+                              {fmtTime(visit.checked_in_at)}
+                              {visit.checked_out_at ? ` → ${fmtTime(visit.checked_out_at)}` : ' → en curso'}
+                            </p>
+                            {isActive && <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>}
+                          </div>
+                          <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          ) : drawerVisits.length === 0 ? (
+            <p className="text-sm text-mist">Sin entradas</p>
+          ) : (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {drawerVisits.map(visit => {
+                const kids = visit.children_present ?? []
+                const isActive = !visit.checked_out_at
+                return (
+                  <Link
+                    key={visit.id}
+                    href="/checkin?tab=dentro"
+                    className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      {kids.length > 0 && (
+                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
+                          {kids.map((c, i) => (
+                            <span key={i} className="text-[11px] font-semibold text-cyan-300">
+                              {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                      <div className="text-right">
+                        <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
+                        {isActive && <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>}
+                      </div>
+                      <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Resumen del día */}
-      <div>
-        <button
-          onClick={() => setShowResumen(v => !v)}
-          className="w-full flex items-center justify-between text-xs font-semibold text-fog uppercase tracking-wide hover:text-snow transition-colors py-1"
-        >
-          <span>Resumen del día</span>
-          {showResumen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        </button>
-        {showResumen && (
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              { label: 'Entradas hoy', value: totalHoy, accent: 'text-lime' },
-              { label: 'Con bono', value: conBonoHoy, accent: 'text-iris' },
-              { label: 'Sin bono', value: sinBonoHoy, accent: 'text-amber' },
-              { label: 'Custodias', value: custodiasHoy, accent: 'text-mint' },
-            ].map(({ label, value, accent }) => (
-              <div key={label} className="rounded-2xl border border-line bg-surface p-3 text-center">
-                <div className={`font-display text-2xl font-bold leading-none ${value > 0 ? accent : 'text-fog'}`}>{value}</div>
-                <div className="text-[11px] text-fog mt-1.5">{label}</div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Charts side by side — contexto histórico, al final */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Afluencia por hora · bono / sin bono</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ stroke: '#1e2530' }} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(value) => value === 'conBono' ? 'Con bono' : 'Sin bono'} />
+              <Line type="monotone" dataKey="conBono" stroke="#8b8bff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Adultos y niños por hora</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v, name) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(v) => v === 'adultos' ? 'Adultos' : 'Niños'} />
+              <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
+              <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
     </div>
