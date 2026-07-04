@@ -348,6 +348,40 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </div>
       </div>
 
+      {/* Aforo en tiempo real — debajo de los charts */}
+      {capacity != null && (
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Users size={13} /> Aforo en tiempo real
+            <span className="relative flex h-3 w-3 ml-0.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-90" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-lime" />
+            </span>
+          </h2>
+          <div className="flex items-end justify-between mb-3">
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
+              <span className="text-xs text-fog">de {capacity} plazas</span>
+            </div>
+            <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3 flex">
+            <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
+            <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
+          </div>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
+              <span className="text-xs text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
+              <span className="text-xs text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stat boxes */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map(({ key, label, value, accent, border, bg, icon }) => {
@@ -527,39 +561,6 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </div>
       )}
 
-      {/* Aforo en tiempo real — abajo */}
-      {capacity != null && (
-        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Users size={13} /> Aforo en tiempo real
-            <span className="relative flex h-3 w-3 ml-0.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-90" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-lime" />
-            </span>
-          </h2>
-          <div className="flex items-end justify-between mb-3">
-            <div className="flex items-baseline gap-2">
-              <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
-              <span className="text-xs text-fog">de {capacity} plazas</span>
-            </div>
-            <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
-          </div>
-          <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3 flex">
-            <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
-            <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
-          </div>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
-              <span className="text-xs text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
-              <span className="text-xs text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   )
