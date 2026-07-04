@@ -45,6 +45,7 @@ type TodayBooking = {
   start_time: string | null
   end_time: string | null
   guests: number | null
+  executed_at: string | null
 }
 
 type HomeClientProps = {
@@ -109,6 +110,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const planByHour = Array(24).fill(0)
   for (const b of todayBookings) {
     if (!b.start_time) continue
+    // Already executed custodia/other → real visit already counted, don't show as planificado
+    if (b.executed_at && (b.type === 'custodia' || b.type === 'other')) continue
     const startH = parseInt(b.start_time.split(':')[0])
     const endH = b.end_time ? parseInt(b.end_time.split(':')[0]) : startH + 2
     const expected = b.type === 'birthday' ? (b.guests ?? 10) : 2
