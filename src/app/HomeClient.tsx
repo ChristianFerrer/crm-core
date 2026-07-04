@@ -172,7 +172,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       planOther:    planByOther[h]    || null,
     }
   })
-  const chartData = buckets.slice(7, 23).map((b, i) => {
+  const chartData = buckets.slice(7, 24).map((b, i) => {
     const h = i + 7
     const isFuture = h > currentHour
     const adultos      = isFuture ? null : b.adultos
