@@ -14,9 +14,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  ComposedChart,
+  BarChart,
   Bar,
   ReferenceLine,
+  LabelList,
 } from 'recharts'
 
 type TodayVisit = {
@@ -140,8 +141,15 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   })
   const chartData = buckets.slice(7, 23).map((b, i) => {
     const h = i + 7
-    if (h > currentHour) return { hour: b.hour, adultos: null, ninos: null, conBono: null, sinBono: null, planificado: b.planificado }
-    return b
+    const isFuture = h > currentHour
+    return {
+      hour: b.hour,
+      adultos:     isFuture ? null : b.adultos,
+      ninos:       isFuture ? null : b.ninos,
+      conBono:     isFuture ? null : b.conBono,
+      sinBono:     isFuture ? null : b.sinBono,
+      planificado: isFuture ? (b.planificado || null) : null,
+    }
   })
 
   const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; bg: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
@@ -436,7 +444,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Aforo por hora</h2>
           <ResponsiveContainer width="100%" height={180}>
-            <ComposedChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+            <BarChart data={chartData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
               <XAxis dataKey="hour" tick={({ x, y, payload }: any) => (
                 <text x={x} y={y + 10} textAnchor="middle" fontSize={10}
@@ -456,9 +464,27 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 formatter={(v) => v === 'adultos' ? 'Adultos' : v === 'ninos' ? 'Niños' : 'Planificado'} />
               <ReferenceLine x={currentHourLabel} stroke="#c6f24e" strokeWidth={1.5} strokeDasharray="3 3" />
               <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
-              <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]} />
-              <Line type="monotone" dataKey="planificado" stroke="#a78bfa" strokeWidth={2} strokeDasharray="4 2" dot={false} connectNulls={false} />
-            </ComposedChart>
+              <Bar dataKey="ninos" stackId="a" fill="#67e8f9">
+                <LabelList content={(props: any) => {
+                  const { x, y, width, index } = props
+                  const d = chartData[index]
+                  if (!d || d.ninos === null) return null
+                  const total = (d.adultos ?? 0) + (d.ninos ?? 0)
+                  if (total === 0) return null
+                  return <text x={(x ?? 0) + (width ?? 0) / 2} y={(y ?? 0) - 3} textAnchor="middle" fill="#9ca3af" fontSize={9} fontWeight={600}>{total}</text>
+                }} />
+              </Bar>
+              <Bar dataKey="planificado" stackId="a" fill="#a78bfa" radius={[4, 4, 0, 0]}>
+                <LabelList content={(props: any) => {
+                  const { x, y, width, index } = props
+                  const d = chartData[index]
+                  if (!d || d.planificado === null) return null
+                  const total = d.planificado ?? 0
+                  if (total === 0) return null
+                  return <text x={(x ?? 0) + (width ?? 0) / 2} y={(y ?? 0) - 3} textAnchor="middle" fill="#9ca3af" fontSize={9} fontWeight={600}>{total}</text>
+                }} />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
