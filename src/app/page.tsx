@@ -21,6 +21,7 @@ export default async function DashboardPage() {
     { data: tenants },
     { data: allMembers },
     { data: birthdayBookings },
+    { data: todayBookingsData },
   ] = await Promise.all([
     supabase
       .from('visits')
@@ -43,6 +44,11 @@ export default async function DashboardPage() {
       .select('id, title, start_time, end_time, guests, member_id, members(name)')
       .eq('date', todayStr)
       .eq('type', 'birthday'),
+    supabase
+      .from('bookings')
+      .select('id, type, start_time, end_time, guests')
+      .eq('date', todayStr)
+      .neq('status', 'cancelled'),
   ])
 
   const allVisits = (todayVisits ?? []) as any[]
@@ -75,6 +81,7 @@ export default async function DashboardPage() {
       dateLabel={dateLabel}
       capacity={capacity}
       todayBirthdays={todayBirthdays}
+      todayBookings={(todayBookingsData ?? []) as any[]}
     />
   )
 }

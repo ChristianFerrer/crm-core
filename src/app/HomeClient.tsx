@@ -14,8 +14,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  BarChart,
+  ComposedChart,
   Bar,
+  ReferenceLine,
 } from 'recharts'
 
 type TodayVisit = {
@@ -38,6 +39,14 @@ type BirthdayMember = {
   booking: { start_time: string | null; end_time: string | null; guests: number | null; title: string } | null
 }
 
+type TodayBooking = {
+  id: string
+  type: 'birthday' | 'custodia' | 'other'
+  start_time: string | null
+  end_time: string | null
+  guests: number | null
+}
+
 type HomeClientProps = {
   todayVisits: TodayVisit[]
   todayCustodias: TodayVisit[]
@@ -45,6 +54,7 @@ type HomeClientProps = {
   dateLabel: string
   capacity: number | null
   todayBirthdays: BirthdayMember[]
+  todayBookings: TodayBooking[]
 }
 
 type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
@@ -78,7 +88,7 @@ function fmtTime(iso: string) {
 
 type ChildInSala = { name: string; age?: number; birth_date?: string; memberName: string }
 
-export default function HomeClient({ todayVisits, todayCustodias, monthCount, dateLabel, capacity, todayBirthdays }: HomeClientProps) {
+export default function HomeClient({ todayVisits, todayCustodias, monthCount, dateLabel, capacity, todayBirthdays, todayBookings }: HomeClientProps) {
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
 
@@ -95,6 +105,21 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const conBonoVisits = todayVisits.filter(v => v.membership_id)
   const sinBonoVisits = todayVisits.filter(v => !v.membership_id)
 
+  // Ocupación planificada por hora (custodias + cumpleaños de hoy)
+  const planByHour = Array(24).fill(0)
+  for (const b of todayBookings) {
+    if (!b.start_time) continue
+    const startH = parseInt(b.start_time.split(':')[0])
+    const endH = b.end_time ? parseInt(b.end_time.split(':')[0]) : startH + 2
+    const expected = b.type === 'birthday' ? (b.guests ?? 10) : 2
+    for (let h = startH; h < Math.min(endH, 24); h++) {
+      planByHour[h] += expected
+    }
+  }
+
+  const currentHour = new Date().getHours()
+  const currentHourLabel = `${String(currentHour).padStart(2, '0')}h`
+
   const buckets = Array.from({ length: 24 }, (_, h) => {
     const hourVisits = todayVisits.filter(v => new Date(v.checked_in_at).getHours() === h)
     const adultos = hourVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
@@ -105,6 +130,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       ninos,
       conBono: hourVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0),
       sinBono: hourVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0),
+      planificado: planByHour[h] || null,
     }
   })
   const chartData = buckets.slice(7, 23)
@@ -172,7 +198,11 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       {capacity != null && (
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Users size={13} /> Aforo
+            <Users size={13} /> Aforo en tiempo real
+            <span className="relative flex h-2 w-2 ml-0.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-lime" />
+            </span>
           </h2>
           <div className="flex items-end justify-between mb-3">
             <div className="flex items-baseline gap-2">
@@ -395,17 +425,31 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </div>
 
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Adultos y niños por hora</h2>
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Aforo por hora</h2>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="hour" tick={({ x, y, payload }: any) => (
+                <text x={x} y={y + 10} textAnchor="middle" fontSize={10}
+                  fill={payload.value === currentHourLabel ? '#c6f24e' : '#6b7280'}
+                  fontWeight={payload.value === currentHourLabel ? 700 : 400}>
+                  {payload.value}
+                </text>
+              )} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }} labelStyle={{ color: '#6b7280', fontSize: 11 }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v, name) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
-              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }} formatter={(v) => v === 'adultos' ? 'Adultos' : 'Niños'} />
+              <Tooltip
+                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px', color: '#f0f4f8' }}
+                labelStyle={{ color: '#6b7280', fontSize: 11 }}
+                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                formatter={(v: any, name: any) => [v, name === 'adultos' ? 'Adultos' : name === 'ninos' ? 'Niños' : 'Planificado']}
+              />
+              <Legend wrapperStyle={{ fontSize: 11, color: '#6b7280', paddingTop: 8 }}
+                formatter={(v) => v === 'adultos' ? 'Adultos' : v === 'ninos' ? 'Niños' : 'Planificado'} />
+              <ReferenceLine x={currentHourLabel} stroke="#c6f24e" strokeWidth={1.5} strokeDasharray="3 3" />
               <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
               <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[4, 4, 0, 0]} />
-            </BarChart>
+              <Line type="monotone" dataKey="planificado" stroke="#a78bfa" strokeWidth={2} strokeDasharray="4 2" dot={false} connectNulls={false} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
