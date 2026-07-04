@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp, BarChart2, Activity, X } from 'lucide-react'
+import { LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp, BarChart2, Activity, X, LogOut, MoreHorizontal } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import {
@@ -13,7 +14,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
   BarChart,
   Bar,
   Cell,
@@ -59,7 +59,7 @@ type HomeClientProps = {
   todayBookings: TodayBooking[]
 }
 
-type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
+type DrawerKey = 'enSala' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | 'otros' | null
 
 function StackedBar({ x, y, width, height, fill, roundTop }: {
   x?: number; y?: number; width?: number; height?: number; fill?: string; roundTop?: boolean
@@ -81,12 +81,19 @@ function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
     let months = now.getMonth() - dob.getMonth()
     if (now.getDate() < dob.getDate()) months--
     if (months < 0) { years--; months += 12 }
-    if (years === 0) return `${months}m`
-    if (months === 0) return `${years}a`
-    return `${years}a ${months}m`
+    const parts: string[] = []
+    if (years > 0) parts.push(`${years} año${years !== 1 ? 's' : ''}`)
+    if (months > 0) parts.push(`${months} mes${months !== 1 ? 'es' : ''}`)
+    return parts.length > 0 ? parts.join(' ') : 'recién nacido'
   }
-  if (fallbackAge != null) return `${fallbackAge}a`
+  if (fallbackAge != null) return `${fallbackAge} año${fallbackAge !== 1 ? 's' : ''}`
   return ''
+}
+
+function fmtVisitType(type: string): string {
+  if (type === 'custodia') return 'Custodia'
+  if (type === 'birthday') return 'Cumpleaños'
+  return 'Libre'
 }
 
 function fmtElapsed(checkedInAt: string): string {
@@ -100,10 +107,10 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 }
 
-type ChildInSala = { name: string; age?: number; birth_date?: string; memberName: string }
-
 export default function HomeClient({ todayVisits, todayCustodias, monthCount, dateLabel, capacity, todayBirthdays, todayBookings }: HomeClientProps) {
+  const router = useRouter()
   const [activeDrawer, setActiveDrawer] = useState<DrawerKey>(null)
+  const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
 
@@ -111,12 +118,18 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
   const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
   const activeTotal = activeAdults + activeChildren
-  const childrenInSala: ChildInSala[] = activeVisits.flatMap(v =>
-    (v.children_present ?? []).map(c => ({ ...c, memberName: v.members?.name ?? '—' }))
-  )
 
-  const conBonoVisits = todayVisits.filter(v => v.membership_id)
-  const sinBonoVisits = todayVisits.filter(v => !v.membership_id)
+  const conBonoActive = activeVisits.filter(v => v.membership_id)
+  const sinBonoActive = activeVisits.filter(v => !v.membership_id)
+  const custodiasActive = activeVisits.filter(v => v.visit_type === 'custodia')
+  const otrosActive = activeVisits.filter(v => v.visit_type !== 'custodia' && v.visit_type !== 'birthday')
+
+  async function handleCheckout(visitId: string) {
+    setCheckingOut(visitId)
+    await supabase.from('visits').update({ checked_out_at: new Date().toISOString() }).eq('id', visitId)
+    setCheckingOut(null)
+    router.refresh()
+  }
 
   // Ocupación planificada por hora separada por tipo
   const planByBirthday = Array(24).fill(0)
@@ -186,15 +199,15 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   })
 
   const stats: { key: DrawerKey; label: string; value: number; accent: string; border: string; bg: string; visits: TodayVisit[]; icon: React.ReactNode }[] = [
-    { key: 'ninos',       label: 'Niños en sala', value: activeChildren,                                         accent: 'text-cyan-300', border: 'border-cyan-300/40', bg: 'bg-cyan-300/10', visits: [],             icon: <Users size={13} /> },
-    { key: 'entradasHoy', label: 'Entradas hoy',  value: todayVisits.reduce((s, v) => s + persons(v), 0),       accent: 'text-lime',     border: 'border-lime/40',     bg: 'bg-lime/10',     visits: todayVisits,    icon: <LogIn size={13} /> },
-    { key: 'conBono',     label: 'Con bono',       value: conBonoVisits.reduce((s, v) => s + persons(v), 0),     accent: 'text-iris',     border: 'border-iris/40',     bg: 'bg-iris/10',     visits: conBonoVisits,  icon: <CreditCard size={13} /> },
-    { key: 'sinBono',     label: 'Sin bono',       value: sinBonoVisits.reduce((s, v) => s + persons(v), 0),     accent: 'text-amber',    border: 'border-amber/40',    bg: 'bg-amber/10',    visits: sinBonoVisits,  icon: <UserX size={13} /> },
-    { key: 'custodias',   label: 'Custodias',      value: todayCustodias.reduce((s, v) => s + persons(v), 0),   accent: 'text-mint',     border: 'border-mint/40',     bg: 'bg-mint/10',     visits: todayCustodias, icon: <CalendarClock size={13} /> },
-    { key: 'cumpleanos',  label: 'Cumpleaños',     value: todayBirthdays.length,                                 accent: 'text-rose',     border: 'border-rose/40',     bg: 'bg-rose/10',     visits: [],             icon: <Cake size={13} /> },
+    { key: 'enSala',     label: 'En sala',    value: activeTotal,                                          accent: 'text-cyan-300', border: 'border-cyan-300/40', bg: 'bg-cyan-300/10', visits: activeVisits,    icon: <Users size={13} /> },
+    { key: 'conBono',    label: 'Con bono',   value: conBonoActive.reduce((s, v) => s + persons(v), 0),   accent: 'text-iris',     border: 'border-iris/40',     bg: 'bg-iris/10',     visits: conBonoActive,   icon: <CreditCard size={13} /> },
+    { key: 'sinBono',    label: 'Sin bono',   value: sinBonoActive.reduce((s, v) => s + persons(v), 0),   accent: 'text-amber',    border: 'border-amber/40',    bg: 'bg-amber/10',    visits: sinBonoActive,   icon: <UserX size={13} /> },
+    { key: 'custodias',  label: 'Custodias',  value: custodiasActive.reduce((s, v) => s + persons(v), 0), accent: 'text-mint',     border: 'border-mint/40',     bg: 'bg-mint/10',     visits: custodiasActive, icon: <CalendarClock size={13} /> },
+    { key: 'otros',      label: 'Otros',      value: otrosActive.reduce((s, v) => s + persons(v), 0),     accent: 'text-lime',     border: 'border-lime/40',     bg: 'bg-lime/10',     visits: otrosActive,     icon: <MoreHorizontal size={13} /> },
+    { key: 'cumpleanos', label: 'Cumpleaños', value: todayBirthdays.length,                                accent: 'text-rose',     border: 'border-rose/40',     bg: 'bg-rose/10',     visits: [],              icon: <Cake size={13} /> },
   ]
 
-  const drawerVisits = activeDrawer && activeDrawer !== 'ninos' && activeDrawer !== 'cumpleanos'
+  const drawerVisits = activeDrawer && activeDrawer !== 'cumpleanos'
     ? (stats.find(s => s.key === activeDrawer)?.visits ?? [])
     : []
 
@@ -425,6 +438,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
           <h3 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3">
             {stats.find(s => s.key === activeDrawer)?.label}
           </h3>
+
           {activeDrawer === 'cumpleanos' ? (
             todayBirthdays.length === 0 ? (
               <p className="text-sm text-mist">Sin cumpleaños hoy</p>
@@ -446,9 +460,7 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                             {m.booking.start_time?.slice(0, 5) ?? '—'}
                             {m.booking.end_time ? ` → ${m.booking.end_time.slice(0, 5)}` : ''}
                           </p>
-                          {m.booking.guests && (
-                            <p className="text-[11px] text-fog">{m.booking.guests} invitados</p>
-                          )}
+                          {m.booking.guests && <p className="text-[11px] text-fog">{m.booking.guests} invitados</p>}
                         </>
                       ) : (
                         <p className="text-[11px] text-fog">Sin reserva</p>
@@ -458,108 +470,56 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 ))}
               </div>
             )
-          ) : activeDrawer === 'ninos' ? (
-            childrenInSala.length === 0 ? (
-              <p className="text-sm text-mist">Sin niños en sala</p>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {activeVisits.filter(v => (v.children_present?.length ?? 0) > 0).map(visit => (
-                    <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
-                            {(visit.children_present ?? []).map((c, i) => (
-                              <span key={i} className="text-[11px] font-semibold text-cyan-300">
-                                {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
-                              </span>
-                            ))}
-                          </div>
-                          <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                          <div className="text-right">
-                            <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
-                            <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>
-                          </div>
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )
-          ) : activeDrawer === 'custodias' ? (
-            drawerVisits.length === 0 ? (
-              <p className="text-sm text-mist">Sin custodias hoy</p>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {drawerVisits.map(visit => {
-                  const kids = visit.children_present ?? []
-                  const isActive = !visit.checked_out_at
-                  return (
-                    <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          {kids.length > 0 && (
-                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
-                              {kids.map((c, i) => (
-                                <span key={i} className="text-[11px] font-semibold text-cyan-300">
-                                  {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                          <div className="text-right">
-                            <p className="text-xs text-mist">
-                              {fmtTime(visit.checked_in_at)}
-                              {visit.checked_out_at ? ` → ${fmtTime(visit.checked_out_at)}` : ' → en curso'}
-                            </p>
-                            {isActive && <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>}
-                          </div>
-                          <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
           ) : drawerVisits.length === 0 ? (
-            <p className="text-sm text-mist">Sin entradas</p>
+            <p className="text-sm text-mist">Sin personas en sala</p>
           ) : (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-72 overflow-y-auto">
               {drawerVisits.map(visit => {
                 const kids = visit.children_present ?? []
-                const isActive = !visit.checked_out_at
+                const bono = visit.membership_id
                 return (
-                  <Link
-                    key={visit.id}
-                    href="/checkin?tab=dentro"
-                    className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
-                  >
-                    <div className="flex-1 min-w-0">
-                      {kids.length > 0 && (
-                        <div className="flex flex-wrap gap-x-2 gap-y-0.5 mb-1">
-                          {kids.map((c, i) => (
-                            <span key={i} className="text-[11px] font-semibold text-cyan-300">
-                              {c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}
-                            </span>
-                          ))}
+                  <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        {/* Titular + categoría */}
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <p className="text-xs font-semibold text-snow">{visit.members?.name ?? '—'}</p>
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line">
+                            {fmtVisitType(visit.visit_type)}
+                          </span>
+                          <span className={`text-[10px] font-medium ${bono ? 'text-iris' : 'text-amber'}`}>
+                            {bono ? 'Con bono' : 'Sin bono'}
+                          </span>
                         </div>
-                      )}
-                      <p className="text-xs text-fog">{visit.members?.name ?? '—'}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                      <div className="text-right">
-                        <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
-                        {isActive && <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>}
+                        {/* Hijos */}
+                        {kids.length > 0 && (
+                          <div className="space-y-0.5 mt-1">
+                            {kids.map((c, i) => {
+                              const age = fmtChildAge(c.birth_date, c.age)
+                              return (
+                                <p key={i} className="text-[11px] text-cyan-300">
+                                  {c.name}{age ? ` · ${age}` : ''}
+                                </p>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
-                      <span className={`w-2 h-2 rounded-full ${visit.membership_id ? 'bg-iris' : 'bg-amber'}`} />
+                      {/* Hora + tiempo + salida */}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
+                        <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>
+                        <button
+                          onClick={() => handleCheckout(visit.id)}
+                          disabled={checkingOut === visit.id}
+                          className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors disabled:opacity-50"
+                        >
+                          <LogOut size={10} />
+                          {checkingOut === visit.id ? '...' : 'Salida'}
+                        </button>
+                      </div>
                     </div>
-                  </Link>
+                  </div>
                 )
               })}
             </div>
