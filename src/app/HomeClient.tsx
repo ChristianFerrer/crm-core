@@ -121,7 +121,12 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
   const currentHourLabel = `${String(currentHour).padStart(2, '0')}h`
 
   const buckets = Array.from({ length: 24 }, (_, h) => {
-    const hourVisits = todayVisits.filter(v => new Date(v.checked_in_at).getHours() === h)
+    // Ocupación real: visitas activas DURANTE la hora h (no solo las que entraron en h)
+    const hourVisits = todayVisits.filter(v => {
+      const inH = new Date(v.checked_in_at).getHours()
+      const outH = v.checked_out_at ? new Date(v.checked_out_at).getHours() : 25
+      return inH <= h && outH > h
+    })
     const adultos = hourVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
     const ninos = hourVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
     return {
