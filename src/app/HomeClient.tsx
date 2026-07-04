@@ -244,41 +244,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </Link>
       </div>
 
-      {/* Aforo en tiempo real + Aforo por hora — lado a lado */}
-      <div className={`grid gap-4 ${capacity != null ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-        {capacity != null && (
-          <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-            <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
-              <Users size={13} /> Aforo en tiempo real
-              <span className="relative flex h-2 w-2 ml-0.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-lime" />
-              </span>
-            </h2>
-            <div className="flex items-end justify-between mb-3">
-              <div className="flex items-baseline gap-2">
-                <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
-                <span className="text-xs text-fog">de {capacity} plazas</span>
-              </div>
-              <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
-            </div>
-            <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3 flex">
-              <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
-              <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
-            </div>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
-                <span className="text-xs text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
-                <span className="text-xs text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
+      {/* Top row: Aforo por hora | Afluencia bono/sin bono */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         {/* Aforo por hora */}
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4 flex items-center gap-1.5">
@@ -288,7 +255,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
             <BarChart data={chartData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
               <XAxis dataKey="hour" tick={({ x, y, payload }: any) => (
-                <text x={x} y={y + 10} textAnchor="middle" fontSize={10}
+                <text x={x} y={y + 10} textAnchor="middle"
+                  fontSize={payload.value === currentHourLabel ? 13 : 10}
                   fill={payload.value === currentHourLabel ? '#c6f24e' : '#6b7280'}
                   fontWeight={payload.value === currentHourLabel ? 700 : 400}>
                   {payload.value}
@@ -326,6 +294,9 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 }}
               />
               <Legend
+                iconType="circle"
+                iconSize={8}
+                align="left"
                 wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                 formatter={(v) => <span style={{ color: '#9ca3af' }}>{v}</span>}
               />
@@ -344,6 +315,35 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 <LabelList dataKey="_reservadoLabel" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Afluencia bono/sin bono */}
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4 flex items-center gap-1.5">
+            <Activity size={13} /> Afluencia por hora · bono / sin bono
+          </h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
+              <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+              <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px' }}
+                labelStyle={{ color: '#6b7280', fontSize: 11 }}
+                itemStyle={{ color: '#f0f4f8', fontSize: 11 }}
+                cursor={{ stroke: '#1e2530' }}
+              />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                align="left"
+                wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                formatter={(v) => <span style={{ color: '#9ca3af' }}>{v === 'conBono' ? 'Con bono' : 'Sin bono'}</span>}
+              />
+              <Line type="monotone" dataKey="conBono" stroke="#8b8bff" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -527,31 +527,39 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
         </div>
       )}
 
-      {/* Afluencia bono/sin bono — al final */}
-      <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-        <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4 flex items-center gap-1.5">
-          <Activity size={13} /> Afluencia por hora · bono / sin bono
-        </h2>
-        <ResponsiveContainer width="100%" height={180}>
-          <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip
-              contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px' }}
-              labelStyle={{ color: '#6b7280', fontSize: 11 }}
-              itemStyle={{ color: '#f0f4f8', fontSize: 11 }}
-              cursor={{ stroke: '#1e2530' }}
-            />
-            <Legend
-              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-              formatter={(v) => <span style={{ color: '#9ca3af' }}>{v === 'conBono' ? 'Con bono' : 'Sin bono'}</span>}
-            />
-            <Line type="monotone" dataKey="conBono" stroke="#8b8bff" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="sinBono" stroke="#f59e0b" strokeWidth={2} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {/* Aforo en tiempo real — abajo */}
+      {capacity != null && (
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Users size={13} /> Aforo en tiempo real
+            <span className="relative flex h-3 w-3 ml-0.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-90" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-lime" />
+            </span>
+          </h2>
+          <div className="flex items-end justify-between mb-3">
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-2xl font-semibold text-snow">{activeTotal}</span>
+              <span className="text-xs text-fog">de {capacity} plazas</span>
+            </div>
+            <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-line overflow-hidden mb-3 flex">
+            <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
+            <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
+          </div>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
+              <span className="text-xs text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
+              <span className="text-xs text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
