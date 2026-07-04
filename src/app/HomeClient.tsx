@@ -61,17 +61,29 @@ type HomeClientProps = {
 
 type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
 
-function StackedBar({ x, y, width, height, fill, roundTop }: { x?: number; y?: number; width?: number; height?: number; fill?: string; roundTop?: boolean }) {
+function StackedBar({ x, y, width, height, fill, roundTop, outlined, strokeColor, dimmed }: {
+  x?: number; y?: number; width?: number; height?: number; fill?: string
+  roundTop?: boolean; outlined?: boolean; strokeColor?: string; dimmed?: boolean
+}) {
   const _x = x ?? 0, _y = y ?? 0, _w = width ?? 0, _h = height ?? 0
   if (_h <= 0 || _w <= 0) return null
   const r = roundTop ? Math.min(4, _w / 2, _h) : 0
-  if (r === 0) return <rect x={_x} y={_y} width={_w} height={_h} fill={fill} />
-  return (
-    <path
-      d={`M${_x},${_y + _h} L${_x},${_y + r} Q${_x},${_y} ${_x + r},${_y} L${_x + _w - r},${_y} Q${_x + _w},${_y} ${_x + _w},${_y + r} L${_x + _w},${_y + _h} Z`}
-      fill={fill}
-    />
-  )
+  const d = r === 0
+    ? `M${_x},${_y+_h} L${_x},${_y} L${_x+_w},${_y} L${_x+_w},${_y+_h} Z`
+    : `M${_x},${_y+_h} L${_x},${_y+r} Q${_x},${_y} ${_x+r},${_y} L${_x+_w-r},${_y} Q${_x+_w},${_y} ${_x+_w},${_y+r} L${_x+_w},${_y+_h} Z`
+  if (outlined) {
+    return (
+      <path
+        d={d}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth={1.5}
+        strokeDasharray="3 3"
+        opacity={dimmed ? 0.5 : 1}
+      />
+    )
+  }
+  return <path d={d} fill={fill} />
 }
 
 function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
@@ -520,25 +532,19 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 ))}
                 <LabelList dataKey="_actualTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="planBirthday" stackId="a" fill="#818cf8"
-                shape={(p: any) => <StackedBar {...p} roundTop={!p.planCustodia && !p.planOther} />}>
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#818cf8' : 'rgba(129,140,248,0.6)'} />
-                ))}
+              <Bar dataKey="planBirthday" stackId="a" fill="#fb7185"
+                shape={(p: any) => <StackedBar {...p} outlined strokeColor="#fb7185" roundTop={!p.planCustodia && !p.planOther} dimmed={p.hour !== currentHourLabel} />}>
+                {chartData.map((_, i) => <Cell key={i} fill="none" />)}
                 <LabelList dataKey="_labelBirthday" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
-              <Bar dataKey="planCustodia" stackId="a" fill="#fb923c"
-                shape={(p: any) => <StackedBar {...p} roundTop={!p.planOther} />}>
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#fb923c' : 'rgba(251,146,60,0.6)'} />
-                ))}
+              <Bar dataKey="planCustodia" stackId="a" fill="#34d399"
+                shape={(p: any) => <StackedBar {...p} outlined strokeColor="#34d399" roundTop={!p.planOther} dimmed={p.hour !== currentHourLabel} />}>
+                {chartData.map((_, i) => <Cell key={i} fill="none" />)}
                 <LabelList dataKey="_labelCustodia" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
               <Bar dataKey="planOther" stackId="a" fill="#94a3b8"
-                shape={(p: any) => <StackedBar {...p} roundTop />}>
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={i + 7 === currentHour ? '#94a3b8' : 'rgba(148,163,184,0.6)'} />
-                ))}
+                shape={(p: any) => <StackedBar {...p} outlined strokeColor="#94a3b8" roundTop dimmed={p.hour !== currentHourLabel} />}>
+                {chartData.map((_, i) => <Cell key={i} fill="none" />)}
                 <LabelList dataKey="_labelOther" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
             </BarChart>
