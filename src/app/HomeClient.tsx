@@ -61,9 +61,9 @@ type HomeClientProps = {
 
 type DrawerKey = 'ninos' | 'entradasHoy' | 'conBono' | 'sinBono' | 'custodias' | 'cumpleanos' | null
 
-function StackedBar({ x, y, width, height, fill, roundTop, outlined, strokeColor, dimmed }: {
+function StackedBar({ x, y, width, height, fill, roundTop, patternId, strokeColor, dimmed }: {
   x?: number; y?: number; width?: number; height?: number; fill?: string
-  roundTop?: boolean; outlined?: boolean; strokeColor?: string; dimmed?: boolean
+  roundTop?: boolean; patternId?: string; strokeColor?: string; dimmed?: boolean
 }) {
   const _x = x ?? 0, _y = y ?? 0, _w = width ?? 0, _h = height ?? 0
   if (_h <= 0 || _w <= 0) return null
@@ -71,16 +71,9 @@ function StackedBar({ x, y, width, height, fill, roundTop, outlined, strokeColor
   const d = r === 0
     ? `M${_x},${_y+_h} L${_x},${_y} L${_x+_w},${_y} L${_x+_w},${_y+_h} Z`
     : `M${_x},${_y+_h} L${_x},${_y+r} Q${_x},${_y} ${_x+r},${_y} L${_x+_w-r},${_y} Q${_x+_w},${_y} ${_x+_w},${_y+r} L${_x+_w},${_y+_h} Z`
-  if (outlined) {
+  if (patternId) {
     return (
-      <path
-        d={d}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={1.5}
-        strokeDasharray="3 3"
-        opacity={dimmed ? 0.5 : 1}
-      />
+      <path d={d} fill={`url(#${patternId})`} stroke={strokeColor} strokeWidth={1.5} opacity={dimmed ? 0.6 : 1} />
     )
   }
   return <path d={d} fill={fill} />
@@ -490,6 +483,20 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-4">Aforo por hora</h2>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={chartData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
+              <defs>
+                <pattern id="hatch-rose" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                  <rect width="6" height="6" fill="rgba(251,113,133,0.18)" />
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="#fb7185" strokeWidth="2" />
+                </pattern>
+                <pattern id="hatch-mint" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                  <rect width="6" height="6" fill="rgba(52,211,153,0.18)" />
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="#34d399" strokeWidth="2" />
+                </pattern>
+                <pattern id="hatch-gray" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                  <rect width="6" height="6" fill="rgba(148,163,184,0.18)" />
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" strokeWidth="2" />
+                </pattern>
+              </defs>
               <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
               <XAxis dataKey="hour" tick={({ x, y, payload }: any) => (
                 <text x={x} y={y + 10} textAnchor="middle" fontSize={10}
@@ -533,18 +540,15 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                 <LabelList dataKey="_actualTotal" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
               <Bar dataKey="planBirthday" stackId="a" fill="#fb7185"
-                shape={(p: any) => <StackedBar {...p} outlined strokeColor="#fb7185" roundTop={!p.planCustodia && !p.planOther} dimmed={p.hour !== currentHourLabel} />}>
-                {chartData.map((_, i) => <Cell key={i} fill="none" />)}
+                shape={(p: any) => <StackedBar {...p} patternId="hatch-rose" strokeColor="#fb7185" roundTop={!p.planCustodia && !p.planOther} dimmed={p.hour !== currentHourLabel} />}>
                 <LabelList dataKey="_labelBirthday" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
               <Bar dataKey="planCustodia" stackId="a" fill="#34d399"
-                shape={(p: any) => <StackedBar {...p} outlined strokeColor="#34d399" roundTop={!p.planOther} dimmed={p.hour !== currentHourLabel} />}>
-                {chartData.map((_, i) => <Cell key={i} fill="none" />)}
+                shape={(p: any) => <StackedBar {...p} patternId="hatch-mint" strokeColor="#34d399" roundTop={!p.planOther} dimmed={p.hour !== currentHourLabel} />}>
                 <LabelList dataKey="_labelCustodia" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
               <Bar dataKey="planOther" stackId="a" fill="#94a3b8"
-                shape={(p: any) => <StackedBar {...p} outlined strokeColor="#94a3b8" roundTop dimmed={p.hour !== currentHourLabel} />}>
-                {chartData.map((_, i) => <Cell key={i} fill="none" />)}
+                shape={(p: any) => <StackedBar {...p} patternId="hatch-gray" strokeColor="#94a3b8" roundTop dimmed={p.hour !== currentHourLabel} />}>
                 <LabelList dataKey="_labelOther" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
               </Bar>
             </BarChart>
