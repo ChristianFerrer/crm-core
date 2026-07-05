@@ -456,33 +456,40 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
           </h3>
 
           {activeDrawer === 'cumpleanos' ? (
-            todayBirthdays.length === 0 ? (
+            birthdayBookings2.length === 0 && todayBirthdays.length === 0 ? (
               <p className="text-sm text-mist">Sin cumpleaños hoy</p>
             ) : (
-              <div className="space-y-2">
-                {todayBirthdays.map((m, i) => (
-                  <Link key={i} href="/calendario"
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {/* Reservas de cumpleaños de la agenda */}
+                {birthdayBookings2.map(b => (
+                  <Link key={b.id} href="/calendario"
                     className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 hover:border-line2 transition-colors gap-3"
                   >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <p className="text-xs font-semibold text-snow">{b.title}</p>
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${b.executed_at ? 'bg-mint/10 text-mint border-mint/30' : 'bg-surface2 text-fog border-line'}`}>
+                          {b.executed_at ? 'Ejecutado' : 'Pendiente'}
+                        </span>
+                      </div>
+                      {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
+                      {b.guests != null && <p className="text-[11px] text-fog mt-0.5">{b.guests} invitado{b.guests !== 1 ? 's' : ''}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xs text-mist">{b.start_time?.slice(0, 5) ?? '—'}{b.end_time ? ` → ${b.end_time.slice(0, 5)}` : ''}</p>
+                      <p className="text-[10px] text-lime mt-1">→ Ver agenda</p>
+                    </div>
+                  </Link>
+                ))}
+                {/* Niños con cumpleaños hoy sin reserva en agenda */}
+                {todayBirthdays.map((m, i) => (
+                  <div key={i} className="flex items-start justify-between rounded-xl border border-line bg-carbon px-4 py-3 gap-3">
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold text-cyan-300">{m.name} · {fmtChildAge(m.birth_date)}</p>
                       <p className="text-xs text-fog mt-0.5">{m.titularName}</p>
-                      <p className="text-[10px] text-lime mt-1 font-medium">→ Ver en agenda</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      {m.booking ? (
-                        <>
-                          <p className="text-xs text-mist">
-                            {m.booking.start_time?.slice(0, 5) ?? '—'}
-                            {m.booking.end_time ? ` → ${m.booking.end_time.slice(0, 5)}` : ''}
-                          </p>
-                          {m.booking.guests && <p className="text-[11px] text-fog">{m.booking.guests} invitados</p>}
-                        </>
-                      ) : (
-                        <p className="text-[11px] text-fog">Sin reserva</p>
-                      )}
-                    </div>
-                  </Link>
+                    <p className="text-[11px] text-fog shrink-0">Sin reserva</p>
+                  </div>
                 ))}
               </div>
             )
