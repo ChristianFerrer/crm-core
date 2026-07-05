@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  LogIn, CreditCard, UserX, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
-  BarChart2, Activity, LogOut, AlertTriangle, Play, Clock, Check, MoreHorizontal,
+  LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
+  BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
+  Check, ShoppingCart, Plus, X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -44,6 +45,27 @@ type TodayBooking = {
   executed_at: string | null
   member_id: string | null
   members: { name: string } | null
+}
+
+type Product = {
+  id: string
+  name: string
+  category: string
+  price: number
+  emoji: string
+}
+
+type CheckItem = {
+  id: string
+  product_id: string | null
+  name: string
+  quantity: number
+  unit_price: number
+}
+
+type OpenCheck = {
+  id: string
+  items: CheckItem[]
 }
 
 type HomeClientProps = {
@@ -110,11 +132,51 @@ function timeToMins(t: string): number {
 export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings }: HomeClientProps) {
   const router = useRouter()
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
+  const [confirmCheckout, setConfirmCheckout] = useState<string | null>(null)
   const [executingBooking, setExecutingBooking] = useState<string | null>(null)
   const [chartsOpen, setChartsOpen] = useState(false)
   const [tenantName, setTenantName] = useState<string | null>(null)
-  const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
+  const [products, setProducts] = useState<Product[]>([])
+  const [openChecks, setOpenChecks] = useState<Map<string, OpenCheck>>(new Map())
+  const [consumosVisitId, setConsumosVisitId] = useState<string | null>(null)
+  const [addingProduct, setAddingProduct] = useState<string | null>(null)
 
+  const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
+  const activeVisits = todayVisits.filter(v => !v.checked_out_at)
+  const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
+  const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
+  const activeTotal = activeAdults + activeChildren
+  const conBonoCount = activeVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0)
+  const sinBonoCount = activeVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0)
+
+  const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
+  const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
+
+  // Load products & open checks
+  useEffect(() => {
+    supabase.from('products').select('id, name, category, price, emoji').eq('active', true).order('category').order('name')
+      .then(({ data }) => { if (data) setProducts(data as Product[]) })
+  }, [])
+
+  const loadOpenChecks = useCallback(async () => {
+    const visitIds = activeVisits.map(v => v.id)
+    if (visitIds.length === 0) { setOpenChecks(new Map()); return }
+    const { data } = await supabase
+      .from('open_checks')
+      .select('id, visit_id, open_check_items(id, product_id, name, quantity, unit_price)')
+      .in('visit_id', visitIds)
+      .eq('status', 'open')
+    if (!data) return
+    const map = new Map<string, OpenCheck>()
+    for (const c of data as any[]) {
+      if (c.visit_id) map.set(c.visit_id, { id: c.id, items: c.open_check_items ?? [] })
+    }
+    setOpenChecks(map)
+  }, [activeVisits.map(v => v.id).join(',')])
+
+  useEffect(() => { loadOpenChecks() }, [loadOpenChecks])
+
+  // Tenant name
   useEffect(() => {
     const impersonating = localStorage.getItem('viewingAsTenant')
     if (impersonating) {
@@ -131,45 +193,28 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     })
   }, [])
 
-  // Active visits
-  const activeVisits = todayVisits.filter(v => !v.checked_out_at)
-  const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
-  const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
-  const activeTotal = activeAdults + activeChildren
-  const conBonoCount = activeVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0)
-  const sinBonoCount = activeVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0)
-
-  const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
-  const aforoColor = aforoPct < 70 ? 'bg-lime' : aforoPct <= 90 ? 'bg-amber' : 'bg-rose-500'
-  const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
-
   // Alerts
   const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
 
-  const alertLongStay = activeVisits.filter(v => {
-    const elapsedMins = (Date.now() - new Date(v.checked_in_at).getTime()) / 60000
-    return elapsedMins > 180
-  })
-
+  const alertLongStay = activeVisits.filter(v =>
+    (Date.now() - new Date(v.checked_in_at).getTime()) / 60000 > 180
+  )
   const alertBirthdaySoon = todayBookings.filter(b => {
     if (b.type !== 'birthday' || b.executed_at || !b.start_time) return false
     const startMins = timeToMins(b.start_time)
     return startMins > nowMins && startMins - nowMins <= 60
   })
-
   const alertCustodiaSoon = todayBookings.filter(b => {
     if (b.type !== 'custodia' || !b.end_time) return false
     const endMins = timeToMins(b.end_time)
     return endMins > nowMins && endMins - nowMins <= 30
   })
-
   const totalAlerts = alertLongStay.length + alertBirthdaySoon.length + alertCustodiaSoon.length
 
   // Timeline
-  const timeline = [...todayBookings].sort((a, b) => {
-    const at = a.start_time ?? '00:00', bt = b.start_time ?? '00:00'
-    return at.localeCompare(bt)
-  })
+  const timeline = [...todayBookings].sort((a, b) =>
+    (a.start_time ?? '00:00').localeCompare(b.start_time ?? '00:00')
+  )
 
   function getBookingStatus(b: TodayBooking): 'ejecutado' | 'en_curso' | 'pendiente' | 'pasado' {
     if (b.executed_at) return 'ejecutado'
@@ -183,8 +228,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   async function handleCheckout(visitId: string) {
     setCheckingOut(visitId)
-    await supabase.from('visits').update({ checked_out_at: new Date().toISOString() }).eq('id', visitId)
+    const now = new Date().toISOString()
+    // Close any open check for this visit
+    const check = openChecks.get(visitId)
+    if (check) {
+      await supabase.from('open_checks').update({ closed_at: now, status: 'closed' }).eq('id', check.id)
+    }
+    await supabase.from('visits').update({ checked_out_at: now }).eq('id', visitId)
     setCheckingOut(null)
+    setConfirmCheckout(null)
+    setConsumosVisitId(null)
     router.refresh()
   }
 
@@ -193,19 +246,81 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     const now = new Date().toISOString()
     await supabase.from('bookings').update({ executed_at: now }).eq('id', booking.id)
     if (booking.member_id) {
+      // Calculate counts so that aforo is updated correctly
+      let adultsCount = 1
+      let childrenCount = 0
+      if (booking.type === 'custodia') {
+        adultsCount = 0
+        childrenCount = booking.guests ?? 1
+      } else if (booking.type === 'birthday') {
+        adultsCount = 1
+        childrenCount = booking.guests ?? 0
+      } else {
+        // other: guests are adults
+        adultsCount = booking.guests ?? 1
+        childrenCount = 0
+      }
       await supabase.from('visits').insert({
         member_id: booking.member_id,
         visit_type: booking.type === 'custodia' ? 'custodia' : 'entrada',
         checked_in_at: now,
-        adults_count: booking.type === 'custodia' ? 0 : 1,
-        children_count: booking.type === 'custodia'
-          ? (booking.guests ?? 1)
-          : booking.type === 'birthday' ? (booking.guests ?? 0) : 0,
+        adults_count: adultsCount,
+        children_count: childrenCount,
         children_present: [],
+        booking_id: booking.id,
       })
     }
     setExecutingBooking(null)
     router.refresh()
+  }
+
+  async function handleAddProduct(visitId: string, product: Product) {
+    setAddingProduct(product.id + visitId)
+    const tenantId = getStoredTenant()?.id
+    const visit = activeVisits.find(v => v.id === visitId)
+
+    let checkId = openChecks.get(visitId)?.id
+    if (!checkId) {
+      const { data: newCheck } = await supabase.from('open_checks').insert({
+        tenant_id: tenantId,
+        visit_id: visitId,
+        member_id: visit?.member_id,
+        member_name: visit?.members?.name ?? '',
+        status: 'open',
+        visit_type: visit?.visit_type ?? 'entrada',
+      }).select('id').single()
+      if (!newCheck) { setAddingProduct(null); return }
+      checkId = (newCheck as any).id
+    }
+
+    const { data: newItem } = await supabase.from('open_check_items').insert({
+      check_id: checkId,
+      product_id: product.id,
+      name: product.name,
+      quantity: 1,
+      unit_price: product.price,
+      total: product.price,
+    }).select('id, product_id, name, quantity, unit_price').single()
+
+    if (newItem) {
+      setOpenChecks(prev => {
+        const next = new Map(prev)
+        const existing = next.get(visitId) ?? { id: checkId!, items: [] }
+        next.set(visitId, { ...existing, id: checkId!, items: [...existing.items, newItem as CheckItem] })
+        return next
+      })
+    }
+    setAddingProduct(null)
+  }
+
+  async function handleRemoveItem(visitId: string, itemId: string) {
+    await supabase.from('open_check_items').delete().eq('id', itemId)
+    setOpenChecks(prev => {
+      const next = new Map(prev)
+      const existing = next.get(visitId)
+      if (existing) next.set(visitId, { ...existing, items: existing.items.filter(i => i.id !== itemId) })
+      return next
+    })
   }
 
   // Chart data
@@ -275,6 +390,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     other:    { bar: 'bg-lime', badge: 'bg-lime/10 text-lime border-lime/30', label: 'Otro' },
   }
 
+  // Group products by category for the picker
+  const productsByCategory = products.reduce<Record<string, Product[]>>((acc, p) => {
+    if (!acc[p.category]) acc[p.category] = []
+    acc[p.category].push(p)
+    return acc
+  }, {})
+
+  const consumosVisit = consumosVisitId ? activeVisits.find(v => v.id === consumosVisitId) : null
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -304,11 +428,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <span className="text-xs text-fog shrink-0">lleva {fmtElapsed(v.checked_in_at)} en sala</span>
               </div>
               <button
-                onClick={() => handleCheckout(v.id)}
-                disabled={checkingOut === v.id}
-                className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors disabled:opacity-50 shrink-0"
+                onClick={() => setConfirmCheckout(v.id)}
+                className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors shrink-0"
               >
-                <LogOut size={10} />{checkingOut === v.id ? '...' : 'Salida'}
+                <LogOut size={10} /> Salida
               </button>
             </div>
           ))}
@@ -329,9 +452,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         </div>
       )}
 
-      {/* ZONA 2 — En sala ahora */}
+      {/* ZONA 2 — En sala ahora (tabla) */}
       <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-        {/* Header con stats */}
+        {/* Stats header */}
         <div className="px-4 pt-4 pb-3 border-b border-line">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
@@ -349,7 +472,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <span className={`text-sm font-bold ${aforoTextColor}`}>{activeTotal}/{capacity}</span>
             )}
           </div>
-          <div className="flex flex-wrap gap-3 text-xs">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <span className="text-fog"><span className="text-snow font-semibold">{activeTotal}</span> total</span>
             <span className="text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
             <span className="text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
@@ -364,51 +487,188 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           )}
         </div>
 
-        {/* Visit cards */}
+        {/* Table */}
         {activeVisits.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">Sin personas en sala</div>
         ) : (
-          <div className="divide-y divide-line">
-            {activeVisits.map(visit => {
-              const kids = visit.children_present ?? []
-              const bono = visit.membership_id
-              const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
-              const isLong = elapsedMins > 180
-              return (
-                <div key={visit.id} className={`px-4 py-3 flex items-start justify-between gap-3 ${isLong ? 'bg-amber/5' : ''}`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line">
-                        {fmtVisitType(visit.visit_type)}
-                      </span>
-                      <span className={`text-[10px] font-medium ${bono ? 'text-iris' : 'text-amber'}`}>
-                        {bono ? 'Con bono' : 'Sin bono'}
-                      </span>
-                    </div>
-                    {kids.length > 0 && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                        {kids.map((c, i) => {
-                          const age = fmtChildAge(c.birth_date, c.age)
-                          return <span key={i} className="text-[11px] text-cyan-300">{c.name}{age ? ` · ${age}` : ''}</span>
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
-                    <p className={`text-[11px] ${isLong ? 'text-amber font-semibold' : 'text-fog'}`}>{fmtElapsed(visit.checked_in_at)}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left border-collapse">
+              <thead>
+                <tr className="border-b border-line">
+                  {['Titular', 'Niños', 'Tipo', 'Bono', 'Entrada', 'Tiempo', 'Consumos', 'Salida'].map(col => (
+                    <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {activeVisits.map(visit => {
+                  const kids = visit.children_present ?? []
+                  const bono = visit.membership_id
+                  const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
+                  const isLong = elapsedMins > 180
+                  const check = openChecks.get(visit.id)
+                  const isConfirming = confirmCheckout === visit.id
+                  const isShowingConsumos = consumosVisitId === visit.id
+
+                  return (
+                    <>
+                      <tr key={visit.id} className={isLong ? 'bg-amber/5' : ''}>
+                        {/* Titular */}
+                        <td className="pl-4 pr-3 py-3 align-top">
+                          <p className="text-xs font-semibold text-snow whitespace-nowrap">{visit.members?.name ?? '—'}</p>
+                        </td>
+                        {/* Niños */}
+                        <td className="px-3 py-3 align-top">
+                          {kids.length === 0 ? (
+                            <span className="text-[11px] text-mist">—</span>
+                          ) : (
+                            <div className="space-y-0.5">
+                              {kids.map((c, i) => {
+                                const age = fmtChildAge(c.birth_date, c.age)
+                                return (
+                                  <p key={i} className="text-[11px] text-cyan-300 whitespace-nowrap">
+                                    {c.name}{age ? ` · ${age}` : ''}
+                                  </p>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </td>
+                        {/* Tipo */}
+                        <td className="px-3 py-3 align-top">
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line whitespace-nowrap">
+                            {fmtVisitType(visit.visit_type)}
+                          </span>
+                        </td>
+                        {/* Bono */}
+                        <td className="px-3 py-3 align-top">
+                          <span className={`text-[10px] font-semibold whitespace-nowrap ${bono ? 'text-iris' : 'text-amber'}`}>
+                            {bono ? 'Con bono' : 'Sin bono'}
+                          </span>
+                        </td>
+                        {/* Entrada */}
+                        <td className="px-3 py-3 align-top">
+                          <span className="text-xs text-mist whitespace-nowrap">{fmtTime(visit.checked_in_at)}</span>
+                        </td>
+                        {/* Tiempo */}
+                        <td className="px-3 py-3 align-top">
+                          <span className={`text-xs font-semibold whitespace-nowrap ${isLong ? 'text-amber' : 'text-fog'}`}>
+                            {fmtElapsed(visit.checked_in_at)}
+                          </span>
+                        </td>
+                        {/* Consumos */}
+                        <td className="px-3 py-3 align-top">
+                          <div className="flex items-start gap-1.5 flex-wrap">
+                            {check && check.items.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {check.items.map(item => (
+                                  <span key={item.id} className="flex items-center gap-0.5 text-[10px] bg-surface2 border border-line rounded px-1.5 py-0.5 text-fog whitespace-nowrap">
+                                    {item.name}
+                                    <button
+                                      onClick={() => handleRemoveItem(visit.id, item.id)}
+                                      className="ml-0.5 text-mist hover:text-rose transition-colors"
+                                    >
+                                      <X size={8} />
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => setConsumosVisitId(isShowingConsumos ? null : visit.id)}
+                              className={`flex items-center gap-0.5 text-[10px] font-medium rounded px-1.5 py-0.5 border transition-colors whitespace-nowrap ${
+                                isShowingConsumos
+                                  ? 'bg-iris/20 text-iris border-iris/40'
+                                  : 'bg-surface2 text-fog border-line hover:border-iris/40 hover:text-iris'
+                              }`}
+                            >
+                              <Plus size={9} />
+                              {check && check.items.length > 0 ? '' : 'Añadir'}
+                            </button>
+                          </div>
+                        </td>
+                        {/* Salida */}
+                        <td className="pl-3 pr-4 py-3 align-top">
+                          {isConfirming ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleCheckout(visit.id)}
+                                disabled={checkingOut === visit.id}
+                                className="flex items-center gap-0.5 text-[10px] font-semibold text-ink bg-rose rounded px-2 py-1 hover:brightness-110 transition-all disabled:opacity-50 whitespace-nowrap"
+                              >
+                                <Check size={9} />{checkingOut === visit.id ? '...' : 'Sí'}
+                              </button>
+                              <button
+                                onClick={() => setConfirmCheckout(null)}
+                                className="text-[10px] font-medium text-fog bg-surface2 border border-line rounded px-2 py-1 hover:text-snow transition-colors"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmCheckout(visit.id)}
+                              className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors whitespace-nowrap"
+                            >
+                              <LogOut size={10} /> Salida
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      {/* Confirm message row */}
+                      {isConfirming && (
+                        <tr key={`confirm-${visit.id}`} className="bg-rose/5">
+                          <td colSpan={8} className="pl-4 pr-4 py-2">
+                            <p className="text-[11px] text-rose font-medium">
+                              ¿Confirmar salida de <span className="font-bold">{visit.members?.name ?? '—'}</span>?
+                              {check && check.items.length > 0 && (
+                                <span className="text-fog font-normal"> · El ticket de {check.items.length} consumo{check.items.length !== 1 ? 's' : ''} se cerrará.</span>
+                              )}
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Product picker panel */}
+        {consumosVisitId && consumosVisit && (
+          <div className="border-t border-line bg-carbon px-4 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ShoppingCart size={13} className="text-iris" />
+                <span className="text-xs font-semibold text-snow">Añadir consumo — {consumosVisit.members?.name ?? '—'}</span>
+              </div>
+              <button onClick={() => setConsumosVisitId(null)} className="text-fog hover:text-snow transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            {Object.entries(productsByCategory).map(([cat, prods]) => (
+              <div key={cat} className="mb-3">
+                <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-1.5 capitalize">{cat}</p>
+                <div className="flex flex-wrap gap-2">
+                  {prods.map(p => (
                     <button
-                      onClick={() => handleCheckout(visit.id)}
-                      disabled={checkingOut === visit.id}
-                      className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors disabled:opacity-50"
+                      key={p.id}
+                      onClick={() => handleAddProduct(consumosVisitId, p)}
+                      disabled={addingProduct === p.id + consumosVisitId}
+                      className="flex items-center gap-1.5 text-xs font-medium text-snow bg-surface2 border border-line rounded-xl px-3 py-1.5 hover:border-iris/50 hover:text-iris transition-colors disabled:opacity-50"
                     >
-                      <LogOut size={10} />{checkingOut === visit.id ? '...' : 'Salida'}
+                      <span>{p.emoji}</span>
+                      <span>{p.name}</span>
+                      <span className="text-mist">{Number(p.price).toFixed(2)}€</span>
                     </button>
-                  </div>
+                  ))}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -431,15 +691,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               const canExecute = status === 'pendiente' || status === 'en_curso'
               return (
                 <div key={b.id} className={`flex gap-0 ${status === 'pasado' ? 'opacity-50' : ''}`}>
-                  {/* Colored left bar */}
                   <div className={`w-1 shrink-0 ${style.bar}`} />
                   <div className="flex-1 px-4 py-3 flex items-start gap-3">
-                    {/* Time column */}
                     <div className="shrink-0 text-right w-14">
                       <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
                       {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
                     </div>
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-0.5">
                         <p className="text-xs font-semibold text-snow">{b.title}</p>
@@ -462,7 +719,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </p>
                       )}
                     </div>
-                    {/* Execute button */}
                     {canExecute && (
                       <button
                         onClick={() => handleExecuteBooking(b)}
