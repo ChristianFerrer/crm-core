@@ -627,64 +627,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
 
-        {/* Product picker panel */}
-        {consumosVisitId && consumosVisit && (
-          <div className="border-t border-line bg-carbon px-4 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <ShoppingCart size={13} className="text-iris" />
-                <span className="text-xs font-semibold text-snow">Consumos — {consumosVisit.members?.name ?? '—'}</span>
-                {openChecks.get(consumosVisitId) && (
-                  <span className="text-xs font-bold text-iris">
-                    {openChecks.get(consumosVisitId)!.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€
-                  </span>
-                )}
-              </div>
-              <button onClick={() => setConsumosVisitId(null)} className="text-fog hover:text-snow transition-colors">
-                <X size={14} />
-              </button>
-            </div>
-
-            {/* Items ya añadidos */}
-            {(openChecks.get(consumosVisitId)?.items.length ?? 0) > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {openChecks.get(consumosVisitId)!.items.map(item => (
-                  <span key={item.id} className="flex items-center gap-1 text-[11px] bg-surface2 border border-line rounded-lg px-2 py-1 text-snow">
-                    {item.name}
-                    <span className="text-mist">{Number(item.unit_price).toFixed(2)}€</span>
-                    <button
-                      onClick={() => handleRemoveItem(consumosVisitId, item.id)}
-                      className="ml-0.5 text-mist hover:text-rose transition-colors"
-                    >
-                      <X size={9} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Selector de productos */}
-            {Object.entries(productsByCategory).map(([cat, prods]) => (
-              <div key={cat} className="mb-3 last:mb-0">
-                <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-1.5 capitalize">{cat}</p>
-                <div className="flex flex-wrap gap-2">
-                  {prods.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => handleAddProduct(consumosVisitId, p)}
-                      disabled={addingProduct === p.id + consumosVisitId}
-                      className="flex items-center gap-1.5 text-xs font-medium text-snow bg-surface2 border border-line rounded-xl px-3 py-1.5 hover:border-iris/50 hover:text-iris transition-colors disabled:opacity-50"
-                    >
-                      <span>{p.emoji}</span>
-                      <span>{p.name}</span>
-                      <span className="text-mist">{Number(p.price).toFixed(2)}€</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ZONA 3 — Agenda de hoy */}
@@ -876,6 +818,102 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
       </div>
+
+      {/* Modal de consumos */}
+      {consumosVisitId && consumosVisit && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          onClick={() => setConsumosVisitId(null)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+          {/* Panel */}
+          <div
+            className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+              <div className="flex items-center gap-2">
+                <ShoppingCart size={15} className="text-iris shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-snow">{consumosVisit.members?.name ?? '—'}</p>
+                  <p className="text-[11px] text-fog">Consumos de la visita</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {(openChecks.get(consumosVisitId)?.items.length ?? 0) > 0 && (
+                  <span className="text-base font-bold text-iris">
+                    {openChecks.get(consumosVisitId)!.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€
+                  </span>
+                )}
+                <button onClick={() => setConsumosVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+              {/* Items consumidos */}
+              {(openChecks.get(consumosVisitId)?.items.length ?? 0) > 0 ? (
+                <div>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Consumido</p>
+                  <div className="space-y-1">
+                    {openChecks.get(consumosVisitId)!.items.map(item => (
+                      <div key={item.id} className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2">
+                        <span className="text-xs text-snow">{item.name}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-semibold text-fog">{Number(item.unit_price).toFixed(2)}€</span>
+                          <button
+                            onClick={() => handleRemoveItem(consumosVisitId, item.id)}
+                            className="text-mist hover:text-rose transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end mt-2">
+                    <p className="text-xs text-fog">
+                      Total: <span className="text-snow font-bold">
+                        {openChecks.get(consumosVisitId)!.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-mist">Sin consumos registrados aún.</p>
+              )}
+
+              {/* Selector de productos */}
+              <div>
+                <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-3">Añadir producto</p>
+                {Object.entries(productsByCategory).map(([cat, prods]) => (
+                  <div key={cat} className="mb-4 last:mb-0">
+                    <p className="text-[10px] font-semibold text-fog capitalize mb-2">{cat}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {prods.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => handleAddProduct(consumosVisitId, p)}
+                          disabled={addingProduct === p.id + consumosVisitId}
+                          className="flex items-center gap-2 text-xs font-medium text-snow bg-surface2 border border-line rounded-xl px-3 py-2.5 hover:border-iris/50 hover:bg-iris/5 transition-colors disabled:opacity-50 text-left"
+                        >
+                          <span className="text-base shrink-0">{p.emoji}</span>
+                          <span className="flex-1 truncate">{p.name}</span>
+                          <span className="text-mist shrink-0">{Number(p.price).toFixed(2)}€</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
