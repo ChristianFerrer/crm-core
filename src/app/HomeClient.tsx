@@ -171,11 +171,17 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       planOther:    planByOther[h]    || null,
     }
   })
+  // Para la hora actual, usar siempre los conteos en tiempo real (coincide con "En sala" y "Aforo en tiempo real")
+  const activeConBono = activeVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0)
+  const activeSinBono = activeVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0)
+
   const chartData = buckets.slice(7, 24).map((b, i) => {
     const h = i + 7
+    const isCurrent = h === currentHour
     const isFuture = h > currentHour
-    const adultos = isFuture ? 0 : b.adultos
-    const ninos   = isFuture ? 0 : b.ninos
+    // Hora actual → usar conteo en vivo; horas pasadas → usar bucket histórico
+    const adultos = isFuture ? 0 : (isCurrent ? activeAdults : b.adultos)
+    const ninos   = isFuture ? 0 : (isCurrent ? activeChildren : b.ninos)
     const alcanzado = isFuture ? null : ((adultos + ninos) || null)
     const pb = isFuture ? (b.planBirthday ?? 0) : 0
     const pc = isFuture ? (b.planCustodia ?? 0) : 0
@@ -185,8 +191,8 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       hour: b.hour,
       alcanzado,
       reservado,
-      conBono: isFuture ? null : b.conBono,
-      sinBono: isFuture ? null : b.sinBono,
+      conBono: isFuture ? null : (isCurrent ? activeConBono : b.conBono),
+      sinBono: isFuture ? null : (isCurrent ? activeSinBono : b.sinBono),
       // detail fields for click panel
       adultos: isFuture ? null : adultos,
       ninos:   isFuture ? null : ninos,
