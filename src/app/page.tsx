@@ -46,7 +46,7 @@ export default async function DashboardPage() {
       .eq('type', 'birthday'),
     supabase
       .from('bookings')
-      .select('id, type, start_time, end_time, guests, executed_at')
+      .select('id, type, title, start_time, end_time, guests, executed_at, member_id, members(name)')
       .eq('date', todayStr)
       .neq('status', 'cancelled'),
   ])
