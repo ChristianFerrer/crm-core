@@ -383,11 +383,14 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
       {/* Aforo en tiempo real — debajo de los charts */}
       {capacity != null && (
         <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Users size={13} /> Aforo en tiempo real
-            <span className="relative flex h-3 w-3 ml-0.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime opacity-90" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-lime" />
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-2">
+            <Users size={13} /> Aforo
+            <span className="flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white animate-pulse" />
+              </span>
+              En vivo
             </span>
           </h2>
           <div className="flex items-end justify-between mb-3">
