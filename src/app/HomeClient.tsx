@@ -487,10 +487,10 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
               </div>
             )
           ) : (activeDrawer === 'custodias' || activeDrawer === 'otros') ? (
-            /* Drawer de custodias/otros: muestra reservas del día */
+            /* Drawer de custodias/otros: solo reservas de agenda de ese tipo */
             (() => {
               const bookings = activeDrawer === 'custodias' ? custodiaBookings : otherBookings
-              if (bookings.length === 0 && drawerVisits.length === 0) return <p className="text-sm text-mist">Sin reservas ni visitas hoy</p>
+              if (bookings.length === 0) return <p className="text-sm text-mist">Sin reservas hoy</p>
               return (
                 <div className="space-y-2 max-h-72 overflow-y-auto">
                   {bookings.map(b => {
@@ -514,32 +514,6 @@ export default function HomeClient({ todayVisits, todayCustodias, monthCount, da
                           <p className="text-[10px] text-lime mt-1">→ Ver agenda</p>
                         </div>
                       </Link>
-                    )
-                  })}
-                  {/* Visitas activas adicionales no vinculadas a reserva */}
-                  {drawerVisits.filter(v => !custodiaBookings.some(() => false)).map(visit => {
-                    const kids = visit.children_present ?? []
-                    const bono = visit.membership_id
-                    return (
-                      <div key={visit.id} className="rounded-xl border border-line bg-carbon px-4 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                              <p className="text-xs font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                              <span className={`text-[10px] font-medium ${bono ? 'text-iris' : 'text-amber'}`}>{bono ? 'Con bono' : 'Sin bono'}</span>
-                            </div>
-                            {kids.map((c, i) => <p key={i} className="text-[11px] text-cyan-300">{c.name}{fmtChildAge(c.birth_date, c.age) ? ` · ${fmtChildAge(c.birth_date, c.age)}` : ''}</p>)}
-                          </div>
-                          <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <p className="text-xs text-mist">{fmtTime(visit.checked_in_at)}</p>
-                            <p className="text-[11px] text-fog">{fmtElapsed(visit.checked_in_at)}</p>
-                            <button onClick={() => handleCheckout(visit.id)} disabled={checkingOut === visit.id}
-                              className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors disabled:opacity-50">
-                              <LogOut size={10} />{checkingOut === visit.id ? '...' : 'Salida'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
                     )
                   })}
                 </div>
