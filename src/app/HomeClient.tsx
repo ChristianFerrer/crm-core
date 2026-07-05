@@ -559,33 +559,22 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </span>
                         </td>
                         {/* Consumos */}
-                        <td className="px-3 py-3 align-top">
-                          <div className="flex items-start gap-1.5 flex-wrap">
-                            {check && check.items.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {check.items.map(item => (
-                                  <span key={item.id} className="flex items-center gap-0.5 text-[10px] bg-surface2 border border-line rounded px-1.5 py-0.5 text-fog whitespace-nowrap">
-                                    {item.name}
-                                    <button
-                                      onClick={() => handleRemoveItem(visit.id, item.id)}
-                                      className="ml-0.5 text-mist hover:text-rose transition-colors"
-                                    >
-                                      <X size={8} />
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                        <td className="px-3 py-3 align-middle">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <span className={`text-xs font-semibold ${check && check.items.length > 0 ? 'text-snow' : 'text-mist'}`}>
+                              {check && check.items.length > 0
+                                ? `${check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€`
+                                : '—'}
+                            </span>
                             <button
                               onClick={() => setConsumosVisitId(isShowingConsumos ? null : visit.id)}
-                              className={`flex items-center gap-0.5 text-[10px] font-medium rounded px-1.5 py-0.5 border transition-colors whitespace-nowrap ${
+                              className={`flex items-center justify-center w-6 h-6 rounded-md border transition-colors ${
                                 isShowingConsumos
                                   ? 'bg-iris/20 text-iris border-iris/40'
                                   : 'bg-surface2 text-fog border-line hover:border-iris/40 hover:text-iris'
                               }`}
                             >
-                              <Plus size={9} />
-                              {check && check.items.length > 0 ? '' : 'Añadir'}
+                              <Plus size={11} />
                             </button>
                           </div>
                         </td>
@@ -644,14 +633,39 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <ShoppingCart size={13} className="text-iris" />
-                <span className="text-xs font-semibold text-snow">Añadir consumo — {consumosVisit.members?.name ?? '—'}</span>
+                <span className="text-xs font-semibold text-snow">Consumos — {consumosVisit.members?.name ?? '—'}</span>
+                {openChecks.get(consumosVisitId) && (
+                  <span className="text-xs font-bold text-iris">
+                    {openChecks.get(consumosVisitId)!.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€
+                  </span>
+                )}
               </div>
               <button onClick={() => setConsumosVisitId(null)} className="text-fog hover:text-snow transition-colors">
                 <X size={14} />
               </button>
             </div>
+
+            {/* Items ya añadidos */}
+            {(openChecks.get(consumosVisitId)?.items.length ?? 0) > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {openChecks.get(consumosVisitId)!.items.map(item => (
+                  <span key={item.id} className="flex items-center gap-1 text-[11px] bg-surface2 border border-line rounded-lg px-2 py-1 text-snow">
+                    {item.name}
+                    <span className="text-mist">{Number(item.unit_price).toFixed(2)}€</span>
+                    <button
+                      onClick={() => handleRemoveItem(consumosVisitId, item.id)}
+                      className="ml-0.5 text-mist hover:text-rose transition-colors"
+                    >
+                      <X size={9} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Selector de productos */}
             {Object.entries(productsByCategory).map(([cat, prods]) => (
-              <div key={cat} className="mb-3">
+              <div key={cat} className="mb-3 last:mb-0">
                 <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-1.5 capitalize">{cat}</p>
                 <div className="flex flex-wrap gap-2">
                   {prods.map(p => (
