@@ -855,37 +855,68 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             </div>
 
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
-              {/* Items consumidos */}
-              {(openChecks.get(consumosVisitId)?.items.length ?? 0) > 0 ? (
-                <div>
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Consumido</p>
-                  <div className="space-y-1">
-                    {openChecks.get(consumosVisitId)!.items.map(item => (
-                      <div key={item.id} className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2">
-                        <span className="text-xs text-snow">{item.name}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-semibold text-fog">{Number(item.unit_price).toFixed(2)}€</span>
-                          <button
-                            onClick={() => handleRemoveItem(consumosVisitId, item.id)}
-                            className="text-mist hover:text-rose transition-colors"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+              {/* Items consumidos — agrupados por producto */}
+              {(() => {
+                const items = openChecks.get(consumosVisitId)?.items ?? []
+                // Group by product key (product_id or name fallback)
+                const grouped = Object.values(
+                  items.reduce<Record<string, { name: string; unit_price: number; ids: string[]; product_id: string | null }>>((acc, item) => {
+                    const key = item.product_id ?? item.name
+                    if (!acc[key]) acc[key] = { name: item.name, unit_price: item.unit_price, ids: [], product_id: item.product_id }
+                    acc[key].ids.push(item.id)
+                    return acc
+                  }, {})
+                )
+                const total = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+
+                return grouped.length > 0 ? (
+                  <div>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Consumido</p>
+                    <div className="space-y-1.5">
+                      {grouped.map(g => {
+                        const qty = g.ids.length
+                        const lineTotal = g.unit_price * qty
+                        const product = products.find(p => p.id === g.product_id)
+                        return (
+                          <div key={g.product_id ?? g.name} className="flex items-center gap-3 rounded-xl bg-surface2 border border-line px-3 py-2.5">
+                            {/* Name + unit price */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-snow truncate">{g.name}</p>
+                              <p className="text-[10px] text-mist">{Number(g.unit_price).toFixed(2)}€/ud.</p>
+                            </div>
+                            {/* Quantity controls */}
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleRemoveItem(consumosVisitId, g.ids[g.ids.length - 1])}
+                                className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors text-sm font-bold"
+                              >
+                                −
+                              </button>
+                              <span className="w-5 text-center text-xs font-semibold text-snow">{qty}</span>
+                              <button
+                                onClick={() => product && handleAddProduct(consumosVisitId, product)}
+                                disabled={!product || addingProduct === (g.product_id ?? g.name) + consumosVisitId}
+                                className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors text-sm font-bold disabled:opacity-40"
+                              >
+                                +
+                              </button>
+                            </div>
+                            {/* Line total */}
+                            <p className="text-xs font-semibold text-snow w-14 text-right shrink-0">{lineTotal.toFixed(2)}€</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="flex justify-end mt-3 pt-3 border-t border-line">
+                      <p className="text-xs text-fog">
+                        Total: <span className="text-snow font-bold">{total.toFixed(2)}€</span>
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex justify-end mt-2">
-                    <p className="text-xs text-fog">
-                      Total: <span className="text-snow font-bold">
-                        {openChecks.get(consumosVisitId)!.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-mist">Sin consumos registrados aún.</p>
-              )}
+                ) : (
+                  <p className="text-xs text-mist">Sin consumos registrados aún.</p>
+                )
+              })()}
 
               {/* Selector de productos */}
               <div>
