@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
-  Check, ShoppingCart, Plus, X,
+  Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -76,6 +76,8 @@ type HomeClientProps = {
   capacity: number | null
   todayBirthdays: BirthdayMember[]
   todayBookings: TodayBooking[]
+  selectedDate: string
+  todayStr: string
 }
 
 function StackedBar({ x, y, width, height, fill, roundTop }: {
@@ -129,8 +131,17 @@ function timeToMins(t: string): number {
   return h * 60 + m
 }
 
-export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings }: HomeClientProps) {
+export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr }: HomeClientProps) {
   const router = useRouter()
+  const isToday = selectedDate === todayStr
+
+  function navigateDate(delta: number) {
+    const d = new Date(selectedDate + 'T12:00:00')
+    d.setDate(d.getDate() + delta)
+    const newDate = d.toISOString().split('T')[0]
+    router.push(newDate === todayStr ? '/' : `/?date=${newDate}`)
+  }
+
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [confirmCheckout, setConfirmCheckout] = useState<string | null>(null)
   const [executingBooking, setExecutingBooking] = useState<string | null>(null)
@@ -430,7 +441,30 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? 'Mi establecimiento'}</h1>
-          <p className="text-sm text-fog capitalize mt-0.5">{dateLabel}</p>
+          {/* Date navigation */}
+          <div className="flex items-center gap-1 mt-1.5">
+            <button
+              onClick={() => navigateDate(-1)}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="text-sm text-fog capitalize px-1">{dateLabel}</span>
+            <button
+              onClick={() => navigateDate(1)}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+            >
+              <ChevronRight size={14} />
+            </button>
+            {!isToday && (
+              <button
+                onClick={() => router.push('/')}
+                className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-0.5 hover:bg-lime/20 transition-colors"
+              >
+                Hoy
+              </button>
+            )}
+          </div>
         </div>
         <Link
           href="/checkin"
@@ -442,8 +476,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         </Link>
       </div>
 
-      {/* ZONA 1 — Alertas */}
-      {totalAlerts > 0 && (
+      {/* ZONA 1 — Alertas (solo hoy) */}
+      {isToday && totalAlerts > 0 && (
         <div className="space-y-2">
           {alertLongStay.map(v => (
             <div key={v.id} className="flex items-center justify-between gap-3 rounded-xl border border-amber/40 bg-amber/10 px-4 py-3">
@@ -484,14 +518,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
               <Users size={13} />
-              En sala ahora
-              <span className="flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
+              {isToday ? 'En sala ahora' : 'Visitas del día'}
+              {isToday && <span className="flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-white animate-pulse" />
                 </span>
                 En vivo
-              </span>
+              </span>}
             </h2>
             {capacity != null && (
               <span className={`text-sm font-bold ${aforoTextColor}`}>{activeTotal}/{capacity}</span>
@@ -710,7 +744,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </p>
                       )}
                     </div>
-                    {canExecute && (
+                    {isToday && canExecute && (
                       <button
                         onClick={() => handleExecuteBooking(b)}
                         disabled={executingBooking === b.id}

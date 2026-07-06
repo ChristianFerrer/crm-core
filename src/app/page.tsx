@@ -3,17 +3,25 @@ import HomeClient from './HomeClient'
 
 export const revalidate = 0
 
-export default async function DashboardPage() {
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const weekFromNow = new Date(todayStart)
-  weekFromNow.setDate(weekFromNow.getDate() + 7)
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>
+}) {
+  const { date: dateParam } = await searchParams
 
-  const todayMonth = now.getMonth() + 1  // 1-12
-  const todayDay = now.getDate()
+  // Determine selected date — fallback to today if param is absent or malformed
+  const todayStr = new Date().toISOString().split('T')[0]
+  const selectedDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : todayStr
 
-  const todayStr = todayStart.toISOString().split('T')[0]
+  const dayStart = new Date(selectedDate + 'T00:00:00')
+  const dayEnd   = new Date(selectedDate + 'T23:59:59.999')
+  const monthStart = new Date(dayStart.getFullYear(), dayStart.getMonth(), 1)
+
+  const selectedMonth = dayStart.getMonth() + 1
+  const selectedDay   = dayStart.getDate()
+
+  const dateLabel = dayStart.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 
   const [
     { data: todayVisits },
@@ -26,7 +34,8 @@ export default async function DashboardPage() {
     supabase
       .from('visits')
       .select('id, checked_in_at, checked_out_at, member_id, membership_id, visit_type, children_present, adults_count, children_count, members(name)')
-      .gte('checked_in_at', todayStart.toISOString())
+      .gte('checked_in_at', dayStart.toISOString())
+      .lte('checked_in_at', dayEnd.toISOString())
       .order('checked_in_at', { ascending: false }),
     supabase
       .from('visits')
@@ -42,27 +51,26 @@ export default async function DashboardPage() {
     supabase
       .from('bookings')
       .select('id, title, start_time, end_time, guests, member_id, members(name)')
-      .eq('date', todayStr)
+      .eq('date', selectedDate)
       .eq('type', 'birthday'),
     supabase
       .from('bookings')
       .select('id, type, title, start_time, end_time, guests, executed_at, member_id, members(name)')
-      .eq('date', todayStr)
+      .eq('date', selectedDate)
       .neq('status', 'cancelled'),
   ])
 
   const allVisits = (todayVisits ?? []) as any[]
   const todayCustodias = allVisits.filter((v: any) => v.visit_type === 'custodia')
-  const dateLabel = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
   const capacity: number | null = tenants?.[0]?.capacity ?? null
 
-  // Collect children with today's birthday from all members
+  // Children with birthday on the selected day
   const todayBirthdays: { name: string; birth_date: string; titularName: string; booking: { start_time: string | null; end_time: string | null; guests: number | null; title: string } | null }[] = []
   for (const member of (allMembers ?? []) as any[]) {
     for (const child of (member.children ?? []) as any[]) {
       if (!child.birth_date) continue
       const dob = new Date(child.birth_date)
-      if (dob.getUTCMonth() + 1 !== todayMonth || dob.getUTCDate() !== todayDay) continue
+      if (dob.getUTCMonth() + 1 !== selectedMonth || dob.getUTCDate() !== selectedDay) continue
       const booking = ((birthdayBookings ?? []) as any[]).find((b: any) => b.member_id === member.id) ?? null
       todayBirthdays.push({
         name: child.name,
@@ -82,6 +90,8 @@ export default async function DashboardPage() {
       capacity={capacity}
       todayBirthdays={todayBirthdays}
       todayBookings={(todayBookingsData ?? []) as any[]}
+      selectedDate={selectedDate}
+      todayStr={todayStr}
     />
   )
 }
