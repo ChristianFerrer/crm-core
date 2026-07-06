@@ -170,6 +170,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [consumosVisitId, setConsumosVisitId] = useState<string | null>(null)
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
   const [importeVisitId, setImporteVisitId] = useState<string | null>(null)
+  const [totalVisitId, setTotalVisitId] = useState<string | null>(null)
   const [acompVisitId, setAcompVisitId] = useState<string | null>(null)
   const [acompCoTitulares, setAcompCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>([])
   const [acompChildren, setAcompChildren] = useState<{ name: string; birth_date?: string; isGuest?: boolean }[]>([])
@@ -758,7 +759,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  {['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
+                  {['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Salida'].map(col => (
                     <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                       {col}
                     </th>
@@ -888,6 +889,24 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               <Plus size={11} />
                             </button>
                           </div>
+                        </td>
+                        {/* Total a pagar */}
+                        <td className="px-3 py-3 align-middle">
+                          {(() => {
+                            const consumosTotal = (openChecks.get(visit.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
+                            const grandTotal = imp.total + consumosTotal
+                            return (
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                                <button
+                                  onClick={() => setTotalVisitId(visit.id)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
+                                >
+                                  <Receipt size={11} />
+                                </button>
+                              </div>
+                            )
+                          })()}
                         </td>
                         {/* Salida */}
                         <td className="pl-3 pr-4 py-3 align-top">
@@ -1098,6 +1117,134 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
       </div>
+
+      {/* Modal de total a pagar */}
+      {totalVisitId && (() => {
+        const visit = activeVisits.find(v => v.id === totalVisitId)
+        if (!visit) return null
+        const imp = calcImporte(visit)
+        const mt = visit.memberships?.membership_types
+        const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
+        const hours = elapsedMins / 60
+        const hourRate = visit.visit_type === 'custodia' ? rateCustodia : rateAdult
+        const childRate = visit.visit_type === 'custodia' ? rateCustodia : rateChild
+        const fmtH = (mins: number) => {
+          const h = Math.floor(mins / 60), m = Math.round(mins % 60)
+          return h > 0 ? `${h}h ${m}min` : `${m}min`
+        }
+        const check = openChecks.get(totalVisitId)
+        const items = check?.items ?? []
+        const grouped = Object.values(
+          items.reduce<Record<string, { name: string; unit_price: number; ids: string[] }>>((acc, item) => {
+            const key = item.product_id ?? item.name
+            if (!acc[key]) acc[key] = { name: item.name, unit_price: item.unit_price, ids: [] }
+            acc[key].ids.push(item.id)
+            return acc
+          }, {})
+        )
+        const consumosTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+        const grandTotal = imp.total + consumosTotal
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setTotalVisitId(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+                <div className="flex items-center gap-2">
+                  <Receipt size={15} className="text-lime shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
+                    <p className="text-[11px] text-fog">Total a pagar</p>
+                  </div>
+                </div>
+                <button onClick={() => setTotalVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+                {/* Sección importe por tiempo */}
+                <div>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Importe por tiempo</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-fog">
+                      <span>Tiempo en sala</span><span className="text-snow">{fmtH(elapsedMins)}</span>
+                    </div>
+                    {visit.adults_count > 0 && imp.titular > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-fog">{visit.adults_count} adulto{visit.adults_count !== 1 ? 's' : ''} × {hourRate}€/h × {hours.toFixed(2)}h</span>
+                        <span className="text-snow">{imp.titular.toFixed(2)}€</span>
+                      </div>
+                    )}
+                    {visit.children_count > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-fog">{visit.children_count} niño{visit.children_count !== 1 ? 's' : ''} × {childRate}€/h × {hours.toFixed(2)}h</span>
+                        <span className="text-snow">{imp.ninos.toFixed(2)}€</span>
+                      </div>
+                    )}
+                    {imp.bonoPrecioSesion !== null && mt ? (
+                      <>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-fog line-through">Subtotal regular</span>
+                          <span className="text-mist line-through">{imp.regular.toFixed(2)}€</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-iris">{mt.name} ({mt.price}€ ÷ {mt.sessions} ses.)</span>
+                          <span className="text-iris font-semibold">{imp.bonoPrecioSesion.toFixed(2)}€</span>
+                        </div>
+                        {imp.ahorro > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-fog">Ahorro aplicado</span>
+                            <span className="text-mint">−{imp.ahorro.toFixed(2)}€</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-fog">Subtotal tiempo</span>
+                        <span className="text-snow">{imp.total.toFixed(2)}€</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
+                      <span className="text-fog">Subtotal tiempo</span>
+                      <span className="text-lime">{imp.total.toFixed(2)}€</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección consumos */}
+                <div>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Consumos</p>
+                  {grouped.length === 0 ? (
+                    <p className="text-xs text-mist">Sin consumos</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {grouped.map(g => {
+                        const qty = g.ids.length
+                        return (
+                          <div key={g.name} className="flex justify-between text-xs">
+                            <span className="text-fog">{g.name} × {qty}</span>
+                            <span className="text-snow">{(g.unit_price * qty).toFixed(2)}€</span>
+                          </div>
+                        )
+                      })}
+                      <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
+                        <span className="text-fog">Subtotal consumos</span>
+                        <span className="text-lime">{consumosTotal.toFixed(2)}€</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="px-5 py-4 border-t border-line shrink-0 flex items-center justify-between">
+                <span className="text-sm font-bold text-snow">Total a pagar</span>
+                <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal de confirmación de salida */}
       {confirmCheckout && (() => {
