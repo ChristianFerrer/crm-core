@@ -263,7 +263,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const conBonoCount = activeVisits.filter(v => v.membership_id).reduce((s, v) => s + persons(v), 0)
   const sinBonoCount = activeVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0)
 
-  const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
+  const aforoPct = capacity ? (activeTotal / capacity) * 100 : 0
   const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
 
   // Load products, services rates & open checks
