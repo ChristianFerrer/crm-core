@@ -22,7 +22,7 @@ type TodayVisit = {
   membership_id: string | null
   member_id: string
   visit_type: string
-  children_present: { name: string; age?: number; birth_date?: string }[] | null
+  children_present: { name: string; age?: number; birth_date?: string; is_adult?: boolean }[] | null
   adults_count: number
   children_count: number
   members: { name: string } | null
@@ -75,6 +75,7 @@ type OpenCheck = {
 type MemberData = {
   id: string
   name: string
+  family_id: string | null
   children: { name: string; birth_date?: string; age?: number }[]
 }
 
@@ -164,6 +165,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
   const [importeVisitId, setImporteVisitId] = useState<string | null>(null)
   const [acompVisitId, setAcompVisitId] = useState<string | null>(null)
+  const [acompCoTitulares, setAcompCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>([])
   const [acompChildren, setAcompChildren] = useState<{ name: string; birth_date?: string; isGuest?: boolean }[]>([])
   const [acompExtraAdults, setAcompExtraAdults] = useState(0)
   const [acompGuestAdults, setAcompGuestAdults] = useState(0)
@@ -271,20 +273,34 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   function openAcompPopup(visit: TodayVisit) {
     const member = allMembers.find(m => m.id === visit.member_id)
     const registeredChildren = member?.children ?? []
-    const presentNames = new Set((visit.children_present ?? []).map(c => c.name))
-    // Registered children with their check state
-    const children = registeredChildren.map(c => ({ ...c, isGuest: false }))
-    // Add guest children (in children_present but not in registered list)
-    const guestKids = (visit.children_present ?? [])
-      .filter(c => !registeredChildren.some(r => r.name === c.name))
-      .map(c => ({ ...c, isGuest: true }))
-    // Build initial selected list: registered ones that are present + all guest ones
-    const selected = [
-      ...children.filter(c => presentNames.has(c.name)),
+    const presentEntries = visit.children_present ?? []
+
+    // Split children_present into adults (co-titulares saved before) and children
+    const presentAdultNames = new Set(presentEntries.filter(e => e.is_adult).map(e => e.name))
+    const presentChildNames = new Set(presentEntries.filter(e => !e.is_adult).map(e => e.name))
+
+    // Co-titulares: other members in the same family
+    const coTitulares = allMembers
+      .filter(m => m.id !== visit.member_id && m.family_id && m.family_id === member?.family_id)
+      .map(m => ({ id: m.id, name: m.name, selected: presentAdultNames.has(m.name) }))
+
+    // Children: registered (with check state) + guest children
+    const regChildren = registeredChildren.map(c => ({ ...c, isGuest: false }))
+    const guestKids = presentEntries
+      .filter(e => !e.is_adult && !registeredChildren.some(r => r.name === e.name))
+      .map(e => ({ name: e.name, birth_date: e.birth_date, isGuest: true }))
+    const selectedChildren = [
+      ...regChildren.filter(c => presentChildNames.has(c.name)),
       ...guestKids,
     ]
-    setAcompChildren(selected)
-    setAcompExtraAdults(Math.max(0, (visit.adults_count ?? 1) - 1))
+
+    // Extra adults = total - titular(1) - co-titulares selected
+    const coTitSelected = coTitulares.filter(c => c.selected).length
+    const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1 - coTitSelected)
+
+    setAcompCoTitulares(coTitulares)
+    setAcompChildren(selectedChildren)
+    setAcompExtraAdults(extraAdults)
     setAcompGuestAdults(0)
     setAcompGuestChildName('')
     setAcompVisitId(visit.id)
@@ -292,12 +308,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   async function handleSaveAcomp(visit: TodayVisit) {
     setSavingAcomp(true)
-    const totalAdults = 1 + acompExtraAdults + acompGuestAdults
+    const selectedCo = acompCoTitulares.filter(c => c.selected)
+    const totalAdults = 1 + selectedCo.length + acompExtraAdults + acompGuestAdults
     const totalChildren = acompChildren.length
+    // Store named adult companions + children together in children_present
+    const adultEntries = selectedCo.map(c => ({ name: c.name, is_adult: true }))
+    const childEntries = acompChildren.map(({ isGuest: _, ...rest }) => rest)
     await supabase.from('visits').update({
       adults_count: totalAdults,
       children_count: totalChildren,
-      children_present: acompChildren.map(({ isGuest: _, ...rest }) => rest),
+      children_present: [...adultEntries, ...childEntries],
     }).eq('id', visit.id)
     setSavingAcomp(false)
     setAcompVisitId(null)
@@ -650,12 +670,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <td className="px-3 py-3 align-middle">
                           {(() => {
                             const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1)
-                            const totalAcomp = extraAdults + (visit.children_count ?? 0)
+                            const numChildren = visit.children_count ?? 0
+                            const hasAcomp = extraAdults > 0 || numChildren > 0
                             return (
                               <div className="flex items-center gap-1.5">
-                                <span className={`text-xs font-semibold ${totalAcomp > 0 ? 'text-snow' : 'text-mist'}`}>
-                                  {totalAcomp > 0 ? totalAcomp : '—'}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  {extraAdults > 0 && (
+                                    <span className="text-[11px] font-bold text-lime">{extraAdults}A</span>
+                                  )}
+                                  {numChildren > 0 && (
+                                    <span className="text-[11px] font-bold text-cyan-300">{numChildren}N</span>
+                                  )}
+                                  {!hasAcomp && <span className="text-xs text-mist">—</span>}
+                                </div>
                                 <button
                                   onClick={() => openAcompPopup(visit)}
                                   className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-iris hover:border-iris/40 transition-colors"
@@ -1004,7 +1031,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         }
 
         const guestKids = acompChildren.filter(c => c.isGuest)
-        const totalAcomp = acompExtraAdults + acompGuestAdults + acompChildren.length
+        const coTitSelected = acompCoTitulares.filter(c => c.selected).length
+        const totalAcomp = coTitSelected + acompExtraAdults + acompGuestAdults + acompChildren.length
 
         return (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setAcompVisitId(null)}>
@@ -1025,6 +1053,31 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </div>
 
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+                {/* Co-titulares */}
+                {acompCoTitulares.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Co-titulares</p>
+                    <div className="space-y-1.5">
+                      {acompCoTitulares.map(cot => (
+                        <button key={cot.id}
+                          onClick={() => setAcompCoTitulares(prev => prev.map(c => c.id === cot.id ? { ...c, selected: !c.selected } : c))}
+                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
+                            cot.selected ? 'bg-lime/10 border-lime/40' : 'bg-surface2 border-line hover:border-lime/30'
+                          }`}
+                        >
+                          <span className={`w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            cot.selected ? 'bg-lime border-lime' : 'border-line2'
+                          }`}>
+                            {cot.selected && <Check size={10} className="text-ink" strokeWidth={3} />}
+                          </span>
+                          <span className="text-xs font-medium text-snow flex-1">{cot.name}</span>
+                          <span className="text-[11px] text-lime font-medium">Co-titular</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Hijos registrados */}
                 {registeredChildren.length > 0 && (
                   <div>
