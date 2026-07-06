@@ -77,6 +77,7 @@ type OpenCheck = {
 type MemberData = {
   id: string
   name: string
+  phone: string | null
   family_id: string | null
   children: { name: string; birth_date?: string; age?: number }[]
 }
@@ -157,6 +158,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     router.push(newDate === todayStr ? '/' : `/?date=${newDate}`)
   }
 
+  const [searchQuery, setSearchQuery] = useState('')
+  const [bonoFilter, setBonoFilter] = useState<'all' | 'con_bono' | 'sin_bono'>('all')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [confirmCheckout, setConfirmCheckout] = useState<string | null>(null)
   const [executingBooking, setExecutingBooking] = useState<string | null>(null)
@@ -183,6 +186,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
+
+  const filteredVisits = activeVisits.filter(v => {
+    if (bonoFilter === 'con_bono' && !v.membership_id) return false
+    if (bonoFilter === 'sin_bono' && v.membership_id) return false
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      const nameMatch = (v.members?.name ?? '').toLowerCase().includes(q)
+      const member = allMembers.find(m => m.id === v.member_id)
+      const phoneMatch = (member?.phone ?? '').toLowerCase().includes(q)
+      if (!nameMatch && !phoneMatch) return false
+    }
+    return true
+  })
   const activeAdults = activeVisits.reduce((s, v) => s + (v.adults_count ?? 1), 0)
   const activeChildren = activeVisits.reduce((s, v) => s + (v.children_count ?? 0), 0)
   const activeTotal = activeAdults + activeChildren
@@ -638,41 +654,105 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* ZONA 2 — En sala ahora (tabla) */}
       <div className="rounded-2xl border border-line bg-surface overflow-hidden">
         {/* Stats header */}
-        <div className="px-4 pt-4 pb-3 border-b border-line">
-          <div className="flex items-center justify-between mb-3">
+        <div className="px-4 pt-4 pb-3 border-b border-line space-y-3">
+          {/* Title row */}
+          <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
               <Users size={13} />
               {isToday ? 'En sala ahora' : 'Visitas del día'}
-              {isToday && <span className="flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white animate-pulse" />
+              {isToday && (
+                <span className="flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white animate-pulse" />
+                  </span>
+                  En vivo
                 </span>
-                En vivo
-              </span>}
+              )}
             </h2>
-            {capacity != null && (
-              <span className={`text-sm font-bold ${aforoTextColor}`}>{activeTotal}/{capacity}</span>
-            )}
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span className="text-fog"><span className="text-snow font-semibold">{activeTotal}</span> total</span>
-            <span className="text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
-            <span className="text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
-            <span className="text-fog"><span className="text-iris font-semibold">{conBonoCount}</span> con bono</span>
-            <span className="text-fog"><span className="text-amber font-semibold">{sinBonoCount}</span> sin bono</span>
-          </div>
+
+          {/* Aforo bar */}
           {capacity != null && (
-            <div className="h-1.5 w-full rounded-full bg-line overflow-hidden mt-3 flex">
-              <div className="h-full bg-lime transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeAdults / capacity) * 100) : 0}%` }} />
-              <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${capacity ? Math.min(100, (activeChildren / capacity) * 100) : 0}%` }} />
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline gap-1.5">
+                  <span className={`text-2xl font-bold leading-none ${aforoTextColor}`}>{activeTotal}</span>
+                  <span className="text-xs text-fog">de {capacity} plazas</span>
+                </div>
+                <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-line overflow-hidden flex">
+                <div className="h-full bg-lime transition-all duration-500 rounded-l-full" style={{ width: `${Math.min(100, (activeAdults / capacity) * 100)}%` }} />
+                <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${Math.min(100, (activeChildren / capacity) * 100)}%` }} />
+              </div>
+              <div className="flex items-center gap-4 text-xs">
+                <span className="flex items-center gap-1.5 text-fog">
+                  <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
+                  <span className="font-semibold text-snow">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}
+                </span>
+                <span className="flex items-center gap-1.5 text-fog">
+                  <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
+                  <span className="font-semibold text-snow">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
           )}
+          {capacity == null && (
+            <div className="flex gap-4 text-xs">
+              <span className="text-fog"><span className="text-snow font-semibold">{activeTotal}</span> en sala</span>
+              <span className="text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
+              <span className="text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
+            </div>
+          )}
+
+          {/* Search + bono filters */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-mist pointer-events-none">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre o teléfono..."
+                className="w-full pl-8 pr-3 py-1.5 bg-surface2 border border-line rounded-xl text-xs text-snow placeholder-mist focus:outline-none focus:border-iris/50 transition-colors"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mist hover:text-snow transition-colors">
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <div className="flex gap-1 shrink-0">
+              {([['all', 'Todos', activeTotal], ['con_bono', `Con bono`, conBonoCount], ['sin_bono', `Sin bono`, sinBonoCount]] as [string, string, number][]).map(([key, label, count]) => (
+                <button
+                  key={key}
+                  onClick={() => setBonoFilter(key as 'all' | 'con_bono' | 'sin_bono')}
+                  className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
+                    bonoFilter === key
+                      ? key === 'con_bono' ? 'bg-iris/20 text-iris border-iris/40'
+                      : key === 'sin_bono' ? 'bg-amber/20 text-amber border-amber/40'
+                      : 'bg-surface2 text-snow border-line'
+                      : 'text-mist border-line hover:text-fog hover:border-line2'
+                  }`}
+                >
+                  {label}
+                  <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${
+                    bonoFilter === key ? 'opacity-80' : 'opacity-50'
+                  }`}>{count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Table */}
         {activeVisits.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">Sin personas en sala</div>
+        ) : filteredVisits.length === 0 ? (
+          <div className="px-4 py-6 text-center text-sm text-mist">Sin resultados para la búsqueda</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-left border-collapse">
@@ -686,7 +766,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {activeVisits.map(visit => {
+                {filteredVisits.map(visit => {
                   const kids = visit.children_present ?? []
                   const bono = visit.membership_id
                   const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
