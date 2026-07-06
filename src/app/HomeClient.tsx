@@ -1309,84 +1309,72 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                         {/* ── Expanded detail ── */}
                         {isExpanded && (
-                          <div className="border-t border-line bg-surface2/40 px-4 py-3.5 space-y-3.5">
-                            {/* Adultos / niños / hora */}
-                            <div className="flex items-center gap-2 flex-wrap text-xs">
-                              <span className="text-fog">
-                                <span className="font-semibold text-lime">{visit.adults_count}</span> adulto{visit.adults_count !== 1 ? 's' : ''}
-                              </span>
+                          <div className="border-t border-line bg-surface2/40 px-3 py-2.5 space-y-2">
+                            {/* Fila 1: info (adultos · niños · hora · bono) */}
+                            <div className="flex items-center gap-1.5 flex-wrap text-xs text-mist">
+                              <span className="font-semibold text-lime">{visit.adults_count}</span>
+                              <span>ad.</span>
                               <span className="text-line2">·</span>
-                              <span className="text-fog">
-                                <span className="font-semibold text-cyan-300">{numChildren}</span> niño{numChildren !== 1 ? 's' : ''}
-                              </span>
+                              <span className="font-semibold text-cyan-300">{numChildren}</span>
+                              <span>niños</span>
                               <span className="text-line2">·</span>
-                              <span className="text-mist">Entrada {fmtTime(visit.checked_in_at)}</span>
-                            </div>
-
-                            {/* Bono */}
-                            <div className="flex items-center gap-2">
-                              <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${
-                                bono
-                                  ? 'bg-iris/10 text-iris border border-iris/30'
-                                  : 'bg-amber/10 text-amber border border-amber/30'
-                              }`}>
+                              <span>Entrada {fmtTime(visit.checked_in_at)}</span>
+                              <span className="text-line2">·</span>
+                              <span className={`font-semibold ${bono ? 'text-iris' : 'text-amber'}`}>
                                 {bono ? (visit.memberships?.membership_types?.name ?? 'Con bono') : 'Sin bono'}
                               </span>
                               {bono && visit.memberships != null && (
-                                <span className={`text-xs font-semibold ${
+                                <span className={`font-semibold ${
                                   visit.memberships.sessions_remaining <= 2 ? 'text-rose' :
                                   visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'
                                 }`}>
-                                  {visit.memberships.sessions_remaining} ses. restantes
+                                  ({visit.memberships.sessions_remaining} ses.)
                                 </span>
                               )}
                             </div>
 
-                            {/* Acciones secundarias */}
-                            <div className="grid grid-cols-3 gap-2">
+                            {/* Fila 2: acciones secundarias horizontales */}
+                            <div className="flex items-center gap-2">
                               <button
                                 onClick={() => setImporteVisitId(visit.id)}
-                                className="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-line bg-surface hover:border-lime/40 transition-colors"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-line bg-surface hover:border-lime/40 transition-colors"
                               >
-                                <Receipt size={14} className="text-lime" />
-                                <span className="text-[10px] text-mist">Importe</span>
-                                <span className="text-xs font-bold text-lime">{imp.total.toFixed(2)}€</span>
+                                <Receipt size={12} className="text-lime" />
+                                <span className="text-xs font-semibold text-lime">{imp.total.toFixed(2)}€</span>
                               </button>
                               <button
                                 onClick={() => setConsumosVisitId(consumosVisitId === visit.id ? null : visit.id)}
-                                className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border transition-colors ${
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border transition-colors ${
                                   consumosVisitId === visit.id
                                     ? 'bg-iris/10 border-iris/40'
                                     : 'border-line bg-surface hover:border-iris/40'
                                 }`}
                               >
-                                <Plus size={14} className={consumosVisitId === visit.id ? 'text-iris' : 'text-fog'} />
-                                <span className="text-[10px] text-mist">Consumos</span>
-                                <span className={`text-xs font-bold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
-                                  {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : '—'}
+                                <Plus size={12} className={consumosVisitId === visit.id ? 'text-iris' : 'text-fog'} />
+                                <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
+                                  {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : 'Consumos'}
                                 </span>
                               </button>
                               <button
                                 onClick={() => openAcompPopup(visit)}
-                                className="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-line bg-surface hover:border-iris/40 transition-colors"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-line bg-surface hover:border-iris/40 transition-colors"
                               >
-                                <UserPlus size={14} className="text-fog" />
-                                <span className="text-[10px] text-mist">Acomp.</span>
-                                <span className="text-xs font-bold text-fog">
-                                  {Math.max(0, visit.adults_count - 1) + numChildren || '—'}
+                                <UserPlus size={12} className="text-fog" />
+                                <span className="text-xs font-semibold text-fog">
+                                  {Math.max(0, visit.adults_count - 1) + numChildren || '0'} acomp.
                                 </span>
                               </button>
                             </div>
 
-                            {/* Total a pagar destacado */}
+                            {/* Fila 3: total a pagar */}
                             <button
                               onClick={() => setTotalVisitId(visit.id)}
-                              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/10 transition-colors"
+                              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-lime/5 border border-lime/20 hover:bg-lime/10 transition-colors"
                             >
-                              <span className="text-sm font-semibold text-fog">Total a pagar</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
-                                <Receipt size={14} className="text-lime/60" />
+                              <span className="text-xs font-semibold text-fog">Total a pagar</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-base font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                                <Receipt size={12} className="text-lime/60" />
                               </div>
                             </button>
                           </div>
