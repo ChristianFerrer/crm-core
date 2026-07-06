@@ -26,6 +26,10 @@ type TodayVisit = {
   adults_count: number
   children_count: number
   members: { name: string } | null
+  memberships: {
+    sessions_remaining: number
+    membership_types: { name: string; sessions: number; price: number } | null
+  } | null
 }
 
 type BirthdayMember = {
@@ -348,16 +352,29 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     })
   }
 
-  function calcImporte(visit: TodayVisit): { titular: number; ninos: number; total: number } {
+  function calcImporte(visit: TodayVisit): {
+    titular: number; ninos: number; regular: number
+    bonoPrecioSesion: number | null; ahorro: number; total: number
+  } {
     const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
     const hours = elapsedMins / 60
+    let titular = 0, ninos = 0
     if (visit.visit_type === 'custodia') {
-      const ninos = visit.children_count * rateCustodia * hours
-      return { titular: 0, ninos, total: ninos }
+      ninos = visit.children_count * rateCustodia * hours
+    } else {
+      titular = visit.adults_count * rateAdult * hours
+      ninos   = visit.children_count * rateChild * hours
     }
-    const titular = visit.adults_count * rateAdult * hours
-    const ninos   = visit.children_count * rateChild * hours
-    return { titular, ninos, total: titular + ninos }
+    const regular = titular + ninos
+    // Bono: cost per session = type.price / type.sessions
+    let bonoPrecioSesion: number | null = null
+    const mt = visit.memberships?.membership_types
+    if (visit.membership_id && mt && mt.sessions > 0) {
+      bonoPrecioSesion = mt.price / mt.sessions
+    }
+    const total  = bonoPrecioSesion !== null ? bonoPrecioSesion : regular
+    const ahorro = bonoPrecioSesion !== null ? Math.max(0, regular - bonoPrecioSesion) : 0
+    return { titular, ninos, regular, bonoPrecioSesion, ahorro, total }
   }
 
   // Chart data
@@ -555,7 +572,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  {['Titular', 'Niños', 'Tipo', 'Bono', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
+                  {['Titular', 'Niños', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
                     <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                       {col}
                     </th>
@@ -606,8 +623,23 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         {/* Bono */}
                         <td className="px-3 py-3 align-top">
                           <span className={`text-[10px] font-semibold whitespace-nowrap ${bono ? 'text-iris' : 'text-amber'}`}>
-                            {bono ? 'Con bono' : 'Sin bono'}
+                            {bono
+                              ? (visit.memberships?.membership_types?.name ?? 'Con bono')
+                              : 'Sin bono'}
                           </span>
+                        </td>
+                        {/* Sesiones restantes */}
+                        <td className="px-3 py-3 align-top">
+                          {bono && visit.memberships != null ? (
+                            <span className={`text-xs font-semibold whitespace-nowrap ${
+                              visit.memberships.sessions_remaining <= 2 ? 'text-rose' :
+                              visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'
+                            }`}>
+                              {visit.memberships.sessions_remaining}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-mist">—</span>
+                          )}
                         </td>
                         {/* Entrada */}
                         <td className="px-3 py-3 align-top">
@@ -625,7 +657,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <span className="text-xs font-bold text-lime">{imp.total.toFixed(2)}€</span>
                             <button
                               onClick={() => setImporteVisitId(visit.id)}
-                              className="w-5 h-5 flex items-center justify-center rounded-md text-fog hover:text-lime hover:bg-lime/10 transition-colors"
+                              className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
                             >
                               <Receipt size={11} />
                             </button>
@@ -682,7 +714,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       {/* Confirm message row */}
                       {isConfirming && (
                         <tr className="bg-rose/5">
-                          <td colSpan={9} className="pl-4 pr-4 py-2">
+                          <td colSpan={10} className="pl-4 pr-4 py-2">
                             <p className="text-[11px] text-rose font-medium">
                               ¿Confirmar salida de <span className="font-bold">{visit.members?.name ?? '—'}</span>?
                               {check && check.items.length > 0 && (
@@ -899,24 +931,24 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
         const hours = elapsedMins / 60
         const imp = calcImporte(visit)
-        const check = openChecks.get(importeVisitId)
-        const consumosTotal = check ? check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0) : 0
-        const grandTotal = imp.total + consumosTotal
-        const fmtHours = (mins: number) => {
+        const mt = visit.memberships?.membership_types
+        const fmtH = (mins: number) => {
           const h = Math.floor(mins / 60), m = Math.round(mins % 60)
           return h > 0 ? `${h}h ${m}min` : `${m}min`
         }
+        const hourRate = visit.visit_type === 'custodia' ? rateCustodia : rateAdult
+        const childRate = visit.visit_type === 'custodia' ? rateCustodia : rateChild
         return (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setImporteVisitId(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
                 <div className="flex items-center gap-2">
                   <Receipt size={15} className="text-lime shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-[11px] text-fog">Detalle del importe</p>
+                    <p className="text-[11px] text-fog">Desglose del importe</p>
                   </div>
                 </div>
                 <button onClick={() => setImporteVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
@@ -924,55 +956,61 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </button>
               </div>
               {/* Body */}
-              <div className="px-5 py-4 space-y-3">
+              <div className="px-5 py-4 space-y-2.5">
                 {/* Meta */}
                 <div className="flex justify-between text-xs text-fog">
-                  <span>Entrada</span>
-                  <span className="text-snow">{fmtTime(visit.checked_in_at)}</span>
+                  <span>Entrada</span><span className="text-snow">{fmtTime(visit.checked_in_at)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-fog">
-                  <span>Tiempo en sala</span>
-                  <span className="text-snow">{fmtHours(elapsedMins)}</span>
+                  <span>Tiempo en sala</span><span className="text-snow">{fmtH(elapsedMins)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-fog">
-                  <span>Tipo</span>
-                  <span className="text-snow">{fmtVisitType(visit.visit_type)}</span>
+                  <span>Tipo de visita</span><span className="text-snow">{fmtVisitType(visit.visit_type)}</span>
                 </div>
-                <div className="border-t border-line pt-3 space-y-2">
-                  {/* Adultos */}
+
+                {/* Tarifa sin bono */}
+                <div className="border-t border-line pt-2.5 space-y-1.5">
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide">Tarifa regular</p>
                   {visit.adults_count > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-fog">
-                        {visit.adults_count} adulto{visit.adults_count !== 1 ? 's' : ''} × {visit.visit_type === 'custodia' ? rateCustodia : rateAdult}€/h × {hours.toFixed(2)}h
-                      </span>
-                      <span className="text-lime font-semibold">{imp.titular.toFixed(2)}€</span>
+                      <span className="text-fog">{visit.adults_count} adulto{visit.adults_count !== 1 ? 's' : ''} × {hourRate}€/h × {hours.toFixed(2)}h</span>
+                      <span className="text-snow">{imp.titular.toFixed(2)}€</span>
                     </div>
                   )}
-                  {/* Niños */}
                   {visit.children_count > 0 && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-fog">
-                        {visit.children_count} niño{visit.children_count !== 1 ? 's' : ''} × {visit.visit_type === 'custodia' ? rateCustodia : rateChild}€/h × {hours.toFixed(2)}h
-                      </span>
-                      <span className="text-lime font-semibold">{imp.ninos.toFixed(2)}€</span>
+                      <span className="text-fog">{visit.children_count} niño{visit.children_count !== 1 ? 's' : ''} × {childRate}€/h × {hours.toFixed(2)}h</span>
+                      <span className="text-snow">{imp.ninos.toFixed(2)}€</span>
                     </div>
                   )}
-                  {/* Consumos */}
-                  {consumosTotal > 0 && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-fog">Consumos ({check!.items.length} producto{check!.items.length !== 1 ? 's' : ''})</span>
-                      <span className="text-lime font-semibold">{consumosTotal.toFixed(2)}€</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-fog">Subtotal regular</span>
+                    <span className={imp.bonoPrecioSesion !== null ? 'text-mist line-through' : 'text-lime'}>{imp.regular.toFixed(2)}€</span>
+                  </div>
                 </div>
+
+                {/* Descuento bono */}
+                {imp.bonoPrecioSesion !== null && mt && (
+                  <div className="border-t border-line pt-2.5 space-y-1.5">
+                    <p className="text-[10px] font-semibold text-iris uppercase tracking-wide">{mt.name}</p>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-fog">Precio por sesión ({mt.price}€ ÷ {mt.sessions} ses.)</span>
+                      <span className="text-iris">{imp.bonoPrecioSesion.toFixed(2)}€</span>
+                    </div>
+                    {imp.ahorro > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-fog">Ahorro aplicado</span>
+                        <span className="text-mint">−{imp.ahorro.toFixed(2)}€</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Total */}
                 <div className="border-t border-line pt-3 flex justify-between items-center">
-                  <span className="text-sm font-bold text-snow">Total</span>
-                  <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                  <span className="text-sm font-bold text-snow">Total a cobrar</span>
+                  <span className="text-xl font-bold text-lime">{imp.total.toFixed(2)}€</span>
                 </div>
-                {visit.membership_id && (
-                  <p className="text-[11px] text-iris text-center">Visita con bono — verificar descuento según tarifa contratada</p>
-                )}
               </div>
             </div>
           </div>
