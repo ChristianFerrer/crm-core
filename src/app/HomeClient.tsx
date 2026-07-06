@@ -1121,56 +1121,91 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </button>
             </div>
             <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
-              {alertLongStay.filter(v => !dismissedAlerts.has('long-' + v.id)).map(v => (
-                <div key={v.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <AlertTriangle size={13} className="text-amber shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
-                      <p className="text-[11px] text-fog">Lleva {fmtElapsed(v.checked_in_at)} en sala</p>
+              {alertLongStay.filter(v => !dismissedAlerts.has('long-' + v.id)).map(v => {
+                const imp = calcImporte(v)
+                const consumosTotal = (openChecks.get(v.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
+                const grandTotal = imp.total + consumosTotal
+                return (
+                  <div key={v.id} className="rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
+                          <p className="text-[11px] text-fog">Lleva {fmtElapsed(v.checked_in_at)} en sala</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'long-' + v.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
+                        <X size={13} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line">{fmtVisitType(v)}</span>
+                        <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                      </div>
+                      <button
+                        onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
+                        className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors shrink-0"
+                      >
+                        <LogOut size={10} /> Salida
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
-                      className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors"
-                    >
-                      <LogOut size={10} /> Salida
-                    </button>
-                    <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'long-' + v.id]))} className="text-mist hover:text-fog transition-colors p-1">
-                      <X size={13} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {alertBirthdaySoon.filter(b => !dismissedAlerts.has('bday-' + b.id)).map(b => (
-                <div key={b.id} className="flex items-center justify-between gap-2 rounded-xl border border-rose/40 bg-rose/10 px-3 py-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Cake size={13} className="text-rose shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
-                      <p className="text-[11px] text-fog">Empieza a las {b.start_time?.slice(0, 5)}</p>
+                )
+              })}
+              {alertBirthdaySoon.filter(b => !dismissedAlerts.has('bday-' + b.id)).map(b => {
+                const linkedVisit = activeVisits.find(v => v.booking_id === b.id)
+                const grandTotal = linkedVisit
+                  ? calcImporte(linkedVisit).total + (openChecks.get(linkedVisit.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
+                  : null
+                return (
+                  <div key={b.id} className="rounded-xl border border-rose/40 bg-rose/10 px-3 py-2.5 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Cake size={13} className="text-rose shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
+                          <p className="text-[11px] text-fog">Empieza a las {b.start_time?.slice(0, 5)}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'bday-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
+                        <X size={13} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-rose border border-rose/30">Cumpleaños</span>
+                      {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
-                  <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'bday-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-              {alertCustodiaSoon.filter(b => !dismissedAlerts.has('cust-' + b.id)).map(b => (
-                <div key={b.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <CalendarClock size={13} className="text-amber shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
-                      <p className="text-[11px] text-fog">Custodia termina a las {b.end_time?.slice(0, 5)}</p>
+                )
+              })}
+              {alertCustodiaSoon.filter(b => !dismissedAlerts.has('cust-' + b.id)).map(b => {
+                const linkedVisit = activeVisits.find(v => v.booking_id === b.id)
+                const grandTotal = linkedVisit
+                  ? calcImporte(linkedVisit).total + (openChecks.get(linkedVisit.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
+                  : null
+                return (
+                  <div key={b.id} className="rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <CalendarClock size={13} className="text-amber shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
+                          <p className="text-[11px] text-fog">Custodia termina a las {b.end_time?.slice(0, 5)}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'cust-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
+                        <X size={13} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-amber border border-amber/30">Custodia</span>
+                      {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
-                  <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'cust-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
+                )
+              })}
               {totalAlerts - dismissedAlerts.size === 0 && (
                 <p className="text-xs text-mist text-center py-4">Todas las alertas cerradas</p>
               )}
