@@ -140,6 +140,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [openChecks, setOpenChecks] = useState<Map<string, OpenCheck>>(new Map())
   const [consumosVisitId, setConsumosVisitId] = useState<string | null>(null)
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
+  const [rateAdult, setRateAdult] = useState(3)
+  const [rateChild, setRateChild] = useState(7)
+  const [rateCustodia, setRateCustodia] = useState(8)
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -152,10 +155,20 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const aforoPct = capacity ? Math.min(100, (activeTotal / capacity) * 100) : 0
   const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
 
-  // Load products & open checks
+  // Load products, services rates & open checks
   useEffect(() => {
     supabase.from('products').select('id, name, category, price, emoji').eq('active', true).order('category').order('name')
       .then(({ data }) => { if (data) setProducts(data as Product[]) })
+    supabase.from('services').select('name, category, price, price_unit').eq('active', true)
+      .then(({ data }) => {
+        if (!data) return
+        const adult = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Adulto')
+        const child = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Niño')
+        const cust  = (data as any[]).find(r => r.category === 'custodia' && r.price_unit === 'hora')
+        if (adult) setRateAdult(Number(adult.price))
+        if (child) setRateChild(Number(child.price))
+        if (cust)  setRateCustodia(Number(cust.price))
+      })
   }, [])
 
   const loadOpenChecks = useCallback(async () => {
@@ -321,6 +334,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       if (existing) next.set(visitId, { ...existing, items: existing.items.filter(i => i.id !== itemId) })
       return next
     })
+  }
+
+  function calcImporte(visit: TodayVisit): { titular: number; ninos: number; total: number } {
+    const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
+    const hours = elapsedMins / 60
+    if (visit.visit_type === 'custodia') {
+      const ninos = visit.children_count * rateCustodia * hours
+      return { titular: 0, ninos, total: ninos }
+    }
+    const titular = visit.adults_count * rateAdult * hours
+    const ninos   = visit.children_count * rateChild * hours
+    return { titular, ninos, total: titular + ninos }
   }
 
   // Chart data
@@ -495,7 +520,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <table className="w-full min-w-[720px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  {['Titular', 'Niños', 'Tipo', 'Bono', 'Entrada', 'Tiempo', 'Consumos', 'Salida'].map(col => (
+                  {['Titular', 'Niños', 'Tipo', 'Bono', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
                     <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                       {col}
                     </th>
@@ -558,10 +583,24 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {fmtElapsed(visit.checked_in_at)}
                           </span>
                         </td>
+                        {/* Importe por tiempo */}
+                        {(() => {
+                          const imp = calcImporte(visit)
+                          return (
+                            <td className="px-3 py-3 align-top">
+                              <p className="text-xs font-bold text-lime whitespace-nowrap">{imp.total.toFixed(2)}€</p>
+                              {imp.titular > 0 && imp.ninos > 0 && (
+                                <p className="text-[10px] text-mist whitespace-nowrap">
+                                  {imp.titular.toFixed(2)}€ + {imp.ninos.toFixed(2)}€
+                                </p>
+                              )}
+                            </td>
+                          )
+                        })()}
                         {/* Consumos */}
                         <td className="px-3 py-3 align-middle">
                           <div className="flex items-center gap-2 whitespace-nowrap">
-                            <span className={`text-xs font-semibold ${check && check.items.length > 0 ? 'text-snow' : 'text-mist'}`}>
+                            <span className={`text-xs font-semibold ${check && check.items.length > 0 ? 'text-lime' : 'text-mist'}`}>
                               {check && check.items.length > 0
                                 ? `${check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€`
                                 : '—'}
@@ -609,7 +648,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       {/* Confirm message row */}
                       {isConfirming && (
                         <tr key={`confirm-${visit.id}`} className="bg-rose/5">
-                          <td colSpan={8} className="pl-4 pr-4 py-2">
+                          <td colSpan={9} className="pl-4 pr-4 py-2">
                             <p className="text-[11px] text-rose font-medium">
                               ¿Confirmar salida de <span className="font-bold">{visit.members?.name ?? '—'}</span>?
                               {check && check.items.length > 0 && (
@@ -844,7 +883,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </div>
               <div className="flex items-center gap-3">
                 {(openChecks.get(consumosVisitId)?.items.length ?? 0) > 0 && (
-                  <span className="text-base font-bold text-iris">
+                  <span className="text-base font-bold text-lime">
                     {openChecks.get(consumosVisitId)!.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€
                   </span>
                 )}
@@ -902,14 +941,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               </button>
                             </div>
                             {/* Line total */}
-                            <p className="text-xs font-semibold text-snow w-14 text-right shrink-0">{lineTotal.toFixed(2)}€</p>
+                            <p className="text-xs font-semibold text-lime w-14 text-right shrink-0">{lineTotal.toFixed(2)}€</p>
                           </div>
                         )
                       })}
                     </div>
                     <div className="flex justify-end mt-3 pt-3 border-t border-line">
                       <p className="text-xs text-fog">
-                        Total: <span className="text-snow font-bold">{total.toFixed(2)}€</span>
+                        Total: <span className="text-lime font-bold">{total.toFixed(2)}€</span>
                       </p>
                     </div>
                   </div>
