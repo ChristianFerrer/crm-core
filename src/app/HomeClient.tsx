@@ -1055,11 +1055,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           )}
           <button
             onClick={() => setCheckinOpen(true)}
-            className="flex items-center gap-1.5 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform"
+            className="flex items-center justify-center bg-lime text-ink font-semibold rounded-xl w-10 h-10 active:scale-95 transition-transform"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
-            <LogIn size={15} strokeWidth={2.4} />
-            Registrar visita
+            <LogIn size={18} strokeWidth={2.4} />
           </button>
         </div>
       </div>
@@ -1504,9 +1503,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           <td className="pl-3 pr-4 py-3 align-top">
                             <button
                               onClick={() => setConfirmCheckout(visit.id)}
-                              className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors whitespace-nowrap"
+                              className="flex items-center justify-center text-rose bg-rose/10 border border-rose/30 rounded-lg w-7 h-7 hover:bg-rose/20 transition-colors"
                             >
-                              <LogOut size={10} /> Salida
+                              <LogOut size={12} />
                             </button>
                           </td>
                         </tr>
