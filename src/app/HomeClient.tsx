@@ -1273,6 +1273,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
                           <button onClick={toggleExpand} className="flex-1 min-w-0 flex items-center gap-2 text-left">
                             <span className="text-sm font-bold text-snow leading-tight truncate">{visit.members?.name ?? '—'}</span>
+                            <span className="text-line2 shrink-0">·</span>
                             <span className={`text-[10px] font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
                           </button>
                           <button
