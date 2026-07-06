@@ -94,6 +94,7 @@ export default async function DashboardPage({
       todayBookings={(todayBookingsData ?? []) as any[]}
       selectedDate={selectedDate}
       todayStr={todayStr}
+      allMembers={(allMembers ?? []) as any[]}
     />
   )
 }

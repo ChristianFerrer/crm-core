@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
-  Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt,
+  Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -72,6 +72,12 @@ type OpenCheck = {
   items: CheckItem[]
 }
 
+type MemberData = {
+  id: string
+  name: string
+  children: { name: string; birth_date?: string; age?: number }[]
+}
+
 type HomeClientProps = {
   todayVisits: TodayVisit[]
   todayCustodias: TodayVisit[]
@@ -82,6 +88,7 @@ type HomeClientProps = {
   todayBookings: TodayBooking[]
   selectedDate: string
   todayStr: string
+  allMembers: MemberData[]
 }
 
 function StackedBar({ x, y, width, height, fill, roundTop }: {
@@ -135,7 +142,7 @@ function timeToMins(t: string): number {
   return h * 60 + m
 }
 
-export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr }: HomeClientProps) {
+export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
   const router = useRouter()
   const isToday = selectedDate === todayStr
 
@@ -156,6 +163,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [consumosVisitId, setConsumosVisitId] = useState<string | null>(null)
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
   const [importeVisitId, setImporteVisitId] = useState<string | null>(null)
+  const [acompVisitId, setAcompVisitId] = useState<string | null>(null)
+  const [acompChildren, setAcompChildren] = useState<{ name: string; birth_date?: string; isGuest?: boolean }[]>([])
+  const [acompExtraAdults, setAcompExtraAdults] = useState(0)
+  const [acompGuestAdults, setAcompGuestAdults] = useState(0)
+  const [acompGuestChildName, setAcompGuestChildName] = useState('')
+  const [savingAcomp, setSavingAcomp] = useState(false)
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
   const [rateCustodia, setRateCustodia] = useState(8)
@@ -253,6 +266,42 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     if (nowMins >= startMins && nowMins < endMins) return 'en_curso'
     if (nowMins >= endMins) return 'pasado'
     return 'pendiente'
+  }
+
+  function openAcompPopup(visit: TodayVisit) {
+    const member = allMembers.find(m => m.id === visit.member_id)
+    const registeredChildren = member?.children ?? []
+    const presentNames = new Set((visit.children_present ?? []).map(c => c.name))
+    // Registered children with their check state
+    const children = registeredChildren.map(c => ({ ...c, isGuest: false }))
+    // Add guest children (in children_present but not in registered list)
+    const guestKids = (visit.children_present ?? [])
+      .filter(c => !registeredChildren.some(r => r.name === c.name))
+      .map(c => ({ ...c, isGuest: true }))
+    // Build initial selected list: registered ones that are present + all guest ones
+    const selected = [
+      ...children.filter(c => presentNames.has(c.name)),
+      ...guestKids,
+    ]
+    setAcompChildren(selected)
+    setAcompExtraAdults(Math.max(0, (visit.adults_count ?? 1) - 1))
+    setAcompGuestAdults(0)
+    setAcompGuestChildName('')
+    setAcompVisitId(visit.id)
+  }
+
+  async function handleSaveAcomp(visit: TodayVisit) {
+    setSavingAcomp(true)
+    const totalAdults = 1 + acompExtraAdults + acompGuestAdults
+    const totalChildren = acompChildren.length
+    await supabase.from('visits').update({
+      adults_count: totalAdults,
+      children_count: totalChildren,
+      children_present: acompChildren.map(({ isGuest: _, ...rest }) => rest),
+    }).eq('id', visit.id)
+    setSavingAcomp(false)
+    setAcompVisitId(null)
+    router.refresh()
   }
 
   async function handleCheckout(visitId: string) {
@@ -572,7 +621,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  {['Titular', 'Niños', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
+                  {['Titular', 'Acomp.', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
                     <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                       {col}
                     </th>
@@ -597,22 +646,25 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <td className="pl-4 pr-3 py-3 align-top">
                           <p className="text-xs font-semibold text-snow whitespace-nowrap">{visit.members?.name ?? '—'}</p>
                         </td>
-                        {/* Niños */}
-                        <td className="px-3 py-3 align-top">
-                          {kids.length === 0 ? (
-                            <span className="text-[11px] text-mist">—</span>
-                          ) : (
-                            <div className="space-y-0.5">
-                              {kids.map((c, i) => {
-                                const age = fmtChildAge(c.birth_date, c.age)
-                                return (
-                                  <p key={i} className="text-[11px] text-cyan-300 whitespace-nowrap">
-                                    {c.name}{age ? ` · ${age}` : ''}
-                                  </p>
-                                )
-                              })}
-                            </div>
-                          )}
+                        {/* Acompañantes */}
+                        <td className="px-3 py-3 align-middle">
+                          {(() => {
+                            const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1)
+                            const totalAcomp = extraAdults + (visit.children_count ?? 0)
+                            return (
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-semibold ${totalAcomp > 0 ? 'text-snow' : 'text-mist'}`}>
+                                  {totalAcomp > 0 ? totalAcomp : '—'}
+                                </span>
+                                <button
+                                  onClick={() => openAcompPopup(visit)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-iris hover:border-iris/40 transition-colors"
+                                >
+                                  <UserPlus size={11} />
+                                </button>
+                              </div>
+                            )
+                          })()}
                         </td>
                         {/* Tipo */}
                         <td className="px-3 py-3 align-top">
@@ -923,6 +975,158 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
       </div>
+
+      {/* Modal de acompañantes */}
+      {acompVisitId && (() => {
+        const visit = activeVisits.find(v => v.id === acompVisitId)
+        if (!visit) return null
+        const member = allMembers.find(m => m.id === visit.member_id)
+        const registeredChildren = member?.children ?? []
+        const selectedNames = new Set(acompChildren.filter(c => !c.isGuest).map(c => c.name))
+
+        function toggleChild(child: { name: string; birth_date?: string }) {
+          setAcompChildren(prev => {
+            const exists = prev.some(c => c.name === child.name && !c.isGuest)
+            if (exists) return prev.filter(c => !(c.name === child.name && !c.isGuest))
+            return [...prev, { ...child, isGuest: false }]
+          })
+        }
+
+        function addGuestChild() {
+          const name = acompGuestChildName.trim()
+          if (!name) return
+          setAcompChildren(prev => [...prev, { name, isGuest: true }])
+          setAcompGuestChildName('')
+        }
+
+        function removeGuestChild(name: string) {
+          setAcompChildren(prev => prev.filter(c => !(c.isGuest && c.name === name)))
+        }
+
+        const guestKids = acompChildren.filter(c => c.isGuest)
+        const totalAcomp = acompExtraAdults + acompGuestAdults + acompChildren.length
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setAcompVisitId(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+                <div className="flex items-center gap-2">
+                  <Users size={15} className="text-iris shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
+                    <p className="text-[11px] text-fog">{totalAcomp} acompañante{totalAcomp !== 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+                <button onClick={() => setAcompVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+                {/* Hijos registrados */}
+                {registeredChildren.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Hijos registrados</p>
+                    <div className="space-y-1.5">
+                      {registeredChildren.map((child, i) => {
+                        const checked = selectedNames.has(child.name)
+                        const age = fmtChildAge(child.birth_date, child.age)
+                        return (
+                          <button key={i} onClick={() => toggleChild(child)}
+                            className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
+                              checked ? 'bg-iris/10 border-iris/40' : 'bg-surface2 border-line hover:border-iris/30'
+                            }`}
+                          >
+                            <span className={`w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              checked ? 'bg-iris border-iris' : 'border-line2'
+                            }`}>
+                              {checked && <Check size={10} className="text-ink" strokeWidth={3} />}
+                            </span>
+                            <span className="text-xs font-medium text-snow flex-1">{child.name}</span>
+                            {age && <span className="text-[11px] text-fog">{age}</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Adultos acompañantes */}
+                <div>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Adultos acompañantes</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
+                      <span className="text-xs text-snow">Adultos adicionales (no titulares)</span>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setAcompExtraAdults(n => Math.max(0, n - 1))}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
+                        <span className="w-5 text-center text-xs font-semibold text-snow">{acompExtraAdults}</span>
+                        <button onClick={() => setAcompExtraAdults(n => n + 1)}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors font-bold">+</button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
+                      <span className="text-xs text-snow">Invitados adultos (sin registro)</span>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setAcompGuestAdults(n => Math.max(0, n - 1))}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
+                        <span className="w-5 text-center text-xs font-semibold text-snow">{acompGuestAdults}</span>
+                        <button onClick={() => setAcompGuestAdults(n => n + 1)}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors font-bold">+</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Invitados niños */}
+                <div>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Niños invitados (sin registro)</p>
+                  {guestKids.length > 0 && (
+                    <div className="space-y-1.5 mb-2">
+                      {guestKids.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between rounded-xl bg-iris/10 border border-iris/30 px-3 py-2">
+                          <span className="text-xs text-snow">{c.name}</span>
+                          <button onClick={() => removeGuestChild(c.name)} className="text-mist hover:text-rose transition-colors">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={acompGuestChildName}
+                      onChange={e => setAcompGuestChildName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addGuestChild()}
+                      placeholder="Nombre del niño invitado"
+                      className="flex-1 bg-surface2 border border-line rounded-xl px-3 py-2 text-xs text-snow placeholder-mist focus:outline-none focus:border-iris/50"
+                    />
+                    <button onClick={addGuestChild}
+                      className="flex items-center gap-1 text-xs font-semibold text-ink bg-iris rounded-xl px-3 py-2 hover:brightness-110 transition-all">
+                      <Plus size={12} /> Añadir
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-4 border-t border-line shrink-0">
+                <button
+                  onClick={() => handleSaveAcomp(visit)}
+                  disabled={savingAcomp}
+                  className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-ink bg-lime rounded-xl py-3 hover:brightness-110 transition-all disabled:opacity-50"
+                >
+                  <Check size={14} />
+                  {savingAcomp ? 'Guardando...' : `Guardar — ${totalAcomp} acompañante${totalAcomp !== 1 ? 's' : ''}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal de detalle de importe */}
       {importeVisitId && (() => {
