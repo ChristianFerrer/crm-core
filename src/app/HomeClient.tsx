@@ -626,7 +626,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   const bookingTypeStyle = {
     birthday: { bar: 'bg-rose', badge: 'bg-rose/10 text-rose border-rose/30', label: 'Cumpleaños' },
-    custodia: { bar: 'bg-mint', badge: 'bg-mint/10 text-mint border-mint/30', label: 'Custodia' },
+    custodia: { bar: 'bg-iris', badge: 'bg-iris/10 text-iris border-iris/30', label: 'Custodia' },
     other:    { bar: 'bg-lime', badge: 'bg-lime/10 text-lime border-lime/30', label: 'Otro' },
   }
 
@@ -887,9 +887,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </td>
                         {/* Tipo */}
                         <td className="px-3 py-3 align-top">
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line whitespace-nowrap">
-                            {fmtVisitType(visit)}
-                          </span>
+                          {(() => {
+                            const tipo = fmtVisitType(visit)
+                            const cls = tipo === 'Cumpleaños'
+                              ? 'bg-rose/10 text-rose border-rose/30'
+                              : tipo === 'Custodia'
+                              ? 'bg-iris/10 text-iris border-iris/30'
+                              : 'bg-surface2 text-fog border-line'
+                            return (
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border whitespace-nowrap ${cls}`}>
+                                {tipo}
+                              </span>
+                            )
+                          })()}
                         </td>
                         {/* Bono */}
                         <td className="px-3 py-3 align-top">
