@@ -676,10 +676,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               <div className="flex items-center gap-1.5">
                                 <div className="flex items-center gap-1">
                                   {extraAdults > 0 && (
-                                    <span className="text-[11px] font-bold text-lime">{extraAdults}A</span>
+                                    <span className="text-[11px] font-bold text-lime flex items-center gap-0.5">
+                                      {extraAdults} <span className="text-[10px] font-normal">adulto{extraAdults !== 1 ? 's' : ''}</span>
+                                    </span>
+                                  )}
+                                  {extraAdults > 0 && numChildren > 0 && (
+                                    <span className="text-mist text-[10px]">·</span>
                                   )}
                                   {numChildren > 0 && (
-                                    <span className="text-[11px] font-bold text-cyan-300">{numChildren}N</span>
+                                    <span className="text-[11px] font-bold text-cyan-300 flex items-center gap-0.5">
+                                      {numChildren} <span className="text-[10px] font-normal">niño{numChildren !== 1 ? 's' : ''}</span>
+                                    </span>
                                   )}
                                   {!hasAcomp && <span className="text-xs text-mist">—</span>}
                                 </div>
