@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -517,7 +517,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <div className="px-4 py-6 text-center text-sm text-mist">Sin personas en sala</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left border-collapse">
+            <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
                   {['Titular', 'Niños', 'Tipo', 'Bono', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
@@ -537,9 +537,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   const isConfirming = confirmCheckout === visit.id
                   const isShowingConsumos = consumosVisitId === visit.id
 
+                  const imp = calcImporte(visit)
                   return (
-                    <>
-                      <tr key={visit.id} className={isLong ? 'bg-amber/5' : ''}>
+                    <Fragment key={visit.id}>
+                      <tr className={isLong ? 'bg-amber/5' : ''}>
                         {/* Titular */}
                         <td className="pl-4 pr-3 py-3 align-top">
                           <p className="text-xs font-semibold text-snow whitespace-nowrap">{visit.members?.name ?? '—'}</p>
@@ -584,19 +585,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </span>
                         </td>
                         {/* Importe por tiempo */}
-                        {(() => {
-                          const imp = calcImporte(visit)
-                          return (
-                            <td className="px-3 py-3 align-top">
-                              <p className="text-xs font-bold text-lime whitespace-nowrap">{imp.total.toFixed(2)}€</p>
-                              {imp.titular > 0 && imp.ninos > 0 && (
-                                <p className="text-[10px] text-mist whitespace-nowrap">
-                                  {imp.titular.toFixed(2)}€ + {imp.ninos.toFixed(2)}€
-                                </p>
-                              )}
-                            </td>
-                          )
-                        })()}
+                        <td className="px-3 py-3 align-top">
+                          <p className="text-xs font-bold text-lime whitespace-nowrap">{imp.total.toFixed(2)}€</p>
+                          {imp.titular > 0 && imp.ninos > 0 && (
+                            <p className="text-[10px] text-mist whitespace-nowrap">
+                              {imp.titular.toFixed(2)}€ + {imp.ninos.toFixed(2)}€
+                            </p>
+                          )}
+                        </td>
                         {/* Consumos */}
                         <td className="px-3 py-3 align-middle">
                           <div className="flex items-center gap-2 whitespace-nowrap">
@@ -647,7 +643,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </tr>
                       {/* Confirm message row */}
                       {isConfirming && (
-                        <tr key={`confirm-${visit.id}`} className="bg-rose/5">
+                        <tr className="bg-rose/5">
                           <td colSpan={9} className="pl-4 pr-4 py-2">
                             <p className="text-[11px] text-rose font-medium">
                               ¿Confirmar salida de <span className="font-bold">{visit.members?.name ?? '—'}</span>?
@@ -658,7 +654,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   )
                 })}
               </tbody>
