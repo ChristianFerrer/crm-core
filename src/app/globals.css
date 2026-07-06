@@ -24,10 +24,14 @@
   --shadow-lime: 0 10px 40px -12px rgba(198,242,78,0.4);
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--color-carbon);
   color: var(--color-snow);
   font-family: var(--font-sans);
