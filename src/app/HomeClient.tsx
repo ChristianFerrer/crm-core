@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
-  Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus,
+  Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -159,6 +159,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     router.push(newDate === todayStr ? '/' : `/?date=${newDate}`)
   }
 
+  const [alertsOpen, setAlertsOpen] = useState(false)
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [bonoFilter, setBonoFilter] = useState<'all' | 'con_bono' | 'sin_bono'>('all')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
@@ -614,50 +616,28 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             )}
           </div>
         </div>
-        <Link
-          href="/checkin"
-          className="flex items-center gap-1.5 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm shrink-0 active:scale-95 transition-transform"
-          style={{ boxShadow: 'var(--shadow-lime)' }}
-        >
-          <LogIn size={15} strokeWidth={2.4} />
-          Registrar visita
-        </Link>
-      </div>
-
-      {/* ZONA 1 — Alertas (solo hoy) */}
-      {isToday && totalAlerts > 0 && (
-        <div className="space-y-2">
-          {alertLongStay.map(v => (
-            <div key={v.id} className="flex items-center justify-between gap-3 rounded-xl border border-amber/40 bg-amber/10 px-4 py-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <AlertTriangle size={14} className="text-amber shrink-0" />
-                <span className="text-xs font-semibold text-snow truncate">{v.members?.name ?? '—'}</span>
-                <span className="text-xs text-fog shrink-0">lleva {fmtElapsed(v.checked_in_at)} en sala</span>
-              </div>
-              <button
-                onClick={() => setConfirmCheckout(v.id)}
-                className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors shrink-0"
-              >
-                <LogOut size={10} /> Salida
-              </button>
-            </div>
-          ))}
-          {alertBirthdaySoon.map(b => (
-            <div key={b.id} className="flex items-center gap-2 rounded-xl border border-rose/40 bg-rose/10 px-4 py-3">
-              <Cake size={14} className="text-rose shrink-0" />
-              <span className="text-xs font-semibold text-snow">{b.title}</span>
-              <span className="text-xs text-fog">empieza a las {b.start_time?.slice(0, 5)}</span>
-            </div>
-          ))}
-          {alertCustodiaSoon.map(b => (
-            <div key={b.id} className="flex items-center gap-2 rounded-xl border border-amber/40 bg-amber/10 px-4 py-3">
-              <CalendarClock size={14} className="text-amber shrink-0" />
-              <span className="text-xs font-semibold text-snow">{b.title}</span>
-              <span className="text-xs text-fog">custodia termina a las {b.end_time?.slice(0, 5)}</span>
-            </div>
-          ))}
+        <div className="flex items-center gap-2 shrink-0">
+          {isToday && totalAlerts > 0 && (
+            <button
+              onClick={() => { setDismissedAlerts(new Set()); setAlertsOpen(true) }}
+              className="relative flex items-center justify-center w-10 h-10 rounded-xl border border-amber/40 bg-amber/10 text-amber hover:bg-amber/20 transition-colors"
+            >
+              <Bell size={16} />
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                {totalAlerts}
+              </span>
+            </button>
+          )}
+          <Link
+            href="/checkin"
+            className="flex items-center gap-1.5 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform"
+            style={{ boxShadow: 'var(--shadow-lime)' }}
+          >
+            <LogIn size={15} strokeWidth={2.4} />
+            Registrar visita
+          </Link>
         </div>
-      )}
+      </div>
 
       {/* ZONA 2 — En sala ahora (tabla) */}
       <div className="rounded-2xl border border-line bg-surface overflow-hidden">
@@ -1124,6 +1104,80 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
       </div>
+
+      {/* Modal de alertas */}
+      {alertsOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-end p-4 pt-16 sm:pt-4" onClick={() => setAlertsOpen(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative w-full max-w-sm rounded-2xl border border-amber/30 bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-line shrink-0">
+              <div className="flex items-center gap-2">
+                <Bell size={14} className="text-amber" />
+                <span className="text-sm font-semibold text-snow">Alertas activas</span>
+                <span className="text-[10px] font-bold bg-rose text-white px-1.5 py-0.5 rounded-full">{totalAlerts - dismissedAlerts.size}</span>
+              </div>
+              <button onClick={() => setAlertsOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+              {alertLongStay.filter(v => !dismissedAlerts.has('long-' + v.id)).map(v => (
+                <div key={v.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <AlertTriangle size={13} className="text-amber shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
+                      <p className="text-[11px] text-fog">Lleva {fmtElapsed(v.checked_in_at)} en sala</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
+                      className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors"
+                    >
+                      <LogOut size={10} /> Salida
+                    </button>
+                    <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'long-' + v.id]))} className="text-mist hover:text-fog transition-colors p-1">
+                      <X size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {alertBirthdaySoon.filter(b => !dismissedAlerts.has('bday-' + b.id)).map(b => (
+                <div key={b.id} className="flex items-center justify-between gap-2 rounded-xl border border-rose/40 bg-rose/10 px-3 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Cake size={13} className="text-rose shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
+                      <p className="text-[11px] text-fog">Empieza a las {b.start_time?.slice(0, 5)}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'bday-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+              {alertCustodiaSoon.filter(b => !dismissedAlerts.has('cust-' + b.id)).map(b => (
+                <div key={b.id} className="flex items-center justify-between gap-2 rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CalendarClock size={13} className="text-amber shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
+                      <p className="text-[11px] text-fog">Custodia termina a las {b.end_time?.slice(0, 5)}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'cust-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+              {totalAlerts - dismissedAlerts.size === 0 && (
+                <p className="text-xs text-mist text-center py-4">Todas las alertas cerradas</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de total a pagar */}
       {totalVisitId && (() => {
