@@ -167,9 +167,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [acompVisitId, setAcompVisitId] = useState<string | null>(null)
   const [acompCoTitulares, setAcompCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>([])
   const [acompChildren, setAcompChildren] = useState<{ name: string; birth_date?: string; isGuest?: boolean }[]>([])
-  const [acompExtraAdults, setAcompExtraAdults] = useState(0)
   const [acompGuestAdults, setAcompGuestAdults] = useState(0)
-  const [acompGuestChildName, setAcompGuestChildName] = useState('')
+  const [acompGuestChildren, setAcompGuestChildren] = useState(0)
   const [savingAcomp, setSavingAcomp] = useState(false)
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
@@ -300,24 +299,27 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           ...guestKids,
         ]
 
-    // Extra adults = total - titular(1) - co-titulares selected
+    // Guest adults = total - titular(1) - co-titulares selected
     const coTitSelected = coTitulares.filter(c => c.selected).length
-    const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1 - coTitSelected)
+    const guestAdults = Math.max(0, (visit.adults_count ?? 1) - 1 - coTitSelected)
+
+    // Guest children = children not in registered list
+    const guestChildrenCount = noPresenceData
+      ? Math.max(0, (visit.children_count ?? 0) - selectedChildren.length)
+      : guestKids.length
 
     setAcompCoTitulares(coTitulares)
     setAcompChildren(selectedChildren)
-    setAcompExtraAdults(extraAdults)
-    setAcompGuestAdults(0)
-    setAcompGuestChildName('')
+    setAcompGuestAdults(guestAdults)
+    setAcompGuestChildren(guestChildrenCount)
     setAcompVisitId(visit.id)
   }
 
   async function handleSaveAcomp(visit: TodayVisit) {
     setSavingAcomp(true)
     const selectedCo = acompCoTitulares.filter(c => c.selected)
-    const totalAdults = 1 + selectedCo.length + acompExtraAdults + acompGuestAdults
-    const totalChildren = acompChildren.length
-    // Store named adult companions + children together in children_present
+    const totalAdults = 1 + selectedCo.length + acompGuestAdults
+    const totalChildren = acompChildren.length + acompGuestChildren
     const adultEntries = selectedCo.map(c => ({ name: c.name, is_adult: true }))
     const childEntries = acompChildren.map(({ isGuest: _, ...rest }) => rest)
     await supabase.from('visits').update({
@@ -1059,20 +1061,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           })
         }
 
-        function addGuestChild() {
-          const name = acompGuestChildName.trim()
-          if (!name) return
-          setAcompChildren(prev => [...prev, { name, isGuest: true }])
-          setAcompGuestChildName('')
-        }
-
-        function removeGuestChild(name: string) {
-          setAcompChildren(prev => prev.filter(c => !(c.isGuest && c.name === name)))
-        }
-
-        const guestKids = acompChildren.filter(c => c.isGuest)
         const coTitSelected = acompCoTitulares.filter(c => c.selected).length
-        const totalAcomp = coTitSelected + acompExtraAdults + acompGuestAdults + acompChildren.length
+        const totalAcomp = coTitSelected + acompGuestAdults + acompChildren.length + acompGuestChildren
 
         return (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setAcompVisitId(null)}>
@@ -1146,61 +1136,42 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                 )}
 
-                {/* Adultos acompañantes */}
+                {/* Invitados */}
                 <div>
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Adultos acompañantes</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Invitados</p>
                   <div className="space-y-2">
+                    {/* Adultos invitados */}
                     <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
-                      <span className="text-xs text-snow">Adultos adicionales (no titulares)</span>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setAcompExtraAdults(n => Math.max(0, n - 1))}
-                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
-                        <span className="w-5 text-center text-xs font-semibold text-snow">{acompExtraAdults}</span>
-                        <button onClick={() => setAcompExtraAdults(n => n + 1)}
-                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors font-bold">+</button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
-                      <span className="text-xs text-snow">Invitados adultos (sin registro)</span>
+                      <span className="text-xs text-snow">Adultos invitados</span>
                       <div className="flex items-center gap-2">
                         <button onClick={() => setAcompGuestAdults(n => Math.max(0, n - 1))}
                           className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
-                        <span className="w-5 text-center text-xs font-semibold text-snow">{acompGuestAdults}</span>
+                        <input
+                          type="number" min={0}
+                          value={acompGuestAdults}
+                          onChange={e => setAcompGuestAdults(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-8 text-center text-xs font-semibold text-snow bg-transparent focus:outline-none"
+                        />
                         <button onClick={() => setAcompGuestAdults(n => n + 1)}
                           className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors font-bold">+</button>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Invitados niños */}
-                <div>
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Niños invitados (sin registro)</p>
-                  {guestKids.length > 0 && (
-                    <div className="space-y-1.5 mb-2">
-                      {guestKids.map((c, i) => (
-                        <div key={i} className="flex items-center justify-between rounded-xl bg-iris/10 border border-iris/30 px-3 py-2">
-                          <span className="text-xs text-snow">{c.name}</span>
-                          <button onClick={() => removeGuestChild(c.name)} className="text-mist hover:text-rose transition-colors">
-                            <X size={12} />
-                          </button>
-                        </div>
-                      ))}
+                    {/* Niños invitados */}
+                    <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
+                      <span className="text-xs text-snow">Niños invitados</span>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setAcompGuestChildren(n => Math.max(0, n - 1))}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
+                        <input
+                          type="number" min={0}
+                          value={acompGuestChildren}
+                          onChange={e => setAcompGuestChildren(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-8 text-center text-xs font-semibold text-snow bg-transparent focus:outline-none"
+                        />
+                        <button onClick={() => setAcompGuestChildren(n => n + 1)}
+                          className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors font-bold">+</button>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={acompGuestChildName}
-                      onChange={e => setAcompGuestChildName(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && addGuestChild()}
-                      placeholder="Nombre del niño invitado"
-                      className="flex-1 bg-surface2 border border-line rounded-xl px-3 py-2 text-xs text-snow placeholder-mist focus:outline-none focus:border-iris/50"
-                    />
-                    <button onClick={addGuestChild}
-                      className="flex items-center gap-1 text-xs font-semibold text-ink bg-iris rounded-xl px-3 py-2 hover:brightness-110 transition-all">
-                      <Plus size={12} /> Añadir
-                    </button>
                   </div>
                 </div>
               </div>
