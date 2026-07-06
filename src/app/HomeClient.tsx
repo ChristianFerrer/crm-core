@@ -655,7 +655,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
                   const isLong = elapsedMins > 180
                   const check = openChecks.get(visit.id)
-                  const isConfirming = confirmCheckout === visit.id
                   const isShowingConsumos = consumosVisitId === visit.id
 
                   const imp = calcImporte(visit)
@@ -775,45 +774,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </td>
                         {/* Salida */}
                         <td className="pl-3 pr-4 py-3 align-top">
-                          {isConfirming ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleCheckout(visit.id)}
-                                disabled={checkingOut === visit.id}
-                                className="flex items-center gap-0.5 text-[10px] font-semibold text-ink bg-rose rounded px-2 py-1 hover:brightness-110 transition-all disabled:opacity-50 whitespace-nowrap"
-                              >
-                                <Check size={9} />{checkingOut === visit.id ? '...' : 'Sí'}
-                              </button>
-                              <button
-                                onClick={() => setConfirmCheckout(null)}
-                                className="text-[10px] font-medium text-fog bg-surface2 border border-line rounded px-2 py-1 hover:text-snow transition-colors"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setConfirmCheckout(visit.id)}
-                              className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors whitespace-nowrap"
-                            >
-                              <LogOut size={10} /> Salida
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setConfirmCheckout(visit.id)}
+                            className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors whitespace-nowrap"
+                          >
+                            <LogOut size={10} /> Salida
+                          </button>
                         </td>
                       </tr>
-                      {/* Confirm message row */}
-                      {isConfirming && (
-                        <tr className="bg-rose/5">
-                          <td colSpan={11} className="pl-4 pr-4 py-2">
-                            <p className="text-[11px] text-rose font-medium">
-                              ¿Confirmar salida de <span className="font-bold">{visit.members?.name ?? '—'}</span>?
-                              {check && check.items.length > 0 && (
-                                <span className="text-fog font-normal"> · El ticket de {check.items.length} consumo{check.items.length !== 1 ? 's' : ''} se cerrará.</span>
-                              )}
-                            </p>
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   )
                 })}
@@ -1013,6 +981,61 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación de salida */}
+      {confirmCheckout && (() => {
+        const visit = activeVisits.find(v => v.id === confirmCheckout)
+        if (!visit) return null
+        const check = openChecks.get(confirmCheckout)
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setConfirmCheckout(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <LogOut size={15} className="text-rose shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
+                    <p className="text-[11px] text-fog">Confirmar salida</p>
+                  </div>
+                </div>
+                <button onClick={() => setConfirmCheckout(null)} className="text-fog hover:text-snow transition-colors p-1">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="px-5 py-4 space-y-3">
+                <p className="text-sm text-fog">
+                  ¿Registrar la salida de <span className="font-semibold text-snow">{visit.members?.name ?? '—'}</span>?
+                </p>
+                {check && check.items.length > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl bg-amber/10 border border-amber/30 px-3 py-2.5">
+                    <ShoppingCart size={13} className="text-amber shrink-0" />
+                    <p className="text-xs text-amber">
+                      Hay {check.items.length} consumo{check.items.length !== 1 ? 's' : ''} abierto{check.items.length !== 1 ? 's' : ''} por <span className="font-bold text-lime">{check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€</span> — se cerrarán al salir.
+                    </p>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setConfirmCheckout(null)}
+                    className="flex-1 text-sm font-medium text-fog bg-surface2 border border-line rounded-xl py-2.5 hover:text-snow transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleCheckout(visit.id)}
+                    disabled={checkingOut === visit.id}
+                    className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
+                  >
+                    <LogOut size={14} />
+                    {checkingOut === visit.id ? 'Registrando...' : 'Confirmar salida'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal de acompañantes */}
       {acompVisitId && (() => {
