@@ -96,6 +96,46 @@ type HomeClientProps = {
   allMembers: MemberData[]
 }
 
+function ColFilter({ label, value, onChange, options }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+}) {
+  const [open, setOpen] = useState(false)
+  const active = value !== 'all'
+  const current = options.find(o => o.value === value)
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
+          active ? 'bg-iris/10 text-iris border-iris/40' : 'text-mist border-line hover:text-fog hover:border-line2'
+        }`}
+      >
+        {active ? current?.label : label}
+        <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute top-full mt-1 left-0 bg-surface border border-line rounded-xl shadow-2xl z-50 min-w-[150px] overflow-hidden py-1">
+            {options.map(opt => (
+              <button key={opt.value} onClick={() => { onChange(opt.value); setOpen(false) }}
+                className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface2 ${
+                  value === opt.value ? 'text-iris font-semibold' : 'text-fog'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function StackedBar({ x, y, width, height, fill, roundTop }: {
   x?: number; y?: number; width?: number; height?: number; fill?: string; roundTop?: boolean
 }) {
@@ -162,7 +202,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
-  const [bonoFilter, setBonoFilter] = useState<'all' | 'con_bono' | 'sin_bono'>('all')
+  const [filterTipo, setFilterTipo] = useState('all')
+  const [filterBono, setFilterBono] = useState('all')
+  const [filterSesiones, setFilterSesiones] = useState('all')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [confirmCheckout, setConfirmCheckout] = useState<string | null>(null)
   const [executingBooking, setExecutingBooking] = useState<string | null>(null)
@@ -192,8 +234,20 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
 
   const filteredVisits = activeVisits.filter(v => {
-    if (bonoFilter === 'con_bono' && !v.membership_id) return false
-    if (bonoFilter === 'sin_bono' && v.membership_id) return false
+    if (filterBono === 'con_bono' && !v.membership_id) return false
+    if (filterBono === 'sin_bono' && v.membership_id) return false
+    if (filterTipo !== 'all') {
+      const tipo = fmtVisitType(v)
+      if (filterTipo === 'libre' && tipo !== 'Libre') return false
+      if (filterTipo === 'birthday' && tipo !== 'Cumpleaños') return false
+      if (filterTipo === 'custodia' && tipo !== 'Custodia') return false
+    }
+    if (filterSesiones !== 'all') {
+      const s = v.memberships?.sessions_remaining
+      if (filterSesiones === 'critical' && (s == null || s > 2)) return false
+      if (filterSesiones === 'low' && (s == null || s <= 2 || s > 5)) return false
+      if (filterSesiones === 'ok' && (s == null || s <= 5)) return false
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase()
       const nameMatch = (v.members?.name ?? '').toLowerCase().includes(q)
@@ -694,7 +748,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             </div>
           )}
 
-          {/* Search + bono filters */}
+          {/* Search + column filters */}
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-mist pointer-events-none">
@@ -713,25 +767,39 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </button>
               )}
             </div>
-            <div className="flex gap-1 shrink-0">
-              {([['all', 'Todos', activeTotal], ['con_bono', `Con bono`, conBonoCount], ['sin_bono', `Sin bono`, sinBonoCount]] as [string, string, number][]).map(([key, label, count]) => (
-                <button
-                  key={key}
-                  onClick={() => setBonoFilter(key as 'all' | 'con_bono' | 'sin_bono')}
-                  className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
-                    bonoFilter === key
-                      ? key === 'con_bono' ? 'bg-iris/20 text-iris border-iris/40'
-                      : key === 'sin_bono' ? 'bg-amber/20 text-amber border-amber/40'
-                      : 'bg-surface2 text-snow border-line'
-                      : 'text-mist border-line hover:text-fog hover:border-line2'
-                  }`}
-                >
-                  {label}
-                  <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${
-                    bonoFilter === key ? 'opacity-80' : 'opacity-50'
-                  }`}>{count}</span>
-                </button>
-              ))}
+            <div className="flex gap-1.5 shrink-0 flex-wrap">
+              <ColFilter
+                label="Tipo"
+                value={filterTipo}
+                onChange={setFilterTipo}
+                options={[
+                  { value: 'all', label: 'Tipo: Todos' },
+                  { value: 'libre', label: 'Libre' },
+                  { value: 'birthday', label: 'Cumpleaños' },
+                  { value: 'custodia', label: 'Custodia' },
+                ]}
+              />
+              <ColFilter
+                label="Bono"
+                value={filterBono}
+                onChange={setFilterBono}
+                options={[
+                  { value: 'all', label: 'Bono: Todos' },
+                  { value: 'con_bono', label: 'Con bono' },
+                  { value: 'sin_bono', label: 'Sin bono' },
+                ]}
+              />
+              <ColFilter
+                label="Sesiones"
+                value={filterSesiones}
+                onChange={setFilterSesiones}
+                options={[
+                  { value: 'all', label: 'Sesiones: Todas' },
+                  { value: 'critical', label: 'Críticas (≤2)' },
+                  { value: 'low', label: 'Bajas (≤5)' },
+                  { value: 'ok', label: 'OK (>5)' },
+                ]}
+              />
             </div>
           </div>
         </div>
@@ -746,11 +814,20 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  {['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Salida'].map(col => (
-                    <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
-                      {col}
-                    </th>
-                  ))}
+                  {(['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Salida'] as const).map(col => {
+                    const isFiltered =
+                      (col === 'Tipo' && filterTipo !== 'all') ||
+                      (col === 'Bono' && filterBono !== 'all') ||
+                      (col === 'Sesiones' && filterSesiones !== 'all')
+                    return (
+                      <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
+                        <span className={`flex items-center gap-1 ${isFiltered ? 'text-iris' : 'text-mist'}`}>
+                          {col}
+                          {isFiltered && <span className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />}
+                        </span>
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
