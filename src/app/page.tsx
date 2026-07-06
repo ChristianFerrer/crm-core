@@ -34,8 +34,10 @@ export default async function DashboardPage({
     supabase
       .from('visits')
       .select('id, checked_in_at, checked_out_at, member_id, membership_id, visit_type, children_present, adults_count, children_count, members(name)')
-      .gte('checked_in_at', dayStart.toISOString())
+      // Visits active during the selected day:
+      // started before/on dayEnd AND (still open OR checked out during/after dayStart)
       .lte('checked_in_at', dayEnd.toISOString())
+      .or(`checked_out_at.is.null,checked_out_at.gte.${dayStart.toISOString()}`)
       .order('checked_in_at', { ascending: false }),
     supabase
       .from('visits')

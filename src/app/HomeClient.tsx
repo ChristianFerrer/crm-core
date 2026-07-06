@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
-  Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight,
+  Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -151,6 +151,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [openChecks, setOpenChecks] = useState<Map<string, OpenCheck>>(new Map())
   const [consumosVisitId, setConsumosVisitId] = useState<string | null>(null)
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
+  const [importeVisitId, setImporteVisitId] = useState<string | null>(null)
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
   const [rateCustodia, setRateCustodia] = useState(8)
@@ -619,13 +620,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </span>
                         </td>
                         {/* Importe por tiempo */}
-                        <td className="px-3 py-3 align-top">
-                          <p className="text-xs font-bold text-lime whitespace-nowrap">{imp.total.toFixed(2)}€</p>
-                          {imp.titular > 0 && imp.ninos > 0 && (
-                            <p className="text-[10px] text-mist whitespace-nowrap">
-                              {imp.titular.toFixed(2)}€ + {imp.ninos.toFixed(2)}€
-                            </p>
-                          )}
+                        <td className="px-3 py-3 align-middle">
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
+                            <span className="text-xs font-bold text-lime">{imp.total.toFixed(2)}€</span>
+                            <button
+                              onClick={() => setImporteVisitId(visit.id)}
+                              className="w-5 h-5 flex items-center justify-center rounded-md text-fog hover:text-lime hover:bg-lime/10 transition-colors"
+                            >
+                              <Receipt size={11} />
+                            </button>
+                          </div>
                         </td>
                         {/* Consumos */}
                         <td className="px-3 py-3 align-middle">
@@ -887,6 +891,93 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
       </div>
+
+      {/* Modal de detalle de importe */}
+      {importeVisitId && (() => {
+        const visit = activeVisits.find(v => v.id === importeVisitId)
+        if (!visit) return null
+        const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
+        const hours = elapsedMins / 60
+        const imp = calcImporte(visit)
+        const check = openChecks.get(importeVisitId)
+        const consumosTotal = check ? check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0) : 0
+        const grandTotal = imp.total + consumosTotal
+        const fmtHours = (mins: number) => {
+          const h = Math.floor(mins / 60), m = Math.round(mins % 60)
+          return h > 0 ? `${h}h ${m}min` : `${m}min`
+        }
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setImporteVisitId(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <Receipt size={15} className="text-lime shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
+                    <p className="text-[11px] text-fog">Detalle del importe</p>
+                  </div>
+                </div>
+                <button onClick={() => setImporteVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                  <X size={16} />
+                </button>
+              </div>
+              {/* Body */}
+              <div className="px-5 py-4 space-y-3">
+                {/* Meta */}
+                <div className="flex justify-between text-xs text-fog">
+                  <span>Entrada</span>
+                  <span className="text-snow">{fmtTime(visit.checked_in_at)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-fog">
+                  <span>Tiempo en sala</span>
+                  <span className="text-snow">{fmtHours(elapsedMins)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-fog">
+                  <span>Tipo</span>
+                  <span className="text-snow">{fmtVisitType(visit.visit_type)}</span>
+                </div>
+                <div className="border-t border-line pt-3 space-y-2">
+                  {/* Adultos */}
+                  {visit.adults_count > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-fog">
+                        {visit.adults_count} adulto{visit.adults_count !== 1 ? 's' : ''} × {visit.visit_type === 'custodia' ? rateCustodia : rateAdult}€/h × {hours.toFixed(2)}h
+                      </span>
+                      <span className="text-lime font-semibold">{imp.titular.toFixed(2)}€</span>
+                    </div>
+                  )}
+                  {/* Niños */}
+                  {visit.children_count > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-fog">
+                        {visit.children_count} niño{visit.children_count !== 1 ? 's' : ''} × {visit.visit_type === 'custodia' ? rateCustodia : rateChild}€/h × {hours.toFixed(2)}h
+                      </span>
+                      <span className="text-lime font-semibold">{imp.ninos.toFixed(2)}€</span>
+                    </div>
+                  )}
+                  {/* Consumos */}
+                  {consumosTotal > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-fog">Consumos ({check!.items.length} producto{check!.items.length !== 1 ? 's' : ''})</span>
+                      <span className="text-lime font-semibold">{consumosTotal.toFixed(2)}€</span>
+                    </div>
+                  )}
+                </div>
+                {/* Total */}
+                <div className="border-t border-line pt-3 flex justify-between items-center">
+                  <span className="text-sm font-bold text-snow">Total</span>
+                  <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                </div>
+                {visit.membership_id && (
+                  <p className="text-[11px] text-iris text-center">Visita con bono — verificar descuento según tarifa contratada</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal de consumos */}
       {consumosVisitId && consumosVisit && (
