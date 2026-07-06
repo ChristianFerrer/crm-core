@@ -641,7 +641,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  {['Titular', 'Acomp.', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
+                  {['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Salida'].map(col => (
                     <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                       {col}
                     </th>
@@ -699,6 +699,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               </div>
                             )
                           })()}
+                        </td>
+                        {/* Total en sala */}
+                        <td className="px-3 py-3 align-middle">
+                          <span className="text-xs font-bold text-snow">{visit.adults_count + visit.children_count}</span>
                         </td>
                         {/* Tipo */}
                         <td className="px-3 py-3 align-top">
@@ -800,7 +804,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       {/* Confirm message row */}
                       {isConfirming && (
                         <tr className="bg-rose/5">
-                          <td colSpan={10} className="pl-4 pr-4 py-2">
+                          <td colSpan={11} className="pl-4 pr-4 py-2">
                             <p className="text-[11px] text-rose font-medium">
                               ¿Confirmar salida de <span className="font-bold">{visit.members?.name ?? '—'}</span>?
                               {check && check.items.length > 0 && (
