@@ -1238,7 +1238,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         ) : (
           <>
             {/* ── MOBILE: expandable cards (< md) ──────────────────────── */}
-            <div className="md:hidden px-5 py-3 space-y-2.5">
+            <div className="md:hidden px-3 py-3 space-y-2.5">
               {filteredVisits.map(visit => {
                 const bono = visit.membership_id
                 const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
