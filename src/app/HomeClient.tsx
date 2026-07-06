@@ -26,6 +26,7 @@ type TodayVisit = {
   adults_count: number
   children_count: number
   booking_id: string | null
+  paid_at: string | null
   bookings: { type: string } | null
   members: { name: string } | null
   memberships: {
@@ -377,6 +378,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [acompTitularPresent, acompCoTitulares, acompChildren, acompGuestAdults, acompGuestChildren])
+
+  async function handlePayVisit(visitId: string) {
+    await supabase.from('visits').update({ paid_at: new Date().toISOString() }).eq('id', visitId)
+    setTotalVisitId(null)
+    router.refresh()
+  }
 
   async function handleCheckout(visitId: string) {
     setCheckingOut(visitId)
@@ -759,7 +766,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <table className="w-full min-w-[820px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-line">
-                  {['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Salida'].map(col => (
+                  {['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Estado', 'Salida'].map(col => (
                     <th key={col} className="px-3 py-2 text-[10px] font-semibold text-mist uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                       {col}
                     </th>
@@ -907,6 +914,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               </div>
                             )
                           })()}
+                        </td>
+                        {/* Estado de la cuenta */}
+                        <td className="px-3 py-3 align-middle">
+                          {visit.paid_at ? (
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-mint bg-mint/10 border border-mint/30 rounded-lg px-2 py-1 whitespace-nowrap">
+                              <Check size={9} strokeWidth={3} /> Pagado
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold text-amber bg-amber/10 border border-amber/30 rounded-lg px-2 py-1 whitespace-nowrap">
+                              Pendiente
+                            </span>
+                          )}
                         </td>
                         {/* Salida */}
                         <td className="pl-3 pr-4 py-3 align-top">
@@ -1236,10 +1255,26 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </div>
               </div>
 
-              {/* Total */}
-              <div className="px-5 py-4 border-t border-line shrink-0 flex items-center justify-between">
-                <span className="text-sm font-bold text-snow">Total a pagar</span>
-                <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+              {/* Footer: total + botón pagar */}
+              <div className="px-5 py-4 border-t border-line shrink-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-snow">Total a pagar</span>
+                  <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                </div>
+                {!visit.paid_at ? (
+                  <button
+                    onClick={() => handlePayVisit(visit.id)}
+                    className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-ink bg-lime rounded-xl py-3 hover:brightness-110 transition-all"
+                  >
+                    <Check size={15} strokeWidth={2.5} />
+                    Marcar como pagado
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 text-sm text-mint font-semibold py-2">
+                    <Check size={14} strokeWidth={2.5} />
+                    Pagado
+                  </div>
+                )}
               </div>
             </div>
           </div>
