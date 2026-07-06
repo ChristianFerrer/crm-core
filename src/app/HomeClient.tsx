@@ -1051,7 +1051,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   })
 
   const bookingTypeStyle = {
-    birthday: { bar: 'bg-rose', badge: 'bg-rose/10 text-rose border-rose/30', label: 'Cumpleaños' },
+    birthday: { bar: 'bg-iris', badge: 'bg-iris/10 text-iris border-iris/30', label: 'Cumpleaños' },
     custodia: { bar: 'bg-cyan-300', badge: 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30', label: 'Custodia' },
     other:    { bar: 'bg-lime', badge: 'bg-lime/10 text-lime border-lime/30', label: 'Otro' },
   }
@@ -1251,7 +1251,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 const acompCount = Math.max(0, (visit.adults_count ?? 1) - 1) + numChildren
                 const tipo = fmtVisitType(visit)
                 const tipoCls = tipo === 'Cumpleaños'
-                  ? 'bg-rose/10 text-rose border-rose/30'
+                  ? 'bg-iris/10 text-iris border-iris/30'
                   : tipo === 'Custodia'
                   ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30'
                   : 'bg-surface2 text-fog border-line'
@@ -1283,11 +1283,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                            {acompCount > 0 && (
-                              <span className="text-[11px] text-fog">
-                                <span className="font-semibold text-snow">{acompCount}</span> acomp.
-                              </span>
-                            )}
                             <span className="text-[11px] text-fog">
                               <span className="font-semibold text-snow">{visit.adults_count + numChildren}</span> en sala
                             </span>
@@ -1464,7 +1459,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {(() => {
                               const tipo = fmtVisitType(visit)
                               const cls = tipo === 'Cumpleaños'
-                                ? 'bg-rose/10 text-rose border-rose/30'
+                                ? 'bg-iris/10 text-iris border-iris/30'
                                 : tipo === 'Custodia'
                                 ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30'
                                 : 'bg-surface2 text-fog border-line'
@@ -1834,7 +1829,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-rose border border-rose/30">Cumpleaños</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-iris/10 text-iris border border-iris/30">Cumpleaños</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
