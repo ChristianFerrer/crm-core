@@ -313,7 +313,7 @@ export default function ServiciosPage() {
 
       {/* Add / Edit Service Modal */}
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-snow">{modal === 'add' ? 'Nuevo servicio' : 'Editar servicio'}</h2>
@@ -363,7 +363,7 @@ export default function ServiciosPage() {
 
       {/* Category Add/Edit Modal */}
       {showCatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-snow">{editCat ? 'Editar categoría' : 'Nueva categoría'}</h2>
@@ -403,7 +403,7 @@ export default function ServiciosPage() {
 
       {/* Delete category confirmation */}
       {deleteCat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
             <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar categoría?</h2>
             <p className="text-sm text-fog mb-1">Los servicios con esta categoría quedarán sin categorizar.</p>
@@ -418,7 +418,7 @@ export default function ServiciosPage() {
 
       {/* Delete service confirmation */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
             <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar servicio?</h2>
             <p className="text-sm text-fog mb-6">Esta acción no se puede deshacer.</p>

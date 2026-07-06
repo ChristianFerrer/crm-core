@@ -336,7 +336,7 @@ export default function TiendaPage() {
 
       {/* Product modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pb-16 lg:pb-0" onClick={() => setShowModal(false)}>
           <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-semibold text-snow">{editing ? 'Editar producto' : 'Nuevo producto'}</h2>
@@ -469,7 +469,7 @@ export default function TiendaPage() {
 
       {/* Quick stock entry modal */}
       {stockProduct && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setStockProduct(null)}>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 pb-16 lg:pb-0" onClick={() => setStockProduct(null)}>
           <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-5 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 shrink-0">

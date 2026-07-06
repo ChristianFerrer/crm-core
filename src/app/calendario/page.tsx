@@ -510,7 +510,7 @@ export default function CalendarioPage() {
 
       {/* ── New booking modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center">
+        <div className="fixed inset-0 z-[60] flex items-end lg:items-center justify-center pb-16 lg:pb-0">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative w-full max-w-lg bg-surface border border-line rounded-t-2xl lg:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">

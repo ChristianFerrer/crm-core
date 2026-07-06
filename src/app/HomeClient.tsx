@@ -1767,7 +1767,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
       {/* Modal de alertas */}
       {alertsOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end p-4 pt-16 sm:pt-4" onClick={() => setAlertsOpen(false)}>
+        <div className="fixed inset-0 z-[60] flex items-start justify-end p-4 pt-16 sm:pt-4" onClick={() => setAlertsOpen(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div className="relative w-full max-w-sm rounded-2xl border border-amber/30 bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-line shrink-0">
@@ -1901,7 +1901,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const consumosTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
         const grandTotal = imp.total + consumosTotal
         return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setTotalVisitId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-16 lg:pb-0" onClick={() => setTotalVisitId(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -2008,7 +2008,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (!visit) return null
         const check = openChecks.get(confirmCheckout)
         return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setConfirmCheckout(null)}>
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-16 lg:pb-0" onClick={() => setConfirmCheckout(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
@@ -2077,7 +2077,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const totalAcomp = coTitSelected + acompGuestAdults + acompChildren.length + acompGuestChildren
 
         return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setAcompVisitId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-16 lg:pb-0" onClick={() => setAcompVisitId(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -2237,7 +2237,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const hourRate = visit.visit_type === 'custodia' ? rateCustodia : rateAdult
         const childRate = visit.visit_type === 'custodia' ? rateCustodia : rateChild
         return (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setImporteVisitId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-16 lg:pb-0" onClick={() => setImporteVisitId(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -2317,7 +2317,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
       {/* Modal de registro de visita */}
       {checkinOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setCheckinOpen(false)}>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-16 lg:pb-0" onClick={() => setCheckinOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[95vh]" onClick={e => e.stopPropagation()}>
             {/* Header */}
@@ -2349,7 +2349,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Modal de consumos */}
       {consumosVisitId && consumosVisit && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pb-16 lg:pb-0"
           onClick={() => setConsumosVisitId(null)}
         >
           {/* Backdrop */}

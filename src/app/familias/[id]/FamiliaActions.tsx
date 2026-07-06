@@ -35,7 +35,7 @@ export default function FamiliaActions({ id }: { id: string }) {
       </button>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-carbon/80 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-carbon/80 backdrop-blur-sm px-4">
           <div className="rounded-2xl border border-line bg-surface p-6 w-full max-w-sm space-y-4">
             <h2 className="text-base font-semibold text-snow">¿Eliminar familia?</h2>
             <p className="text-sm text-fog">

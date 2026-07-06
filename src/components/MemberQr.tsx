@@ -20,7 +20,7 @@ export function MemberQr({ qrCode }: { qrCode: string }) {
       </button>
       {expanded && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
           onClick={() => setExpanded(false)}
         >
           <div className="rounded-2xl bg-white p-6 shadow-2xl max-w-xs w-full" onClick={e => e.stopPropagation()}>
