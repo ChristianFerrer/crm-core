@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, Fragment } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -25,6 +25,8 @@ type TodayVisit = {
   children_present: { name: string; age?: number; birth_date?: string; is_adult?: boolean }[] | null
   adults_count: number
   children_count: number
+  booking_id: string | null
+  bookings: { type: string } | null
   members: { name: string } | null
   memberships: {
     sessions_remaining: number
@@ -121,9 +123,10 @@ function fmtChildAge(birth_date?: string, fallbackAge?: number): string {
   return ''
 }
 
-function fmtVisitType(type: string): string {
-  if (type === 'custodia') return 'Custodia'
-  if (type === 'birthday') return 'Cumpleaños'
+function fmtVisitType(visit: { visit_type: string; bookings?: { type: string } | null }): string {
+  if (visit.visit_type === 'custodia') return 'Custodia'
+  if (visit.bookings?.type === 'birthday') return 'Cumpleaños'
+  if (visit.bookings?.type === 'custodia') return 'Custodia'
   return 'Libre'
 }
 
@@ -169,6 +172,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [acompChildren, setAcompChildren] = useState<{ name: string; birth_date?: string; isGuest?: boolean }[]>([])
   const [acompGuestAdults, setAcompGuestAdults] = useState(0)
   const [acompGuestChildren, setAcompGuestChildren] = useState(0)
+  const [acompTitularPresent, setAcompTitularPresent] = useState(true)
+  const [savedAcomp, setSavedAcomp] = useState(false)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const skipNextSave = useRef(false)
   const [savingAcomp, setSavingAcomp] = useState(false)
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
@@ -299,15 +306,20 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           ...guestKids,
         ]
 
-    // Guest adults = total - titular(1) - co-titulares selected
-    const coTitSelected = coTitulares.filter(c => c.selected).length
-    const guestAdults = Math.max(0, (visit.adults_count ?? 1) - 1 - coTitSelected)
+    // Titular present = adults_count >= 1
+    const titularPresent = (visit.adults_count ?? 1) >= 1
 
-    // Guest children = children not in registered list
+    // Guest adults = total adults - titular(0 or 1) - co-titulares selected
+    const coTitSelected = coTitulares.filter(c => c.selected).length
+    const guestAdults = Math.max(0, (visit.adults_count ?? 1) - (titularPresent ? 1 : 0) - coTitSelected)
+
+    // Guest children = children_count minus those already identified as registered
     const guestChildrenCount = noPresenceData
       ? Math.max(0, (visit.children_count ?? 0) - selectedChildren.length)
       : guestKids.length
 
+    skipNextSave.current = true
+    setAcompTitularPresent(titularPresent)
     setAcompCoTitulares(coTitulares)
     setAcompChildren(selectedChildren)
     setAcompGuestAdults(guestAdults)
@@ -315,22 +327,41 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     setAcompVisitId(visit.id)
   }
 
-  async function handleSaveAcomp(visit: TodayVisit) {
+  async function saveAcompData(
+    visitId: string,
+    titularPresent: boolean,
+    coTitulares: { id: string; name: string; selected: boolean }[],
+    children: { name: string; birth_date?: string; isGuest?: boolean }[],
+    guestAdults: number,
+    guestChildren: number,
+  ) {
     setSavingAcomp(true)
-    const selectedCo = acompCoTitulares.filter(c => c.selected)
-    const totalAdults = 1 + selectedCo.length + acompGuestAdults
-    const totalChildren = acompChildren.length + acompGuestChildren
+    const selectedCo = coTitulares.filter(c => c.selected)
+    const totalAdults = (titularPresent ? 1 : 0) + selectedCo.length + guestAdults
+    const totalChildren = children.length + guestChildren
     const adultEntries = selectedCo.map(c => ({ name: c.name, is_adult: true }))
-    const childEntries = acompChildren.map(({ isGuest: _, ...rest }) => rest)
+    const childEntries = children.map(({ isGuest: _, ...rest }) => rest)
     await supabase.from('visits').update({
       adults_count: totalAdults,
       children_count: totalChildren,
       children_present: [...adultEntries, ...childEntries],
-    }).eq('id', visit.id)
+    }).eq('id', visitId)
     setSavingAcomp(false)
-    setAcompVisitId(null)
+    setSavedAcomp(true)
+    setTimeout(() => setSavedAcomp(false), 2000)
     router.refresh()
   }
+
+  // Auto-save: skip first run when popup opens (state initialisation), then debounce on each change
+  useEffect(() => {
+    if (!acompVisitId) return
+    if (skipNextSave.current) { skipNextSave.current = false; return }
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      saveAcompData(acompVisitId, acompTitularPresent, acompCoTitulares, acompChildren, acompGuestAdults, acompGuestChildren)
+    }, 700)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [acompTitularPresent, acompCoTitulares, acompChildren, acompGuestAdults, acompGuestChildren])
 
   async function handleCheckout(visitId: string) {
     setCheckingOut(visitId)
@@ -714,7 +745,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         {/* Tipo */}
                         <td className="px-3 py-3 align-top">
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line whitespace-nowrap">
-                            {fmtVisitType(visit.visit_type)}
+                            {fmtVisitType(visit)}
                           </span>
                         </td>
                         {/* Bono */}
@@ -1083,6 +1114,25 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </div>
 
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+                {/* Titular */}
+                <div>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Titular</p>
+                  <button
+                    onClick={() => setAcompTitularPresent(p => !p)}
+                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
+                      acompTitularPresent ? 'bg-iris/10 border-iris/40' : 'bg-surface2 border-line hover:border-iris/30'
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      acompTitularPresent ? 'bg-iris border-iris' : 'border-line2'
+                    }`}>
+                      {acompTitularPresent && <Check size={10} className="text-ink" strokeWidth={3} />}
+                    </span>
+                    <span className="text-xs font-medium text-snow flex-1">{visit.members?.name ?? '—'}</span>
+                    <span className="text-[11px] text-iris font-medium">Titular</span>
+                  </button>
+                </div>
+
                 {/* Co-titulares */}
                 {acompCoTitulares.length > 0 && (
                   <div>
@@ -1177,15 +1227,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </div>
 
               {/* Footer */}
-              <div className="px-5 py-4 border-t border-line shrink-0">
-                <button
-                  onClick={() => handleSaveAcomp(visit)}
-                  disabled={savingAcomp}
-                  className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-ink bg-lime rounded-xl py-3 hover:brightness-110 transition-all disabled:opacity-50"
-                >
-                  <Check size={14} />
-                  {savingAcomp ? 'Guardando...' : `Guardar — ${totalAcomp} acompañante${totalAcomp !== 1 ? 's' : ''}`}
-                </button>
+              <div className="px-5 py-3 border-t border-line shrink-0 flex items-center justify-between">
+                <span className="text-[11px] text-mist">{totalAcomp} acompañante{totalAcomp !== 1 ? 's' : ''}</span>
+                <span className={`text-[11px] flex items-center gap-1 transition-opacity ${savingAcomp || savedAcomp ? 'opacity-100' : 'opacity-0'}`}>
+                  {savingAcomp
+                    ? <span className="text-fog">Guardando...</span>
+                    : <span className="text-mint flex items-center gap-1"><Check size={11} /> Guardado</span>
+                  }
+                </span>
               </div>
             </div>
           </div>
@@ -1233,7 +1282,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <span>Tiempo en sala</span><span className="text-snow">{fmtH(elapsedMins)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-fog">
-                  <span>Tipo de visita</span><span className="text-snow">{fmtVisitType(visit.visit_type)}</span>
+                  <span>Tipo de visita</span><span className="text-snow">{fmtVisitType(visit)}</span>
                 </div>
 
                 {/* Tarifa sin bono */}
