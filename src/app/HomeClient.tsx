@@ -313,10 +313,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     const coTitSelected = coTitulares.filter(c => c.selected).length
     const guestAdults = Math.max(0, (visit.adults_count ?? 1) - (titularPresent ? 1 : 0) - coTitSelected)
 
-    // Guest children = children_count minus those already identified as registered
-    const guestChildrenCount = noPresenceData
-      ? Math.max(0, (visit.children_count ?? 0) - selectedChildren.length)
-      : guestKids.length
+    // Guest children = total children_count minus those identified by name (registered or named guests)
+    const guestChildrenCount = Math.max(0, (visit.children_count ?? 0) - selectedChildren.length)
 
     skipNextSave.current = true
     setAcompTitularPresent(titularPresent)
