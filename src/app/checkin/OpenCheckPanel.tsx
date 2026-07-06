@@ -242,7 +242,7 @@ export function OpenCheckPanel({
 
       {/* Quantity picker overlay */}
       {pickProduct && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>

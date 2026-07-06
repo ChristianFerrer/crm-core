@@ -32,7 +32,7 @@ export function DatePickerModal({ value, onChange, placeholder = 'Seleccionar fe
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center pb-16 lg:pb-0" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div
             className="relative w-full max-w-sm rounded-t-3xl border-t border-x border-line bg-surface flex flex-col"

@@ -39,7 +39,7 @@ export function BarcodeScanner({ onDetected, onClose }: {
   }, [onDetected])
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-line">
           <div className="flex items-center gap-2">
