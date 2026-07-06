@@ -1229,200 +1229,317 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         </div>
 
-        {/* Table */}
+        {/* Empty states */}
         {activeVisits.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">Sin personas en sala</div>
         ) : filteredVisits.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">Sin resultados para la búsqueda</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left border-collapse">
-              <thead>
-                <tr className="border-b border-line">
-                  {(['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Salida'] as const).map(col => {
-                    const isFiltered =
-                      (col === 'Tipo' && filterTipo !== 'all') ||
-                      (col === 'Bono' && filterBono !== 'all') ||
-                      (col === 'Sesiones' && filterSesiones !== 'all')
-                    return (
-                      <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
-                        <span className={`flex items-center gap-1 ${isFiltered ? 'text-iris' : 'text-mist'}`}>
-                          {col}
-                          {isFiltered && <span className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />}
+          <>
+            {/* ── MOBILE: card list (< md) ─────────────────────────────── */}
+            <div className="md:hidden divide-y divide-line">
+              {filteredVisits.map(visit => {
+                const bono = visit.membership_id
+                const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
+                const isLong = elapsedMins > 180
+                const check = openChecks.get(visit.id)
+                const imp = calcImporte(visit)
+                const consumosTotal = (check?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
+                const grandTotal = imp.total + consumosTotal
+                const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1)
+                const numChildren = visit.children_count ?? 0
+                const tipo = fmtVisitType(visit)
+                const tipoCls = tipo === 'Cumpleaños'
+                  ? 'bg-rose/10 text-rose border-rose/30'
+                  : tipo === 'Custodia'
+                  ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30'
+                  : 'bg-surface2 text-fog border-line'
+
+                return (
+                  <div key={visit.id} className={`px-4 py-3 space-y-2.5 ${isLong ? 'bg-amber/5' : ''}`}>
+                    {/* Row 1: name + type badge + checkout */}
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-snow flex-1 truncate">{visit.members?.name ?? '—'}</p>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border whitespace-nowrap shrink-0 ${tipoCls}`}>
+                        {tipo}
+                      </span>
+                      <button
+                        onClick={() => setConfirmCheckout(visit.id)}
+                        className="flex items-center gap-1 text-[10px] font-semibold text-rose bg-rose/10 border border-rose/30 rounded-lg px-2.5 py-1.5 hover:bg-rose/20 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                      >
+                        <LogOut size={11} /> Salida
+                      </button>
+                    </div>
+
+                    {/* Row 2: people counts + entry time + elapsed */}
+                    <div className="flex items-center gap-3 flex-wrap text-xs">
+                      <span className="flex items-center gap-1 text-fog">
+                        <span className="font-semibold text-snow">{visit.adults_count}</span> adulto{visit.adults_count !== 1 ? 's' : ''}
+                      </span>
+                      <span className="text-mist">·</span>
+                      <span className="flex items-center gap-1 text-fog">
+                        <span className="font-semibold text-snow">{numChildren}</span> niño{numChildren !== 1 ? 's' : ''}
+                      </span>
+                      <span className="text-mist">·</span>
+                      <span className="text-mist">
+                        {visit.adults_count + numChildren} en sala
+                      </span>
+                      <span className="ml-auto flex items-center gap-1.5">
+                        <span className="text-mist">{fmtTime(visit.checked_in_at)}</span>
+                        <span className={`font-semibold ${isLong ? 'text-amber' : 'text-fog'}`}>{fmtElapsed(visit.checked_in_at)}</span>
+                        {isLong && <AlertTriangle size={11} className="text-amber" />}
+                      </span>
+                    </div>
+
+                    {/* Row 3: bono + sessions */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[11px] font-semibold ${bono ? 'text-iris' : 'text-amber'}`}>
+                        {bono ? (visit.memberships?.membership_types?.name ?? 'Con bono') : 'Sin bono'}
+                      </span>
+                      {bono && visit.memberships != null && (
+                        <>
+                          <span className="text-mist text-[10px]">·</span>
+                          <span className={`text-[11px] font-semibold ${
+                            visit.memberships.sessions_remaining <= 2 ? 'text-rose' :
+                            visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'
+                          }`}>
+                            {visit.memberships.sessions_remaining} ses.
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Row 4: financials + action buttons */}
+                    <div className="flex items-center gap-2 pt-0.5">
+                      {/* Importe */}
+                      <button
+                        onClick={() => setImporteVisitId(visit.id)}
+                        className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs hover:border-lime/40 transition-colors"
+                      >
+                        <span className="text-mist">Importe</span>
+                        <span className="font-semibold text-lime">{imp.total.toFixed(2)}€</span>
+                      </button>
+                      {/* Consumos */}
+                      <button
+                        onClick={() => setConsumosVisitId(consumosVisitId === visit.id ? null : visit.id)}
+                        className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                          consumosVisitId === visit.id
+                            ? 'bg-iris/10 border-iris/40 text-iris'
+                            : 'border-line bg-surface2 hover:border-iris/40'
+                        }`}
+                      >
+                        <Plus size={11} className={consumosVisitId === visit.id ? 'text-iris' : 'text-fog'} />
+                        <span className={consumosTotal > 0 ? 'text-lime font-semibold' : 'text-mist'}>
+                          {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : 'Consumos'}
                         </span>
-                      </th>
+                      </button>
+                      {/* Total */}
+                      <button
+                        onClick={() => setTotalVisitId(visit.id)}
+                        className="flex items-center gap-1.5 rounded-lg border border-lime/40 bg-lime/5 px-2.5 py-1.5 text-xs hover:bg-lime/10 transition-colors ml-auto"
+                      >
+                        <Receipt size={11} className="text-lime" />
+                        <span className="font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                      </button>
+                      {/* Acompañantes */}
+                      <button
+                        onClick={() => openAcompPopup(visit)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-iris hover:border-iris/40 transition-colors shrink-0"
+                      >
+                        <UserPlus size={13} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* ── DESKTOP: table (md+) ─────────────────────────────────── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[820px] text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-line">
+                    {(['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Salida'] as const).map(col => {
+                      const isFiltered =
+                        (col === 'Tipo' && filterTipo !== 'all') ||
+                        (col === 'Bono' && filterBono !== 'all') ||
+                        (col === 'Sesiones' && filterSesiones !== 'all')
+                      return (
+                        <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
+                          <span className={`flex items-center gap-1 ${isFiltered ? 'text-iris' : 'text-mist'}`}>
+                            {col}
+                            {isFiltered && <span className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />}
+                          </span>
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {filteredVisits.map(visit => {
+                    const bono = visit.membership_id
+                    const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
+                    const isLong = elapsedMins > 180
+                    const check = openChecks.get(visit.id)
+                    const isShowingConsumos = consumosVisitId === visit.id
+                    const imp = calcImporte(visit)
+                    return (
+                      <Fragment key={visit.id}>
+                        <tr className={isLong ? 'bg-amber/5' : ''}>
+                          {/* Titular */}
+                          <td className="pl-4 pr-3 py-3 align-top">
+                            <p className="text-xs font-semibold text-snow whitespace-nowrap">{visit.members?.name ?? '—'}</p>
+                          </td>
+                          {/* Acompañantes */}
+                          <td className="px-3 py-3 align-middle">
+                            {(() => {
+                              const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1)
+                              const numChildren = visit.children_count ?? 0
+                              const hasAcomp = extraAdults > 0 || numChildren > 0
+                              return (
+                                <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1">
+                                    {extraAdults > 0 && (
+                                      <span className="text-[11px] font-bold text-lime flex items-center gap-0.5">
+                                        {extraAdults} <span className="text-[10px] font-normal">adulto{extraAdults !== 1 ? 's' : ''}</span>
+                                      </span>
+                                    )}
+                                    {extraAdults > 0 && numChildren > 0 && (
+                                      <span className="text-mist text-[10px]">·</span>
+                                    )}
+                                    {numChildren > 0 && (
+                                      <span className="text-[11px] font-bold text-cyan-300 flex items-center gap-0.5">
+                                        {numChildren} <span className="text-[10px] font-normal">niño{numChildren !== 1 ? 's' : ''}</span>
+                                      </span>
+                                    )}
+                                    {!hasAcomp && <span className="text-xs text-mist">—</span>}
+                                  </div>
+                                  <button
+                                    onClick={() => openAcompPopup(visit)}
+                                    className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-iris hover:border-iris/40 transition-colors"
+                                  >
+                                    <UserPlus size={11} />
+                                  </button>
+                                </div>
+                              )
+                            })()}
+                          </td>
+                          {/* Total en sala */}
+                          <td className="px-3 py-3 align-middle">
+                            <span className="text-xs font-bold text-snow">{visit.adults_count + visit.children_count}</span>
+                          </td>
+                          {/* Tipo */}
+                          <td className="px-3 py-3 align-top">
+                            {(() => {
+                              const tipo = fmtVisitType(visit)
+                              const cls = tipo === 'Cumpleaños'
+                                ? 'bg-rose/10 text-rose border-rose/30'
+                                : tipo === 'Custodia'
+                                ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30'
+                                : 'bg-surface2 text-fog border-line'
+                              return (
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border whitespace-nowrap ${cls}`}>
+                                  {tipo}
+                                </span>
+                              )
+                            })()}
+                          </td>
+                          {/* Bono */}
+                          <td className="px-3 py-3 align-top">
+                            <span className={`text-[10px] font-semibold whitespace-nowrap ${bono ? 'text-iris' : 'text-amber'}`}>
+                              {bono ? (visit.memberships?.membership_types?.name ?? 'Con bono') : 'Sin bono'}
+                            </span>
+                          </td>
+                          {/* Sesiones restantes */}
+                          <td className="px-3 py-3 align-top">
+                            {bono && visit.memberships != null ? (
+                              <span className={`text-xs font-semibold whitespace-nowrap ${
+                                visit.memberships.sessions_remaining <= 2 ? 'text-rose' :
+                                visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'
+                              }`}>
+                                {visit.memberships.sessions_remaining}
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-mist">—</span>
+                            )}
+                          </td>
+                          {/* Entrada */}
+                          <td className="px-3 py-3 align-top">
+                            <span className="text-xs text-mist whitespace-nowrap">{fmtTime(visit.checked_in_at)}</span>
+                          </td>
+                          {/* Tiempo */}
+                          <td className="px-3 py-3 align-top">
+                            <span className={`text-xs font-semibold whitespace-nowrap ${isLong ? 'text-amber' : 'text-fog'}`}>
+                              {fmtElapsed(visit.checked_in_at)}
+                            </span>
+                          </td>
+                          {/* Importe por tiempo */}
+                          <td className="px-3 py-3 align-middle">
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <span className="text-xs font-bold text-lime">{imp.total.toFixed(2)}€</span>
+                              <button
+                                onClick={() => setImporteVisitId(visit.id)}
+                                className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
+                              >
+                                <Receipt size={11} />
+                              </button>
+                            </div>
+                          </td>
+                          {/* Consumos */}
+                          <td className="px-3 py-3 align-middle">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                              <span className={`text-xs font-semibold ${check && check.items.length > 0 ? 'text-lime' : 'text-mist'}`}>
+                                {check && check.items.length > 0
+                                  ? `${check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€`
+                                  : '—'}
+                              </span>
+                              <button
+                                onClick={() => setConsumosVisitId(isShowingConsumos ? null : visit.id)}
+                                className={`flex items-center justify-center w-6 h-6 rounded-md border transition-colors ${
+                                  isShowingConsumos
+                                    ? 'bg-iris/20 text-iris border-iris/40'
+                                    : 'bg-surface2 text-fog border-line hover:border-iris/40 hover:text-iris'
+                                }`}
+                              >
+                                <Plus size={11} />
+                              </button>
+                            </div>
+                          </td>
+                          {/* Total a pagar */}
+                          <td className="px-3 py-3 align-middle">
+                            {(() => {
+                              const consumosTotal = (openChecks.get(visit.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
+                              const grandTotal = imp.total + consumosTotal
+                              return (
+                                <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                                  <button
+                                    onClick={() => setTotalVisitId(visit.id)}
+                                    className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
+                                  >
+                                    <Receipt size={11} />
+                                  </button>
+                                </div>
+                              )
+                            })()}
+                          </td>
+                          {/* Salida */}
+                          <td className="pl-3 pr-4 py-3 align-top">
+                            <button
+                              onClick={() => setConfirmCheckout(visit.id)}
+                              className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors whitespace-nowrap"
+                            >
+                              <LogOut size={10} /> Salida
+                            </button>
+                          </td>
+                        </tr>
+                      </Fragment>
                     )
                   })}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {filteredVisits.map(visit => {
-                  const kids = visit.children_present ?? []
-                  const bono = visit.membership_id
-                  const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
-                  const isLong = elapsedMins > 180
-                  const check = openChecks.get(visit.id)
-                  const isShowingConsumos = consumosVisitId === visit.id
-
-                  const imp = calcImporte(visit)
-                  return (
-                    <Fragment key={visit.id}>
-                      <tr className={isLong ? 'bg-amber/5' : ''}>
-                        {/* Titular */}
-                        <td className="pl-4 pr-3 py-3 align-top">
-                          <p className="text-xs font-semibold text-snow whitespace-nowrap">{visit.members?.name ?? '—'}</p>
-                        </td>
-                        {/* Acompañantes */}
-                        <td className="px-3 py-3 align-middle">
-                          {(() => {
-                            const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1)
-                            const numChildren = visit.children_count ?? 0
-                            const hasAcomp = extraAdults > 0 || numChildren > 0
-                            return (
-                              <div className="flex items-center gap-1.5">
-                                <div className="flex items-center gap-1">
-                                  {extraAdults > 0 && (
-                                    <span className="text-[11px] font-bold text-lime flex items-center gap-0.5">
-                                      {extraAdults} <span className="text-[10px] font-normal">adulto{extraAdults !== 1 ? 's' : ''}</span>
-                                    </span>
-                                  )}
-                                  {extraAdults > 0 && numChildren > 0 && (
-                                    <span className="text-mist text-[10px]">·</span>
-                                  )}
-                                  {numChildren > 0 && (
-                                    <span className="text-[11px] font-bold text-cyan-300 flex items-center gap-0.5">
-                                      {numChildren} <span className="text-[10px] font-normal">niño{numChildren !== 1 ? 's' : ''}</span>
-                                    </span>
-                                  )}
-                                  {!hasAcomp && <span className="text-xs text-mist">—</span>}
-                                </div>
-                                <button
-                                  onClick={() => openAcompPopup(visit)}
-                                  className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-iris hover:border-iris/40 transition-colors"
-                                >
-                                  <UserPlus size={11} />
-                                </button>
-                              </div>
-                            )
-                          })()}
-                        </td>
-                        {/* Total en sala */}
-                        <td className="px-3 py-3 align-middle">
-                          <span className="text-xs font-bold text-snow">{visit.adults_count + visit.children_count}</span>
-                        </td>
-                        {/* Tipo */}
-                        <td className="px-3 py-3 align-top">
-                          {(() => {
-                            const tipo = fmtVisitType(visit)
-                            const cls = tipo === 'Cumpleaños'
-                              ? 'bg-rose/10 text-rose border-rose/30'
-                              : tipo === 'Custodia'
-                              ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30'
-                              : 'bg-surface2 text-fog border-line'
-                            return (
-                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border whitespace-nowrap ${cls}`}>
-                                {tipo}
-                              </span>
-                            )
-                          })()}
-                        </td>
-                        {/* Bono */}
-                        <td className="px-3 py-3 align-top">
-                          <span className={`text-[10px] font-semibold whitespace-nowrap ${bono ? 'text-iris' : 'text-amber'}`}>
-                            {bono
-                              ? (visit.memberships?.membership_types?.name ?? 'Con bono')
-                              : 'Sin bono'}
-                          </span>
-                        </td>
-                        {/* Sesiones restantes */}
-                        <td className="px-3 py-3 align-top">
-                          {bono && visit.memberships != null ? (
-                            <span className={`text-xs font-semibold whitespace-nowrap ${
-                              visit.memberships.sessions_remaining <= 2 ? 'text-rose' :
-                              visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'
-                            }`}>
-                              {visit.memberships.sessions_remaining}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-mist">—</span>
-                          )}
-                        </td>
-                        {/* Entrada */}
-                        <td className="px-3 py-3 align-top">
-                          <span className="text-xs text-mist whitespace-nowrap">{fmtTime(visit.checked_in_at)}</span>
-                        </td>
-                        {/* Tiempo */}
-                        <td className="px-3 py-3 align-top">
-                          <span className={`text-xs font-semibold whitespace-nowrap ${isLong ? 'text-amber' : 'text-fog'}`}>
-                            {fmtElapsed(visit.checked_in_at)}
-                          </span>
-                        </td>
-                        {/* Importe por tiempo */}
-                        <td className="px-3 py-3 align-middle">
-                          <div className="flex items-center gap-1.5 whitespace-nowrap">
-                            <span className="text-xs font-bold text-lime">{imp.total.toFixed(2)}€</span>
-                            <button
-                              onClick={() => setImporteVisitId(visit.id)}
-                              className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
-                            >
-                              <Receipt size={11} />
-                            </button>
-                          </div>
-                        </td>
-                        {/* Consumos */}
-                        <td className="px-3 py-3 align-middle">
-                          <div className="flex items-center gap-2 whitespace-nowrap">
-                            <span className={`text-xs font-semibold ${check && check.items.length > 0 ? 'text-lime' : 'text-mist'}`}>
-                              {check && check.items.length > 0
-                                ? `${check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€`
-                                : '—'}
-                            </span>
-                            <button
-                              onClick={() => setConsumosVisitId(isShowingConsumos ? null : visit.id)}
-                              className={`flex items-center justify-center w-6 h-6 rounded-md border transition-colors ${
-                                isShowingConsumos
-                                  ? 'bg-iris/20 text-iris border-iris/40'
-                                  : 'bg-surface2 text-fog border-line hover:border-iris/40 hover:text-iris'
-                              }`}
-                            >
-                              <Plus size={11} />
-                            </button>
-                          </div>
-                        </td>
-                        {/* Total a pagar */}
-                        <td className="px-3 py-3 align-middle">
-                          {(() => {
-                            const consumosTotal = (openChecks.get(visit.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
-                            const grandTotal = imp.total + consumosTotal
-                            return (
-                              <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>
-                                <button
-                                  onClick={() => setTotalVisitId(visit.id)}
-                                  className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
-                                >
-                                  <Receipt size={11} />
-                                </button>
-                              </div>
-                            )
-                          })()}
-                        </td>
-                        {/* Salida */}
-                        <td className="pl-3 pr-4 py-3 align-top">
-                          <button
-                            onClick={() => setConfirmCheckout(visit.id)}
-                            className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors whitespace-nowrap"
-                          >
-                            <LogOut size={10} /> Salida
-                          </button>
-                        </td>
-                      </tr>
-                    </Fragment>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
       </div>
