@@ -289,10 +289,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     const guestKids = presentEntries
       .filter(e => !e.is_adult && !registeredChildren.some(r => r.name === e.name))
       .map(e => ({ name: e.name, birth_date: e.birth_date, isGuest: true }))
-    const selectedChildren = [
-      ...regChildren.filter(c => presentChildNames.has(c.name)),
-      ...guestKids,
-    ]
+
+    // If children_present is empty but children_count > 0 (e.g. just executed from booking),
+    // pre-select registered children up to children_count so the popup isn't blank
+    const noPresenceData = presentEntries.filter(e => !e.is_adult).length === 0
+    const selectedChildren = noPresenceData && (visit.children_count ?? 0) > 0
+      ? regChildren.slice(0, visit.children_count)
+      : [
+          ...regChildren.filter(c => presentChildNames.has(c.name)),
+          ...guestKids,
+        ]
 
     // Extra adults = total - titular(1) - co-titulares selected
     const coTitSelected = coTitulares.filter(c => c.selected).length
