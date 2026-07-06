@@ -1280,42 +1280,30 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </div>
                         </button>
 
-                        {/* Stats grid: 3 columnas */}
-                        <button onClick={toggleExpand} className="w-full text-left px-4 py-3">
-                          <div className="grid grid-cols-3 gap-0 divide-x divide-line">
-                            {/* En sala */}
-                            <div className="flex flex-col items-center gap-0.5 pr-3">
-                              <span className="text-xl font-bold text-snow leading-none">{visit.adults_count + numChildren}</span>
-                              <span className="text-[10px] text-mist leading-tight">en sala</span>
-                            </div>
-                            {/* Tiempo */}
-                            <div className="flex flex-col items-center gap-0.5 px-3">
-                              <span className={`text-xl font-bold leading-none ${isLong ? 'text-amber' : 'text-snow'}`}>
-                                {fmtElapsed(visit.checked_in_at)}
-                              </span>
-                              <span className="text-[10px] text-mist leading-tight">
-                                {isLong ? '⚠ revisar' : `desde ${fmtTime(visit.checked_in_at)}`}
-                              </span>
-                            </div>
-                            {/* Total */}
-                            <div className="flex flex-col items-center gap-0.5 pl-3">
-                              <span className="text-xl font-bold text-lime leading-none">{grandTotal.toFixed(2)}€</span>
-                              <span className="text-[10px] text-mist leading-tight">total</span>
-                            </div>
+                        {/* Stats inline */}
+                        <button onClick={toggleExpand} className="w-full text-left px-4 pb-2.5">
+                          <div className="flex items-center gap-1.5 text-xs text-mist">
+                            <span className="font-semibold text-snow">{visit.adults_count + numChildren}</span>
+                            <span>en sala</span>
+                            <span className="text-line2">·</span>
+                            <span className={`font-semibold ${isLong ? 'text-amber' : 'text-snow'}`}>{fmtElapsed(visit.checked_in_at)}</span>
+                            {isLong && <span className="text-amber">⚠</span>}
+                            <span className="text-line2">·</span>
+                            <span className="font-semibold text-lime">{grandTotal.toFixed(2)}€</span>
                           </div>
                         </button>
 
                         {/* Acciones primarias */}
-                        <div className="px-4 pb-3.5 flex items-center gap-2">
+                        <div className="px-4 pb-3 flex items-center justify-end gap-2">
                           <button
                             onClick={() => setConfirmCheckout(visit.id)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-rose/10 border border-rose/30 text-sm font-semibold text-rose hover:bg-rose/20 active:scale-[0.98] transition-all"
+                            className="w-11 h-11 flex items-center justify-center rounded-xl bg-rose/10 border border-rose/30 text-rose hover:bg-rose/20 active:scale-[0.98] transition-all"
                           >
-                            <LogOut size={14} strokeWidth={2.2} /> Salida
+                            <LogOut size={16} strokeWidth={2.2} />
                           </button>
                           <button
                             onClick={toggleExpand}
-                            className={`w-12 h-12 flex items-center justify-center rounded-xl border transition-colors ${
+                            className={`w-11 h-11 flex items-center justify-center rounded-xl border transition-colors ${
                               isExpanded
                                 ? 'bg-surface2 border-line2 text-snow'
                                 : 'bg-surface2 border-line text-fog hover:text-snow hover:border-line2'
