@@ -127,6 +127,8 @@ function CheckInTab({
   const [visitType, setVisitType] = useState<VisitType>('entrada')
   const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
   const [extraChildren, setExtraChildren] = useState<string[]>([])
+  const [custodiaStart, setCustodiaStart] = useState('')
+  const [custodiaEnd, setCustodiaEnd] = useState('')
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -153,7 +155,7 @@ function CheckInTab({
 
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([])
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setCustodiaStart(''); setCustodiaEnd('')
   }
 
   function selectMember(m: MemberRow) {
@@ -174,8 +176,10 @@ function CheckInTab({
   const bono = member ? getBono(member) : null
   const alreadyInside = member ? activeVisits.some(v => v.members?.id === member.id) : false
 
+  const custodiaValid = visitType !== 'custodia' || (custodiaStart.trim() !== '' && custodiaEnd.trim() !== '')
+
   async function handleCheckIn() {
-    if (!member || registering) return
+    if (!member || registering || !custodiaValid) return
     setRegistering(true)
     const b = getBono(member)
     const m = member.memberships?.[0]
@@ -186,14 +190,22 @@ function CheckInTab({
     ]
     const numChildren = allChildrenPresent.length
 
+    const today = toLocalDate(new Date())
+    const custodiaEndAt = visitType === 'custodia' && custodiaEnd
+      ? new Date(`${today}T${custodiaEnd}:00`).toISOString()
+      : null
+
     await supabase.from('visits').insert({
       member_id: member.id,
       membership_id: (b?.ok && m) ? m.id : null,
-      checked_in_at: new Date().toISOString(),
+      checked_in_at: visitType === 'custodia' && custodiaStart
+        ? new Date(`${today}T${custodiaStart}:00`).toISOString()
+        : new Date().toISOString(),
       visit_type: visitType,
       children_present: allChildrenPresent,
       adults_count: 1,
       children_count: numChildren,
+      ...(custodiaEndAt ? { custodia_end_at: custodiaEndAt } : {}),
     })
 
     if (b?.ok && !b.unlimited && m?.sessions_remaining != null) {
@@ -290,6 +302,30 @@ function CheckInTab({
                   </button>
                 </div>
 
+                {/* Horas custodia */}
+                {visitType === 'custodia' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora inicio <span className="text-rose">*</span></label>
+                      <input
+                        type="time"
+                        value={custodiaStart}
+                        onChange={e => setCustodiaStart(e.target.value)}
+                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora fin <span className="text-rose">*</span></label>
+                      <input
+                        type="time"
+                        value={custodiaEnd}
+                        onChange={e => setCustodiaEnd(e.target.value)}
+                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Niños presentes */}
                 {(member.children && member.children.length > 0) && (
                   <div className="flex flex-wrap gap-1.5">
@@ -359,7 +395,7 @@ function CheckInTab({
                 {/* Botón registrar */}
                 <button
                   onClick={handleCheckIn}
-                  disabled={registering}
+                  disabled={registering || !custodiaValid}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
                     bono?.ok ? 'bg-lime text-ink hover:bg-lime-deep' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
                   }`}

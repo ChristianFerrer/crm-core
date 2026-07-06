@@ -129,6 +129,8 @@ function CheckinPanel({
   const [visitType, setVisitType] = useState<'entrada' | 'custodia'>('entrada')
   const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
   const [extraChildren, setExtraChildren] = useState<string[]>([])
+  const [custodiaStart, setCustodiaStart] = useState('')
+  const [custodiaEnd, setCustodiaEnd] = useState('')
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -157,7 +159,7 @@ function CheckinPanel({
 
   function reset() {
     setSelectedMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([])
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setCustodiaStart(''); setCustodiaEnd('')
   }
 
   function doSelectMember(m: FullMember) {
@@ -179,8 +181,10 @@ function CheckinPanel({
   const bono = selectedMember ? getBonoInfo(selectedMember) : null
   const alreadyInside = selectedMember ? activeVisits.some(v => v.member_id === selectedMember.id && !v.checked_out_at) : false
 
+  const custodiaValid = visitType !== 'custodia' || (custodiaStart.trim() !== '' && custodiaEnd.trim() !== '')
+
   async function handleCheckIn() {
-    if (!selectedMember || registering) return
+    if (!selectedMember || registering || !custodiaValid) return
     setRegistering(true)
     const b = getBonoInfo(selectedMember)
     const m = selectedMember.memberships?.[0]
@@ -191,14 +195,22 @@ function CheckinPanel({
     ]
     const numChildren = allChildren.length
 
+    const today = new Date().toISOString().slice(0, 10)
+    const custodiaEndAt = visitType === 'custodia' && custodiaEnd
+      ? new Date(`${today}T${custodiaEnd}:00`).toISOString()
+      : null
+
     await supabase.from('visits').insert({
       member_id: selectedMember.id,
       membership_id: (b?.ok && m) ? m.id : null,
-      checked_in_at: new Date().toISOString(),
+      checked_in_at: visitType === 'custodia' && custodiaStart
+        ? new Date(`${today}T${custodiaStart}:00`).toISOString()
+        : new Date().toISOString(),
       visit_type: visitType,
       children_present: allChildren,
       adults_count: 1,
       children_count: numChildren,
+      ...(custodiaEndAt ? { custodia_end_at: custodiaEndAt } : {}),
     })
 
     if (b?.ok && !b.unlimited && m?.sessions_remaining != null) {
@@ -292,6 +304,30 @@ function CheckinPanel({
                   </button>
                 </div>
 
+                {/* Horas custodia */}
+                {visitType === 'custodia' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora inicio <span className="text-rose">*</span></label>
+                      <input
+                        type="time"
+                        value={custodiaStart}
+                        onChange={e => setCustodiaStart(e.target.value)}
+                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora fin <span className="text-rose">*</span></label>
+                      <input
+                        type="time"
+                        value={custodiaEnd}
+                        onChange={e => setCustodiaEnd(e.target.value)}
+                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Niños registrados */}
                 {selectedMember.children && selectedMember.children.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
@@ -348,7 +384,7 @@ function CheckinPanel({
 
                 <button
                   onClick={handleCheckIn}
-                  disabled={registering}
+                  disabled={registering || !custodiaValid}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
                     bono?.ok ? 'bg-lime text-ink hover:brightness-105' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
                   }`}
