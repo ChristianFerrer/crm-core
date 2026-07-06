@@ -1268,20 +1268,33 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <div className={`flex ${isLong ? 'border-l-[3px] border-amber' : ''}`}>
                       <div className="flex-1 min-w-0">
 
-                        {/* ── Collapsed: header + stats + acciones primarias ── */}
-                        <button
-                          onClick={toggleExpand}
-                          className="w-full text-left px-4 pt-3.5 pb-1"
-                        >
-                          {/* Nombre + badge tipo */}
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-base font-bold text-snow leading-tight truncate flex-1">{visit.members?.name ?? '—'}</span>
-                            <span className={`text-[10px] font-semibold shrink-0 mt-0.5 ${tipoColor}`}>{tipo}</span>
-                          </div>
-                        </button>
+                        {/* ── Collapsed: 2 líneas ── */}
+                        {/* Línea 1: nombre + badge + acciones */}
+                        <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+                          <button onClick={toggleExpand} className="flex-1 min-w-0 flex items-center gap-2 text-left">
+                            <span className="text-sm font-bold text-snow leading-tight truncate">{visit.members?.name ?? '—'}</span>
+                            <span className={`text-[10px] font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
+                          </button>
+                          <button
+                            onClick={() => setConfirmCheckout(visit.id)}
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose/10 border border-rose/30 text-rose hover:bg-rose/20 active:scale-[0.98] transition-all"
+                          >
+                            <LogOut size={14} strokeWidth={2.2} />
+                          </button>
+                          <button
+                            onClick={toggleExpand}
+                            className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border transition-colors ${
+                              isExpanded
+                                ? 'bg-surface2 border-line2 text-snow'
+                                : 'bg-surface2 border-line text-fog'
+                            }`}
+                          >
+                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
 
-                        {/* Stats inline */}
-                        <button onClick={toggleExpand} className="w-full text-left px-4 pb-2.5">
+                        {/* Línea 2: stats inline */}
+                        <button onClick={toggleExpand} className="w-full text-left px-3 pb-2.5">
                           <div className="flex items-center gap-1.5 text-xs text-mist">
                             <span className="font-semibold text-snow">{visit.adults_count + numChildren}</span>
                             <span>en sala</span>
@@ -1292,26 +1305,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <span className="font-semibold text-lime">{grandTotal.toFixed(2)}€</span>
                           </div>
                         </button>
-
-                        {/* Acciones primarias */}
-                        <div className="px-4 pb-3 flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => setConfirmCheckout(visit.id)}
-                            className="w-11 h-11 flex items-center justify-center rounded-xl bg-rose/10 border border-rose/30 text-rose hover:bg-rose/20 active:scale-[0.98] transition-all"
-                          >
-                            <LogOut size={16} strokeWidth={2.2} />
-                          </button>
-                          <button
-                            onClick={toggleExpand}
-                            className={`w-11 h-11 flex items-center justify-center rounded-xl border transition-colors ${
-                              isExpanded
-                                ? 'bg-surface2 border-line2 text-snow'
-                                : 'bg-surface2 border-line text-fog hover:text-snow hover:border-line2'
-                            }`}
-                          >
-                            <ChevronDown size={16} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                          </button>
-                        </div>
 
                         {/* ── Expanded detail ── */}
                         {isExpanded && (
