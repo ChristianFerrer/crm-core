@@ -7,6 +7,7 @@ import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
+  Search, QrCode, RotateCcw, User,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -81,6 +82,420 @@ type MemberData = {
   phone: string | null
   family_id: string | null
   children: { name: string; birth_date?: string; age?: number }[]
+}
+
+type FullMember = {
+  id: string
+  name: string
+  phone: string | null
+  memberships: {
+    id: string
+    sessions_remaining: number | null
+    expires_at: string
+    membership_types: { name: string } | null
+  }[]
+  children: { name: string; birth_date: string }[]
+}
+
+function getBonoInfo(m: FullMember) {
+  const bono = m.memberships?.[0]
+  if (!bono) return null
+  const isUnlimited = bono.membership_types?.name?.toLowerCase().includes('ilimitado')
+  if (isUnlimited) return { ok: true, unlimited: true, label: 'Bono ilimitado', sessions: null }
+  if ((bono.sessions_remaining ?? 0) <= 0) return { ok: false, unlimited: false, label: 'Bono agotado', sessions: 0 }
+  return { ok: true, unlimited: false, label: bono.membership_types?.name ?? 'Bono', sessions: bono.sessions_remaining }
+}
+
+function CheckinPanel({
+  checkinMembers,
+  activeVisits,
+  rates,
+  onCheckedIn,
+  onClose,
+}: {
+  checkinMembers: FullMember[]
+  activeVisits: TodayVisit[]
+  rates: { adult: number; child: number; custodia: number }
+  onCheckedIn: () => void
+  onClose: () => void
+}) {
+  const [mode, setMode] = useState<'manual' | 'qr'>('manual')
+  const [scanning, setScanning] = useState(true)
+  const [selectedMember, setSelectedMember] = useState<FullMember | null>(null)
+  const [registering, setRegistering] = useState(false)
+  const [flash, setFlash] = useState<string | null>(null)
+  const [camError, setCamError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [visitType, setVisitType] = useState<'entrada' | 'custodia'>('entrada')
+  const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
+  const [extraChildren, setExtraChildren] = useState<string[]>([])
+  const [pendingConfirm, setPendingConfirm] = useState(false)
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => {
+    if (mode !== 'qr' || !scanning) return
+    let html5Qr: any, stopped = false
+    import('html5-qrcode').then(({ Html5Qrcode }) => {
+      if (stopped) return
+      html5Qr = new Html5Qrcode('qr-reader-modal')
+      html5Qr.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        async (decoded: string) => {
+          await html5Qr.stop().catch(() => {})
+          setScanning(false)
+          const { data } = await supabase.from('members')
+            .select('id, name, phone, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
+            .eq('qr_code', decoded).single()
+          if (!data) { setCamError('Código QR no reconocido'); return }
+          doSelectMember(data as unknown as FullMember)
+        },
+        () => {}
+      ).catch(() => setCamError('No se puede acceder a la cámara'))
+    })
+    return () => { stopped = true; html5Qr?.stop().catch(() => {}) }
+  }, [mode, scanning])
+
+  function reset() {
+    setSelectedMember(null); setFlash(null); setCamError(null); setScanning(true)
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setPendingConfirm(false)
+  }
+
+  function doSelectMember(m: FullMember) {
+    setSelectedMember(m)
+    setChildrenPresent((m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined })))
+    setExtraChildren([])
+    setPendingConfirm(false)
+    setFlash(null)
+  }
+
+  const filteredMembers = query.trim().length > 0
+    ? checkinMembers.filter(m => {
+        const q = query.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        const qd = q.replace(/\D/g, '')
+        return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
+      })
+    : checkinMembers
+
+  const bono = selectedMember ? getBonoInfo(selectedMember) : null
+  const alreadyInside = selectedMember ? activeVisits.some(v => v.member_id === selectedMember.id && !v.checked_out_at) : false
+
+  async function handleCheckIn() {
+    if (!selectedMember || registering) return
+    setRegistering(true)
+    const b = getBonoInfo(selectedMember)
+    const m = selectedMember.memberships?.[0]
+
+    const allChildren = [
+      ...childrenPresent,
+      ...extraChildren.filter(n => n.trim()).map(n => ({ name: n.trim() })),
+    ]
+    const numChildren = allChildren.length
+
+    await supabase.from('visits').insert({
+      member_id: selectedMember.id,
+      membership_id: (b?.ok && m) ? m.id : null,
+      checked_in_at: new Date().toISOString(),
+      visit_type: visitType,
+      children_present: allChildren,
+      adults_count: 1,
+      children_count: numChildren,
+    })
+
+    if (b?.ok && !b.unlimited && m?.sessions_remaining != null) {
+      await supabase.from('memberships')
+        .update({ sessions_remaining: Math.max(0, m.sessions_remaining - 1) })
+        .eq('id', m.id)
+    }
+
+    const typeLabel = visitType === 'custodia' ? 'Custodia' : 'Entrada'
+    clearTimeout(flashTimer.current)
+    if (b?.ok) {
+      setFlash(
+        b.unlimited
+          ? `✓ ${typeLabel} registrada · bono ilimitado · ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+          : `✓ ${typeLabel} registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
+      )
+    } else {
+      const rateLabel = visitType === 'custodia'
+        ? `${rates.custodia}€/h × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+        : `${rates.adult}€ adulto + ${numChildren} × ${rates.child}€ niño/h`
+      setFlash(`✓ ${typeLabel} registrada · sin bono — ${rateLabel}`)
+    }
+    flashTimer.current = setTimeout(() => setFlash(null), 6000)
+    setRegistering(false)
+    onCheckedIn()
+
+    // Refresh member data
+    const { data } = await supabase.from('members')
+      .select('id, name, phone, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
+      .eq('id', selectedMember.id).single()
+    if (data) {
+      const refreshed = data as unknown as FullMember
+      setSelectedMember(refreshed)
+      setChildrenPresent((refreshed.children ?? []).map(c => ({ name: c.name })))
+      setExtraChildren([])
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Controls row */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex rounded-xl border border-line bg-surface2 overflow-hidden">
+          <button onClick={() => { setMode('manual'); reset() }}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'manual' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
+            <Search size={13} /> Manual
+          </button>
+          <button onClick={() => { setMode('qr'); reset() }}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'qr' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
+            <QrCode size={13} /> QR
+          </button>
+        </div>
+        <Link href="/miembros/nuevo" onClick={onClose}
+          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface2 px-3 py-2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
+          <UserPlus size={13} /> Nuevo miembro
+        </Link>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-[1fr_1.1fr] md:items-stretch">
+        {/* Search / QR panel */}
+        <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col" style={{ minHeight: '18rem' }}>
+          {mode === 'qr' ? (
+            <>
+              <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
+                <QrCode size={13} className="text-lime" /> Escáner QR
+              </div>
+              {scanning && !camError ? (
+                <div id="qr-reader-modal" className="w-full rounded-xl overflow-hidden [&>*]:rounded-xl" />
+              ) : (
+                <div className="flex flex-col items-center justify-center flex-1 gap-3">
+                  {camError && <p className="text-sm text-rose text-center">{camError}</p>}
+                  {!selectedMember && (
+                    <button onClick={reset}
+                      className="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm text-fog hover:text-snow hover:border-line2 transition-colors">
+                      <RotateCcw size={14} /> Volver a escanear
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="relative mb-3 shrink-0">
+                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+                <input value={query} onChange={e => setQuery(e.target.value)}
+                  placeholder="Nombre o teléfono..." autoFocus
+                  className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-0.5 min-h-0">
+                {filteredMembers.length > 0 ? filteredMembers.map(m => {
+                  const b = getBonoInfo(m)
+                  const inside = activeVisits.some(v => v.member_id === m.id && !v.checked_out_at)
+                  return (
+                    <button key={m.id} onClick={() => { doSelectMember(m); setQuery('') }}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${selectedMember?.id === m.id ? 'bg-lime/15 text-lime' : 'text-snow hover:bg-surface2'}`}>
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block truncate text-sm font-medium">{m.name}</span>
+                        {inside && <span className="block text-xs text-iris">Dentro ahora</span>}
+                      </span>
+                      {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
+                        : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
+                        : <span className="text-xs text-rose shrink-0">sin bono</span>}
+                    </button>
+                  )
+                }) : (
+                  <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
+                )}
+              </div>
+              <div className="shrink-0 mt-3 pt-3 border-t border-line flex flex-wrap gap-x-4 gap-y-1.5">
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-mint shrink-0" /><span className="text-[11px] text-fog">Bono activo</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber shrink-0" /><span className="text-[11px] text-fog">Bono bajo / agotado</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose shrink-0" /><span className="text-[11px] text-fog">Sin bono</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-iris shrink-0" /><span className="text-[11px] text-fog">Dentro ahora / ilimitado</span></div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Member detail panel */}
+        {selectedMember ? (
+          <div className="rounded-2xl border border-line bg-surface overflow-hidden flex flex-col">
+            <div className={`px-5 py-4 flex items-center gap-3 ${
+              alreadyInside ? 'bg-iris/10 border-b border-iris/20' :
+              bono?.ok ? 'bg-lime/10 border-b border-lime/20' :
+              'bg-amber/10 border-b border-amber/20'
+            }`}>
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                alreadyInside ? 'bg-iris/20' : bono?.ok ? 'bg-lime/20' : 'bg-amber/20'
+              }`}>
+                {alreadyInside ? <Clock size={18} className="text-iris" /> :
+                 bono?.ok ? <Check size={18} className="text-lime" strokeWidth={2.5} /> :
+                 <AlertTriangle size={18} className="text-amber" />}
+              </div>
+              <div>
+                <p className={`text-sm font-semibold ${alreadyInside ? 'text-iris' : bono?.ok ? 'text-lime' : 'text-amber'}`}>
+                  {alreadyInside ? 'Ya está dentro' :
+                   bono?.ok ? (bono.unlimited ? 'Bono ilimitado' : `${bono.sessions} sesiones restantes`) :
+                   !bono ? 'Sin bono · se cobrará por horas' : 'Bono agotado · se cobrará por horas'}
+                </p>
+                {!bono?.ok && !alreadyInside && (
+                  <p className="text-xs text-amber/80 mt-0.5">
+                    {visitType === 'custodia'
+                      ? `Custodia: ${rates.custodia} €/h × niños`
+                      : `Adulto ${rates.adult}€ + niño ${rates.child}€ · por hora o fracción`}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-display text-lg font-semibold text-snow">{selectedMember.name}</p>
+                  {selectedMember.phone && <p className="text-sm text-fog mt-1">{selectedMember.phone}</p>}
+                </div>
+                {bono && (
+                  <div className="text-right shrink-0">
+                    <p className="text-xs text-fog">{bono.label}</p>
+                    {bono.unlimited ? (
+                      <p className="font-bold text-base text-iris mt-0.5">∞</p>
+                    ) : bono.sessions != null ? (
+                      <p className={`font-bold text-base mt-0.5 ${bono.sessions <= 2 ? 'text-amber' : 'text-lime'}`}>{bono.sessions}</p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+
+              {!alreadyInside && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide">Tipo de visita</p>
+                  <div className="flex gap-2">
+                    {(['entrada', 'custodia'] as const).map(t => (
+                      <button key={t} type="button" onClick={() => setVisitType(t)}
+                        className={`flex-1 rounded-xl border py-2 text-xs font-semibold transition-colors capitalize ${
+                          visitType === t
+                            ? t === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-lime/15 border-lime/30 text-lime'
+                            : 'bg-surface2 border-line text-fog hover:text-snow'
+                        }`}>
+                        {t === 'entrada' ? 'Entrada normal' : 'Custodia'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {((selectedMember.children && selectedMember.children.length > 0) || extraChildren.length > 0) && !alreadyInside && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide">Niños presentes</p>
+                  {selectedMember.children && selectedMember.children.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedMember.children.map((child, i) => {
+                        const selected = childrenPresent.some(c => c.name === child.name)
+                        return (
+                          <button key={i} type="button"
+                            onClick={() => setChildrenPresent(prev =>
+                              selected ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name }]
+                            )}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              selected ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'
+                            }`}>
+                            {child.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {extraChildren.length > 0 && (
+                    <div className="space-y-1.5">
+                      {extraChildren.map((name, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input value={name} onChange={e => setExtraChildren(prev => prev.map((n, j) => j === i ? e.target.value : n))}
+                            placeholder="Nombre del niño/a"
+                            className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-1.5 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
+                          <button type="button" onClick={() => setExtraChildren(prev => prev.filter((_, j) => j !== i))}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-rose hover:border-rose/30 transition-colors">
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!alreadyInside && (
+                <button type="button" onClick={() => setExtraChildren(prev => [...prev, ''])}
+                  className="flex items-center gap-1.5 text-xs text-mist hover:text-fog transition-colors">
+                  <span className="w-5 h-5 rounded-full border border-line bg-surface2 flex items-center justify-center font-bold text-fog">+</span>
+                  Añadir niño/a
+                </button>
+              )}
+
+              {alreadyInside ? (
+                <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
+                  Este miembro ya tiene una entrada activa
+                </div>
+              ) : pendingConfirm ? (
+                <div className="rounded-xl border border-amber/30 bg-amber/10 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle size={15} className="text-amber shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber font-semibold">¿Confirmar entrada sin bono?</p>
+                  </div>
+                  <p className="text-xs text-fog">
+                    {bono ? 'El bono está agotado.' : 'No tiene bono activo.'} Se cobrará en efectivo:{' '}
+                    {visitType === 'custodia' ? `${rates.custodia} €/h por niño` : `${rates.adult} €/h adulto + ${rates.child} €/h niño`}
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setPendingConfirm(false)}
+                      className="flex-1 rounded-xl border border-line py-2 text-sm text-fog hover:text-snow transition-colors">
+                      Cancelar
+                    </button>
+                    <button onClick={handleCheckIn} disabled={registering}
+                      className="flex-1 rounded-xl bg-amber/20 border border-amber/30 py-2 text-sm font-semibold text-amber hover:bg-amber/30 transition-colors disabled:opacity-60">
+                      {registering ? 'Registrando...' : 'Confirmar'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { if (!bono?.ok) { setPendingConfirm(true) } else { handleCheckIn() } }}
+                  disabled={registering}
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
+                    bono?.ok ? 'bg-lime text-ink hover:brightness-105' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
+                  }`}
+                  style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}
+                >
+                  <LogIn size={17} strokeWidth={2.2} />
+                  {registering ? 'Registrando...' : bono?.ok ? 'Registrar entrada' : 'Registrar entrada (sin bono)'}
+                </button>
+              )}
+
+              {flash && (
+                <div className="flex items-center justify-center gap-2 text-sm font-semibold text-mint text-center">
+                  <Check size={14} strokeWidth={2.5} /> {flash}
+                </div>
+              )}
+
+              <button onClick={reset} className="flex w-full items-center justify-center gap-1.5 text-xs text-mist hover:text-fog pt-1">
+                <RotateCcw size={12} /> Nueva búsqueda
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid place-items-center rounded-2xl border-2 border-dashed border-line bg-surface/40 p-8 text-center" style={{ minHeight: '18rem' }}>
+            <div>
+              {mode === 'qr' ? <QrCode size={32} className="mx-auto text-mist" /> : <User size={32} className="mx-auto text-mist" />}
+              <p className="mt-3 text-sm text-fog max-w-xs">
+                {mode === 'qr' ? 'Escanea el QR del miembro' : 'Busca y selecciona un miembro'}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 type HomeClientProps = {
@@ -229,6 +644,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
   const [rateCustodia, setRateCustodia] = useState(8)
+  const [checkinOpen, setCheckinOpen] = useState(false)
+  const [checkinMembers, setCheckinMembers] = useState<FullMember[]>([])
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -281,6 +698,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (cust)  setRateCustodia(Number(cust.price))
       })
   }, [])
+
+  useEffect(() => {
+    if (!checkinOpen || checkinMembers.length > 0) return
+    supabase.from('members')
+      .select('id, name, phone, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
+      .order('name')
+      .then(({ data }) => { if (data) setCheckinMembers(data as unknown as FullMember[]) })
+  }, [checkinOpen])
 
   const loadOpenChecks = useCallback(async () => {
     const visitIds = activeVisits.map(v => v.id)
@@ -682,14 +1107,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </span>
             </button>
           )}
-          <Link
-            href="/checkin"
+          <button
+            onClick={() => setCheckinOpen(true)}
             className="flex items-center gap-1.5 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
             <LogIn size={15} strokeWidth={2.4} />
             Registrar visita
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -1741,6 +2166,37 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )
       })()}
+
+      {/* Modal de registro de visita */}
+      {checkinOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setCheckinOpen(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[95vh]" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+              <div className="flex items-center gap-2">
+                <LogIn size={15} className="text-lime shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-snow">Registrar visita</p>
+                  <p className="text-[11px] text-fog">Check-in manual o por QR</p>
+                </div>
+              </div>
+              <button onClick={() => setCheckinOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-5 py-4">
+              <CheckinPanel
+                checkinMembers={checkinMembers}
+                activeVisits={activeVisits}
+                rates={{ adult: rateAdult, child: rateChild, custodia: rateCustodia }}
+                onCheckedIn={() => { router.refresh(); setCheckinMembers([]) }}
+                onClose={() => setCheckinOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de consumos */}
       {consumosVisitId && consumosVisit && (
