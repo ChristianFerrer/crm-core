@@ -925,6 +925,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [savedAcomp, setSavedAcomp] = useState(false)
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const skipNextSave = useRef(false)
+  const returnToDetailRef = useRef<string | null>(null)
+
+  function closeAndReturn(closeFn: () => void) {
+    closeFn()
+    if (returnToDetailRef.current) {
+      setDetailVisitId(returnToDetailRef.current)
+      returnToDetailRef.current = null
+    }
+  }
   const [savingAcomp, setSavingAcomp] = useState(false)
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
@@ -1555,12 +1564,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose/10 border border-rose/30 text-rose hover:bg-rose/20 active:scale-[0.98] transition-all"
                           >
                             <LogOut size={14} strokeWidth={2.2} />
-                          </button>
-                          <button
-                            onClick={() => setDetailVisitId(visit.id)}
-                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border bg-surface2 border-line text-fog hover:text-snow transition-colors"
-                          >
-                            <ChevronDown size={14} />
                           </button>
                         </div>
 
@@ -2275,7 +2278,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const totalAcomp = coTitSelected + acompGuestAdults + acompChildren.length + acompGuestChildren
 
         return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setAcompVisitId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => closeAndReturn(() => setAcompVisitId(null))}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-md rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -2287,7 +2290,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <p className="text-[11px] text-fog">{totalAcomp} acompañante{totalAcomp !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <button onClick={() => setAcompVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                <button onClick={() => closeAndReturn(() => setAcompVisitId(null))} className="text-fog hover:text-snow transition-colors p-1">
                   <X size={16} />
                 </button>
               </div>
@@ -2459,7 +2462,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const hourRate = visit.visit_type === 'custodia' ? rateCustodia : rateAdult
         const childRate = visit.visit_type === 'custodia' ? rateCustodia : rateChild
         return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setImporteVisitId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => closeAndReturn(() => setImporteVisitId(null))}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -2471,39 +2474,39 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <p className="text-[11px] text-fog">Desglose del importe</p>
                   </div>
                 </div>
-                <button onClick={() => setImporteVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                <button onClick={() => closeAndReturn(() => setImporteVisitId(null))} className="text-fog hover:text-snow transition-colors p-1">
                   <X size={16} />
                 </button>
               </div>
               {/* Body */}
-              <div className="px-5 py-4 space-y-2.5">
+              <div className="px-5 py-4 space-y-3">
                 {/* Meta */}
-                <div className="flex justify-between text-xs text-fog">
-                  <span>Entrada</span><span className="text-snow">{fmtTime(visit.checked_in_at)}</span>
+                <div className="flex justify-between text-sm text-fog">
+                  <span>Entrada</span><span className="text-snow font-medium">{fmtTime(visit.checked_in_at)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-fog">
-                  <span>Tiempo en sala</span><span className="text-snow">{fmtH(elapsedMins)}</span>
+                <div className="flex justify-between text-sm text-fog">
+                  <span>Tiempo en sala</span><span className="text-snow font-medium">{fmtH(elapsedMins)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-fog">
-                  <span>Tipo de visita</span><span className="text-snow">{fmtVisitType(visit)}</span>
+                <div className="flex justify-between text-sm text-fog">
+                  <span>Tipo de visita</span><span className="text-snow font-medium">{fmtVisitType(visit)}</span>
                 </div>
 
                 {/* Tarifa sin bono */}
-                <div className="border-t border-line pt-2.5 space-y-1.5">
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide">Tarifa regular</p>
+                <div className="border-t border-line pt-3 space-y-2">
+                  <p className="text-xs font-semibold text-mist uppercase tracking-wide">Tarifa regular</p>
                   {visit.adults_count > 0 && (
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-sm">
                       <span className="text-fog">{visit.adults_count} adulto{visit.adults_count !== 1 ? 's' : ''} × {hourRate}€/h × {hours.toFixed(2)}h</span>
-                      <span className="text-snow">{imp.titular.toFixed(2)}€</span>
+                      <span className="text-snow font-medium">{imp.titular.toFixed(2)}€</span>
                     </div>
                   )}
                   {visit.children_count > 0 && (
-                    <div className="flex justify-between text-xs">
+                    <div className="flex justify-between text-sm">
                       <span className="text-fog">{visit.children_count} niño{visit.children_count !== 1 ? 's' : ''} × {childRate}€/h × {hours.toFixed(2)}h</span>
-                      <span className="text-snow">{imp.ninos.toFixed(2)}€</span>
+                      <span className="text-snow font-medium">{imp.ninos.toFixed(2)}€</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-xs font-semibold">
+                  <div className="flex justify-between text-sm font-semibold">
                     <span className="text-fog">Subtotal regular</span>
                     <span className={imp.bonoPrecioSesion !== null ? 'text-mist line-through' : 'text-lime'}>{imp.regular.toFixed(2)}€</span>
                   </div>
@@ -2511,25 +2514,25 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Descuento bono */}
                 {imp.bonoPrecioSesion !== null && mt && (
-                  <div className="border-t border-line pt-2.5 space-y-1.5">
-                    <p className="text-[10px] font-semibold text-iris uppercase tracking-wide">{mt.name}</p>
-                    <div className="flex justify-between text-xs">
+                  <div className="border-t border-line pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-iris uppercase tracking-wide">{mt.name}</p>
+                    <div className="flex justify-between text-sm">
                       <span className="text-fog">Precio por sesión ({mt.price}€ ÷ {mt.sessions} ses.)</span>
-                      <span className="text-iris">{imp.bonoPrecioSesion.toFixed(2)}€</span>
+                      <span className="text-iris font-medium">{imp.bonoPrecioSesion.toFixed(2)}€</span>
                     </div>
                     {imp.ahorro > 0 && (
-                      <div className="flex justify-between text-xs">
+                      <div className="flex justify-between text-sm">
                         <span className="text-fog">Ahorro aplicado</span>
-                        <span className="text-mint">−{imp.ahorro.toFixed(2)}€</span>
+                        <span className="text-mint font-medium">−{imp.ahorro.toFixed(2)}€</span>
                       </div>
                     )}
                   </div>
                 )}
 
                 {/* Total */}
-                <div className="border-t border-line pt-3 flex justify-between items-center">
-                  <span className="text-sm font-bold text-snow">Total a cobrar</span>
-                  <span className="text-xl font-bold text-lime">{imp.total.toFixed(2)}€</span>
+                <div className="border-t border-line pt-4 flex justify-between items-center">
+                  <span className="text-base font-bold text-snow">Total a cobrar</span>
+                  <span className="text-2xl font-bold text-lime">{imp.total.toFixed(2)}€</span>
                 </div>
               </div>
             </div>
@@ -2635,13 +2638,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Acciones */}
                 <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => { setDetailVisitId(null); setImporteVisitId(detailVisitId) }}
+                  <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); setImporteVisitId(detailVisitId) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-lime/40 transition-colors">
                     <Receipt size={15} className="text-lime" />
                     <span className="text-xs font-semibold text-lime">{imp.total.toFixed(2)}€</span>
                     <span className="text-[10px] text-mist">Importe</span>
                   </button>
-                  <button onClick={() => { setDetailVisitId(null); setConsumosVisitId(detailVisitId) }}
+                  <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); setConsumosVisitId(detailVisitId) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
                     <Plus size={15} className="text-fog" />
                     <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
@@ -2649,7 +2652,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     </span>
                     <span className="text-[10px] text-mist">Consumos</span>
                   </button>
-                  <button onClick={() => { setDetailVisitId(null); openAcompPopup(visit) }}
+                  <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); openAcompPopup(visit) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
                     <UserPlus size={15} className="text-fog" />
                     <span className="text-xs font-semibold text-mist">
@@ -2734,7 +2737,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {consumosVisitId && consumosVisit && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-          onClick={() => setConsumosVisitId(null)}
+          onClick={() => closeAndReturn(() => setConsumosVisitId(null))}
         >
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -2759,7 +2762,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     {openChecks.get(consumosVisitId)!.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€
                   </span>
                 )}
-                <button onClick={() => setConsumosVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                <button onClick={() => closeAndReturn(() => setConsumosVisitId(null))} className="text-fog hover:text-snow transition-colors p-1">
                   <X size={16} />
                 </button>
               </div>
