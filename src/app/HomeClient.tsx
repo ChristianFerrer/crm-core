@@ -7,7 +7,7 @@ import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
-  Search, QrCode, RotateCcw, User,
+  Search, QrCode, RotateCcw, User, Phone,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -275,7 +275,12 @@ function CheckinPanel({
             </button>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-snow truncate">{selectedMember.name}</p>
-              {selectedMember.phone && <p className="text-xs text-mist">{selectedMember.phone}</p>}
+              {selectedMember.phone && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Phone size={10} className="text-mist shrink-0" />
+                  <p className="text-xs text-mist">{selectedMember.phone}</p>
+                </div>
+              )}
             </div>
             <div className="shrink-0 text-right">
               {alreadyInside ? (
@@ -298,75 +303,62 @@ function CheckinPanel({
               </div>
             ) : (
               <>
-                {/* Tipo de visita */}
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setVisitType('entrada')}
-                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
-                      visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
-                    }`}>
-                    Libre
-                  </button>
-                  <button type="button" onClick={() => setVisitType('custodia')}
-                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
-                      visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
-                    }`}>
-                    Custodia
-                  </button>
-                </div>
-
-                {/* Horas custodia */}
-                {visitType === 'custodia' && (
-                  <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shrink-0" />
-                      <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Inicio <span className="text-rose">*</span></label>
-                        <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
-                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Fin <span className="text-rose">*</span></label>
-                        <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
-                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TITULAR */}
+                {/* Tipo de entrada */}
                 <div>
-                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Titular</p>
-                  <div className="rounded-xl border border-line overflow-hidden">
-                    <div className="flex items-center gap-3 px-3 py-2.5 bg-iris/5">
-                      <div className="w-5 h-5 rounded-md border-2 bg-iris border-iris flex items-center justify-center shrink-0">
-                        <Check size={11} className="text-white" strokeWidth={3} />
-                      </div>
-                      <span className="flex-1 text-sm font-medium text-snow">{selectedMember.name}</span>
-                      <span className="text-[10px] text-iris shrink-0">Titular</span>
-                    </div>
-                    {coTitulares.map((co, i) => (
-                      <button key={i} type="button"
-                        onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
-                        className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-t border-line ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
-                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
-                          {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
-                        </div>
-                        <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
-                        <span className="text-[10px] text-mist shrink-0">Co-titular</span>
-                      </button>
-                    ))}
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Tipo de entrada</p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setVisitType('entrada')}
+                      className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                        visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
+                      }`}>
+                      Libre
+                    </button>
+                    <button type="button" onClick={() => setVisitType('custodia')}
+                      className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                        visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
+                      }`}>
+                      Custodia
+                    </button>
                   </div>
+                  {visitType === 'custodia' && (
+                    <div className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shrink-0" />
+                        <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-fog uppercase tracking-wide">Inicio <span className="text-rose">*</span></label>
+                          <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
+                            className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-fog uppercase tracking-wide">Fin <span className="text-rose">*</span></label>
+                          <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
+                            className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* HIJOS REGISTRADOS */}
-                {selectedMember.children && selectedMember.children.length > 0 && (
+                {/* ¿Quién viene hoy? */}
+                {(coTitulares.length > 0 || (selectedMember.children && selectedMember.children.length > 0)) && (
                   <div>
-                    <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Hijos registrados</p>
+                    <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">¿Quién viene hoy?</p>
                     <div className="rounded-xl border border-line overflow-hidden">
-                      {selectedMember.children.map((child, i) => {
+                      {coTitulares.map((co, i) => (
+                        <button key={co.id} type="button"
+                          onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
+                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
+                            {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
+                          <span className="text-[10px] text-mist shrink-0">Co-titular</span>
+                        </button>
+                      ))}
+                      {selectedMember.children && selectedMember.children.map((child, i) => {
                         const sel = childrenPresent.some(c => c.name === child.name)
                         const bd = (child as any).birth_date as string | undefined
                         const age = bd ? (() => {
@@ -378,11 +370,11 @@ function CheckinPanel({
                           return y > 0 ? `${y} año${y !== 1 ? 's' : ''}${m > 0 ? ` ${m} m.` : ''}` : `${m} mes${m !== 1 ? 'es' : ''}`
                         })() : null
                         return (
-                          <button key={i} type="button"
+                          <button key={child.name + i} type="button"
                             onClick={() => setChildrenPresent(prev =>
                               sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
                             )}
-                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
+                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-t border-line ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
                             <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
                               {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
                             </div>
@@ -395,12 +387,12 @@ function CheckinPanel({
                   </div>
                 )}
 
-                {/* INVITADOS */}
+                {/* Invitados adicionales */}
                 <div>
-                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados</p>
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
                   <div className="rounded-xl border border-line overflow-hidden divide-y divide-line">
                     <div className="flex items-center justify-between px-3 py-2.5">
-                      <span className="text-sm text-fog">Adultos invitados</span>
+                      <span className="text-sm text-fog">Adultos</span>
                       <div className="flex items-center gap-3">
                         <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
                           className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
@@ -410,7 +402,7 @@ function CheckinPanel({
                       </div>
                     </div>
                     <div className="flex items-center justify-between px-3 py-2.5">
-                      <span className="text-sm text-fog">Niños invitados adicionales</span>
+                      <span className="text-sm text-fog">Niños</span>
                       <div className="flex items-center gap-3">
                         <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
                           className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
@@ -2380,8 +2372,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="flex items-center gap-2">
                 <LogIn size={15} className="text-lime shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-snow">Registrar visita</p>
-                  <p className="text-[11px] text-fog">Check-in manual o por QR</p>
+                  <p className="text-sm font-semibold text-snow">Registrar Entrada</p>
+                  <p className="text-[11px] text-fog">Check-in de visitantes</p>
                 </div>
               </div>
               <button onClick={() => setCheckinOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
