@@ -209,40 +209,46 @@ function CheckinConfirmModal({
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className={`flex items-center gap-3 px-5 pt-5 pb-4 border-b shrink-0 ${
-          alreadyInside ? 'border-iris/20' : bono?.ok ? 'border-lime/20' : 'border-amber/20'
-        }`}>
+        {/* Header — siempre "Registro de entrada" */}
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
             <ChevronLeft size={16} />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-snow truncate">{currentMember.name}</p>
-            <p className="text-[11px] text-fog">Registro de entrada</p>
+            <p className="text-sm font-semibold text-snow">Registro de entrada</p>
+            <p className="text-[11px] text-fog">Check-in de visitantes</p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            {alreadyInside ? (
-              <span className="text-xs font-semibold text-iris">Ya dentro</span>
-            ) : bono?.ok ? (
-              <span className={`text-sm font-bold ${bono.unlimited ? 'text-iris' : bono.sessions! <= 2 ? 'text-amber' : 'text-lime'}`}>
-                {bono.unlimited ? '∞' : bono.sessions}
-                {!bono.unlimited && <span className="text-[10px] font-normal text-mist ml-1">ses.</span>}
-              </span>
-            ) : (
-              <span className="text-xs font-semibold text-amber">Sin bono</span>
-            )}
-            <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
-          </div>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
         </div>
-        {/* Phone row */}
-        {currentMember.phone && (
-          <div className="flex items-center gap-1.5 px-5 py-2 border-b border-line/40 shrink-0">
-            <Phone size={11} className="text-mist shrink-0" />
-            <span className="text-xs text-mist">{currentMember.phone}</span>
-          </div>
-        )}
 
-        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          {/* Datos del titular */}
+          <div className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
+            alreadyInside ? 'border-iris/20 bg-iris/5' : bono?.ok ? 'border-lime/20 bg-lime/5' : 'border-amber/20 bg-amber/5'
+          }`}>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-snow truncate">{currentMember.name}</p>
+              {currentMember.phone && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Phone size={10} className="text-mist shrink-0" />
+                  <span className="text-xs text-mist">{currentMember.phone}</span>
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 text-right">
+              {alreadyInside ? (
+                <span className="text-xs font-semibold text-iris">Ya dentro</span>
+              ) : bono?.ok ? (
+                <span className={`text-sm font-bold ${bono.unlimited ? 'text-iris' : bono.sessions! <= 2 ? 'text-amber' : 'text-lime'}`}>
+                  {bono.unlimited ? '∞' : bono.sessions}
+                  {!bono.unlimited && <span className="text-[10px] font-normal text-mist ml-1">ses.</span>}
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-amber">Sin bono</span>
+              )}
+            </div>
+          </div>
+
           {alreadyInside ? (
             <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
               Este miembro ya tiene una entrada activa
@@ -270,12 +276,12 @@ function CheckinConfirmModal({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Inicio <span className="text-rose">*</span></label>
+                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Entrada <span className="text-rose">*</span></label>
                         <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
                           className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Fin <span className="text-rose">*</span></label>
+                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Salida <span className="text-rose">*</span></label>
                         <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
                           className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
                       </div>
@@ -288,12 +294,12 @@ function CheckinConfirmModal({
               {(coTitulares.length > 0 || (currentMember.children && currentMember.children.length > 0)) && (
                 <div>
                   <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">¿Quién viene hoy?</p>
-                  <div className="rounded-xl border border-line overflow-hidden">
+                  <div className="rounded-xl border border-line overflow-hidden divide-y divide-line">
                     {coTitulares.map((co, i) => (
                       <button key={co.id} type="button"
                         onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
-                        className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
-                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
+                        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
                           {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
                         </div>
                         <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
@@ -316,8 +322,8 @@ function CheckinConfirmModal({
                           onClick={() => setChildrenPresent(prev =>
                             sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
                           )}
-                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-t border-line ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
-                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
+                          className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
                             {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
                           </div>
                           <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
@@ -333,7 +339,7 @@ function CheckinConfirmModal({
               <div>
                 <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
                 <div className="rounded-xl border border-line overflow-hidden divide-y divide-line">
-                  <div className="flex items-center justify-between px-3 py-2.5">
+                  <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-sm text-fog">Adultos</span>
                     <div className="flex items-center gap-3">
                       <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
@@ -343,7 +349,7 @@ function CheckinConfirmModal({
                         className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between px-3 py-2.5">
+                  <div className="flex items-center justify-between px-4 py-3">
                     <span className="text-sm text-fog">Niños</span>
                     <div className="flex items-center gap-3">
                       <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
@@ -356,8 +362,9 @@ function CheckinConfirmModal({
                 </div>
               </div>
 
+              {/* Aviso tarifa */}
               {!bono?.ok && (
-                <div className="flex items-start gap-2 rounded-xl bg-amber/10 border border-amber/20 px-3 py-2">
+                <div className="flex items-start gap-2 rounded-xl bg-amber/10 border border-amber/20 px-3 py-2.5">
                   <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
                   <p className="text-xs text-amber/90">
                     {bono ? 'Bono agotado.' : 'Sin bono.'}{' '}
@@ -366,20 +373,18 @@ function CheckinConfirmModal({
                 </div>
               )}
 
-              <button onClick={handleCheckIn} disabled={registering || !custodiaValid}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
-                  bono?.ok ? 'bg-lime text-ink hover:brightness-105' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
-                }`}
-                style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}>
-                <LogIn size={17} strokeWidth={2.2} />
-                {registering ? 'Registrando...' : 'Registrar Entrada'}
-              </button>
-
               {flash && (
                 <div className="flex items-center justify-center gap-2 text-sm font-semibold text-mint text-center">
                   <Check size={14} strokeWidth={2.5} /> {flash}
                 </div>
               )}
+
+              <button onClick={handleCheckIn} disabled={registering || !custodiaValid}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
+                style={{ boxShadow: 'var(--shadow-lime)' }}>
+                <LogIn size={17} strokeWidth={2.2} />
+                {registering ? 'Registrando...' : 'Registrar Entrada'}
+              </button>
             </>
           )}
         </div>
