@@ -7,10 +7,11 @@ import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
-  Search, QrCode, RotateCcw, User, Phone,
+  Search, QrCode, RotateCcw, User, Phone, Loader2, Save,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
+import { DatePickerModal } from '@/components/DatePickerModal'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LabelList,
@@ -107,136 +108,83 @@ function getBonoInfo(m: FullMember) {
   return { ok: true, unlimited: false, label: bono.membership_types?.name ?? 'Bono', sessions: bono.sessions_remaining }
 }
 
-function CheckinPanel({
+// ── Modal 2: confirmación de entrada ──
+function CheckinConfirmModal({
+  member,
   checkinMembers,
   activeVisits,
   rates,
-  onCheckedIn,
+  onBack,
   onClose,
+  onCheckedIn,
 }: {
+  member: FullMember
   checkinMembers: FullMember[]
   activeVisits: TodayVisit[]
   rates: { adult: number; child: number; custodia: number }
-  onCheckedIn: () => void
+  onBack: () => void
   onClose: () => void
+  onCheckedIn: () => void
 }) {
-  const [mode, setMode] = useState<'manual' | 'qr'>('manual')
-  const [scanning, setScanning] = useState(true)
-  const [selectedMember, setSelectedMember] = useState<FullMember | null>(null)
   const [registering, setRegistering] = useState(false)
   const [flash, setFlash] = useState<string | null>(null)
-  const [camError, setCamError] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
+  const [currentMember, setCurrentMember] = useState<FullMember>(member)
   const [visitType, setVisitType] = useState<'entrada' | 'custodia'>('entrada')
-  const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
+  const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>(
+    (member.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined }))
+  )
   const [extraChildrenCount, setExtraChildrenCount] = useState(0)
-  const [coTitulares, setCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>([])
+  const [coTitulares, setCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>(
+    member.family_id
+      ? checkinMembers.filter(o => (o as any).family_id === member.family_id && o.id !== member.id)
+          .map(o => ({ id: o.id, name: o.name, selected: false }))
+      : []
+  )
   const [extraAdultsCount, setExtraAdultsCount] = useState(0)
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  useEffect(() => {
-    if (mode !== 'qr' || !scanning) return
-    let html5Qr: any, stopped = false
-    import('html5-qrcode').then(({ Html5Qrcode }) => {
-      if (stopped) return
-      html5Qr = new Html5Qrcode('qr-reader-modal')
-      html5Qr.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
-        async (decoded: string) => {
-          await html5Qr.stop().catch(() => {})
-          setScanning(false)
-          const { data } = await supabase.from('members')
-            .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
-            .eq('qr_code', decoded).single()
-          if (!data) { setCamError('Código QR no reconocido'); return }
-          doSelectMember(data as unknown as FullMember)
-        },
-        () => {}
-      ).catch(() => setCamError('No se puede acceder a la cámara'))
-    })
-    return () => { stopped = true; html5Qr?.stop().catch(() => {}) }
-  }, [mode, scanning])
-
-  function reset() {
-    setSelectedMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildrenCount(0)
-    setCoTitulares([]); setExtraAdultsCount(0); setCustodiaStart(''); setCustodiaEnd('')
-  }
-
-  function doSelectMember(m: FullMember) {
-    setSelectedMember(m)
-    setChildrenPresent((m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined })))
-    setExtraChildrenCount(0)
-    setExtraAdultsCount(0)
-    const familyCo = m.family_id
-      ? checkinMembers.filter(o => (o as any).family_id === m.family_id && o.id !== m.id)
-          .map(o => ({ id: o.id, name: o.name, selected: false }))
-      : []
-    setCoTitulares(familyCo)
-    setFlash(null)
-  }
-
-  const filteredMembers = query.trim().length > 0
-    ? checkinMembers.filter(m => {
-        const q = query.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        const qd = q.replace(/\D/g, '')
-        return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
-      })
-    : []
-
-  const bono = selectedMember ? getBonoInfo(selectedMember) : null
-  const alreadyInside = selectedMember ? activeVisits.some(v => v.member_id === selectedMember.id && !v.checked_out_at) : false
-
+  const bono = getBonoInfo(currentMember)
+  const alreadyInside = activeVisits.some(v => v.member_id === currentMember.id && !v.checked_out_at)
   const custodiaValid = visitType !== 'custodia' || (custodiaStart.trim() !== '' && custodiaEnd.trim() !== '')
 
   async function handleCheckIn() {
-    if (!selectedMember || registering || !custodiaValid) return
+    if (registering || !custodiaValid) return
     setRegistering(true)
-    const b = getBonoInfo(selectedMember)
-    const m = selectedMember.memberships?.[0]
-
+    const b = getBonoInfo(currentMember)
+    const m = currentMember.memberships?.[0]
     const selectedCo = coTitulares.filter(c => c.selected)
     const numAdults = 1 + selectedCo.length + extraAdultsCount
     const numChildren = childrenPresent.length + extraChildrenCount
     const adultEntries = selectedCo.map(c => ({ name: c.name, is_adult: true }))
-    const allChildren = [...childrenPresent]
-
     const today = new Date().toISOString().slice(0, 10)
     const custodiaEndAt = visitType === 'custodia' && custodiaEnd
       ? new Date(`${today}T${custodiaEnd}:00`).toISOString()
       : null
-
     await supabase.from('visits').insert({
-      member_id: selectedMember.id,
+      member_id: currentMember.id,
       membership_id: (b?.ok && m) ? m.id : null,
       checked_in_at: visitType === 'custodia' && custodiaStart
         ? new Date(`${today}T${custodiaStart}:00`).toISOString()
         : new Date().toISOString(),
       visit_type: visitType,
-      children_present: [...adultEntries, ...allChildren],
+      children_present: [...adultEntries, ...childrenPresent],
       adults_count: numAdults,
       children_count: numChildren,
       ...(custodiaEndAt ? { custodia_end_at: custodiaEndAt } : {}),
     })
-
     if (b?.ok && !b.unlimited && m?.sessions_remaining != null) {
       await supabase.from('memberships')
         .update({ sessions_remaining: Math.max(0, m.sessions_remaining - 1) })
         .eq('id', m.id)
     }
-
     const typeLabel = visitType === 'custodia' ? 'Custodia' : 'Entrada'
     clearTimeout(flashTimer.current)
     if (b?.ok) {
-      setFlash(
-        b.unlimited
-          ? `✓ ${typeLabel} registrada · bono ilimitado · ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
-          : `✓ ${typeLabel} registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`
-      )
+      setFlash(b.unlimited
+        ? `✓ ${typeLabel} registrada · bono ilimitado · ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
+        : `✓ ${typeLabel} registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`)
     } else {
       const rateLabel = visitType === 'custodia'
         ? `${rates.custodia}€/h × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
@@ -246,280 +194,440 @@ function CheckinPanel({
     flashTimer.current = setTimeout(() => setFlash(null), 6000)
     setRegistering(false)
     onCheckedIn()
-
-    // Refresh member data
     const { data } = await supabase.from('members')
       .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
-      .eq('id', selectedMember.id).single()
+      .eq('id', currentMember.id).single()
     if (data) {
       const refreshed = data as unknown as FullMember
-      setSelectedMember(refreshed)
+      setCurrentMember(refreshed)
       setChildrenPresent((refreshed.children ?? []).map(c => ({ name: c.name })))
       setExtraChildrenCount(0); setExtraAdultsCount(0); setCoTitulares([])
     }
   }
 
   return (
-    <div>
-      {/* ── Paso 2: confirmación ── */}
-      {selectedMember ? (
-        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-          {/* Header: volver + nombre + estado bono */}
-          <div className={`flex items-center gap-3 px-4 py-3 border-b ${
-            alreadyInside ? 'bg-iris/10 border-iris/20' :
-            bono?.ok ? 'bg-lime/10 border-lime/20' :
-            'bg-amber/10 border-amber/20'
-          }`}>
-            <button onClick={reset} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
-              <ChevronLeft size={16} />
-            </button>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-snow truncate">{selectedMember.name}</p>
-              {selectedMember.phone && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Phone size={10} className="text-mist shrink-0" />
-                  <p className="text-xs text-mist">{selectedMember.phone}</p>
-                </div>
-              )}
-            </div>
-            <div className="shrink-0 text-right">
-              {alreadyInside ? (
-                <span className="text-xs font-semibold text-iris">Ya dentro</span>
-              ) : bono?.ok ? (
-                <span className={`text-sm font-bold ${bono.unlimited ? 'text-iris' : bono.sessions! <= 2 ? 'text-amber' : 'text-lime'}`}>
-                  {bono.unlimited ? '∞' : bono.sessions}
-                  {!bono.unlimited && <span className="text-[10px] font-normal text-mist ml-1">ses.</span>}
-                </span>
-              ) : (
-                <span className="text-xs font-semibold text-amber">Sin bono</span>
-              )}
-            </div>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className={`flex items-center gap-3 px-5 pt-5 pb-4 border-b shrink-0 ${
+          alreadyInside ? 'border-iris/20' : bono?.ok ? 'border-lime/20' : 'border-amber/20'
+        }`}>
+          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
+            <ChevronLeft size={16} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-snow truncate">{currentMember.name}</p>
+            <p className="text-[11px] text-fog">Registro de entrada</p>
           </div>
-
-          <div className="p-4 space-y-3">
+          <div className="flex items-center gap-3 shrink-0">
             {alreadyInside ? (
-              <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
-                Este miembro ya tiene una entrada activa
-              </div>
+              <span className="text-xs font-semibold text-iris">Ya dentro</span>
+            ) : bono?.ok ? (
+              <span className={`text-sm font-bold ${bono.unlimited ? 'text-iris' : bono.sessions! <= 2 ? 'text-amber' : 'text-lime'}`}>
+                {bono.unlimited ? '∞' : bono.sessions}
+                {!bono.unlimited && <span className="text-[10px] font-normal text-mist ml-1">ses.</span>}
+              </span>
             ) : (
-              <>
-                {/* Tipo de entrada */}
-                <div>
-                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Tipo de entrada</p>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setVisitType('entrada')}
-                      className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
-                        visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
-                      }`}>
-                      Libre
-                    </button>
-                    <button type="button" onClick={() => setVisitType('custodia')}
-                      className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
-                        visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
-                      }`}>
-                      Custodia
-                    </button>
-                  </div>
-                  {visitType === 'custodia' && (
-                    <div className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shrink-0" />
-                        <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-fog uppercase tracking-wide">Inicio <span className="text-rose">*</span></label>
-                          <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
-                            className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-fog uppercase tracking-wide">Fin <span className="text-rose">*</span></label>
-                          <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
-                            className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* ¿Quién viene hoy? */}
-                {(coTitulares.length > 0 || (selectedMember.children && selectedMember.children.length > 0)) && (
-                  <div>
-                    <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">¿Quién viene hoy?</p>
-                    <div className="rounded-xl border border-line overflow-hidden">
-                      {coTitulares.map((co, i) => (
-                        <button key={co.id} type="button"
-                          onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
-                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
-                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
-                            {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
-                          </div>
-                          <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
-                          <span className="text-[10px] text-mist shrink-0">Co-titular</span>
-                        </button>
-                      ))}
-                      {selectedMember.children && selectedMember.children.map((child, i) => {
-                        const sel = childrenPresent.some(c => c.name === child.name)
-                        const bd = (child as any).birth_date as string | undefined
-                        const age = bd ? (() => {
-                          const now = new Date(), dob = new Date(bd)
-                          let y = now.getFullYear() - dob.getFullYear()
-                          let m = now.getMonth() - dob.getMonth()
-                          if (now.getDate() < dob.getDate()) m--
-                          if (m < 0) { y--; m += 12 }
-                          return y > 0 ? `${y} año${y !== 1 ? 's' : ''}${m > 0 ? ` ${m} m.` : ''}` : `${m} mes${m !== 1 ? 'es' : ''}`
-                        })() : null
-                        return (
-                          <button key={child.name + i} type="button"
-                            onClick={() => setChildrenPresent(prev =>
-                              sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
-                            )}
-                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-t border-line ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
-                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
-                              {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
-                            </div>
-                            <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
-                            {age && <span className="text-xs text-mist shrink-0">{age}</span>}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Invitados adicionales */}
-                <div>
-                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
-                  <div className="rounded-xl border border-line overflow-hidden divide-y divide-line">
-                    <div className="flex items-center justify-between px-3 py-2.5">
-                      <span className="text-sm text-fog">Adultos</span>
-                      <div className="flex items-center gap-3">
-                        <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
-                          className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
-                        <span className="w-5 text-center font-bold text-snow">{extraAdultsCount}</span>
-                        <button type="button" onClick={() => setExtraAdultsCount(n => n + 1)}
-                          className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between px-3 py-2.5">
-                      <span className="text-sm text-fog">Niños</span>
-                      <div className="flex items-center gap-3">
-                        <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
-                          className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
-                        <span className="w-5 text-center font-bold text-snow">{extraChildrenCount}</span>
-                        <button type="button" onClick={() => setExtraChildrenCount(n => n + 1)}
-                          className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Aviso sin bono inline */}
-                {!bono?.ok && (
-                  <div className="flex items-start gap-2 rounded-xl bg-amber/10 border border-amber/20 px-3 py-2">
-                    <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber/90">
-                      {bono ? 'Bono agotado.' : 'Sin bono.'}{' '}
-                      {visitType === 'custodia' ? `${rates.custodia} €/h × niños` : `${rates.adult} €/h adulto · ${rates.child} €/h niño`}
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleCheckIn}
-                  disabled={registering || !custodiaValid}
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
-                    bono?.ok ? 'bg-lime text-ink hover:brightness-105' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
-                  }`}
-                  style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}
-                >
-                  <LogIn size={17} strokeWidth={2.2} />
-                  {registering ? 'Registrando...' : 'Registrar entrada'}
-                </button>
-
-                {flash && (
-                  <div className="flex items-center justify-center gap-2 text-sm font-semibold text-mint text-center">
-                    <Check size={14} strokeWidth={2.5} /> {flash}
-                  </div>
-                )}
-              </>
+              <span className="text-xs font-semibold text-amber">Sin bono</span>
             )}
+            <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
           </div>
         </div>
-      ) : (
-        /* ── Paso 1: búsqueda / QR ── */
-        <div className="space-y-3">
-          <div className="flex rounded-xl border border-line bg-surface2 overflow-hidden">
-            <button onClick={() => { setMode('manual'); reset() }}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'manual' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
-              <Search size={13} /> Manual
-            </button>
-            <button onClick={() => { setMode('qr'); reset() }}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'qr' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
-              <QrCode size={13} /> QR
-            </button>
+        {/* Phone row */}
+        {currentMember.phone && (
+          <div className="flex items-center gap-1.5 px-5 py-2 border-b border-line/40 shrink-0">
+            <Phone size={11} className="text-mist shrink-0" />
+            <span className="text-xs text-mist">{currentMember.phone}</span>
           </div>
+        )}
 
-          {mode === 'qr' ? (
-            <div className="rounded-2xl border border-line bg-surface p-4">
-              <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
-                <QrCode size={13} className="text-lime" /> Escáner QR
-              </div>
-              {scanning && !camError ? (
-                <div id="qr-reader-modal" className="w-full rounded-xl overflow-hidden [&>*]:rounded-xl" />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 gap-3">
-                  {camError && <p className="text-sm text-rose text-center">{camError}</p>}
-                  <button onClick={reset}
-                    className="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm text-fog hover:text-snow hover:border-line2 transition-colors">
-                    <RotateCcw size={14} /> Volver a escanear
-                  </button>
-                </div>
-              )}
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+          {alreadyInside ? (
+            <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
+              Este miembro ya tiene una entrada activa
             </div>
           ) : (
-            <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-              <div className="p-3 border-b border-line">
-                <div className="relative">
-                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-                  <input value={query} onChange={e => setQuery(e.target.value)}
-                    placeholder="Nombre o teléfono..." autoFocus
-                    className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
+            <>
+              {/* Tipo de entrada */}
+              <div>
+                <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Tipo de entrada</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setVisitType('entrada')}
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                      visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
+                    }`}>Libre</button>
+                  <button type="button" onClick={() => setVisitType('custodia')}
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                      visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
+                    }`}>Custodia</button>
                 </div>
-              </div>
-              <div className="divide-y divide-line/50 max-h-72 overflow-y-auto">
-                {filteredMembers.map(m => {
-                  const b = getBonoInfo(m)
-                  const inside = activeVisits.some(v => v.member_id === m.id && !v.checked_out_at)
-                  return (
-                    <button key={m.id} onClick={() => { doSelectMember(m); setQuery('') }}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface2 transition-colors">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
-                      <span className="flex-1 min-w-0">
-                        <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
-                        {inside && <span className="block text-xs text-iris">Dentro ahora</span>}
-                      </span>
-                      {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
-                        : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
-                        : <span className="text-xs text-rose shrink-0">sin bono</span>}
-                    </button>
-                  )
-                })}
-                {query.trim().length > 0 && filteredMembers.length === 0 && (
-                  <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
+                {visitType === 'custodia' && (
+                  <div className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shrink-0" />
+                      <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Inicio <span className="text-rose">*</span></label>
+                        <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
+                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Fin <span className="text-rose">*</span></label>
+                        <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
+                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              <Link href="/miembros/nuevo" onClick={onClose}
-                className="flex w-full items-center justify-center gap-2 px-4 py-3 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors">
-                <UserPlus size={15} /> Crear nuevo miembro
-              </Link>
-            </div>
+
+              {/* ¿Quién viene hoy? */}
+              {(coTitulares.length > 0 || (currentMember.children && currentMember.children.length > 0)) && (
+                <div>
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">¿Quién viene hoy?</p>
+                  <div className="rounded-xl border border-line overflow-hidden">
+                    {coTitulares.map((co, i) => (
+                      <button key={co.id} type="button"
+                        onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
+                        className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
+                          {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
+                        </div>
+                        <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
+                        <span className="text-[10px] text-mist shrink-0">Co-titular</span>
+                      </button>
+                    ))}
+                    {currentMember.children && currentMember.children.map((child, i) => {
+                      const sel = childrenPresent.some(c => c.name === child.name)
+                      const bd = (child as any).birth_date as string | undefined
+                      const age = bd ? (() => {
+                        const now = new Date(), dob = new Date(bd)
+                        let y = now.getFullYear() - dob.getFullYear()
+                        let m = now.getMonth() - dob.getMonth()
+                        if (now.getDate() < dob.getDate()) m--
+                        if (m < 0) { y--; m += 12 }
+                        return y > 0 ? `${y} año${y !== 1 ? 's' : ''}${m > 0 ? ` ${m} m.` : ''}` : `${m} mes${m !== 1 ? 'es' : ''}`
+                      })() : null
+                      return (
+                        <button key={child.name + i} type="button"
+                          onClick={() => setChildrenPresent(prev =>
+                            sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
+                          )}
+                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-t border-line ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
+                            {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
+                          </div>
+                          <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
+                          {age && <span className="text-xs text-mist shrink-0">{age}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Invitados adicionales */}
+              <div>
+                <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
+                <div className="rounded-xl border border-line overflow-hidden divide-y divide-line">
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-sm text-fog">Adultos</span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
+                        className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                      <span className="w-5 text-center font-bold text-snow">{extraAdultsCount}</span>
+                      <button type="button" onClick={() => setExtraAdultsCount(n => n + 1)}
+                        className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-sm text-fog">Niños</span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
+                        className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                      <span className="w-5 text-center font-bold text-snow">{extraChildrenCount}</span>
+                      <button type="button" onClick={() => setExtraChildrenCount(n => n + 1)}
+                        className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {!bono?.ok && (
+                <div className="flex items-start gap-2 rounded-xl bg-amber/10 border border-amber/20 px-3 py-2">
+                  <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber/90">
+                    {bono ? 'Bono agotado.' : 'Sin bono.'}{' '}
+                    {visitType === 'custodia' ? `${rates.custodia} €/h × niños` : `${rates.adult} €/h adulto · ${rates.child} €/h niño`}
+                  </p>
+                </div>
+              )}
+
+              <button onClick={handleCheckIn} disabled={registering || !custodiaValid}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
+                  bono?.ok ? 'bg-lime text-ink hover:brightness-105' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
+                }`}
+                style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}>
+                <LogIn size={17} strokeWidth={2.2} />
+                {registering ? 'Registrando...' : 'Registrar Entrada'}
+              </button>
+
+              {flash && (
+                <div className="flex items-center justify-center gap-2 text-sm font-semibold text-mint text-center">
+                  <Check size={14} strokeWidth={2.5} /> {flash}
+                </div>
+              )}
+            </>
           )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
+
+// ── Modal 3: nuevo miembro inline ──
+function CheckinNewMemberModal({
+  onBack,
+  onClose,
+  onCreated,
+}: {
+  onBack: () => void
+  onClose: () => void
+  onCreated: (member: FullMember) => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [children, setChildren] = useState<{ name: string; sex: string; birth_date: string }[]>([])
+  const [consentAccepted, setConsentAccepted] = useState(false)
+  const [showPartner, setShowPartner] = useState(false)
+  const [partnerPhone, setPartnerPhone] = useState('')
+  const [partnerSearching, setPartnerSearching] = useState(false)
+  const [partnerFound, setPartnerFound] = useState<{ id: string; name: string; phone: string } | null | undefined>(undefined)
+  const [partnerConfirmed, setPartnerConfirmed] = useState(false)
+  const [partnerName, setPartnerName] = useState('')
+  const partnerTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  function handlePartnerPhone(val: string) {
+    setPartnerPhone(val); setPartnerFound(undefined); setPartnerConfirmed(false); setPartnerName('')
+    clearTimeout(partnerTimer.current)
+    if (val.replace(/\s/g, '').length < 8) return
+    setPartnerSearching(true)
+    partnerTimer.current = setTimeout(async () => {
+      const { data } = await supabase.from('members').select('id, name, phone')
+        .or(`phone.eq.${val.trim()},phone.ilike.%${val.replace(/\s/g, '')}%`).limit(1).single()
+      setPartnerSearching(false); setPartnerFound(data ?? null)
+    }, 400)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!firstName.trim() || !consentAccepted) return
+    const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
+    setSaving(true); setError(null)
+    try {
+      const cleanChildren = children.filter(c => c.name.trim())
+      const hasPartner = showPartner && partnerPhone.trim() && (partnerConfirmed || partnerName.trim())
+      let familyId: string | null = null
+      if (hasPartner) {
+        const { data: fam, error: fe } = await supabase
+          .from('families').insert({ name: `Familia ${lastName.trim() || firstName.trim()}` }).select('id').single()
+        if (fe) throw fe
+        familyId = fam.id
+      }
+      const { data: newMember, error: me } = await supabase.from('members').insert({
+        name: fullName, phone: phone.trim() || null, email: email.trim() || null,
+        birth_date: birthDate || null, family_id: familyId,
+        children: cleanChildren, children_count: cleanChildren.length,
+        consent_accepted_at: new Date().toISOString(), consent_version: 'v1.0',
+      }).select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children').single()
+      if (me) throw me
+      if (hasPartner && familyId) {
+        if (partnerFound && partnerConfirmed) {
+          await supabase.from('members').update({
+            family_id: familyId,
+            ...(cleanChildren.length > 0 ? { children: cleanChildren, children_count: cleanChildren.length } : {}),
+          }).eq('id', partnerFound.id)
+        } else if (partnerName.trim()) {
+          await supabase.from('members').insert({
+            name: partnerName.trim(), phone: partnerPhone.trim(), family_id: familyId,
+            children: cleanChildren, children_count: cleanChildren.length,
+            consent_accepted_at: new Date().toISOString(), consent_version: 'v1.0',
+          })
+        }
+      }
+      onCreated(newMember as unknown as FullMember)
+    } catch (err: any) {
+      setError(err.message ?? 'Error al guardar'); setSaving(false)
+    }
+  }
+
+  const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
+  const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5'
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
+          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
+            <ChevronLeft size={16} />
+          </button>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-snow">Nuevo miembro</p>
+            <p className="text-[11px] text-fog">Registro de entrada</p>
+          </div>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          {/* Titular */}
+          <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Titular</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Nombre *</label>
+                <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" required className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Apellido</label>
+                <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido" className={inputCls} />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Teléfono</label>
+              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Fecha de nacimiento</label>
+              <DatePickerModal value={birthDate} onChange={setBirthDate} />
+            </div>
+          </div>
+
+          {/* Hijos */}
+          <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Hijos <span className="normal-case font-normal text-mist ml-1">opcional</span></p>
+              <button type="button" onClick={() => setChildren(cs => [...cs, { name: '', sex: '', birth_date: '' }])}
+                className="flex items-center gap-1 text-xs font-semibold text-lime hover:opacity-80 transition-opacity">
+                <Plus size={13} /> Añadir
+              </button>
+            </div>
+            {children.length === 0 && <p className="text-xs text-mist">Añade los niños que vienen con este miembro.</p>}
+            {children.map((c, i) => (
+              <div key={i} className="border-t border-line pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-fog">Hijo/a {i + 1}</p>
+                  <button type="button" onClick={() => setChildren(cs => cs.filter((_, idx) => idx !== i))} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
+                </div>
+                <input value={c.name} onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, name: e.target.value } : ch))} placeholder="Nombre" className={inputCls} />
+                <select value={c.sex} onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, sex: e.target.value } : ch))} className={inputCls}>
+                  <option value="">Sin especificar</option>
+                  <option value="M">Niño</option>
+                  <option value="F">Niña</option>
+                </select>
+                <div>
+                  <label className={labelCls}>Fecha de nacimiento</label>
+                  <DatePickerModal value={c.birth_date} onChange={v => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, birth_date: v } : ch))} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pareja */}
+          {!showPartner ? (
+            <button type="button" onClick={() => setShowPartner(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
+              <UserPlus size={14} /> Agregar pareja / otro titular
+            </button>
+          ) : (
+            <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Pareja / otro titular</p>
+                <button type="button" onClick={() => { setShowPartner(false); setPartnerPhone(''); setPartnerFound(undefined); setPartnerConfirmed(false); setPartnerName('') }}
+                  className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
+              </div>
+              <div className="relative">
+                <input type="tel" value={partnerPhone} onChange={e => handlePartnerPhone(e.target.value)} placeholder="Teléfono de la pareja" className={inputCls} />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {partnerSearching && <Loader2 size={14} className="text-mist animate-spin" />}
+                  {partnerConfirmed && <Check size={14} className="text-lime" />}
+                </div>
+              </div>
+              {partnerFound && !partnerConfirmed && (
+                <div className="rounded-xl border border-lime/20 bg-lime/5 p-3 space-y-2">
+                  <p className="text-xs text-fog">Miembro encontrado: <span className="text-snow font-medium">{partnerFound.name}</span></p>
+                  <button type="button" onClick={() => setPartnerConfirmed(true)}
+                    className="w-full rounded-xl bg-lime/10 border border-lime/30 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">Confirmar como pareja</button>
+                </div>
+              )}
+              {partnerConfirmed && partnerFound && (
+                <div className="flex items-center gap-2 rounded-xl border border-lime/20 bg-lime/5 px-3 py-2.5">
+                  <Check size={13} className="text-lime shrink-0" />
+                  <p className="text-sm text-snow flex-1">{partnerFound.name}</p>
+                  <button type="button" onClick={() => { setPartnerConfirmed(false); setPartnerFound(undefined); setPartnerPhone('') }}
+                    className="text-mist hover:text-rose"><X size={13} /></button>
+                </div>
+              )}
+              {partnerFound === null && (
+                <div className="space-y-2">
+                  <div className="rounded-xl border border-amber/20 bg-amber/5 px-3 py-2">
+                    <p className="text-xs text-amber font-medium">Número no registrado — se creará un nuevo miembro</p>
+                  </div>
+                  <input value={partnerName} onChange={e => setPartnerName(e.target.value)} placeholder="Nombre de la pareja" className={inputCls} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Consentimiento RGPD */}
+          <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Protección de datos</p>
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="relative mt-0.5 shrink-0">
+                <input type="checkbox" checked={consentAccepted} onChange={e => setConsentAccepted(e.target.checked)} className="sr-only" />
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${consentAccepted ? 'bg-lime border-lime' : 'bg-surface2 border-line group-hover:border-line2'}`}>
+                  {consentAccepted && <Check size={12} className="text-ink" strokeWidth={3} />}
+                </div>
+              </div>
+              <p className="text-xs text-fog leading-relaxed">
+                El tutor legal ha sido informado y acepta el tratamiento de sus datos según la{' '}
+                <a href="/privacidad" target="_blank" className="text-iris underline">política de privacidad</a>.
+              </p>
+            </label>
+            {!consentAccepted && (
+              <p className="text-[11px] text-amber flex items-center gap-1">
+                <AlertTriangle size={11} /> Obligatorio para registrar al miembro
+              </p>
+            )}
+          </div>
+
+          {error && <p className="text-sm text-rose text-center">{error}</p>}
+
+          <button type="submit" disabled={saving || !firstName.trim() || !consentAccepted}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
+            style={{ boxShadow: 'var(--shadow-lime)' }}>
+            <Save size={17} strokeWidth={2.2} />
+            {saving ? 'Guardando...' : 'Guardar y registrar entrada'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 
 type HomeClientProps = {
   todayVisits: TodayVisit[]
@@ -667,7 +775,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
   const [rateCustodia, setRateCustodia] = useState(8)
-  const [checkinOpen, setCheckinOpen] = useState(false)
+  const [checkinModal, setCheckinModal] = useState<null | 'search' | 'confirm' | 'new-member'>(null)
+  const [checkinSelectedMember, setCheckinSelectedMember] = useState<FullMember | null>(null)
+  const [checkinQuery, setCheckinQuery] = useState('')
   const [checkinMembers, setCheckinMembers] = useState<FullMember[]>([])
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
 
@@ -724,12 +834,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   }, [])
 
   useEffect(() => {
-    if (!checkinOpen || checkinMembers.length > 0) return
+    if (!checkinModal || checkinMembers.length > 0) return
     supabase.from('members')
       .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
       .order('name')
       .then(({ data }) => { if (data) setCheckinMembers(data as unknown as FullMember[]) })
-  }, [checkinOpen])
+  }, [checkinModal])
 
   const loadOpenChecks = useCallback(async () => {
     const visitIds = activeVisits.map(v => v.id)
@@ -1132,7 +1242,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             </button>
           )}
           <button
-            onClick={() => setCheckinOpen(true)}
+            onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
             className="flex items-center justify-center bg-lime text-ink font-semibold rounded-xl w-10 h-10 active:scale-95 transition-transform"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
@@ -2362,35 +2472,101 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         )
       })()}
 
-      {/* Modal de registro de visita */}
-      {checkinOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setCheckinOpen(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full sm:max-w-3xl rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[95vh]" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
-              <div className="flex items-center gap-2">
-                <LogIn size={15} className="text-lime shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-snow">Registrar Entrada</p>
-                  <p className="text-[11px] text-fog">Check-in de visitantes</p>
+      {/* Modal 1: búsqueda de miembro */}
+      {checkinModal === 'search' && (() => {
+        const filtered = checkinQuery.trim().length > 0
+          ? checkinMembers.filter(m => {
+              const q = checkinQuery.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+              const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+              const qd = q.replace(/\D/g, '')
+              return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
+            })
+          : []
+        const closeAll = () => { setCheckinModal(null); setCheckinQuery(''); setCheckinSelectedMember(null) }
+        return (
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" onClick={closeAll}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+                <div className="flex items-center gap-2">
+                  <LogIn size={15} className="text-lime shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-snow">Registrar Entrada</p>
+                    <p className="text-[11px] text-fog">Check-in de visitantes</p>
+                  </div>
+                </div>
+                <button onClick={closeAll} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+              </div>
+              {/* Search */}
+              <div className="px-5 pt-4 pb-2 shrink-0">
+                <div className="relative">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+                  <input value={checkinQuery} onChange={e => setCheckinQuery(e.target.value)}
+                    placeholder="Buscar por nombre o teléfono..." autoFocus
+                    className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
                 </div>
               </div>
-              <button onClick={() => setCheckinOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
-                <X size={16} />
+              {/* Results */}
+              <div className="overflow-y-auto flex-1 divide-y divide-line/50">
+                {filtered.map(m => {
+                  const b = getBonoInfo(m)
+                  const inside = activeVisits.some(v => v.member_id === m.id && !v.checked_out_at)
+                  return (
+                    <button key={m.id} onClick={() => { setCheckinSelectedMember(m); setCheckinModal('confirm') }}
+                      className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface2 transition-colors">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
+                        {inside && <span className="block text-xs text-iris">Dentro ahora</span>}
+                      </span>
+                      {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
+                        : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
+                        : <span className="text-xs text-rose shrink-0">sin bono</span>}
+                    </button>
+                  )
+                })}
+                {checkinQuery.trim().length > 0 && filtered.length === 0 && (
+                  <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
+                )}
+                {checkinQuery.trim().length === 0 && (
+                  <p className="py-8 text-center text-sm text-mist">Escribe un nombre o teléfono para buscar</p>
+                )}
+              </div>
+              {/* Crear nuevo */}
+              <button onClick={() => setCheckinModal('new-member')}
+                className="flex w-full items-center justify-center gap-2 px-5 py-3.5 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors shrink-0">
+                <UserPlus size={15} /> Crear nuevo miembro
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 px-5 py-4">
-              <CheckinPanel
-                checkinMembers={checkinMembers}
-                activeVisits={activeVisits}
-                rates={{ adult: rateAdult, child: rateChild, custodia: rateCustodia }}
-                onCheckedIn={() => { router.refresh(); setCheckinMembers([]) }}
-                onClose={() => setCheckinOpen(false)}
-              />
-            </div>
           </div>
-        </div>
+        )
+      })()}
+
+      {/* Modal 2: confirmación de entrada */}
+      {checkinModal === 'confirm' && checkinSelectedMember && (
+        <CheckinConfirmModal
+          member={checkinSelectedMember}
+          checkinMembers={checkinMembers}
+          activeVisits={activeVisits}
+          rates={{ adult: rateAdult, child: rateChild, custodia: rateCustodia }}
+          onBack={() => setCheckinModal('search')}
+          onClose={() => { setCheckinModal(null); setCheckinSelectedMember(null); setCheckinQuery('') }}
+          onCheckedIn={() => { router.refresh(); setCheckinMembers([]) }}
+        />
+      )}
+
+      {/* Modal 3: nuevo miembro */}
+      {checkinModal === 'new-member' && (
+        <CheckinNewMemberModal
+          onBack={() => setCheckinModal('search')}
+          onClose={() => { setCheckinModal(null); setCheckinSelectedMember(null); setCheckinQuery(''); setCheckinMembers([]) }}
+          onCreated={(newMember) => {
+            setCheckinMembers([])
+            setCheckinSelectedMember(newMember)
+            setCheckinModal('confirm')
+          }}
+        />
       )}
 
       {/* Modal de consumos */}
