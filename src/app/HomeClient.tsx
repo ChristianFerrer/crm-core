@@ -265,6 +265,7 @@ function CheckinConfirmModal({
   onCheckedIn: () => void
 }) {
   const [registering, setRegistering] = useState(false)
+  const [registered, setRegistered] = useState(false)
   const [checkedOut, setCheckedOut] = useState(false)
   const [showGuests, setShowGuests] = useState(false)
   const [currentMember, setCurrentMember] = useState<FullMember>(member)
@@ -328,9 +329,9 @@ function CheckinConfirmModal({
         .eq('id', m.id)
     }
     setRegistering(false)
+    setRegistered(true)
     onCheckedIn()
-    // Mejora #4: cierre automático 1.5 s tras registro
-    closeTimer.current = setTimeout(onClose, 1500)
+    closeTimer.current = setTimeout(onClose, 2000)
   }
 
   return (
@@ -351,8 +352,17 @@ function CheckinConfirmModal({
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
 
-          {/* Mejora #5: "ya dentro" con checkout */}
-          {alreadyInside ? (
+          {/* Confirmación de registro */}
+          {registered ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <div className="w-16 h-16 rounded-full bg-lime/15 border border-lime/30 flex items-center justify-center">
+                <Check size={30} className="text-lime" strokeWidth={2.5} />
+              </div>
+              <p className="text-lg font-bold text-snow">¡Entrada registrada!</p>
+              <p className="text-sm text-fog text-center">La visita de <span className="text-snow font-medium">{currentMember.name}</span> ha sido registrada correctamente.</p>
+              <p className="text-xs text-mist mt-1">Cerrando automáticamente...</p>
+            </div>
+          ) : alreadyInside ? (
             <div className="space-y-3">
               {checkedOut ? (
                 <div className="rounded-xl bg-lime/10 border border-lime/20 px-4 py-4 flex flex-col items-center gap-2">
@@ -923,7 +933,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [checkinSelectedMember, setCheckinSelectedMember] = useState<FullMember | null>(null)
   const [checkinQuery, setCheckinQuery] = useState('')
   const [checkinMembers, setCheckinMembers] = useState<FullMember[]>([])
-  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  const [detailVisitId, setDetailVisitId] = useState<string | null>(null)
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -1516,7 +1526,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             {/* ── MOBILE: expandable cards (< md) ──────────────────────── */}
             <div className="md:hidden px-3 py-3 space-y-2.5">
               {filteredVisits.map(visit => {
-                const bono = visit.membership_id
                 const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
                 const isLong = elapsedMins > 180
                 const check = openChecks.get(visit.id)
@@ -1526,28 +1535,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 const numChildren = visit.children_count ?? 0
                 const tipo = fmtVisitType(visit)
                 const tipoColor = tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-mist'
-                const isExpanded = expandedCards.has(visit.id)
-                const toggleExpand = () => setExpandedCards(prev => {
-                  const next = new Set(prev)
-                  next.has(visit.id) ? next.delete(visit.id) : next.add(visit.id)
-                  return next
-                })
 
                 return (
                   <div
                     key={visit.id}
-                    className={`rounded-2xl border bg-surface overflow-hidden ${
-                      isLong ? 'border-amber/40' : 'border-line'
-                    }`}
+                    className={`rounded-2xl border bg-surface overflow-hidden ${isLong ? 'border-amber/40' : 'border-line'}`}
                   >
-                    {/* Alerta de estancia larga: borde izquierdo ámbar */}
                     <div className={`flex ${isLong ? 'border-l-[3px] border-amber' : ''}`}>
                       <div className="flex-1 min-w-0">
-
-                        {/* ── Collapsed: 2 líneas ── */}
                         {/* Línea 1: nombre + badge + acciones */}
                         <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-                          <button onClick={toggleExpand} className="flex-1 min-w-0 flex items-center gap-2 text-left">
+                          <button onClick={() => setDetailVisitId(visit.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left">
                             <span className="text-sm font-bold text-snow leading-tight truncate">{visit.members?.name ?? '—'}</span>
                             <span className="text-line2 shrink-0">·</span>
                             <span className={`text-[10px] font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
@@ -1559,19 +1557,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <LogOut size={14} strokeWidth={2.2} />
                           </button>
                           <button
-                            onClick={toggleExpand}
-                            className={`w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border transition-colors ${
-                              isExpanded
-                                ? 'bg-surface2 border-line2 text-snow'
-                                : 'bg-surface2 border-line text-fog'
-                            }`}
+                            onClick={() => setDetailVisitId(visit.id)}
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border bg-surface2 border-line text-fog hover:text-snow transition-colors"
                           >
-                            <ChevronDown size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={14} />
                           </button>
                         </div>
 
                         {/* Línea 2: stats inline */}
-                        <button onClick={toggleExpand} className="w-full text-left px-3 pb-2.5">
+                        <button onClick={() => setDetailVisitId(visit.id)} className="w-full text-left px-3 pb-2.5">
                           <div className="flex items-center gap-1.5 text-xs text-mist">
                             <span className="font-semibold text-snow">{visit.adults_count + numChildren}</span>
                             <span>en sala</span>
@@ -1582,79 +1576,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <span className="font-semibold text-lime">{grandTotal.toFixed(2)}€</span>
                           </div>
                         </button>
-
-                        {/* ── Expanded detail ── */}
-                        {isExpanded && (
-                          <div className="border-t border-line bg-surface2/40 px-3 py-2.5 space-y-2">
-                            {/* Fila 1: info (adultos · niños · hora · bono) */}
-                            <div className="flex items-center gap-1.5 flex-wrap text-xs text-mist">
-                              <span className="font-semibold text-lime">{visit.adults_count}</span>
-                              <span>ad.</span>
-                              <span className="text-line2">·</span>
-                              <span className="font-semibold text-cyan-300">{numChildren}</span>
-                              <span>niños</span>
-                              <span className="text-line2">·</span>
-                              <span>Entrada {fmtTime(visit.checked_in_at)}</span>
-                              <span className="text-line2">·</span>
-                              <span className={`font-semibold ${bono ? 'text-iris' : 'text-amber'}`}>
-                                {bono ? (visit.memberships?.membership_types?.name ?? 'Con bono') : 'Sin bono'}
-                              </span>
-                              {bono && visit.memberships != null && (
-                                <span className={`font-semibold ${
-                                  visit.memberships.sessions_remaining <= 2 ? 'text-rose' :
-                                  visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'
-                                }`}>
-                                  ({visit.memberships.sessions_remaining} ses.)
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Fila 2: acciones secundarias horizontales */}
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setImporteVisitId(visit.id)}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-line bg-surface hover:border-lime/40 transition-colors"
-                              >
-                                <Receipt size={12} className="text-lime" />
-                                <span className="text-xs font-semibold text-lime">{imp.total.toFixed(2)}€</span>
-                              </button>
-                              <button
-                                onClick={() => setConsumosVisitId(consumosVisitId === visit.id ? null : visit.id)}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border transition-colors ${
-                                  consumosVisitId === visit.id
-                                    ? 'bg-iris/10 border-iris/40'
-                                    : 'border-line bg-surface hover:border-iris/40'
-                                }`}
-                              >
-                                <Plus size={12} className={consumosVisitId === visit.id ? 'text-iris' : 'text-fog'} />
-                                <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
-                                  {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : 'Consumos'}
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => openAcompPopup(visit)}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-line bg-surface hover:border-iris/40 transition-colors"
-                              >
-                                <UserPlus size={12} className="text-fog" />
-                                <span className="text-xs font-semibold text-fog">
-                                  {Math.max(0, visit.adults_count - 1) + numChildren || '0'} acomp.
-                                </span>
-                              </button>
-                            </div>
-
-                            {/* Fila 3: total a pagar */}
-                            <button
-                              onClick={() => setTotalVisitId(visit.id)}
-                              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-lime/5 border border-lime/20 hover:bg-lime/10 transition-colors"
-                            >
-                              <span className="text-xs font-semibold text-fog">Total a pagar</span>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-base font-bold text-lime">{grandTotal.toFixed(2)}€</span>
-                                <Receipt size={12} className="text-lime/60" />
-                              </div>
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -2610,6 +2531,133 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <span className="text-sm font-bold text-snow">Total a cobrar</span>
                   <span className="text-xl font-bold text-lime">{imp.total.toFixed(2)}€</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal de detalle de visita (móvil) */}
+      {detailVisitId && (() => {
+        const visit = activeVisits.find(v => v.id === detailVisitId)
+        if (!visit) return null
+        const bono = visit.membership_id
+        const check = openChecks.get(detailVisitId)
+        const imp = calcImporte(visit)
+        const consumosTotal = (check?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
+        const grandTotal = imp.total + consumosTotal
+        const numChildren = visit.children_count ?? 0
+        const tipo = fmtVisitType(visit)
+        const tipoColor = tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-mist'
+        const isLong = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000 > 180
+        const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
+        const cp = visit.children_present ?? []
+        const coTitNames = cp.filter(e => e.is_adult).map(e => e.name)
+        const childNames = cp.filter(e => !e.is_adult).map(e => e.name)
+        const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1 - coTitNames.length)
+        const extraChildren = Math.max(0, numChildren - childNames.length)
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setDetailVisitId(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold text-snow truncate">{visit.members?.name ?? '—'}</p>
+                    <span className={`text-[10px] font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
+                    {isLong && <span className="text-[10px] font-semibold text-amber shrink-0">⚠ Estancia larga</span>}
+                  </div>
+                  <p className="text-[11px] text-fog mt-0.5">Entrada {fmtTime(visit.checked_in_at)} · {fmtElapsed(visit.checked_in_at)}</p>
+                </div>
+                <button onClick={() => setDetailVisitId(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+                {/* Info personas */}
+                <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-fog">Adultos</span>
+                    <span className="font-semibold text-lime">{visit.adults_count}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-fog">Niños</span>
+                    <span className="font-semibold text-cyan-300">{numChildren}</span>
+                  </div>
+                  {coTitNames.length > 0 && (
+                    <div className="flex items-start justify-between text-xs gap-2">
+                      <span className="text-fog shrink-0">Co-titulares</span>
+                      <span className="text-snow text-right">{coTitNames.join(', ')}</span>
+                    </div>
+                  )}
+                  {childNames.length > 0 && (
+                    <div className="flex items-start justify-between text-xs gap-2">
+                      <span className="text-fog shrink-0">Menores</span>
+                      <span className="text-snow text-right">{childNames.join(', ')}</span>
+                    </div>
+                  )}
+                  {(extraAdults > 0 || extraChildren > 0) && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-fog">Invitados</span>
+                      <span className="text-snow">
+                        {[extraAdults > 0 && `${extraAdults} adulto${extraAdults !== 1 ? 's' : ''}`, extraChildren > 0 && `${extraChildren} niño${extraChildren !== 1 ? 's' : ''}`].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-xs border-t border-line pt-2">
+                    <span className="text-fog">Bono</span>
+                    <span className={`font-semibold ${bono ? 'text-iris' : 'text-amber'}`}>
+                      {bono ? (visit.memberships?.membership_types?.name ?? 'Con bono') : 'Sin bono'}
+                      {bono && visit.memberships != null && (
+                        <span className={`ml-1 ${visit.memberships.sessions_remaining <= 2 ? 'text-rose' : visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'}`}>
+                          ({visit.memberships.sessions_remaining} ses.)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Acciones */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => { setDetailVisitId(null); setImporteVisitId(detailVisitId) }}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-line bg-surface2 hover:border-lime/40 transition-colors">
+                    <Receipt size={14} className="text-lime" />
+                    <span className="text-[10px] font-semibold text-lime">{imp.total.toFixed(2)}€</span>
+                    <span className="text-[9px] text-mist">Importe</span>
+                  </button>
+                  <button onClick={() => { setDetailVisitId(null); setConsumosVisitId(detailVisitId) }}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
+                    <Plus size={14} className="text-fog" />
+                    <span className={`text-[10px] font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
+                      {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : '—'}
+                    </span>
+                    <span className="text-[9px] text-mist">Consumos</span>
+                  </button>
+                  <button onClick={() => { setDetailVisitId(null); openAcompPopup(visit) }}
+                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
+                    <UserPlus size={14} className="text-fog" />
+                    <span className="text-[10px] font-semibold text-mist">
+                      {Math.max(0, visit.adults_count - 1) + numChildren}
+                    </span>
+                    <span className="text-[9px] text-mist">Acomp.</span>
+                  </button>
+                </div>
+
+                {/* Total + checkout */}
+                <button onClick={() => { setDetailVisitId(null); setTotalVisitId(detailVisitId) }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/10 transition-colors">
+                  <span className="text-sm font-semibold text-fog">Total a pagar</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                    <Receipt size={13} className="text-lime/60" />
+                  </div>
+                </button>
+
+                <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose/10 border border-rose/30 text-rose font-semibold text-sm hover:bg-rose/20 transition active:scale-[0.99]">
+                  <LogOut size={16} strokeWidth={2.2} />
+                  Registrar salida
+                </button>
               </div>
             </div>
           </div>
