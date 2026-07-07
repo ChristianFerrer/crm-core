@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase'
 import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight, Users, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 import { OpenCheckPanel } from './OpenCheckPanel'
-import { NewMemberInlineForm, type CreatedMember } from '@/components/NewMemberInlineForm'
 
 const FALLBACK_HOURLY_RATE = 5
 
@@ -130,7 +129,6 @@ function CheckInTab({
   const [extraChildren, setExtraChildren] = useState<string[]>([])
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
-  const [creatingMember, setCreatingMember] = useState(false)
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -157,7 +155,7 @@ function CheckInTab({
 
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setCustodiaStart(''); setCustodiaEnd(''); setCreatingMember(false)
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setCustodiaStart(''); setCustodiaEnd('')
   }
 
   function selectMember(m: MemberRow) {
@@ -245,29 +243,10 @@ function CheckInTab({
 
   return (
     <div>
-      {/* ── Formulario nuevo miembro inline ── */}
-      {creatingMember ? (
+      {/* ── Paso 2: panel de confirmación ── */}
+      {member ? (
         <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-          <NewMemberInlineForm
-            onCreated={(created) => {
-              const asRow: MemberRow = {
-                id: created.id,
-                name: created.name,
-                phone: created.phone,
-                birth_date: null,
-                families: null,
-                memberships: created.memberships as any,
-                children: created.children as any,
-              }
-              selectMember(asRow)
-              setCreatingMember(false)
-            }}
-            onCancel={() => setCreatingMember(false)}
-          />
-        </div>
-      ) : member ? (
-        /* ── Paso 2: confirmación ── */
-        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+          {/* Header: volver + nombre + estado */}
           <div className={`flex items-center gap-3 px-4 py-3 border-b ${
             alreadyInside ? 'bg-iris/10 border-iris/20' :
             bono?.ok ? 'bg-lime/10 border-lime/20' :
@@ -301,13 +280,61 @@ function CheckInTab({
               </div>
             ) : (
               <>
+                {/* Tipo de visita */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setVisitType('entrada')}
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                      visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
+                    }`}
+                  >
+                    Entrada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVisitType('custodia')}
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                      visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
+                    }`}
+                  >
+                    Custodia
+                  </button>
+                </div>
+
+                {/* Horas custodia */}
+                {visitType === 'custodia' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora inicio <span className="text-rose">*</span></label>
+                      <input
+                        type="time"
+                        value={custodiaStart}
+                        onChange={e => setCustodiaStart(e.target.value)}
+                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora fin <span className="text-rose">*</span></label>
+                      <input
+                        type="time"
+                        value={custodiaEnd}
+                        onChange={e => setCustodiaEnd(e.target.value)}
+                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Niños presentes */}
-                {member.children && member.children.length > 0 && (
+                {(member.children && member.children.length > 0) && (
                   <div className="flex flex-wrap gap-1.5">
                     {member.children.map((child, i) => {
                       const selected = childrenPresent.some(c => c.name === child.name)
                       return (
-                        <button key={i} type="button"
+                        <button
+                          key={i}
+                          type="button"
                           onClick={() => setChildrenPresent(prev =>
                             selected ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name }]
                           )}
@@ -327,12 +354,17 @@ function CheckInTab({
                   <div className="space-y-1.5">
                     {extraChildren.map((name, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <input value={name}
+                        <input
+                          value={name}
                           onChange={e => setExtraChildren(prev => prev.map((n, j) => j === i ? e.target.value : n))}
                           placeholder="Nombre del niño/a"
-                          className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
-                        <button type="button" onClick={() => setExtraChildren(prev => prev.filter((_, j) => j !== i))}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-rose hover:border-rose/30 transition-colors">
+                          className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setExtraChildren(prev => prev.filter((_, j) => j !== i))}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-rose hover:border-rose/30 transition-colors"
+                        >
                           <X size={13} />
                         </button>
                       </div>
@@ -340,42 +372,16 @@ function CheckInTab({
                   </div>
                 )}
 
-                <button type="button" onClick={() => setExtraChildren(prev => [...prev, ''])}
-                  className="flex items-center gap-1.5 text-xs text-mist hover:text-fog transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setExtraChildren(prev => [...prev, ''])}
+                  className="flex items-center gap-1.5 text-xs text-mist hover:text-fog transition-colors"
+                >
                   <span className="w-5 h-5 rounded-full border border-line bg-surface2 flex items-center justify-center font-bold text-fog">+</span>
                   Añadir niño/a
                 </button>
 
-                {/* Toggle custodia */}
-                <label className="flex items-center justify-between rounded-xl border border-line bg-surface2 px-3 py-2.5 cursor-pointer hover:border-line2 transition-colors">
-                  <span className="text-sm text-fog">¿Es custodia?</span>
-                  <div className="relative">
-                    <input type="checkbox" className="sr-only"
-                      checked={visitType === 'custodia'}
-                      onChange={e => setVisitType(e.target.checked ? 'custodia' : 'entrada')} />
-                    <div className={`w-9 h-5 rounded-full transition-colors ${visitType === 'custodia' ? 'bg-cyan-300' : 'bg-line2'}`}>
-                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${visitType === 'custodia' ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                    </div>
-                  </div>
-                </label>
-
-                {/* Horas custodia */}
-                {visitType === 'custodia' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora inicio <span className="text-rose">*</span></label>
-                      <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
-                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora fin <span className="text-rose">*</span></label>
-                      <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
-                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60" />
-                    </div>
-                  </div>
-                )}
-
-                {/* Aviso sin bono */}
+                {/* Aviso sin bono inline */}
                 {!bono?.ok && (
                   <div className="flex items-start gap-2 rounded-xl bg-amber/10 border border-amber/20 px-3 py-2">
                     <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
@@ -386,11 +392,15 @@ function CheckInTab({
                   </div>
                 )}
 
-                <button onClick={handleCheckIn} disabled={registering || !custodiaValid}
+                {/* Botón registrar */}
+                <button
+                  onClick={handleCheckIn}
+                  disabled={registering || !custodiaValid}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
                     bono?.ok ? 'bg-lime text-ink hover:bg-lime-deep' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
                   }`}
-                  style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}>
+                  style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}
+                >
                   <LogIn size={17} strokeWidth={2.2} />
                   {registering ? 'Registrando...' : 'Registrar entrada'}
                 </button>
@@ -407,6 +417,7 @@ function CheckInTab({
       ) : (
         /* ── Paso 1: búsqueda / QR ── */
         <div className="space-y-3">
+          {/* Controles secundarios */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex rounded-xl border border-line bg-surface overflow-hidden">
               <button onClick={() => { setMode('manual'); reset() }}
@@ -418,6 +429,10 @@ function CheckInTab({
                 <QrCode size={13} /> QR
               </button>
             </div>
+            <Link href="/miembros/nuevo"
+              className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
+              <UserPlus size={13} /> Nuevo miembro
+            </Link>
           </div>
 
           {mode === 'qr' ? (
@@ -465,17 +480,7 @@ function CheckInTab({
                     </button>
                   )
                 }) : (
-                  <>
-                    <p className="py-8 text-center text-sm text-fog">
-                      {query.trim() ? 'Sin resultados' : 'Escribe para buscar'}
-                    </p>
-                    {query.trim().length > 0 && (
-                      <button onClick={() => setCreatingMember(true)}
-                        className="flex w-full items-center justify-center gap-2 px-4 py-3 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors">
-                        <UserPlus size={15} /> Crear nuevo miembro
-                      </button>
-                    )}
-                  </>
+                  <p className="py-10 text-center text-sm text-fog">Sin resultados</p>
                 )}
               </div>
             </div>

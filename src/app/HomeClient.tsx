@@ -11,7 +11,6 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
-import { NewMemberInlineForm, type CreatedMember } from '@/components/NewMemberInlineForm'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LabelList,
@@ -132,7 +131,6 @@ function CheckinPanel({
   const [extraChildren, setExtraChildren] = useState<string[]>([])
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
-  const [creatingMember, setCreatingMember] = useState(false)
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -162,7 +160,6 @@ function CheckinPanel({
   function reset() {
     setSelectedMember(null); setFlash(null); setCamError(null); setScanning(true)
     setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setCustodiaStart(''); setCustodiaEnd('')
-    setCreatingMember(false)
   }
 
   function doSelectMember(m: FullMember) {
@@ -254,23 +251,8 @@ function CheckinPanel({
 
   return (
     <div>
-      {/* ── Crear nuevo miembro inline ── */}
-      {creatingMember ? (
-        <NewMemberInlineForm
-          onCreated={(created: CreatedMember) => {
-            const asRow: FullMember = {
-              id: created.id,
-              name: created.name,
-              phone: created.phone,
-              memberships: created.memberships as any,
-              children: created.children as any,
-            }
-            doSelectMember(asRow)
-            setCreatingMember(false)
-          }}
-          onCancel={() => setCreatingMember(false)}
-        />
-      ) : selectedMember ? (
+      {/* ── Paso 2: confirmación ── */}
+      {selectedMember ? (
         <div className="rounded-2xl border border-line bg-surface overflow-hidden">
           {/* Header: volver + nombre + estado bono */}
           <div className={`flex items-center gap-3 px-4 py-3 border-b ${
@@ -306,18 +288,21 @@ function CheckinPanel({
               </div>
             ) : (
               <>
-                {/* Tipo de visita — toggle */}
-                <label className="flex items-center justify-between rounded-xl border border-line bg-surface2 px-3 py-2.5 cursor-pointer hover:border-line2 transition-colors">
-                  <span className="text-sm text-fog">¿Es custodia?</span>
-                  <div className="relative">
-                    <input type="checkbox" className="sr-only"
-                      checked={visitType === 'custodia'}
-                      onChange={e => setVisitType(e.target.checked ? 'custodia' : 'entrada')} />
-                    <div className={`w-9 h-5 rounded-full transition-colors ${visitType === 'custodia' ? 'bg-cyan-300' : 'bg-line2'}`}>
-                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${visitType === 'custodia' ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                    </div>
-                  </div>
-                </label>
+                {/* Tipo de visita */}
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setVisitType('entrada')}
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                      visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
+                    }`}>
+                    Entrada
+                  </button>
+                  <button type="button" onClick={() => setVisitType('custodia')}
+                    className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
+                      visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
+                    }`}>
+                    Custodia
+                  </button>
+                </div>
 
                 {/* Horas custodia */}
                 {visitType === 'custodia' && (
@@ -484,12 +469,6 @@ function CheckinPanel({
                   )
                 }) : (
                   <p className="py-10 text-center text-sm text-fog">Sin resultados</p>
-                )}
-                {query.trim().length > 0 && (
-                  <button onClick={() => setCreatingMember(true)}
-                    className="flex w-full items-center justify-center gap-2 px-4 py-3 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors">
-                    <UserPlus size={15} /> Crear nuevo miembro
-                  </button>
                 )}
               </div>
             </div>
