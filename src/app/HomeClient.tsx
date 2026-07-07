@@ -2168,9 +2168,33 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors font-bold">+</button>
                       </div>
                     </div>
-                    {/* Niños invitados */}
+
+                    {/* Niños invitados con nombre (añadidos en el check-in) */}
+                    {acompChildren.filter(c => c.isGuest).map((child, i) => (
+                      <div key={i} className="flex items-center gap-2 rounded-xl bg-surface2 border border-line px-3 py-2.5">
+                        <span className="text-xs text-snow flex-1">{child.name}</span>
+                        <span className="text-[10px] text-cyan-300 font-medium">Niño invitado</span>
+                        <button
+                          onClick={() => setAcompChildren(prev => {
+                            const guestIdx = prev.filter(c => c.isGuest).indexOf(child)
+                            let removed = 0
+                            return prev.filter(c => {
+                              if (!c.isGuest) return true
+                              if (removed === guestIdx) { removed++; return false }
+                              removed++
+                              return true
+                            })
+                          })}
+                          className="w-5 h-5 flex items-center justify-center rounded-md text-fog hover:text-rose transition-colors"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Niños invitados anónimos */}
                     <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
-                      <span className="text-xs text-snow">Niños invitados</span>
+                      <span className="text-xs text-snow">Niños invitados adicionales</span>
                       <div className="flex items-center gap-2">
                         <button onClick={() => setAcompGuestChildren(n => Math.max(0, n - 1))}
                           className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
