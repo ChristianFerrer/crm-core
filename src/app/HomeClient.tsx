@@ -269,36 +269,38 @@ function CheckinConfirmModal({
                     }`}>Custodia</button>
                 </div>
                 {visitType === 'custodia' && (
-                  <div className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-3">
+                  <div className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-2.5">
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shrink-0" />
                       <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Entrada <span className="text-rose">*</span></label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Entrada <span className="text-rose">*</span></label>
                         <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
-                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                          className="flex-1 rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60" />
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Salida <span className="text-rose">*</span></label>
+                      <div className="flex items-center gap-3">
+                        <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Salida <span className="text-rose">*</span></label>
                         <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
-                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                          className="flex-1 rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60" />
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* ¿Quién viene hoy? */}
-              {(coTitulares.length > 0 || (currentMember.children && currentMember.children.length > 0)) && (
+              {/* Co-titulares — solo en entrada libre */}
+              {visitType === 'entrada' && coTitulares.length > 0 && (
                 <div>
-                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">¿Quién viene hoy?</p>
-                  <div className="rounded-xl border border-line overflow-hidden divide-y divide-line">
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Co-titulares</p>
+                  <div className="space-y-2">
                     {coTitulares.map((co, i) => (
                       <button key={co.id} type="button"
                         onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
-                        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
+                        className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
+                          co.selected ? 'bg-iris/5 border-iris/30' : 'border-line hover:bg-surface2'
+                        }`}>
                         <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
                           {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
                         </div>
@@ -306,7 +308,16 @@ function CheckinConfirmModal({
                         <span className="text-[10px] text-mist shrink-0">Co-titular</span>
                       </button>
                     ))}
-                    {currentMember.children && currentMember.children.map((child, i) => {
+                  </div>
+                </div>
+              )}
+
+              {/* Menores */}
+              {currentMember.children && currentMember.children.length > 0 && (
+                <div>
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Menores</p>
+                  <div className="space-y-2">
+                    {currentMember.children.map((child, i) => {
                       const sel = childrenPresent.some(c => c.name === child.name)
                       const bd = (child as any).birth_date as string | undefined
                       const age = bd ? (() => {
@@ -322,7 +333,9 @@ function CheckinConfirmModal({
                           onClick={() => setChildrenPresent(prev =>
                             sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
                           )}
-                          className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
+                          className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
+                            sel ? 'bg-lime/5 border-lime/30' : 'border-line hover:bg-surface2'
+                          }`}>
                           <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
                             {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
                           </div>
@@ -335,21 +348,23 @@ function CheckinConfirmModal({
                 </div>
               )}
 
-              {/* Invitados adicionales */}
+              {/* Invitados adicionales — adultos solo en libre, niños siempre */}
               <div>
                 <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
-                <div className="rounded-xl border border-line overflow-hidden divide-y divide-line">
-                  <div className="flex items-center justify-between px-4 py-3">
-                    <span className="text-sm text-fog">Adultos</span>
-                    <div className="flex items-center gap-3">
-                      <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
-                        className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
-                      <span className="w-5 text-center font-bold text-snow">{extraAdultsCount}</span>
-                      <button type="button" onClick={() => setExtraAdultsCount(n => n + 1)}
-                        className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                <div className="space-y-2">
+                  {visitType === 'entrada' && (
+                    <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line">
+                      <span className="text-sm text-fog">Adultos</span>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
+                          className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                        <span className="w-5 text-center font-bold text-snow">{extraAdultsCount}</span>
+                        <button type="button" onClick={() => setExtraAdultsCount(n => n + 1)}
+                          className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between px-4 py-3">
+                  )}
+                  <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line">
                     <span className="text-sm text-fog">Niños</span>
                     <div className="flex items-center gap-3">
                       <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
