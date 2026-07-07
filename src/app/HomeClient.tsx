@@ -2556,6 +2556,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const childNames = cp.filter(e => !e.is_adult).map(e => e.name)
         const extraAdults = Math.max(0, (visit.adults_count ?? 1) - 1 - coTitNames.length)
         const extraChildren = Math.max(0, numChildren - childNames.length)
+        // Build adult & children summary lines
+        const titularName = visit.members?.name ?? '—'
+        const allAdultNames = [titularName, ...coTitNames]
+        const adultNamesStr = allAdultNames.join(', ')
+        const adultSuffix = extraAdults > 0 ? ` + ${extraAdults} invitado${extraAdults !== 1 ? 's' : ''}` : ''
+        const childNamesStr = childNames.join(', ')
+        const childSuffix = extraChildren > 0 ? `${childNames.length > 0 ? ' + ' : ''}${extraChildren} invitado${extraChildren !== 1 ? 's' : ''}` : ''
+        const bonoInfo = bono && visit.memberships
+        const bonoName = bonoInfo ? (visit.memberships!.membership_types?.name ?? 'Con bono') : null
+        const bonoSessions = bonoInfo ? visit.memberships!.sessions_remaining : null
+        const bonoIsUnlimited = bonoName?.toLowerCase().includes('ilimitado')
+        const bonoSessionColor = bonoSessions == null ? 'text-fog' : bonoSessions <= 2 ? 'text-rose' : bonoSessions <= 5 ? 'text-amber' : 'text-mint'
+
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setDetailVisitId(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -2563,83 +2576,86 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-bold text-snow truncate">{visit.members?.name ?? '—'}</p>
-                    <span className={`text-[10px] font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
-                    {isLong && <span className="text-[10px] font-semibold text-amber shrink-0">⚠ Estancia larga</span>}
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <Users size={13} className="text-fog shrink-0" />
+                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Ahora en sala</p>
                   </div>
-                  <p className="text-[11px] text-fog mt-0.5">Entrada {fmtTime(visit.checked_in_at)} · {fmtElapsed(visit.checked_in_at)}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-base font-bold text-snow truncate">{titularName}</p>
+                    <span className={`text-[10px] font-semibold shrink-0 px-1.5 py-0.5 rounded-md border ${tipo === 'Cumpleaños' ? 'bg-iris/10 text-iris border-iris/30' : tipo === 'Custodia' ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30' : 'bg-surface2 text-fog border-line'}`}>{tipo}</span>
+                    {isLong && <span className="text-[10px] font-semibold text-amber shrink-0">⚠ Larga</span>}
+                  </div>
+                  <p className="text-xs text-fog mt-0.5">Entrada {fmtTime(visit.checked_in_at)} · <span className={isLong ? 'text-amber font-semibold' : 'text-snow'}>{fmtElapsed(visit.checked_in_at)}</span></p>
                 </div>
                 <button onClick={() => setDetailVisitId(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
               </div>
 
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-                {/* Info personas */}
-                <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-fog">Adultos</span>
-                    <span className="font-semibold text-lime">{visit.adults_count}</span>
+                {/* Personas: 2 líneas compactas */}
+                <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2.5">
+                  {/* Adultos */}
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-xs text-fog shrink-0 w-14">Adultos</span>
+                    <span className="text-lg font-bold text-lime leading-none shrink-0">{visit.adults_count}</span>
+                    <span className="text-sm text-snow leading-tight truncate">{adultNamesStr}<span className="text-mist">{adultSuffix}</span></span>
                   </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-fog">Niños</span>
-                    <span className="font-semibold text-cyan-300">{numChildren}</span>
-                  </div>
-                  {coTitNames.length > 0 && (
-                    <div className="flex items-start justify-between text-xs gap-2">
-                      <span className="text-fog shrink-0">Co-titulares</span>
-                      <span className="text-snow text-right">{coTitNames.join(', ')}</span>
-                    </div>
-                  )}
-                  {childNames.length > 0 && (
-                    <div className="flex items-start justify-between text-xs gap-2">
-                      <span className="text-fog shrink-0">Menores</span>
-                      <span className="text-snow text-right">{childNames.join(', ')}</span>
-                    </div>
-                  )}
-                  {(extraAdults > 0 || extraChildren > 0) && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-fog">Invitados</span>
-                      <span className="text-snow">
-                        {[extraAdults > 0 && `${extraAdults} adulto${extraAdults !== 1 ? 's' : ''}`, extraChildren > 0 && `${extraChildren} niño${extraChildren !== 1 ? 's' : ''}`].filter(Boolean).join(', ')}
+                  {/* Niños */}
+                  {numChildren > 0 && (
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-xs text-fog shrink-0 w-14">Niños</span>
+                      <span className="text-lg font-bold text-cyan-300 leading-none shrink-0">{numChildren}</span>
+                      <span className="text-sm text-snow leading-tight truncate">
+                        {childNamesStr}<span className="text-mist">{childSuffix}</span>
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-xs border-t border-line pt-2">
-                    <span className="text-fog">Bono</span>
-                    <span className={`font-semibold ${bono ? 'text-iris' : 'text-amber'}`}>
-                      {bono ? (visit.memberships?.membership_types?.name ?? 'Con bono') : 'Sin bono'}
-                      {bono && visit.memberships != null && (
-                        <span className={`ml-1 ${visit.memberships.sessions_remaining <= 2 ? 'text-rose' : visit.memberships.sessions_remaining <= 5 ? 'text-amber' : 'text-fog'}`}>
-                          ({visit.memberships.sessions_remaining} ses.)
-                        </span>
-                      )}
-                    </span>
-                  </div>
+                </div>
+
+                {/* Bono */}
+                <div className={`rounded-xl border px-4 py-3 space-y-1.5 ${bono ? 'border-iris/20 bg-iris/5' : 'border-amber/20 bg-amber/5'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-fog uppercase tracking-wide">Bono</span>
+                      <span className={`text-sm font-bold ${bono ? 'text-iris' : 'text-amber'}`}>
+                        {bono ? (bonoName ?? 'Con bono') : 'Sin bono'}
+                      </span>
+                    </div>
+                    {bono && !bonoIsUnlimited && bonoSessions != null && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-fog">Sesiones restantes</span>
+                        <span className={`text-sm font-bold ${bonoSessionColor}`}>{bonoSessions}</span>
+                      </div>
+                    )}
+                    {bono && bonoIsUnlimited && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-fog">Sesiones</span>
+                        <span className="text-sm font-bold text-iris">∞ Ilimitado</span>
+                      </div>
+                    )}
                 </div>
 
                 {/* Acciones */}
                 <div className="grid grid-cols-3 gap-2">
                   <button onClick={() => { setDetailVisitId(null); setImporteVisitId(detailVisitId) }}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-line bg-surface2 hover:border-lime/40 transition-colors">
-                    <Receipt size={14} className="text-lime" />
-                    <span className="text-[10px] font-semibold text-lime">{imp.total.toFixed(2)}€</span>
-                    <span className="text-[9px] text-mist">Importe</span>
+                    className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-lime/40 transition-colors">
+                    <Receipt size={15} className="text-lime" />
+                    <span className="text-xs font-semibold text-lime">{imp.total.toFixed(2)}€</span>
+                    <span className="text-[10px] text-mist">Importe</span>
                   </button>
                   <button onClick={() => { setDetailVisitId(null); setConsumosVisitId(detailVisitId) }}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
-                    <Plus size={14} className="text-fog" />
-                    <span className={`text-[10px] font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
+                    className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
+                    <Plus size={15} className="text-fog" />
+                    <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
                       {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : '—'}
                     </span>
-                    <span className="text-[9px] text-mist">Consumos</span>
+                    <span className="text-[10px] text-mist">Consumos</span>
                   </button>
                   <button onClick={() => { setDetailVisitId(null); openAcompPopup(visit) }}
-                    className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
-                    <UserPlus size={14} className="text-fog" />
-                    <span className="text-[10px] font-semibold text-mist">
+                    className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
+                    <UserPlus size={15} className="text-fog" />
+                    <span className="text-xs font-semibold text-mist">
                       {Math.max(0, visit.adults_count - 1) + numChildren}
                     </span>
-                    <span className="text-[9px] text-mist">Acomp.</span>
+                    <span className="text-[10px] text-mist">Acomp.</span>
                   </button>
                 </div>
 
