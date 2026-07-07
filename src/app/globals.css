@@ -55,3 +55,14 @@ body {
 
 .scrollbar-hide { scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+@keyframes scroll-names {
+  0%, 15%   { transform: translateX(0); }
+  70%, 85%  { transform: translateX(var(--scroll-amount, -160px)); }
+  100%      { transform: translateX(0); }
+}
+.animate-scroll-names {
+  display: inline-block;
+  white-space: nowrap;
+  animation: scroll-names 5s ease-in-out infinite;
+}
