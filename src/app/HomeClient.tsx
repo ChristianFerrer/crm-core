@@ -227,7 +227,13 @@ function CheckinSearchModal({
                 )
               })}
               {query.trim().length > 0 && filtered.length === 0 && (
-                <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
+                <div className="flex flex-col items-center gap-4 py-8 px-5">
+                  <p className="text-sm text-fog text-center">No se encontró ningún miembro con ese nombre o teléfono.</p>
+                  <button onClick={onNewMember}
+                    className="flex items-center gap-2 rounded-xl bg-lime/10 border border-lime/30 px-5 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors">
+                    <UserPlus size={15} /> Crear nuevo miembro
+                  </button>
+                </div>
               )}
               {query.trim().length === 0 && (
                 <p className="py-8 text-center text-sm text-mist">Escribe un nombre o teléfono para buscar</p>
@@ -235,12 +241,6 @@ function CheckinSearchModal({
             </div>
           </>
         )}
-
-        {/* Crear nuevo */}
-        <button onClick={onNewMember}
-          className="flex w-full items-center justify-center gap-2 px-5 py-3.5 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors shrink-0">
-          <UserPlus size={15} /> Crear nuevo miembro
-        </button>
       </div>
     </div>
   )
@@ -343,28 +343,10 @@ function CheckinConfirmModal({
             <ChevronLeft size={16} />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-snow truncate">{currentMember.name}</p>
-            <p className="text-[11px] text-fog">Registro de entrada</p>
+            <p className="text-lg font-bold text-snow truncate">{currentMember.name}</p>
+            <p className="text-xs text-fog">Registro de entrada</p>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
-        </div>
-
-        {/* Barra de estado del bono */}
-        <div className={`flex items-center justify-between px-5 py-2.5 border-b shrink-0 ${
-          alreadyInside ? 'bg-iris/8 border-iris/15' :
-          bono?.ok ? 'bg-lime/8 border-lime/15' :
-          'bg-amber/8 border-amber/15'
-        }`}>
-          <span className="text-xs text-fog">Estado del bono</span>
-          {alreadyInside ? (
-            <span className="text-xs font-semibold text-iris">Ya dentro</span>
-          ) : bono?.ok ? (
-            <span className={`text-xs font-semibold ${bono.unlimited ? 'text-iris' : bono.sessions! <= 2 ? 'text-amber' : 'text-lime'}`}>
-              {bono.unlimited ? `${bono.label} · ilimitado` : `${bono.label} · ${bono.sessions} sesiones restantes`}
-            </span>
-          ) : (
-            <span className="text-xs font-semibold text-amber">Sin bono</span>
-          )}
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -407,22 +389,17 @@ function CheckinConfirmModal({
                     }`}>Custodia</button>
                 </div>
                 {visitType === 'custodia' && (
-                  <div className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shrink-0" />
-                      <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
+                  <div className="mt-3 space-y-2">
+                    <p className="px-1 pb-1 text-[10px] font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-cyan-300/30 bg-surface2">
+                      <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Entrada <span className="text-rose">*</span></label>
+                      <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
+                        className="flex-1 bg-transparent text-sm text-snow outline-none" />
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Entrada <span className="text-rose">*</span></label>
-                        <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
-                          className="flex-1 rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60" />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Salida <span className="text-rose">*</span></label>
-                        <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
-                          className="flex-1 rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60" />
-                      </div>
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-cyan-300/30 bg-surface2">
+                      <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Salida <span className="text-rose">*</span></label>
+                      <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
+                        className="flex-1 bg-transparent text-sm text-snow outline-none" />
                     </div>
                   </div>
                 )}
