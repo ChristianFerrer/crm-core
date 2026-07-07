@@ -22,6 +22,7 @@ type MemberRow = {
   name: string
   phone: string | null
   birth_date: string | null
+  family_id: string | null
   families: { name: string } | null
   memberships: {
     id: string
@@ -102,7 +103,7 @@ function toLocalDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const MEMBER_QUERY = 'id, name, phone, birth_date, families(name), memberships(id, sessions_remaining, expires_at, membership_types(name)), children'
+const MEMBER_QUERY = 'id, name, phone, birth_date, family_id, families(name), memberships(id, sessions_remaining, expires_at, membership_types(name)), children'
 
 // ─── Tab: Check-in ───────────────────────────────────────────────────────────
 
@@ -127,6 +128,8 @@ function CheckInTab({
   const [visitType, setVisitType] = useState<VisitType>('entrada')
   const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
   const [extraChildrenCount, setExtraChildrenCount] = useState(0)
+  const [coTitulares, setCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>([])
+  const [extraAdultsCount, setExtraAdultsCount] = useState(0)
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -155,13 +158,20 @@ function CheckInTab({
 
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildrenCount(0); setCustodiaStart(''); setCustodiaEnd('')
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildrenCount(0)
+    setCoTitulares([]); setExtraAdultsCount(0); setCustodiaStart(''); setCustodiaEnd('')
   }
 
   function selectMember(m: MemberRow) {
     setMember(m)
     setChildrenPresent((m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined })))
     setExtraChildrenCount(0)
+    setExtraAdultsCount(0)
+    const familyCo = m.family_id
+      ? allMembers.filter(o => o.family_id === m.family_id && o.id !== m.id)
+          .map(o => ({ id: o.id, name: o.name, selected: false }))
+      : []
+    setCoTitulares(familyCo)
   }
 
   const filteredMembers = query.trim().length > 0
@@ -184,8 +194,11 @@ function CheckInTab({
     const b = getBono(member)
     const m = member.memberships?.[0]
 
-    const allChildrenPresent = [...childrenPresent]
-    const numChildren = allChildrenPresent.length + extraChildrenCount
+    const selectedCo = coTitulares.filter(c => c.selected)
+    const numAdults = 1 + selectedCo.length + extraAdultsCount
+    const numChildren = childrenPresent.length + extraChildrenCount
+    const adultEntries = selectedCo.map(c => ({ name: c.name, is_adult: true }))
+    const childEntries = [...childrenPresent]
 
     const today = toLocalDate(new Date())
     const custodiaEndAt = visitType === 'custodia' && custodiaEnd
@@ -199,8 +212,8 @@ function CheckInTab({
         ? new Date(`${today}T${custodiaStart}:00`).toISOString()
         : new Date().toISOString(),
       visit_type: visitType,
-      children_present: allChildrenPresent,
-      adults_count: 1,
+      children_present: [...adultEntries, ...childEntries],
+      adults_count: numAdults,
       children_count: numChildren,
       ...(custodiaEndAt ? { custodia_end_at: custodiaEndAt } : {}),
     })
@@ -211,7 +224,7 @@ function CheckInTab({
         .eq('id', m.id)
     }
 
-    const typeLabel = visitType === 'custodia' ? 'Custodia' : 'Entrada'
+    const typeLabel = visitType === 'custodia' ? 'Custodia' : 'Libre'
     clearTimeout(flashTimer.current)
     if (b?.ok) {
       setFlash(
@@ -279,49 +292,75 @@ function CheckInTab({
               <>
                 {/* Tipo de visita */}
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setVisitType('entrada')}
+                  <button type="button" onClick={() => setVisitType('entrada')}
                     className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
                       visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
-                    }`}
-                  >
-                    Entrada
+                    }`}>
+                    Libre
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setVisitType('custodia')}
+                  <button type="button" onClick={() => setVisitType('custodia')}
                     className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
                       visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
-                    }`}
-                  >
+                    }`}>
                     Custodia
                   </button>
                 </div>
 
                 {/* Horas custodia */}
                 {visitType === 'custodia' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora inicio <span className="text-rose">*</span></label>
-                      <input
-                        type="time"
-                        value={custodiaStart}
-                        onChange={e => setCustodiaStart(e.target.value)}
-                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
-                      />
+                  <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-300 shrink-0" />
+                      <p className="text-xs font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-fog uppercase tracking-wide">Hora fin <span className="text-rose">*</span></label>
-                      <input
-                        type="time"
-                        value={custodiaEnd}
-                        onChange={e => setCustodiaEnd(e.target.value)}
-                        className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-cyan-300/60"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Inicio <span className="text-rose">*</span></label>
+                        <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
+                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-fog uppercase tracking-wide">Fin <span className="text-rose">*</span></label>
+                        <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
+                          className="w-full rounded-xl border border-cyan-300/30 bg-surface2 px-3 py-3 text-base text-snow outline-none focus:border-cyan-300/60" />
+                      </div>
                     </div>
                   </div>
                 )}
+
+                {/* Co-titular */}
+                {coTitulares.length > 0 && (
+                  <div className="rounded-xl border border-line overflow-hidden">
+                    <p className="px-3 py-2 text-[10px] font-semibold text-fog uppercase tracking-wide border-b border-line bg-surface2/60">Co-titular</p>
+                    {coTitulares.map((co, i) => (
+                      <button key={i} type="button"
+                        onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
+                        className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${co.selected ? 'bg-iris/5' : 'hover:bg-surface2'}`}>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
+                          {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
+                        </div>
+                        <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
+                        <span className="text-[10px] text-mist shrink-0">Co-titular</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Adultos invitados */}
+                <div className="rounded-xl border border-line overflow-hidden">
+                  <p className="px-3 py-2 text-[10px] font-semibold text-fog uppercase tracking-wide border-b border-line bg-surface2/60">Adultos adicionales</p>
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-sm text-fog">Adultos invitados</span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))}
+                        disabled={extraAdultsCount === 0}
+                        className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                      <span className="w-5 text-center font-bold text-snow">{extraAdultsCount}</span>
+                      <button type="button" onClick={() => setExtraAdultsCount(n => n + 1)}
+                        className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Hijos registrados */}
                 {member.children && member.children.length > 0 && (
