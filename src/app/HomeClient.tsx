@@ -888,6 +888,21 @@ function timeToMins(t: string): number {
   return h * 60 + m
 }
 
+function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: string; suffixClass: string }) {
+  const [animKey, setAnimKey] = useState(0)
+  return (
+    <span
+      className="overflow-hidden min-w-0 flex-1 cursor-pointer"
+      onClick={(e) => { e.stopPropagation(); setAnimKey(k => k + 1) }}
+      title="Toca para releer"
+    >
+      <span key={animKey} className="animate-scroll-once text-sm text-snow leading-tight">
+        {text}<span className={suffixClass}>{suffix}</span>
+      </span>
+    </span>
+  )
+}
+
 export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
   const router = useRouter()
   const isToday = selectedDate === todayStr
@@ -2600,22 +2615,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <div className="flex items-baseline gap-3 min-w-0">
                     <span className="text-xs text-fog shrink-0 w-14">Adultos</span>
                     <span className="text-lg font-bold text-lime leading-none shrink-0">{visit.adults_count}</span>
-                    <span className="overflow-hidden min-w-0 flex-1">
-                      <span className="animate-scroll-names text-sm text-snow leading-tight">
-                        {adultNamesStr}<span className="text-mist">{adultSuffix}</span>
-                      </span>
-                    </span>
+                    <ScrollingName text={adultNamesStr} suffix={adultSuffix} suffixClass="text-mist" />
                   </div>
                   {/* Niños */}
                   {numChildren > 0 && (
                     <div className="flex items-baseline gap-3 min-w-0">
                       <span className="text-xs text-fog shrink-0 w-14">Niños</span>
                       <span className="text-lg font-bold text-cyan-300 leading-none shrink-0">{numChildren}</span>
-                      <span className="overflow-hidden min-w-0 flex-1">
-                        <span className="animate-scroll-names text-sm text-snow leading-tight">
-                          {childNamesStr}<span className="text-mist">{childSuffix}</span>
-                        </span>
-                      </span>
+                      <ScrollingName text={childNamesStr} suffix={childSuffix} suffixClass="text-mist" />
                     </div>
                   )}
                 </div>
