@@ -128,7 +128,7 @@ function CheckinPanel({
   const [query, setQuery] = useState('')
   const [visitType, setVisitType] = useState<'entrada' | 'custodia'>('entrada')
   const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
-  const [extraChildren, setExtraChildren] = useState<string[]>([])
+  const [extraChildrenCount, setExtraChildrenCount] = useState(0)
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -159,13 +159,13 @@ function CheckinPanel({
 
   function reset() {
     setSelectedMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setCustodiaStart(''); setCustodiaEnd('')
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildrenCount(0); setCustodiaStart(''); setCustodiaEnd('')
   }
 
   function doSelectMember(m: FullMember) {
     setSelectedMember(m)
     setChildrenPresent((m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined })))
-    setExtraChildren([])
+    setExtraChildrenCount(0)
     setFlash(null)
   }
 
@@ -189,11 +189,8 @@ function CheckinPanel({
     const b = getBonoInfo(selectedMember)
     const m = selectedMember.memberships?.[0]
 
-    const allChildren = [
-      ...childrenPresent,
-      ...extraChildren.filter(n => n.trim()).map(n => ({ name: n.trim() })),
-    ]
-    const numChildren = allChildren.length
+    const allChildren = [...childrenPresent]
+    const numChildren = allChildren.length + extraChildrenCount
 
     const today = new Date().toISOString().slice(0, 10)
     const custodiaEndAt = visitType === 'custodia' && custodiaEnd
@@ -245,7 +242,7 @@ function CheckinPanel({
       const refreshed = data as unknown as FullMember
       setSelectedMember(refreshed)
       setChildrenPresent((refreshed.children ?? []).map(c => ({ name: c.name })))
-      setExtraChildren([])
+      setExtraChildrenCount(0)
     }
   }
 
@@ -328,48 +325,53 @@ function CheckinPanel({
                   </div>
                 )}
 
-                {/* Niños registrados */}
+                {/* Hijos registrados */}
                 {selectedMember.children && selectedMember.children.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="rounded-xl border border-line overflow-hidden">
+                    <p className="px-3 py-2 text-[10px] font-semibold text-fog uppercase tracking-wide border-b border-line bg-surface2/60">Hijos registrados</p>
                     {selectedMember.children.map((child, i) => {
                       const sel = childrenPresent.some(c => c.name === child.name)
+                      const bd = (child as any).birth_date as string | undefined
+                      const age = bd ? (() => {
+                        const now = new Date(), dob = new Date(bd)
+                        let y = now.getFullYear() - dob.getFullYear()
+                        let m = now.getMonth() - dob.getMonth()
+                        if (now.getDate() < dob.getDate()) m--
+                        if (m < 0) { y--; m += 12 }
+                        return y > 0 ? `${y} año${y !== 1 ? 's' : ''}${m > 0 ? ` ${m} m.` : ''}` : `${m} mes${m !== 1 ? 'es' : ''}`
+                      })() : null
                       return (
                         <button key={i} type="button"
                           onClick={() => setChildrenPresent(prev =>
-                            sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name }]
+                            sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
                           )}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                            sel ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'
-                          }`}>
-                          {child.name}
+                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${sel ? 'bg-lime/5' : 'hover:bg-surface2'}`}>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
+                            {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
+                          </div>
+                          <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
+                          {age && <span className="text-xs text-mist shrink-0">{age}</span>}
                         </button>
                       )
                     })}
                   </div>
                 )}
 
-                {/* Niños extra */}
-                {extraChildren.length > 0 && (
-                  <div className="space-y-1.5">
-                    {extraChildren.map((name, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input value={name} onChange={e => setExtraChildren(prev => prev.map((n, j) => j === i ? e.target.value : n))}
-                          placeholder="Nombre del niño/a"
-                          className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
-                        <button type="button" onClick={() => setExtraChildren(prev => prev.filter((_, j) => j !== i))}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-rose hover:border-rose/30 transition-colors">
-                          <X size={13} />
-                        </button>
-                      </div>
-                    ))}
+                {/* Niños adicionales (contador) */}
+                <div className="rounded-xl border border-line overflow-hidden">
+                  <p className="px-3 py-2 text-[10px] font-semibold text-fog uppercase tracking-wide border-b border-line bg-surface2/60">Niños adicionales</p>
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-sm text-fog">Niños invitados</span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))}
+                        disabled={extraChildrenCount === 0}
+                        className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                      <span className="w-5 text-center font-bold text-snow">{extraChildrenCount}</span>
+                      <button type="button" onClick={() => setExtraChildrenCount(n => n + 1)}
+                        className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                    </div>
                   </div>
-                )}
-
-                <button type="button" onClick={() => setExtraChildren(prev => [...prev, ''])}
-                  className="flex items-center gap-1.5 text-xs text-mist hover:text-fog transition-colors">
-                  <span className="w-5 h-5 rounded-full border border-line bg-surface2 flex items-center justify-center font-bold text-fog">+</span>
-                  Añadir niño/a
-                </button>
+                </div>
 
                 {/* Aviso sin bono inline */}
                 {!bono?.ok && (

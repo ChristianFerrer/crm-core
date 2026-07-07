@@ -126,7 +126,7 @@ function CheckInTab({
   const [query, setQuery] = useState('')
   const [visitType, setVisitType] = useState<VisitType>('entrada')
   const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
-  const [extraChildren, setExtraChildren] = useState<string[]>([])
+  const [extraChildrenCount, setExtraChildrenCount] = useState(0)
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
   const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -155,13 +155,13 @@ function CheckInTab({
 
   function reset() {
     setMember(null); setFlash(null); setCamError(null); setScanning(true)
-    setVisitType('entrada'); setChildrenPresent([]); setExtraChildren([]); setCustodiaStart(''); setCustodiaEnd('')
+    setVisitType('entrada'); setChildrenPresent([]); setExtraChildrenCount(0); setCustodiaStart(''); setCustodiaEnd('')
   }
 
   function selectMember(m: MemberRow) {
     setMember(m)
     setChildrenPresent((m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined })))
-    setExtraChildren([])
+    setExtraChildrenCount(0)
   }
 
   const filteredMembers = query.trim().length > 0
@@ -184,11 +184,8 @@ function CheckInTab({
     const b = getBono(member)
     const m = member.memberships?.[0]
 
-    const allChildrenPresent = [
-      ...childrenPresent,
-      ...extraChildren.filter(n => n.trim()).map(n => ({ name: n.trim() })),
-    ]
-    const numChildren = allChildrenPresent.length
+    const allChildrenPresent = [...childrenPresent]
+    const numChildren = allChildrenPresent.length + extraChildrenCount
 
     const today = toLocalDate(new Date())
     const custodiaEndAt = visitType === 'custodia' && custodiaEnd
@@ -236,7 +233,7 @@ function CheckInTab({
       const refreshed = data as unknown as MemberRow
       setMember(refreshed)
       setChildrenPresent((refreshed.children ?? []).map(c => ({ name: c.name })))
-      setExtraChildren([])
+      setExtraChildrenCount(0)
     }
     onCheckedIn()
   }
@@ -326,60 +323,53 @@ function CheckInTab({
                   </div>
                 )}
 
-                {/* Niños presentes */}
-                {(member.children && member.children.length > 0) && (
-                  <div className="flex flex-wrap gap-1.5">
+                {/* Hijos registrados */}
+                {member.children && member.children.length > 0 && (
+                  <div className="rounded-xl border border-line overflow-hidden">
+                    <p className="px-3 py-2 text-[10px] font-semibold text-fog uppercase tracking-wide border-b border-line bg-surface2/60">Hijos registrados</p>
                     {member.children.map((child, i) => {
                       const selected = childrenPresent.some(c => c.name === child.name)
+                      const age = child.birth_date ? (() => {
+                        const now = new Date(), dob = new Date(child.birth_date)
+                        let y = now.getFullYear() - dob.getFullYear()
+                        let m = now.getMonth() - dob.getMonth()
+                        if (now.getDate() < dob.getDate()) m--
+                        if (m < 0) { y--; m += 12 }
+                        return y > 0 ? `${y} año${y !== 1 ? 's' : ''}${m > 0 ? ` ${m} m.` : ''}` : `${m} mes${m !== 1 ? 'es' : ''}`
+                      })() : null
                       return (
-                        <button
-                          key={i}
-                          type="button"
+                        <button key={i} type="button"
                           onClick={() => setChildrenPresent(prev =>
-                            selected ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name }]
+                            selected ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: child.birth_date ?? undefined }]
                           )}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                            selected ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'
-                          }`}
+                          className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors border-b border-line last:border-b-0 ${selected ? 'bg-lime/5' : 'hover:bg-surface2'}`}
                         >
-                          {child.name}
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
+                            {selected && <Check size={11} className="text-ink" strokeWidth={3} />}
+                          </div>
+                          <span className={`flex-1 text-sm font-medium ${selected ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
+                          {age && <span className="text-xs text-mist shrink-0">{age}</span>}
                         </button>
                       )
                     })}
                   </div>
                 )}
 
-                {/* Niños extra */}
-                {extraChildren.length > 0 && (
-                  <div className="space-y-1.5">
-                    {extraChildren.map((name, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input
-                          value={name}
-                          onChange={e => setExtraChildren(prev => prev.map((n, j) => j === i ? e.target.value : n))}
-                          placeholder="Nombre del niño/a"
-                          className="flex-1 rounded-xl border border-line bg-surface2 px-3 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setExtraChildren(prev => prev.filter((_, j) => j !== i))}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-rose hover:border-rose/30 transition-colors"
-                        >
-                          <X size={13} />
-                        </button>
-                      </div>
-                    ))}
+                {/* Niños adicionales (contador) */}
+                <div className="rounded-xl border border-line overflow-hidden">
+                  <p className="px-3 py-2 text-[10px] font-semibold text-fog uppercase tracking-wide border-b border-line bg-surface2/60">Niños adicionales</p>
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-sm text-fog">Niños invitados</span>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))}
+                        disabled={extraChildrenCount === 0}
+                        className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                      <span className="w-5 text-center font-bold text-snow">{extraChildrenCount}</span>
+                      <button type="button" onClick={() => setExtraChildrenCount(n => n + 1)}
+                        className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                    </div>
                   </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setExtraChildren(prev => [...prev, ''])}
-                  className="flex items-center gap-1.5 text-xs text-mist hover:text-fog transition-colors"
-                >
-                  <span className="w-5 h-5 rounded-full border border-line bg-surface2 flex items-center justify-center font-bold text-fog">+</span>
-                  Añadir niño/a
-                </button>
+                </div>
 
                 {/* Aviso sin bono inline */}
                 {!bono?.ok && (
