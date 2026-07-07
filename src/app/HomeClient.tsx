@@ -209,45 +209,37 @@ function CheckinConfirmModal({
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-        {/* Header — siempre "Registro de entrada" */}
+        {/* Header — nombre del miembro */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
             <ChevronLeft size={16} />
           </button>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-snow">Registro de entrada</p>
-            <p className="text-[11px] text-fog">Check-in de visitantes</p>
+            <p className="text-sm font-semibold text-snow truncate">{currentMember.name}</p>
+            <p className="text-[11px] text-fog">Registro de entrada</p>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
         </div>
 
+        {/* Barra de estado del bono */}
+        <div className={`flex items-center justify-between px-5 py-2.5 border-b shrink-0 ${
+          alreadyInside ? 'bg-iris/8 border-iris/15' :
+          bono?.ok ? 'bg-lime/8 border-lime/15' :
+          'bg-amber/8 border-amber/15'
+        }`}>
+          <span className="text-xs text-fog">Estado del bono</span>
+          {alreadyInside ? (
+            <span className="text-xs font-semibold text-iris">Ya dentro</span>
+          ) : bono?.ok ? (
+            <span className={`text-xs font-semibold ${bono.unlimited ? 'text-iris' : bono.sessions! <= 2 ? 'text-amber' : 'text-lime'}`}>
+              {bono.unlimited ? `${bono.label} · ilimitado` : `${bono.label} · ${bono.sessions} sesiones restantes`}
+            </span>
+          ) : (
+            <span className="text-xs font-semibold text-amber">Sin bono</span>
+          )}
+        </div>
+
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-          {/* Datos del titular */}
-          <div className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
-            alreadyInside ? 'border-iris/20 bg-iris/5' : bono?.ok ? 'border-lime/20 bg-lime/5' : 'border-amber/20 bg-amber/5'
-          }`}>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-snow truncate">{currentMember.name}</p>
-              {currentMember.phone && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Phone size={10} className="text-mist shrink-0" />
-                  <span className="text-xs text-mist">{currentMember.phone}</span>
-                </div>
-              )}
-            </div>
-            <div className="shrink-0 text-right">
-              {alreadyInside ? (
-                <span className="text-xs font-semibold text-iris">Ya dentro</span>
-              ) : bono?.ok ? (
-                <span className={`text-sm font-bold ${bono.unlimited ? 'text-iris' : bono.sessions! <= 2 ? 'text-amber' : 'text-lime'}`}>
-                  {bono.unlimited ? '∞' : bono.sessions}
-                  {!bono.unlimited && <span className="text-[10px] font-normal text-mist ml-1">ses.</span>}
-                </span>
-              ) : (
-                <span className="text-xs font-semibold text-amber">Sin bono</span>
-              )}
-            </div>
-          </div>
 
           {alreadyInside ? (
             <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
