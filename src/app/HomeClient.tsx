@@ -389,17 +389,20 @@ function CheckinConfirmModal({
                     }`}>Custodia</button>
                 </div>
                 {visitType === 'custodia' && (
-                  <div className="mt-3 space-y-2">
-                    <p className="px-1 pb-1 text-[10px] font-semibold text-cyan-300 uppercase tracking-wide">Horario custodia</p>
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-cyan-300/30 bg-surface2">
-                      <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Entrada <span className="text-rose">*</span></label>
-                      <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
-                        className="flex-1 bg-transparent text-sm text-snow outline-none" />
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">Entrada <span className="text-rose">*</span></p>
+                      <div className="flex items-center px-3 py-2.5 rounded-xl border border-cyan-300/30 bg-surface2">
+                        <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
+                          className="w-full bg-transparent text-sm text-snow outline-none" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-cyan-300/30 bg-surface2">
-                      <label className="w-14 text-xs font-semibold text-fog uppercase tracking-wide shrink-0">Salida <span className="text-rose">*</span></label>
-                      <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
-                        className="flex-1 bg-transparent text-sm text-snow outline-none" />
+                    <div className="space-y-1.5">
+                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">Salida <span className="text-rose">*</span></p>
+                      <div className="flex items-center px-3 py-2.5 rounded-xl border border-cyan-300/30 bg-surface2">
+                        <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
+                          className="w-full bg-transparent text-sm text-snow outline-none" />
+                      </div>
                     </div>
                   </div>
                 )}
