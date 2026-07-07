@@ -943,6 +943,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [checkinQuery, setCheckinQuery] = useState('')
   const [checkinMembers, setCheckinMembers] = useState<FullMember[]>([])
   const [detailVisitId, setDetailVisitId] = useState<string | null>(null)
+  const [detailTooltip, setDetailTooltip] = useState<string | null>(null)
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -2573,7 +2574,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const bonoSessionColor = bonoSessions == null ? 'text-fog' : bonoSessions <= 2 ? 'text-rose' : bonoSessions <= 5 ? 'text-amber' : 'text-mint'
 
         return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setDetailVisitId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => { setDetailVisitId(null); setDetailTooltip(null) }}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -2590,7 +2591,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                   <p className="text-xs text-fog mt-0.5">Entrada {fmtTime(visit.checked_in_at)} · <span className={isLong ? 'text-amber font-semibold' : 'text-snow'}>{fmtElapsed(visit.checked_in_at)}</span></p>
                 </div>
-                <button onClick={() => setDetailVisitId(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
+                <button onClick={() => { setDetailVisitId(null); setDetailTooltip(null) }} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
               </div>
 
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -2600,16 +2601,20 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <div className="flex items-baseline gap-3">
                     <span className="text-xs text-fog shrink-0 w-14">Adultos</span>
                     <span className="text-lg font-bold text-lime leading-none shrink-0">{visit.adults_count}</span>
-                    <span className="text-sm text-snow leading-tight truncate">{adultNamesStr}<span className="text-mist">{adultSuffix}</span></span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDetailTooltip(adultNamesStr + adultSuffix) }}
+                      className="text-sm text-snow leading-tight truncate text-left min-w-0 hover:text-lime/90 transition-colors"
+                    >{adultNamesStr}<span className="text-mist">{adultSuffix}</span></button>
                   </div>
                   {/* Niños */}
                   {numChildren > 0 && (
                     <div className="flex items-baseline gap-3">
                       <span className="text-xs text-fog shrink-0 w-14">Niños</span>
                       <span className="text-lg font-bold text-cyan-300 leading-none shrink-0">{numChildren}</span>
-                      <span className="text-sm text-snow leading-tight truncate">
-                        {childNamesStr}<span className="text-mist">{childSuffix}</span>
-                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDetailTooltip(childNamesStr + childSuffix) }}
+                        className="text-sm text-snow leading-tight truncate text-left min-w-0 hover:text-cyan-300/90 transition-colors"
+                      >{childNamesStr}<span className="text-mist">{childSuffix}</span></button>
                     </div>
                   )}
                 </div>
@@ -2682,6 +2687,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )
       })()}
+
+      {/* Tooltip de texto completo (adultos / niños) */}
+      {detailTooltip && (
+        <div className="fixed inset-0 z-[65] flex items-end sm:items-center justify-center p-4" onClick={() => setDetailTooltip(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-surface border border-line rounded-2xl px-5 py-4 w-full sm:max-w-xs shadow-2xl" onClick={e => e.stopPropagation()}>
+            <p className="text-sm text-snow leading-relaxed">{detailTooltip}</p>
+            <button onClick={() => setDetailTooltip(null)} className="mt-3 text-xs text-fog hover:text-snow transition-colors">Cerrar</button>
+          </div>
+        </div>
+      )}
 
       {/* Modal 1: búsqueda de miembro */}
       {checkinModal === 'search' && (() => {
