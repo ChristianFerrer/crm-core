@@ -206,9 +206,9 @@ function CheckinConfirmModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className={`flex items-center gap-3 px-5 pt-5 pb-4 border-b shrink-0 ${
           alreadyInside ? 'border-iris/20' : bono?.ok ? 'border-lime/20' : 'border-amber/20'
@@ -473,9 +473,9 @@ function CheckinNewMemberModal({
   const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5'
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
@@ -2484,9 +2484,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           : []
         const closeAll = () => { setCheckinModal(null); setCheckinQuery(''); setCheckinSelectedMember(null) }
         return (
-          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" onClick={closeAll}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closeAll}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
                 <div className="flex items-center gap-2">
