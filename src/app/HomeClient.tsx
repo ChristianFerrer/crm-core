@@ -208,7 +208,7 @@ function CheckinConfirmModal({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className={`flex items-center gap-3 px-5 pt-5 pb-4 border-b shrink-0 ${
           alreadyInside ? 'border-iris/20' : bono?.ok ? 'border-lime/20' : 'border-amber/20'
@@ -475,7 +475,7 @@ function CheckinNewMemberModal({
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
@@ -2486,7 +2486,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closeAll}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[92vh]" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
                 <div className="flex items-center gap-2">
