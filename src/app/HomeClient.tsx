@@ -176,7 +176,7 @@ function CheckinPanel({
         const qd = q.replace(/\D/g, '')
         return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
       })
-    : checkinMembers
+    : []
 
   const bono = selectedMember ? getBonoInfo(selectedMember) : null
   const alreadyInside = selectedMember ? activeVisits.some(v => v.member_id === selectedMember.id && !v.checked_out_at) : false
@@ -406,21 +406,15 @@ function CheckinPanel({
       ) : (
         /* ── Paso 1: búsqueda / QR ── */
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex rounded-xl border border-line bg-surface2 overflow-hidden">
-              <button onClick={() => { setMode('manual'); reset() }}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'manual' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
-                <Search size={13} /> Manual
-              </button>
-              <button onClick={() => { setMode('qr'); reset() }}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'qr' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
-                <QrCode size={13} /> QR
-              </button>
-            </div>
-            <Link href="/miembros/nuevo" onClick={onClose}
-              className="flex items-center gap-1.5 rounded-xl border border-line bg-surface2 px-3 py-2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
-              <UserPlus size={13} /> Nuevo miembro
-            </Link>
+          <div className="flex rounded-xl border border-line bg-surface2 overflow-hidden">
+            <button onClick={() => { setMode('manual'); reset() }}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'manual' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
+              <Search size={13} /> Manual
+            </button>
+            <button onClick={() => { setMode('qr'); reset() }}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors ${mode === 'qr' ? 'bg-lime/15 text-lime' : 'text-mist hover:text-fog'}`}>
+              <QrCode size={13} /> QR
+            </button>
           </div>
 
           {mode === 'qr' ? (
@@ -450,8 +444,8 @@ function CheckinPanel({
                     className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
                 </div>
               </div>
-              <div className="divide-y divide-line/50 max-h-72 overflow-y-auto min-h-[10rem]">
-                {filteredMembers.length > 0 ? filteredMembers.map(m => {
+              <div className="divide-y divide-line/50 max-h-72 overflow-y-auto">
+                {filteredMembers.map(m => {
                   const b = getBonoInfo(m)
                   const inside = activeVisits.some(v => v.member_id === m.id && !v.checked_out_at)
                   return (
@@ -467,10 +461,15 @@ function CheckinPanel({
                         : <span className="text-xs text-rose shrink-0">sin bono</span>}
                     </button>
                   )
-                }) : (
-                  <p className="py-10 text-center text-sm text-fog">Sin resultados</p>
+                })}
+                {query.trim().length > 0 && filteredMembers.length === 0 && (
+                  <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
                 )}
               </div>
+              <Link href="/miembros/nuevo" onClick={onClose}
+                className="flex w-full items-center justify-center gap-2 px-4 py-3 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors">
+                <UserPlus size={15} /> Crear nuevo miembro
+              </Link>
             </div>
           )}
         </div>
