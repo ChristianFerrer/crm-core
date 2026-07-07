@@ -62,7 +62,5 @@ body {
   100%      { transform: translateX(0); }
 }
 .animate-scroll-once {
-  display: inline-block;
-  white-space: nowrap;
   animation: scroll-names-once 4s ease-in-out 1 forwards;
 }

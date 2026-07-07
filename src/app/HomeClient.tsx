@@ -889,14 +889,28 @@ function timeToMins(t: string): number {
 }
 
 function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: string; suffixClass: string }) {
+  const containerRef = useRef<HTMLSpanElement>(null)
+  const textRef = useRef<HTMLSpanElement>(null)
+  const [overflows, setOverflows] = useState(false)
   const [animKey, setAnimKey] = useState(0)
+
+  useEffect(() => {
+    if (containerRef.current && textRef.current) {
+      setOverflows(textRef.current.offsetWidth > containerRef.current.offsetWidth)
+    }
+  }, [text, suffix])
+
   return (
     <span
-      className="overflow-hidden min-w-0 flex-1 cursor-pointer"
-      onClick={(e) => { e.stopPropagation(); setAnimKey(k => k + 1) }}
-      title="Toca para releer"
+      ref={containerRef}
+      className={`overflow-hidden min-w-0 flex-1 ${overflows ? 'cursor-pointer' : ''}`}
+      onClick={(e) => { if (!overflows) return; e.stopPropagation(); setAnimKey(k => k + 1) }}
     >
-      <span key={animKey} className="animate-scroll-once text-sm text-snow leading-tight">
+      <span
+        ref={textRef}
+        key={animKey}
+        className={`inline-block whitespace-nowrap text-sm text-snow leading-tight${overflows ? ' animate-scroll-once' : ''}`}
+      >
         {text}<span className={suffixClass}>{suffix}</span>
       </span>
     </span>
