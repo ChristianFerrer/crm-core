@@ -57,10 +57,9 @@ body {
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
 @keyframes scroll-names-once {
-  0%, 15%   { transform: translateX(0); }
-  70%, 85%  { transform: translateX(-180px); }
-  100%      { transform: translateX(0); }
+  0%, 15% { transform: translateX(0); }
+  100%    { transform: translateX(var(--scroll-amount)); }
 }
 .animate-scroll-once {
-  animation: scroll-names-once 4s ease-in-out 1 forwards;
+  animation: scroll-names-once 3s ease-in-out 1 forwards;
 }

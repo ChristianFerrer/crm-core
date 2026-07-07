@@ -891,14 +891,17 @@ function timeToMins(t: string): number {
 function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: string; suffixClass: string }) {
   const containerRef = useRef<HTMLSpanElement>(null)
   const textRef = useRef<HTMLSpanElement>(null)
-  const [overflows, setOverflows] = useState(false)
+  const [scrollAmount, setScrollAmount] = useState(0)
   const [animKey, setAnimKey] = useState(0)
 
   useEffect(() => {
     if (containerRef.current && textRef.current) {
-      setOverflows(textRef.current.offsetWidth > containerRef.current.offsetWidth)
+      const overflow = textRef.current.offsetWidth - containerRef.current.offsetWidth
+      setScrollAmount(overflow > 0 ? overflow : 0)
     }
   }, [text, suffix])
+
+  const overflows = scrollAmount > 0
 
   return (
     <span
@@ -910,6 +913,7 @@ function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: st
         ref={textRef}
         key={animKey}
         className={`inline-block whitespace-nowrap text-sm text-snow leading-tight${overflows ? ' animate-scroll-once' : ''}`}
+        style={overflows ? ({ '--scroll-amount': `-${scrollAmount}px` } as React.CSSProperties) : undefined}
       >
         {text}<span className={suffixClass}>{suffix}</span>
       </span>
