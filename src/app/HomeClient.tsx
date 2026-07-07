@@ -108,6 +108,144 @@ function getBonoInfo(m: FullMember) {
   return { ok: true, unlimited: false, label: bono.membership_types?.name ?? 'Bono', sessions: bono.sessions_remaining }
 }
 
+// ── Modal 1: búsqueda + QR ──
+function CheckinSearchModal({
+  filtered,
+  query,
+  onQueryChange,
+  activeVisits,
+  onSelect,
+  onNewMember,
+  onClose,
+}: {
+  filtered: FullMember[]
+  query: string
+  onQueryChange: (q: string) => void
+  activeVisits: TodayVisit[]
+  onSelect: (m: FullMember) => void
+  onNewMember: () => void
+  onClose: () => void
+}) {
+  const [mode, setMode] = useState<'manual' | 'qr'>('manual')
+  const [scanning, setScanning] = useState(true)
+  const [camError, setCamError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (mode !== 'qr' || !scanning) return
+    let html5Qr: any, stopped = false
+    import('html5-qrcode').then(({ Html5Qrcode }) => {
+      if (stopped) return
+      html5Qr = new Html5Qrcode('qr-reader-checkin')
+      html5Qr.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 200, height: 200 } },
+        async (decoded: string) => {
+          await html5Qr.stop().catch(() => {})
+          setScanning(false)
+          const { data } = await supabase.from('members')
+            .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
+            .eq('qr_code', decoded).single()
+          if (!data) { setCamError('Código QR no reconocido'); return }
+          onSelect(data as unknown as FullMember)
+        },
+        () => {}
+      ).catch(() => setCamError('No se puede acceder a la cámara'))
+    })
+    return () => { stopped = true; html5Qr?.stop().catch(() => {}) }
+  }, [mode, scanning])
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+          <div className="flex items-center gap-2">
+            <LogIn size={15} className="text-lime shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-snow">Registrar Entrada</p>
+              <p className="text-[11px] text-fog">Check-in de visitantes</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+        </div>
+
+        {/* Tabs manual / QR */}
+        <div className="flex border-b border-line shrink-0">
+          <button onClick={() => setMode('manual')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${mode === 'manual' ? 'text-lime border-b-2 border-lime' : 'text-mist hover:text-fog'}`}>
+            <Search size={13} /> Manual
+          </button>
+          <button onClick={() => { setMode('qr'); setScanning(true); setCamError(null) }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${mode === 'qr' ? 'text-lime border-b-2 border-lime' : 'text-mist hover:text-fog'}`}>
+            <QrCode size={13} /> Escanear QR
+          </button>
+        </div>
+
+        {mode === 'qr' ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-5 gap-4">
+            {scanning && !camError ? (
+              <div id="qr-reader-checkin" className="w-full max-w-xs rounded-xl overflow-hidden [&>*]:rounded-xl" />
+            ) : (
+              <div className="flex flex-col items-center gap-3">
+                {camError && <p className="text-sm text-rose text-center">{camError}</p>}
+                <button onClick={() => { setScanning(true); setCamError(null) }}
+                  className="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm text-fog hover:text-snow hover:border-line2 transition-colors">
+                  <RotateCcw size={14} /> Volver a escanear
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Search input */}
+            <div className="px-5 pt-4 pb-2 shrink-0">
+              <div className="relative">
+                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+                <input value={query} onChange={e => onQueryChange(e.target.value)}
+                  placeholder="Buscar por nombre o teléfono..." autoFocus
+                  className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
+              </div>
+            </div>
+            {/* Results */}
+            <div className="overflow-y-auto flex-1 divide-y divide-line/50">
+              {filtered.map(m => {
+                const b = getBonoInfo(m)
+                const inside = activeVisits.some(v => v.member_id === m.id && !v.checked_out_at)
+                return (
+                  <button key={m.id} onClick={() => onSelect(m)}
+                    className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface2 transition-colors">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
+                      {inside && <span className="block text-xs text-iris">Dentro ahora</span>}
+                    </span>
+                    {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
+                      : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
+                      : <span className="text-xs text-rose shrink-0">sin bono</span>}
+                  </button>
+                )
+              })}
+              {query.trim().length > 0 && filtered.length === 0 && (
+                <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
+              )}
+              {query.trim().length === 0 && (
+                <p className="py-8 text-center text-sm text-mist">Escribe un nombre o teléfono para buscar</p>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Crear nuevo */}
+        <button onClick={onNewMember}
+          className="flex w-full items-center justify-center gap-2 px-5 py-3.5 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors shrink-0">
+          <UserPlus size={15} /> Crear nuevo miembro
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal 2: confirmación de entrada ──
 function CheckinConfirmModal({
   member,
@@ -127,12 +265,12 @@ function CheckinConfirmModal({
   onCheckedIn: () => void
 }) {
   const [registering, setRegistering] = useState(false)
-  const [flash, setFlash] = useState<string | null>(null)
+  const [checkedOut, setCheckedOut] = useState(false)
+  const [showGuests, setShowGuests] = useState(false)
   const [currentMember, setCurrentMember] = useState<FullMember>(member)
   const [visitType, setVisitType] = useState<'entrada' | 'custodia'>('entrada')
-  const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>(
-    (member.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? undefined }))
-  )
+  // Mejora #1: menores sin pre-seleccionar
+  const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
   const [extraChildrenCount, setExtraChildrenCount] = useState(0)
   const [coTitulares, setCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>(
     member.family_id
@@ -143,11 +281,21 @@ function CheckinConfirmModal({
   const [extraAdultsCount, setExtraAdultsCount] = useState(0)
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
-  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const bono = getBonoInfo(currentMember)
-  const alreadyInside = activeVisits.some(v => v.member_id === currentMember.id && !v.checked_out_at)
+  const activeVisit = activeVisits.find(v => v.member_id === currentMember.id && !v.checked_out_at)
+  const alreadyInside = !!activeVisit
   const custodiaValid = visitType !== 'custodia' || (custodiaStart.trim() !== '' && custodiaEnd.trim() !== '')
+
+  // Mejora #5: checkout desde "ya dentro"
+  async function handleCheckOut() {
+    if (!activeVisit) return
+    await supabase.from('visits').update({ checked_out_at: new Date().toISOString() }).eq('id', activeVisit.id)
+    setCheckedOut(true)
+    onCheckedIn()
+    closeTimer.current = setTimeout(onClose, 1500)
+  }
 
   async function handleCheckIn() {
     if (registering || !custodiaValid) return
@@ -179,30 +327,10 @@ function CheckinConfirmModal({
         .update({ sessions_remaining: Math.max(0, m.sessions_remaining - 1) })
         .eq('id', m.id)
     }
-    const typeLabel = visitType === 'custodia' ? 'Custodia' : 'Entrada'
-    clearTimeout(flashTimer.current)
-    if (b?.ok) {
-      setFlash(b.unlimited
-        ? `✓ ${typeLabel} registrada · bono ilimitado · ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
-        : `✓ ${typeLabel} registrada · quedan ${Math.max(0, (m?.sessions_remaining ?? 1) - 1)} sesiones`)
-    } else {
-      const rateLabel = visitType === 'custodia'
-        ? `${rates.custodia}€/h × ${numChildren} niño${numChildren !== 1 ? 's' : ''}`
-        : `${rates.adult}€ adulto + ${numChildren} × ${rates.child}€ niño/h`
-      setFlash(`✓ ${typeLabel} registrada · sin bono — ${rateLabel}`)
-    }
-    flashTimer.current = setTimeout(() => setFlash(null), 6000)
     setRegistering(false)
     onCheckedIn()
-    const { data } = await supabase.from('members')
-      .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
-      .eq('id', currentMember.id).single()
-    if (data) {
-      const refreshed = data as unknown as FullMember
-      setCurrentMember(refreshed)
-      setChildrenPresent((refreshed.children ?? []).map(c => ({ name: c.name })))
-      setExtraChildrenCount(0); setExtraAdultsCount(0); setCoTitulares([])
-    }
+    // Mejora #4: cierre automático 1.5 s tras registro
+    closeTimer.current = setTimeout(onClose, 1500)
   }
 
   return (
@@ -241,9 +369,27 @@ function CheckinConfirmModal({
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
 
+          {/* Mejora #5: "ya dentro" con checkout */}
           {alreadyInside ? (
-            <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
-              Este miembro ya tiene una entrada activa
+            <div className="space-y-3">
+              {checkedOut ? (
+                <div className="rounded-xl bg-lime/10 border border-lime/20 px-4 py-4 flex flex-col items-center gap-2">
+                  <Check size={22} className="text-lime" strokeWidth={2.5} />
+                  <p className="text-sm font-semibold text-lime">Salida registrada</p>
+                  <p className="text-xs text-fog">Cerrando...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
+                    Este miembro ya está dentro
+                  </div>
+                  <button onClick={handleCheckOut}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-iris/15 border border-iris/30 text-iris font-semibold text-sm hover:bg-iris/25 transition active:scale-[0.99]">
+                    <LogOut size={17} strokeWidth={2.2} />
+                    Registrar salida
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -304,7 +450,7 @@ function CheckinConfirmModal({
                 </div>
               )}
 
-              {/* Menores */}
+              {/* Menores — #1 sin pre-seleccionar */}
               {currentMember.children && currentMember.children.length > 0 && (
                 <div>
                   <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Menores</p>
@@ -340,34 +486,45 @@ function CheckinConfirmModal({
                 </div>
               )}
 
-              {/* Invitados adicionales — adultos solo en libre, niños siempre */}
-              <div>
-                <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
-                <div className="space-y-2">
-                  {visitType === 'entrada' && (
+              {/* Invitados adicionales — #2 colapsados */}
+              {!showGuests ? (
+                <button type="button" onClick={() => setShowGuests(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
+                  <Plus size={13} /> Añadir invitados adicionales
+                </button>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between px-1 pb-1.5">
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
+                    <button type="button" onClick={() => { setShowGuests(false); setExtraAdultsCount(0); setExtraChildrenCount(0) }}
+                      className="text-mist hover:text-fog transition-colors"><X size={13} /></button>
+                  </div>
+                  <div className="space-y-2">
+                    {visitType === 'entrada' && (
+                      <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line">
+                        <span className="text-sm text-fog">Adultos</span>
+                        <div className="flex items-center gap-3">
+                          <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
+                            className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                          <span className="w-5 text-center font-bold text-snow">{extraAdultsCount}</span>
+                          <button type="button" onClick={() => setExtraAdultsCount(n => n + 1)}
+                            className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line">
-                      <span className="text-sm text-fog">Adultos</span>
+                      <span className="text-sm text-fog">Niños</span>
                       <div className="flex items-center gap-3">
-                        <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
+                        <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
                           className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
-                        <span className="w-5 text-center font-bold text-snow">{extraAdultsCount}</span>
-                        <button type="button" onClick={() => setExtraAdultsCount(n => n + 1)}
+                        <span className="w-5 text-center font-bold text-snow">{extraChildrenCount}</span>
+                        <button type="button" onClick={() => setExtraChildrenCount(n => n + 1)}
                           className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
                       </div>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line">
-                    <span className="text-sm text-fog">Niños</span>
-                    <div className="flex items-center gap-3">
-                      <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
-                        className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
-                      <span className="w-5 text-center font-bold text-snow">{extraChildrenCount}</span>
-                      <button type="button" onClick={() => setExtraChildrenCount(n => n + 1)}
-                        className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
-                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Aviso tarifa */}
               {!bono?.ok && (
@@ -380,12 +537,7 @@ function CheckinConfirmModal({
                 </div>
               )}
 
-              {flash && (
-                <div className="flex items-center justify-center gap-2 text-sm font-semibold text-mint text-center">
-                  <Check size={14} strokeWidth={2.5} /> {flash}
-                </div>
-              )}
-
+              {/* Botón registrar — #4 se cierra solo tras registro */}
               <button onClick={handleCheckIn} disabled={registering || !custodiaValid}
                 className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
@@ -2496,62 +2648,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           : []
         const closeAll = () => { setCheckinModal(null); setCheckinQuery(''); setCheckinSelectedMember(null) }
         return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closeAll}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
-                <div className="flex items-center gap-2">
-                  <LogIn size={15} className="text-lime shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-snow">Registrar Entrada</p>
-                    <p className="text-[11px] text-fog">Check-in de visitantes</p>
-                  </div>
-                </div>
-                <button onClick={closeAll} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
-              </div>
-              {/* Search */}
-              <div className="px-5 pt-4 pb-2 shrink-0">
-                <div className="relative">
-                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-                  <input value={checkinQuery} onChange={e => setCheckinQuery(e.target.value)}
-                    placeholder="Buscar por nombre o teléfono..." autoFocus
-                    className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
-                </div>
-              </div>
-              {/* Results */}
-              <div className="overflow-y-auto flex-1 divide-y divide-line/50">
-                {filtered.map(m => {
-                  const b = getBonoInfo(m)
-                  const inside = activeVisits.some(v => v.member_id === m.id && !v.checked_out_at)
-                  return (
-                    <button key={m.id} onClick={() => { setCheckinSelectedMember(m); setCheckinModal('confirm') }}
-                      className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface2 transition-colors">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
-                      <span className="flex-1 min-w-0">
-                        <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
-                        {inside && <span className="block text-xs text-iris">Dentro ahora</span>}
-                      </span>
-                      {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
-                        : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
-                        : <span className="text-xs text-rose shrink-0">sin bono</span>}
-                    </button>
-                  )
-                })}
-                {checkinQuery.trim().length > 0 && filtered.length === 0 && (
-                  <p className="py-8 text-center text-sm text-fog">Sin resultados</p>
-                )}
-                {checkinQuery.trim().length === 0 && (
-                  <p className="py-8 text-center text-sm text-mist">Escribe un nombre o teléfono para buscar</p>
-                )}
-              </div>
-              {/* Crear nuevo */}
-              <button onClick={() => setCheckinModal('new-member')}
-                className="flex w-full items-center justify-center gap-2 px-5 py-3.5 border-t border-line text-sm font-semibold text-lime hover:bg-lime/5 transition-colors shrink-0">
-                <UserPlus size={15} /> Crear nuevo miembro
-              </button>
-            </div>
-          </div>
+          <CheckinSearchModal
+            filtered={filtered}
+            query={checkinQuery}
+            onQueryChange={setCheckinQuery}
+            activeVisits={activeVisits}
+            onSelect={m => { setCheckinSelectedMember(m); setCheckinModal('confirm') }}
+            onNewMember={() => setCheckinModal('new-member')}
+            onClose={closeAll}
+          />
         )
       })()}
 
