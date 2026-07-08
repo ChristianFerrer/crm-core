@@ -18,6 +18,7 @@ type Service = {
   deposit_pct: number | null
   price_per_guest_adult: number | null
   price_per_guest_child: number | null
+  included_guests: number | null
 }
 
 type Category = {
@@ -38,6 +39,7 @@ type FormData = {
   deposit_pct: string
   price_per_guest_adult: string
   price_per_guest_child: string
+  included_guests: string
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -62,7 +64,7 @@ const CAT_COLORS = [
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '' }
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '' }
 
 // Categorías que corresponden a paquetes reservables (muestran config de pagos)
 const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
@@ -132,6 +134,7 @@ export default function ServiciosPage() {
       deposit_pct: s.deposit_pct != null ? String(s.deposit_pct) : '50',
       price_per_guest_adult: s.price_per_guest_adult ? String(s.price_per_guest_adult) : '',
       price_per_guest_child: s.price_per_guest_child ? String(s.price_per_guest_child) : '',
+      included_guests: s.included_guests ? String(s.included_guests) : '',
     })
     setEditTarget(s); setModal('edit')
   }
@@ -147,6 +150,7 @@ export default function ServiciosPage() {
       deposit_pct: form.deposit_pct ? parseFloat(form.deposit_pct) : null,
       price_per_guest_adult: form.price_per_guest_adult ? parseFloat(form.price_per_guest_adult) : 0,
       price_per_guest_child: form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
+      included_guests: form.included_guests ? parseInt(form.included_guests) : 0,
     }
     if (modal === 'add') await supabase.from('services').insert({ ...payload, active: true })
     else if (editTarget) await supabase.from('services').update(payload).eq('id', editTarget.id)
@@ -380,10 +384,17 @@ export default function ServiciosPage() {
               {BOOKING_CATEGORIES.includes(form.category) && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Configuración de reservas</p>
-                  <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5">Adelanto sugerido (%)</label>
-                    <input className={INPUT_CLASS} type="number" min="0" max="100" step="1" placeholder="50"
-                      value={form.deposit_pct} onChange={e => setForm(f => ({ ...f, deposit_pct: e.target.value }))} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">Adelanto sugerido (%)</label>
+                      <input className={INPUT_CLASS} type="number" min="0" max="100" step="1" placeholder="50"
+                        value={form.deposit_pct} onChange={e => setForm(f => ({ ...f, deposit_pct: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">Personas incluidas</label>
+                      <input className={INPUT_CLASS} type="number" min="0" step="1" placeholder="0"
+                        value={form.included_guests} onChange={e => setForm(f => ({ ...f, included_guests: e.target.value }))} />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -398,7 +409,7 @@ export default function ServiciosPage() {
                     </div>
                   </div>
                   <p className="text-[11px] text-mist leading-relaxed">
-                    Si dejas en blanco el precio por invitado extra, se usará la tarifa de <span className="text-fog font-medium">entrada libre</span> (categoría «Entrada»).
+                    El precio cubre las <span className="text-fog font-medium">personas incluidas</span> (niños + adultos). Solo se cobran los invitados que excedan ese número. Si dejas en blanco el precio por invitado extra, se usa la tarifa de <span className="text-fog font-medium">entrada libre</span>.
                   </p>
                 </div>
               )}

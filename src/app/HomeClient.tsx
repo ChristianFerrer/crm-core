@@ -32,7 +32,7 @@ type TodayVisit = {
   bookings: {
     type: string; amount: number | null; deposit_amount: number | null; payment_status: string | null
     guest_adults: number | null; guest_children: number | null
-    services: { price: number | null; price_per_guest_adult: number | null; price_per_guest_child: number | null } | null
+    services: { price: number | null; price_per_guest_adult: number | null; price_per_guest_child: number | null; included_guests: number | null } | null
   } | null
   members: { name: string } | null
   memberships: {
@@ -914,6 +914,15 @@ function BookingSearchAndTypeModal({
   )
 }
 
+// Reparte la capacidad incluida en el precio (niños primero, luego adultos) y
+// devuelve cuántos invitados quedan por cobrar de cada tipo.
+function chargeableGuests(adults: number, children: number, included: number) {
+  const freeChildren = Math.min(children, Math.max(0, included))
+  const remaining = Math.max(0, included - freeChildren)
+  const freeAdults = Math.min(adults, remaining)
+  return { chargeAdults: Math.max(0, adults - freeAdults), chargeChildren: Math.max(0, children - freeChildren) }
+}
+
 // ── Modal reserva 3: formulario ──
 function BookingFormModal({
   member, bookingType, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
@@ -961,7 +970,10 @@ function BookingFormModal({
     const cfgC = Number(selectedService.price_per_guest_child) || 0
     const ppa  = cfgA > 0 ? cfgA : rateAdult
     const ppc  = cfgC > 0 ? cfgC : rateChild
-    const total = round2(base + guestAdults * ppa + guestChildren * ppc)
+    // El precio cubre N personas incluidas; solo se cobran los que excedan (niños primero)
+    const included = Number(selectedService.included_guests) || 0
+    const { chargeAdults, chargeChildren } = chargeableGuests(guestAdults, guestChildren, included)
+    const total = round2(base + chargeAdults * ppa + chargeChildren * ppc)
     setTotalStr(String(total))
     const pct = selectedService.deposit_pct != null ? Number(selectedService.deposit_pct) : 50
     setDepositStr(String(round2(total * pct / 100)))
@@ -1256,6 +1268,11 @@ function BookingFormModal({
                             </select>
                             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-fog pointer-events-none" />
                           </div>
+                          {selectedService && Number(selectedService.included_guests) > 0 && (
+                            <p className="text-[11px] text-mist mt-1.5">
+                              Incluye {Number(selectedService.included_guests)} personas. Los invitados que excedan se cobran aparte.
+                            </p>
+                          )}
                         </div>
                         {/* Total */}
                         <div className="flex items-center justify-between gap-3">
@@ -1335,6 +1352,7 @@ type BookingService = {
   deposit_pct: number | null
   price_per_guest_adult: number | null
   price_per_guest_child: number | null
+  included_guests: number | null
 }
 
 type HomeClientProps = {
@@ -1635,7 +1653,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (cust)  setRateCustodia(Number(cust.price))
       })
     supabase.from('services')
-      .select('id, name, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child')
+      .select('id, name, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests')
       .eq('active', true).order('sort_order')
       .then(({ data }) => { if (data) setBookingServices(data as BookingService[]) })
   }, [])
@@ -1914,7 +1932,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     bonoPrecioSesion: number | null; ahorro: number; total: number
     isPackage: boolean; deposit: number; toPay: number
     pkg?: {
-      base: number; rateA: number; rateC: number
+      base: number; rateA: number; rateC: number; included: number
+      chargeA: number; chargeC: number
       contractedA: number; contractedC: number; presentA: number; presentC: number
       live: boolean
     }
@@ -1940,9 +1959,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const presentC = bk?.type === 'birthday'
           ? Math.max(0, visit.children_count - 1)
           : visit.children_count
-        total = round2(base + presentA * rateA + presentC * rateC)
+        // El precio cubre N personas incluidas; solo se cobran los que excedan (niños primero)
+        const included = Number(svc.included_guests) || 0
+        const { chargeAdults, chargeChildren } = chargeableGuests(presentA, presentC, included)
+        total = round2(base + chargeAdults * rateA + chargeChildren * rateC)
         pkg = {
-          base, rateA, rateC,
+          base, rateA, rateC, included,
+          chargeA: chargeAdults, chargeC: chargeChildren,
           contractedA: bk?.guest_adults ?? 0,
           contractedC: bk?.guest_children ?? 0,
           presentA, presentC, live: true,
@@ -2826,25 +2849,33 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       {imp.pkg?.live && (
                         <>
                           <div className="flex justify-between text-xs">
-                            <span className="text-fog">Paquete base</span>
+                            <span className="text-fog">
+                              Paquete base
+                              {imp.pkg.included > 0 && <span className="text-mist"> (incluye {imp.pkg.included})</span>}
+                            </span>
                             <span className="text-snow">{imp.pkg.base.toFixed(2)}€</span>
                           </div>
-                          {(imp.pkg.presentA > 0 || imp.pkg.contractedA > 0) && (
+                          <div className="flex justify-between text-xs text-mist">
+                            <span>Presentes: {imp.pkg.presentA + imp.pkg.presentC}
+                              {(imp.pkg.presentA + imp.pkg.presentC) !== (imp.pkg.contractedA + imp.pkg.contractedC) &&
+                                ` (contratados ${imp.pkg.contractedA + imp.pkg.contractedC})`}
+                            </span>
+                          </div>
+                          {imp.pkg.chargeA > 0 && (
                             <div className="flex justify-between text-xs">
-                              <span className="text-fog">
-                                {imp.pkg.presentA} adulto{imp.pkg.presentA !== 1 ? 's' : ''} × {imp.pkg.rateA.toFixed(2)}€
-                                {imp.pkg.presentA !== imp.pkg.contractedA && <span className="text-mist"> (contratados {imp.pkg.contractedA})</span>}
-                              </span>
-                              <span className="text-snow">{(imp.pkg.presentA * imp.pkg.rateA).toFixed(2)}€</span>
+                              <span className="text-fog">{imp.pkg.chargeA} adulto{imp.pkg.chargeA !== 1 ? 's' : ''} extra × {imp.pkg.rateA.toFixed(2)}€</span>
+                              <span className="text-snow">{(imp.pkg.chargeA * imp.pkg.rateA).toFixed(2)}€</span>
                             </div>
                           )}
-                          {(imp.pkg.presentC > 0 || imp.pkg.contractedC > 0) && (
+                          {imp.pkg.chargeC > 0 && (
                             <div className="flex justify-between text-xs">
-                              <span className="text-fog">
-                                {imp.pkg.presentC} niño{imp.pkg.presentC !== 1 ? 's' : ''} × {imp.pkg.rateC.toFixed(2)}€
-                                {imp.pkg.presentC !== imp.pkg.contractedC && <span className="text-mist"> (contratados {imp.pkg.contractedC})</span>}
-                              </span>
-                              <span className="text-snow">{(imp.pkg.presentC * imp.pkg.rateC).toFixed(2)}€</span>
+                              <span className="text-fog">{imp.pkg.chargeC} niño{imp.pkg.chargeC !== 1 ? 's' : ''} extra × {imp.pkg.rateC.toFixed(2)}€</span>
+                              <span className="text-snow">{(imp.pkg.chargeC * imp.pkg.rateC).toFixed(2)}€</span>
+                            </div>
+                          )}
+                          {imp.pkg.chargeA === 0 && imp.pkg.chargeC === 0 && (
+                            <div className="flex justify-between text-xs text-mint">
+                              <span>Sin invitados extra</span>
                             </div>
                           )}
                         </>
