@@ -937,11 +937,12 @@ function BookingFormModal({
   const [saved, setSaved]         = useState(false)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const typeLabels = { birthday: 'Cumpleaños', custodia: 'Custodia', other: 'Otro' }
+  const typeLabels = { birthday: 'Reserva de Cumpleaños', custodia: 'Reserva de Custodia', other: 'Otra Reserva' }
   const needsTitle = bookingType === 'other'
   const birthdayValid = bookingType !== 'birthday' || !!birthdayChild || member.children.length === 0
   const custodiaValid = bookingType !== 'custodia' || selectedChildren.length > 0 || member.children.length === 0
   const isValid = (!needsTitle || title.trim()) && startTime && endTime && birthdayValid && custodiaValid
+  const [guestsOpen, setGuestsOpen] = useState(false)
 
   function handleChildSelect(name: string) {
     setBirthdayChild(name)
@@ -1003,15 +1004,26 @@ function BookingFormModal({
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
-          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
-            <ChevronLeft size={16} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-snow truncate">{member.name}</p>
-            <p className="text-[11px] text-fog">Paso 2 de 2 · {typeLabels[bookingType]}</p>
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 border-b border-line shrink-0">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
+                <ChevronLeft size={16} />
+              </button>
+              <div>
+                <p className="text-xl font-bold text-snow leading-tight">{typeLabels[bookingType]}</p>
+                <p className="text-[11px] text-fog mt-0.5">Paso 2 de 2</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5"><X size={16} /></button>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+          {/* Titular — no editable */}
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line/60 bg-surface2/60">
+            <User size={13} className="text-fog shrink-0" />
+            <span className="text-xs text-fog">Titular</span>
+            <span className="ml-auto text-sm font-semibold text-snow">{member.name}</span>
+          </div>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -1026,7 +1038,7 @@ function BookingFormModal({
             </div>
           ) : (
             <>
-              {/* Menores — selector para cumpleaños (único) y custodia (múltiple) */}
+              {/* Niño/a — selector cumpleaños (checkbox) y custodia (multi-checkbox) */}
               {member.children && member.children.length > 0 && (bookingType === 'birthday' || bookingType === 'custodia') && (
                 <div>
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
@@ -1036,14 +1048,19 @@ function BookingFormModal({
                   <div className="space-y-1.5">
                     {member.children.map((c: any) => {
                       if (bookingType === 'birthday') {
+                        const checked = birthdayChild === c.name
                         return (
                           <button key={c.name} type="button" onClick={() => handleChildSelect(c.name)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
-                              birthdayChild === c.name ? 'border-iris/40 bg-iris/10' : 'border-line bg-surface2 hover:border-line2'
+                              checked ? 'border-iris/40 bg-iris/10' : 'border-line bg-surface2 hover:border-line2'
                             }`}>
-                            <Cake size={15} className={birthdayChild === c.name ? 'text-iris' : 'text-fog'} />
-                            <span className={`flex-1 text-sm font-medium ${birthdayChild === c.name ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
-                            {birthdayChild === c.name && <Check size={14} className="text-iris" />}
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              checked ? 'bg-iris border-iris' : 'border-line2'
+                            }`}>
+                              {checked && <div className="w-2 h-2 rounded-full bg-white" />}
+                            </div>
+                            <span className={`flex-1 text-sm font-medium ${checked ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
+                            {c.birth_date && <span className="text-xs text-mist shrink-0">{fmtChildAge(c.birth_date)}</span>}
                           </button>
                         )
                       }
@@ -1088,6 +1105,7 @@ function BookingFormModal({
                 </label>
                 <div className="flex items-center px-3 py-2.5 rounded-xl border border-line bg-surface2">
                   <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                    style={{ colorScheme: 'dark' }}
                     className="w-full bg-transparent text-sm text-snow outline-none" />
                 </div>
               </div>
@@ -1112,21 +1130,35 @@ function BookingFormModal({
                 )}
               </div>
 
-              {/* Invitados adicionales */}
+              {/* Invitados — colapsable */}
               <div>
-                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
-                  {bookingType === 'custodia' ? 'Niños adicionales' : 'Invitados'}
-                </label>
-                <div className="space-y-2">
-                  {bookingType !== 'custodia' && (
-                    <Counter value={guestAdults} onChange={setGuestAdults} label="Adultos" />
-                  )}
-                  <Counter
-                    value={guestChildren}
-                    onChange={setGuestChildren}
-                    label={bookingType === 'custodia' ? 'Niños sin registrar' : 'Niños'}
-                  />
-                </div>
+                <button type="button" onClick={() => setGuestsOpen(o => !o)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-line bg-surface2 hover:border-line2 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Users size={14} className="text-fog" />
+                    <span className="text-sm font-medium text-fog">
+                      {bookingType === 'custodia' ? 'Niños adicionales' : 'Invitados'}
+                    </span>
+                    {(guestAdults + guestChildren) > 0 && (
+                      <span className="text-xs font-semibold text-snow bg-line px-2 py-0.5 rounded-full">
+                        {guestAdults + guestChildren}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown size={14} className={`text-fog transition-transform ${guestsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {guestsOpen && (
+                  <div className="mt-2 space-y-2">
+                    {bookingType !== 'custodia' && (
+                      <Counter value={guestAdults} onChange={setGuestAdults} label="Adultos" />
+                    )}
+                    <Counter
+                      value={guestChildren}
+                      onChange={setGuestChildren}
+                      label={bookingType === 'custodia' ? 'Niños sin registrar' : 'Niños'}
+                    />
+                  </div>
+                )}
               </div>
 
               {error && <p className="text-sm text-rose text-center">{error}</p>}
@@ -1251,14 +1283,38 @@ function timeToMins(t: string): number {
 }
 
 function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [h, m] = value ? value.split(':') : ['', '']
+  const initParts = value ? value.split(':') : ['', '']
+  const [localH, setLocalH] = useState(initParts[0] || '')
+  const [localM, setLocalM] = useState(initParts[1] || '')
+
+  useEffect(() => {
+    if (value) {
+      const [h, m] = value.split(':')
+      setLocalH(h || '')
+      setLocalM(m || '')
+    } else {
+      setLocalH('')
+      setLocalM('')
+    }
+  }, [value])
+
+  function handleH(hv: string) {
+    setLocalH(hv)
+    const mv = localM || '00'
+    onChange(hv ? `${hv}:${mv}` : '')
+  }
+  function handleM(mv: string) {
+    setLocalM(mv)
+    if (localH) onChange(`${localH}:${mv}`)
+  }
+
   const hours = Array.from({ length: 17 }, (_, i) => String(i + 7).padStart(2, '0'))
   const minutes = ['00', '15', '30', '45']
   return (
     <div className="flex items-center gap-1 bg-surface2 rounded-xl border border-line px-4 py-3">
       <select
-        value={h}
-        onChange={e => { const hv = e.target.value; onChange(hv && m ? `${hv}:${m}` : hv ? `${hv}:00` : '') }}
+        value={localH}
+        onChange={e => handleH(e.target.value)}
         className="bg-transparent text-2xl font-bold text-snow outline-none appearance-none cursor-pointer w-10 text-center"
       >
         <option value="">--</option>
@@ -1266,8 +1322,8 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
       </select>
       <span className="text-2xl font-bold text-fog select-none">:</span>
       <select
-        value={m}
-        onChange={e => { const mv = e.target.value; onChange(h && mv ? `${h}:${mv}` : '') }}
+        value={localM}
+        onChange={e => handleM(e.target.value)}
         className="bg-transparent text-2xl font-bold text-snow outline-none appearance-none cursor-pointer w-10 text-center"
       >
         <option value="">--</option>
