@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
@@ -798,24 +798,26 @@ function CheckinNewMemberModal({
 
 // ── Modal reserva: titular + tipo (paso 1 de 2) ──
 function BookingSearchAndTypeModal({
-  filtered, query, onQueryChange, preselectedMember,
+  filtered, query, onQueryChange, preselectedMember, types: reservableTypes,
   onProceed, onNewMember, onClose,
 }: {
   filtered: FullMember[]
   query: string
   onQueryChange: (q: string) => void
   preselectedMember: FullMember | null
-  onProceed: (member: FullMember, type: 'birthday' | 'custodia' | 'other') => void
+  types: { category: string; flow: 'birthday' | 'custodia' | 'other'; label: string }[]
+  onProceed: (member: FullMember, type: 'birthday' | 'custodia' | 'other', category: string) => void
   onNewMember: () => void
   onClose: () => void
 }) {
   const [member, setMember] = useState<FullMember | null>(preselectedMember)
 
-  const types = [
-    { key: 'birthday' as const, label: 'Cumpleaños', desc: 'Celebración con sala reservada', Icon: Cake,     colorCls: 'text-iris',      activeCls: 'border-iris/40 bg-iris/10 hover:bg-iris/15' },
-    { key: 'custodia' as const, label: 'Custodia',   desc: 'Servicio de cuidado con horario', Icon: Clock,   colorCls: 'text-cyan-300',  activeCls: 'border-cyan-300/40 bg-cyan-300/10 hover:bg-cyan-300/15' },
-    { key: 'other'    as const, label: 'Otro',        desc: 'Otro tipo de reserva o evento',   Icon: Calendar, colorCls: 'text-lime',     activeCls: 'border-lime/40 bg-lime/10 hover:bg-lime/15' },
-  ]
+  const flowMeta = {
+    birthday: { Icon: Cake,     colorCls: 'text-iris',     activeCls: 'border-iris/40 bg-iris/10 hover:bg-iris/15',           desc: 'Celebración con sala reservada' },
+    custodia: { Icon: Clock,    colorCls: 'text-cyan-300', activeCls: 'border-cyan-300/40 bg-cyan-300/10 hover:bg-cyan-300/15', desc: 'Servicio de cuidado con horario' },
+    other:    { Icon: Calendar, colorCls: 'text-lime',     activeCls: 'border-lime/40 bg-lime/10 hover:bg-lime/15',            desc: 'Reserva con paquete de servicio' },
+  } as const
+  const types = reservableTypes.map(t => ({ key: t.flow, category: t.category, label: t.label, ...flowMeta[t.flow] }))
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
@@ -892,8 +894,8 @@ function BookingSearchAndTypeModal({
             </p>
             <div className="space-y-2">
               {types.map(t => (
-                <button key={t.key}
-                  onClick={() => { if (member) { onProceed(member, t.key) } }}
+                <button key={t.category}
+                  onClick={() => { if (member) { onProceed(member, t.key, t.category) } }}
                   className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors text-left ${
                     member ? `${t.activeCls}` : 'border-line bg-surface2 opacity-50 cursor-not-allowed'
                   }`}
@@ -906,8 +908,13 @@ function BookingSearchAndTypeModal({
                   <ChevronRight size={15} className={member ? 'text-fog' : 'text-line2'} />
                 </button>
               ))}
+              {types.length === 0 && (
+                <p className="text-xs text-mist text-center py-4">
+                  No hay servicios reservables. Marca un servicio como «Reservable» en Panel → Servicios.
+                </p>
+              )}
             </div>
-            {!member && (
+            {!member && types.length > 0 && (
               <p className="text-xs text-mist text-center pt-1">Selecciona un titular para continuar</p>
             )}
           </div>
@@ -928,10 +935,11 @@ function chargeableGuests(adults: number, children: number, included: number) {
 
 // ── Modal reserva 3: formulario ──
 function BookingFormModal({
-  member, bookingType, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
+  member, bookingType, serviceCategory, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
 }: {
   member: FullMember
   bookingType: 'birthday' | 'custodia' | 'other'
+  serviceCategory: string
   selectedDate: string
   services: BookingService[]
   rateAdult: number
@@ -957,7 +965,7 @@ function BookingFormModal({
   const [guestsOpen, setGuestsOpen] = useState(false)
   const [notes, setNotes]         = useState('')
   // Pagos
-  const serviceCat = bookingType === 'birthday' ? 'cumpleanos' : bookingType === 'custodia' ? 'custodia' : 'otros'
+  const serviceCat = serviceCategory
   const catServices = serviceCat ? services.filter(s => s.category === serviceCat) : []
   const [serviceId, setServiceId] = useState('')
   const [totalStr, setTotalStr]   = useState('')
@@ -1420,6 +1428,7 @@ type BookingService = {
   price_per_guest_child: number | null
   included_guests: number | null
   applies_to: string[] | null
+  reservable: boolean | null
 }
 
 type BookingAddon = { name: string; price: number }
@@ -1610,6 +1619,7 @@ function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: st
 
 export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const isToday = selectedDate === todayStr
 
   function navigateDate(delta: number) {
@@ -1669,7 +1679,49 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const newMemberReturnTo = useRef<'checkin' | 'booking'>('checkin')
   const [bookingMember, setBookingMember] = useState<FullMember | null>(null)
   const [bookingType, setBookingType] = useState<'birthday' | 'custodia' | 'other' | null>(null)
+  const [bookingCategory, setBookingCategory] = useState<string>('otros')
   const [bookingQuery, setBookingQuery] = useState('')
+
+  // Abrir el flujo de nueva reserva cuando se llega con ?nueva=1 (p. ej. desde el calendario)
+  useEffect(() => {
+    if (searchParams.get('nueva') === '1') {
+      setBookingModal('pick')
+      setBookingQuery('')
+      const params = new URLSearchParams(Array.from(searchParams.entries()))
+      params.delete('nueva')
+      router.replace(params.toString() ? `/?${params.toString()}` : '/')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Etiquetas de categorías (compartidas con la pantalla de servicios vía localStorage)
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({
+    cumpleanos: 'Cumpleaños', custodia: 'Custodia', otros: 'Otro',
+  })
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('wm_service_categories')
+      if (raw) {
+        const cats = JSON.parse(raw) as { value: string; label: string }[]
+        setCategoryLabels(prev => ({ ...prev, ...Object.fromEntries(cats.map(c => [c.value, c.label])) }))
+      }
+    } catch {}
+  }, [])
+
+  // Tipos reservables: una tarjeta por categoría con al menos un servicio reservable
+  const reservableTypes = (() => {
+    const preferred = ['cumpleanos', 'custodia', 'otros']
+    const cats = Array.from(new Set(bookingServices.filter(s => s.reservable).map(s => s.category)))
+    cats.sort((a, b) => {
+      const ia = preferred.indexOf(a), ib = preferred.indexOf(b)
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+    })
+    return cats.map(cat => ({
+      category: cat,
+      flow: (cat === 'cumpleanos' ? 'birthday' : cat === 'custodia' ? 'custodia' : 'other') as 'birthday' | 'custodia' | 'other',
+      label: categoryLabels[cat] ?? cat.charAt(0).toUpperCase() + cat.slice(1),
+    }))
+  })()
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -1722,7 +1774,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (cust)  setRateCustodia(Number(cust.price))
       })
     supabase.from('services')
-      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to')
+      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable')
       .eq('active', true).order('sort_order')
       .then(({ data }) => { if (data) setBookingServices(data as BookingService[]) })
   }, [])
@@ -3778,7 +3830,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             query={bookingQuery}
             onQueryChange={setBookingQuery}
             preselectedMember={bookingMember}
-            onProceed={(m, t) => { setBookingMember(m); setBookingType(t); setBookingModal('form') }}
+            types={reservableTypes}
+            onProceed={(m, t, cat) => { setBookingMember(m); setBookingType(t); setBookingCategory(cat); setBookingModal('form') }}
             onNewMember={() => { newMemberReturnTo.current = 'booking'; setCheckinModal('new-member') }}
             onClose={closeAll}
           />
@@ -3789,6 +3842,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <BookingFormModal
           member={bookingMember}
           bookingType={bookingType}
+          serviceCategory={bookingCategory}
           selectedDate={selectedDate}
           services={bookingServices}
           rateAdult={rateAdult}

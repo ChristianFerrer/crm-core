@@ -20,6 +20,7 @@ type Service = {
   price_per_guest_child: number | null
   included_guests: number | null
   applies_to: string[] | null
+  reservable: boolean | null
 }
 
 // Tipos de reserva a los que puede asociarse un sub-servicio
@@ -49,6 +50,7 @@ type FormData = {
   price_per_guest_child: string
   included_guests: string
   applies_to: string[]
+  reservable: boolean
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -75,7 +77,7 @@ const CAT_COLORS = [
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [] }
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [], reservable: false }
 
 // Categorías que corresponden a paquetes reservables (muestran config de pagos)
 const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
@@ -161,6 +163,7 @@ export default function ServiciosPage() {
       price_per_guest_child: s.price_per_guest_child ? String(s.price_per_guest_child) : '',
       included_guests: s.included_guests ? String(s.included_guests) : '',
       applies_to: s.applies_to ?? [],
+      reservable: s.reservable ?? false,
     })
     setEditTarget(s); setModal('edit')
   }
@@ -178,6 +181,7 @@ export default function ServiciosPage() {
       price_per_guest_child: form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
       included_guests: form.included_guests ? parseInt(form.included_guests) : 0,
       applies_to: form.category === 'subservicios' ? form.applies_to : [],
+      reservable: form.reservable,
     }
     if (modal === 'add') await supabase.from('services').insert({ ...payload, active: true })
     else if (editTarget) await supabase.from('services').update(payload).eq('id', editTarget.id)
@@ -425,6 +429,20 @@ export default function ServiciosPage() {
                   {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
+
+              {/* Reservable: aparece como tipo en el flujo de crear reserva */}
+              {form.category !== 'subservicios' && (
+                <button type="button" onClick={() => setForm(f => ({ ...f, reservable: !f.reservable }))}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40 text-left">
+                  <div className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${form.reservable ? 'bg-lime' : 'bg-line'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.reservable ? 'translate-x-4' : ''}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-snow">Reservable</p>
+                    <p className="text-[11px] text-mist">Aparece como tipo al crear una reserva</p>
+                  </div>
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
