@@ -1009,26 +1009,20 @@ function BookingFormModal({
       <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-line shrink-0">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0 mt-0.5">
                 <ChevronLeft size={16} />
               </button>
-              <div className="flex items-center gap-2">
-                <TypeIcon size={20} className={typeColors[bookingType]} />
-                <div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <TypeIcon size={20} className="text-snow" />
                   <p className="text-xl font-bold text-snow leading-tight">{typeLabels[bookingType]}</p>
-                  <p className="text-[11px] text-fog mt-0.5">Paso 2 de 2</p>
                 </div>
+                <p className="text-[11px] text-fog mt-1">Paso 2 de 2</p>
               </div>
             </div>
             <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5"><X size={16} /></button>
-          </div>
-          {/* Titular — no editable */}
-          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-line/60 bg-surface2/60">
-            <User size={13} className="text-fog shrink-0" />
-            <span className="text-xs text-fog">Titular</span>
-            <span className="ml-auto text-sm font-semibold text-snow">{member.name}</span>
           </div>
         </div>
 
@@ -1044,6 +1038,16 @@ function BookingFormModal({
             </div>
           ) : (
             <>
+              {/* Titular — no editable */}
+              <div>
+                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Titular</p>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40">
+                  <div className="w-5 h-5 rounded-md border-2 border-line2 bg-surface shrink-0" />
+                  <span className="flex-1 text-sm font-medium text-fog">{member.name}</span>
+                  <span className="text-[10px] text-mist font-medium">Titular</span>
+                </div>
+              </div>
+
               {/* Niño/a — selector cumpleaños (checkbox) y custodia (multi-checkbox) */}
               {member.children && member.children.length > 0 && (bookingType === 'birthday' || bookingType === 'custodia') && (
                 <div>
@@ -1289,52 +1293,15 @@ function timeToMins(t: string): number {
 }
 
 function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const initParts = value ? value.split(':') : ['', '']
-  const [localH, setLocalH] = useState(initParts[0] || '')
-  const [localM, setLocalM] = useState(initParts[1] || '')
-
-  useEffect(() => {
-    if (value) {
-      const [h, m] = value.split(':')
-      setLocalH(h || '')
-      setLocalM(m || '')
-    } else {
-      setLocalH('')
-      setLocalM('')
-    }
-  }, [value])
-
-  function handleH(hv: string) {
-    setLocalH(hv)
-    const mv = localM || '00'
-    onChange(hv ? `${hv}:${mv}` : '')
-  }
-  function handleM(mv: string) {
-    setLocalM(mv)
-    if (localH) onChange(`${localH}:${mv}`)
-  }
-
-  const hours = Array.from({ length: 17 }, (_, i) => String(i + 7).padStart(2, '0'))
-  const minutes = ['00', '15', '30', '45']
   return (
-    <div className="flex items-center gap-1 bg-surface2 rounded-xl border border-line px-4 py-3">
-      <select
-        value={localH}
-        onChange={e => handleH(e.target.value)}
-        className="bg-transparent text-2xl font-bold text-snow outline-none appearance-none cursor-pointer w-10 text-center"
-      >
-        <option value="">--</option>
-        {hours.map(hr => <option key={hr} value={hr}>{hr}</option>)}
-      </select>
-      <span className="text-2xl font-bold text-fog select-none">:</span>
-      <select
-        value={localM}
-        onChange={e => handleM(e.target.value)}
-        className="bg-transparent text-2xl font-bold text-snow outline-none appearance-none cursor-pointer w-10 text-center"
-      >
-        <option value="">--</option>
-        {minutes.map(min => <option key={min} value={min}>{min}</option>)}
-      </select>
+    <div className="flex items-center px-4 py-3 bg-surface2 rounded-xl border border-line">
+      <input
+        type="time"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{ colorScheme: 'dark' }}
+        className="w-full bg-transparent text-base font-semibold text-snow outline-none"
+      />
     </div>
   )
 }
