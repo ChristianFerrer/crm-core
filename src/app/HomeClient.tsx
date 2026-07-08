@@ -29,7 +29,11 @@ type TodayVisit = {
   children_count: number
   booking_id: string | null
   paid_at: string | null
-  bookings: { type: string; amount: number | null; deposit_amount: number | null; payment_status: string | null } | null
+  bookings: {
+    type: string; amount: number | null; deposit_amount: number | null; payment_status: string | null
+    guest_adults: number | null; guest_children: number | null
+    services: { price: number | null; price_per_guest_adult: number | null; price_per_guest_child: number | null } | null
+  } | null
   members: { name: string } | null
   memberships: {
     sessions_remaining: number
@@ -940,7 +944,7 @@ function BookingFormModal({
   const [guestChildren, setGuestChildren] = useState(0)
   const [notes, setNotes]         = useState('')
   // Pagos
-  const serviceCat = bookingType === 'birthday' ? 'cumpleaos' : bookingType === 'custodia' ? 'custodia' : null
+  const serviceCat = bookingType === 'birthday' ? 'cumpleanos' : bookingType === 'custodia' ? 'custodia' : null
   const catServices = serviceCat ? services.filter(s => s.category === serviceCat) : []
   const [serviceId, setServiceId] = useState('')
   const [totalStr, setTotalStr]   = useState('')
@@ -1909,15 +1913,45 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     titular: number; ninos: number; regular: number
     bonoPrecioSesion: number | null; ahorro: number; total: number
     isPackage: boolean; deposit: number; toPay: number
+    pkg?: {
+      base: number; rateA: number; rateC: number
+      contractedA: number; contractedC: number; presentA: number; presentC: number
+      live: boolean
+    }
   } {
-    // Reserva con paquete contratado (cumpleaños/custodia/otro con importe): el total es el del paquete
-    const bAmount = visit.bookings?.amount != null ? Number(visit.bookings.amount) : null
+    // Reserva con paquete contratado: el total es el del paquete
+    const bk = visit.bookings
+    const bAmount = bk?.amount != null ? Number(bk.amount) : null
     if (bAmount != null) {
-      const deposit = visit.bookings?.deposit_amount != null ? Number(visit.bookings.deposit_amount) : 0
-      const toPay = Math.max(0, Math.round((bAmount - deposit) * 100) / 100)
+      const round2 = (n: number) => Math.round(n * 100) / 100
+      const deposit = bk?.deposit_amount != null ? Number(bk.deposit_amount) : 0
+      const svc = bk?.services
+      // Recálculo en vivo según asistentes presentes (cumpleaños y otro; custodia mantiene lo contratado)
+      let total = bAmount
+      let pkg: NonNullable<ReturnType<typeof calcImporte>['pkg']> | undefined
+      if (svc && svc.price != null && bk?.type !== 'custodia') {
+        const base = Number(svc.price) || 0
+        const cfgA = Number(svc.price_per_guest_adult) || 0
+        const cfgC = Number(svc.price_per_guest_child) || 0
+        const rateA = cfgA > 0 ? cfgA : rateAdult
+        const rateC = cfgC > 0 ? cfgC : rateChild
+        // Invitados presentes = conteo de la visita menos titular (y niño del cumple)
+        const presentA = Math.max(0, visit.adults_count - 1)
+        const presentC = bk?.type === 'birthday'
+          ? Math.max(0, visit.children_count - 1)
+          : visit.children_count
+        total = round2(base + presentA * rateA + presentC * rateC)
+        pkg = {
+          base, rateA, rateC,
+          contractedA: bk?.guest_adults ?? 0,
+          contractedC: bk?.guest_children ?? 0,
+          presentA, presentC, live: true,
+        }
+      }
+      const toPay = Math.max(0, round2(total - deposit))
       return {
-        titular: 0, ninos: 0, regular: bAmount, bonoPrecioSesion: null, ahorro: 0,
-        total: bAmount, isPackage: true, deposit, toPay,
+        titular: 0, ninos: 0, regular: total, bonoPrecioSesion: null, ahorro: 0,
+        total, isPackage: true, deposit, toPay, pkg,
       }
     }
     const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
@@ -2789,9 +2823,35 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <div>
                     <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Reserva</p>
                     <div className="space-y-1.5">
-                      <div className="flex justify-between text-xs">
+                      {imp.pkg?.live && (
+                        <>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-fog">Paquete base</span>
+                            <span className="text-snow">{imp.pkg.base.toFixed(2)}€</span>
+                          </div>
+                          {(imp.pkg.presentA > 0 || imp.pkg.contractedA > 0) && (
+                            <div className="flex justify-between text-xs">
+                              <span className="text-fog">
+                                {imp.pkg.presentA} adulto{imp.pkg.presentA !== 1 ? 's' : ''} × {imp.pkg.rateA.toFixed(2)}€
+                                {imp.pkg.presentA !== imp.pkg.contractedA && <span className="text-mist"> (contratados {imp.pkg.contractedA})</span>}
+                              </span>
+                              <span className="text-snow">{(imp.pkg.presentA * imp.pkg.rateA).toFixed(2)}€</span>
+                            </div>
+                          )}
+                          {(imp.pkg.presentC > 0 || imp.pkg.contractedC > 0) && (
+                            <div className="flex justify-between text-xs">
+                              <span className="text-fog">
+                                {imp.pkg.presentC} niño{imp.pkg.presentC !== 1 ? 's' : ''} × {imp.pkg.rateC.toFixed(2)}€
+                                {imp.pkg.presentC !== imp.pkg.contractedC && <span className="text-mist"> (contratados {imp.pkg.contractedC})</span>}
+                              </span>
+                              <span className="text-snow">{(imp.pkg.presentC * imp.pkg.rateC).toFixed(2)}€</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
                         <span className="text-fog">Total del paquete</span>
-                        <span className="text-snow font-semibold">{imp.total.toFixed(2)}€</span>
+                        <span className="text-snow">{imp.total.toFixed(2)}€</span>
                       </div>
                       {imp.deposit > 0 && (
                         <div className="flex justify-between text-xs">

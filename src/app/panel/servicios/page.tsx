@@ -41,11 +41,12 @@ type FormData = {
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
-  { value: 'entrada', label: 'Entrada',      color: 'text-lime',  bg: 'bg-lime/10',  border: 'border-lime/30' },
-  { value: 'bono',    label: 'Bono',         color: 'text-iris',  bg: 'bg-iris/10',  border: 'border-iris/30' },
-  { value: 'sala',    label: 'Sala privada', color: 'text-amber', bg: 'bg-amber/10', border: 'border-amber/30' },
-  { value: 'custodia',label: 'Custodia',     color: 'text-mint',  bg: 'bg-mint/10',  border: 'border-mint/30' },
-  { value: 'general', label: 'General',      color: 'text-fog',   bg: 'bg-fog/10',   border: 'border-fog/30' },
+  { value: 'entrada',   label: 'Entrada',      color: 'text-lime',      bg: 'bg-lime/10',      border: 'border-lime/30' },
+  { value: 'bono',      label: 'Bono',         color: 'text-iris',      bg: 'bg-iris/10',      border: 'border-iris/30' },
+  { value: 'cumpleanos',label: 'Cumpleaños',   color: 'text-cyan-300',  bg: 'bg-cyan-300/10',  border: 'border-cyan-300/30' },
+  { value: 'sala',      label: 'Sala privada', color: 'text-amber',     bg: 'bg-amber/10',     border: 'border-amber/30' },
+  { value: 'custodia',  label: 'Custodia',     color: 'text-mint',      bg: 'bg-mint/10',      border: 'border-mint/30' },
+  { value: 'general',   label: 'General',      color: 'text-fog',       bg: 'bg-fog/10',       border: 'border-fog/30' },
 ]
 
 const CAT_COLORS = [
@@ -64,14 +65,20 @@ const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 
 const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '' }
 
 // Categorías que corresponden a paquetes reservables (muestran config de pagos)
-const BOOKING_CATEGORIES = ['cumpleaos', 'cumpleaños', 'sala', 'custodia']
+const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
 
 const STORAGE_KEY = 'wm_service_categories'
 
 function loadCategories(): Category[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const stored: Category[] = JSON.parse(raw)
+      const values = new Set(stored.map(c => c.value))
+      // Fusiona categorías por defecto que falten (p. ej. 'cumpleanos' añadida después)
+      const missing = DEFAULT_CATEGORIES.filter(c => !values.has(c.value))
+      return missing.length > 0 ? [...stored, ...missing] : stored
+    }
   } catch {}
   return DEFAULT_CATEGORIES
 }
