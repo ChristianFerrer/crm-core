@@ -912,12 +912,14 @@ function BookingSearchAndTypeModal({
 
 // ── Modal reserva 3: formulario ──
 function BookingFormModal({
-  member, bookingType, selectedDate, services, tenantId, onBack, onClose, onSaved,
+  member, bookingType, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
 }: {
   member: FullMember
   bookingType: 'birthday' | 'custodia' | 'other'
   selectedDate: string
   services: BookingService[]
+  rateAdult: number
+  rateChild: number
   tenantId: string | null
   onBack: () => void
   onClose: () => void
@@ -950,13 +952,16 @@ function BookingFormModal({
   useEffect(() => {
     if (!selectedService) return
     const base = Number(selectedService.price) || 0
-    const ppa  = Number(selectedService.price_per_guest_adult) || 0
-    const ppc  = Number(selectedService.price_per_guest_child) || 0
+    // Si no hay tarifa por invitado configurada en el servicio, se usa la de entrada libre
+    const cfgA = Number(selectedService.price_per_guest_adult) || 0
+    const cfgC = Number(selectedService.price_per_guest_child) || 0
+    const ppa  = cfgA > 0 ? cfgA : rateAdult
+    const ppc  = cfgC > 0 ? cfgC : rateChild
     const total = round2(base + guestAdults * ppa + guestChildren * ppc)
     setTotalStr(String(total))
     const pct = selectedService.deposit_pct != null ? Number(selectedService.deposit_pct) : 50
     setDepositStr(String(round2(total * pct / 100)))
-  }, [serviceId, guestAdults, guestChildren])
+  }, [serviceId, guestAdults, guestChildren, rateAdult, rateChild])
 
   const totalNum   = Number(totalStr) || 0
   const depositNum = Number(depositStr) || 0
@@ -3563,6 +3568,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           bookingType={bookingType}
           selectedDate={selectedDate}
           services={bookingServices}
+          rateAdult={rateAdult}
+          rateChild={rateChild}
           tenantId={getStoredTenant()?.id ?? null}
           onBack={() => setBookingModal('pick')}
           onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery('') }}

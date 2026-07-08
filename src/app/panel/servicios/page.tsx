@@ -15,6 +15,9 @@ type Service = {
   duration_min: number | null
   active: boolean
   sort_order: number | null
+  deposit_pct: number | null
+  price_per_guest_adult: number | null
+  price_per_guest_child: number | null
 }
 
 type Category = {
@@ -32,6 +35,9 @@ type FormData = {
   price: string
   price_unit: string
   duration_min: string
+  deposit_pct: string
+  price_per_guest_adult: string
+  price_per_guest_child: string
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -55,7 +61,10 @@ const CAT_COLORS = [
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '' }
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '' }
+
+// Categorías que corresponden a paquetes reservables (muestran config de pagos)
+const BOOKING_CATEGORIES = ['cumpleaos', 'cumpleaños', 'sala', 'custodia']
 
 const STORAGE_KEY = 'wm_service_categories'
 
@@ -110,7 +119,13 @@ export default function ServiciosPage() {
 
   function openAdd() { setForm(EMPTY_FORM); setEditTarget(null); setModal('add') }
   function openEdit(s: Service) {
-    setForm({ name: s.name, description: s.description ?? '', category: s.category, price: String(s.price), price_unit: s.price_unit, duration_min: s.duration_min != null ? String(s.duration_min) : '' })
+    setForm({
+      name: s.name, description: s.description ?? '', category: s.category, price: String(s.price),
+      price_unit: s.price_unit, duration_min: s.duration_min != null ? String(s.duration_min) : '',
+      deposit_pct: s.deposit_pct != null ? String(s.deposit_pct) : '50',
+      price_per_guest_adult: s.price_per_guest_adult ? String(s.price_per_guest_adult) : '',
+      price_per_guest_child: s.price_per_guest_child ? String(s.price_per_guest_child) : '',
+    })
     setEditTarget(s); setModal('edit')
   }
   function closeModal() { setModal(null); setEditTarget(null); setForm(EMPTY_FORM) }
@@ -122,6 +137,9 @@ export default function ServiciosPage() {
       name: form.name.trim(), description: form.description.trim() || null,
       category: form.category, price: parseFloat(form.price),
       price_unit: form.price_unit, duration_min: form.duration_min ? parseInt(form.duration_min) : null,
+      deposit_pct: form.deposit_pct ? parseFloat(form.deposit_pct) : null,
+      price_per_guest_adult: form.price_per_guest_adult ? parseFloat(form.price_per_guest_adult) : 0,
+      price_per_guest_child: form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
     }
     if (modal === 'add') await supabase.from('services').insert({ ...payload, active: true })
     else if (editTarget) await supabase.from('services').update(payload).eq('id', editTarget.id)
@@ -350,6 +368,33 @@ export default function ServiciosPage() {
                 <label className="block text-xs font-semibold text-fog mb-1.5">Duración en minutos (opcional)</label>
                 <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 60" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
               </div>
+
+              {/* Config de reservas — solo para paquetes reservables */}
+              {BOOKING_CATEGORIES.includes(form.category) && (
+                <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Configuración de reservas</p>
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">Adelanto sugerido (%)</label>
+                    <input className={INPUT_CLASS} type="number" min="0" max="100" step="1" placeholder="50"
+                      value={form.deposit_pct} onChange={e => setForm(f => ({ ...f, deposit_pct: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">Adulto extra (€)</label>
+                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="Entrada libre"
+                        value={form.price_per_guest_adult} onChange={e => setForm(f => ({ ...f, price_per_guest_adult: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">Niño extra (€)</label>
+                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="Entrada libre"
+                        value={form.price_per_guest_child} onChange={e => setForm(f => ({ ...f, price_per_guest_child: e.target.value }))} />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-mist leading-relaxed">
+                    Si dejas en blanco el precio por invitado extra, se usará la tarifa de <span className="text-fog font-medium">entrada libre</span> (categoría «Entrada»).
+                  </p>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
