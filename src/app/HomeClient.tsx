@@ -430,13 +430,13 @@ function CheckinConfirmModal({
                       <button key={co.id} type="button"
                         onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
                         className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
-                          co.selected ? 'bg-iris/5 border-iris/30' : 'border-line hover:bg-surface2'
+                          co.selected ? 'bg-iris/5 border-iris/30' : 'border-line bg-surface2 hover:border-line2'
                         }`}>
-                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line'}`}>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
                           {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
                         </div>
                         <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
-                        <span className="text-[10px] text-mist shrink-0">Co-titular</span>
+                        <span className="text-[10px] text-iris font-medium shrink-0">Co-titular</span>
                       </button>
                     ))}
                   </div>
@@ -465,10 +465,10 @@ function CheckinConfirmModal({
                             sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
                           )}
                           className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
-                            sel ? 'bg-lime/5 border-lime/30' : 'border-line hover:bg-surface2'
+                            sel ? 'bg-iris/5 border-iris/30' : 'border-line bg-surface2 hover:border-line2'
                           }`}>
-                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-lime border-lime' : 'bg-surface2 border-line'}`}>
-                            {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
+                            {sel && <Check size={11} className="text-white" strokeWidth={3} />}
                           </div>
                           <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
                           {age && <span className="text-xs text-mist shrink-0">{age}</span>}
@@ -937,7 +937,10 @@ function BookingFormModal({
   const [saved, setSaved]         = useState(false)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const typeLabels = { birthday: 'Reserva de Cumpleaños', custodia: 'Reserva de Custodia', other: 'Otra Reserva' }
+  const typeLabels  = { birthday: 'Reserva de Cumpleaños', custodia: 'Reserva de Custodia', other: 'Otra Reserva' }
+  const typeIcons   = { birthday: Cake, custodia: Clock, other: Calendar }
+  const typeColors  = { birthday: 'text-iris', custodia: 'text-cyan-300', other: 'text-lime' }
+  const TypeIcon    = typeIcons[bookingType]
   const needsTitle = bookingType === 'other'
   const birthdayValid = bookingType !== 'birthday' || !!birthdayChild || member.children.length === 0
   const custodiaValid = bookingType !== 'custodia' || selectedChildren.length > 0 || member.children.length === 0
@@ -1011,9 +1014,12 @@ function BookingFormModal({
               <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
                 <ChevronLeft size={16} />
               </button>
-              <div>
-                <p className="text-xl font-bold text-snow leading-tight">{typeLabels[bookingType]}</p>
-                <p className="text-[11px] text-fog mt-0.5">Paso 2 de 2</p>
+              <div className="flex items-center gap-2">
+                <TypeIcon size={20} className={typeColors[bookingType]} />
+                <div>
+                  <p className="text-xl font-bold text-snow leading-tight">{typeLabels[bookingType]}</p>
+                  <p className="text-[11px] text-fog mt-0.5">Paso 2 de 2</p>
+                </div>
               </div>
             </div>
             <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5"><X size={16} /></button>
@@ -1052,12 +1058,12 @@ function BookingFormModal({
                         return (
                           <button key={c.name} type="button" onClick={() => handleChildSelect(c.name)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
-                              checked ? 'border-iris/40 bg-iris/10' : 'border-line bg-surface2 hover:border-line2'
+                              checked ? 'border-iris/30 bg-iris/5' : 'border-line bg-surface2 hover:border-line2'
                             }`}>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              checked ? 'bg-iris border-iris' : 'border-line2'
+                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              checked ? 'bg-iris border-iris' : 'bg-surface2 border-line2'
                             }`}>
-                              {checked && <div className="w-2 h-2 rounded-full bg-white" />}
+                              {checked && <Check size={11} className="text-white" strokeWidth={3} />}
                             </div>
                             <span className={`flex-1 text-sm font-medium ${checked ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
                             {c.birth_date && <span className="text-xs text-mist shrink-0">{fmtChildAge(c.birth_date)}</span>}
@@ -1072,12 +1078,12 @@ function BookingFormModal({
                             sel ? prev.filter(n => n !== c.name) : [...prev, c.name]
                           )}
                           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
-                            sel ? 'border-cyan-300/40 bg-cyan-300/10' : 'border-line bg-surface2 hover:border-line2'
+                            sel ? 'border-iris/30 bg-iris/5' : 'border-line bg-surface2 hover:border-line2'
                           }`}>
                           <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            sel ? 'bg-cyan-300 border-cyan-300' : 'border-line2'
+                            sel ? 'bg-iris border-iris' : 'bg-surface2 border-line2'
                           }`}>
-                            {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
+                            {sel && <Check size={11} className="text-white" strokeWidth={3} />}
                           </div>
                           <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
                           {age && <span className="text-xs text-mist shrink-0">{age}</span>}
@@ -1130,33 +1136,33 @@ function BookingFormModal({
                 )}
               </div>
 
-              {/* Invitados — colapsable */}
+              {/* Invitados — colapsable con botón dashed */}
               <div>
-                <button type="button" onClick={() => setGuestsOpen(o => !o)}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-line bg-surface2 hover:border-line2 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <Users size={14} className="text-fog" />
-                    <span className="text-sm font-medium text-fog">
-                      {bookingType === 'custodia' ? 'Niños adicionales' : 'Invitados'}
-                    </span>
-                    {(guestAdults + guestChildren) > 0 && (
-                      <span className="text-xs font-semibold text-snow bg-line px-2 py-0.5 rounded-full">
-                        {guestAdults + guestChildren}
-                      </span>
-                    )}
-                  </div>
-                  <ChevronDown size={14} className={`text-fog transition-transform ${guestsOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {guestsOpen && (
-                  <div className="mt-2 space-y-2">
-                    {bookingType !== 'custodia' && (
-                      <Counter value={guestAdults} onChange={setGuestAdults} label="Adultos" />
-                    )}
-                    <Counter
-                      value={guestChildren}
-                      onChange={setGuestChildren}
-                      label={bookingType === 'custodia' ? 'Niños sin registrar' : 'Niños'}
-                    />
+                {!guestsOpen ? (
+                  <button type="button" onClick={() => setGuestsOpen(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line2 py-3 text-sm font-medium text-fog hover:border-line hover:text-snow transition-colors">
+                    <Plus size={14} />
+                    {bookingType === 'custodia' ? 'Añadir niños adicionales' : 'Añadir invitados adicionales'}
+                  </button>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">
+                        {bookingType === 'custodia' ? 'Niños adicionales' : 'Invitados'}
+                      </p>
+                      <button type="button" onClick={() => { setGuestsOpen(false); setGuestAdults(0); setGuestChildren(0) }}
+                        className="text-[10px] text-mist hover:text-rose transition-colors">Quitar</button>
+                    </div>
+                    <div className="space-y-2">
+                      {bookingType !== 'custodia' && (
+                        <Counter value={guestAdults} onChange={setGuestAdults} label="Adultos" />
+                      )}
+                      <Counter
+                        value={guestChildren}
+                        onChange={setGuestChildren}
+                        label={bookingType === 'custodia' ? 'Niños sin registrar' : 'Niños'}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -2817,16 +2823,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <button key={cot.id}
                           onClick={() => setAcompCoTitulares(prev => prev.map(c => c.id === cot.id ? { ...c, selected: !c.selected } : c))}
                           className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
-                            cot.selected ? 'bg-lime/10 border-lime/40' : 'bg-surface2 border-line hover:border-lime/30'
+                            cot.selected ? 'bg-iris/10 border-iris/40' : 'bg-surface2 border-line hover:border-line2'
                           }`}
                         >
                           <span className={`w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            cot.selected ? 'bg-lime border-lime' : 'border-line2'
+                            cot.selected ? 'bg-iris border-iris' : 'border-line2'
                           }`}>
-                            {cot.selected && <Check size={10} className="text-ink" strokeWidth={3} />}
+                            {cot.selected && <Check size={10} className="text-white" strokeWidth={3} />}
                           </span>
                           <span className="text-xs font-medium text-snow flex-1">{cot.name}</span>
-                          <span className="text-[11px] text-lime font-medium">Co-titular</span>
+                          <span className="text-[11px] text-iris font-medium">Co-titular</span>
                         </button>
                       ))}
                     </div>
