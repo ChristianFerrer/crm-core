@@ -1042,9 +1042,11 @@ function BookingFormModal({
               <div>
                 <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Titular</p>
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40">
-                  <div className="w-5 h-5 rounded-md border-2 border-line2 bg-surface shrink-0" />
-                  <span className="flex-1 text-sm font-medium text-fog">{member.name}</span>
-                  <span className="text-[10px] text-mist font-medium">Titular</span>
+                  <div className="w-5 h-5 rounded-md border-2 border-line2 bg-line2 flex items-center justify-center shrink-0">
+                    <Check size={11} className="text-fog" strokeWidth={3} />
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-snow">{member.name}</span>
+                  <span className="text-[10px] text-snow font-medium">Titular</span>
                 </div>
               </div>
 
