@@ -947,7 +947,7 @@ function BookingFormModal({
   const [selectedChildren, setSelectedChildren] = useState<string[]>([])
   const [title, setTitle] = useState(
     bookingType === 'birthday' ? `Cumple de ${firstChild || member.name}` :
-    bookingType === 'custodia' ? `Custodia — ${member.name}` : ''
+    bookingType === 'custodia' ? `Custodia de ${member.children?.length > 0 ? member.children[0].name : member.name}` : ''
   )
   const [date, setDate]           = useState(selectedDate)
   const [startTime, setStart]     = useState('')
@@ -957,7 +957,7 @@ function BookingFormModal({
   const [guestsOpen, setGuestsOpen] = useState(false)
   const [notes, setNotes]         = useState('')
   // Pagos
-  const serviceCat = bookingType === 'birthday' ? 'cumpleanos' : bookingType === 'custodia' ? 'custodia' : null
+  const serviceCat = bookingType === 'birthday' ? 'cumpleanos' : bookingType === 'custodia' ? 'custodia' : 'otros'
   const catServices = serviceCat ? services.filter(s => s.category === serviceCat) : []
   const [serviceId, setServiceId] = useState('')
   const [totalStr, setTotalStr]   = useState('')
@@ -965,7 +965,10 @@ function BookingFormModal({
   const [paymentsOpen, setPaymentsOpen] = useState(false)
   const [selectedAddons, setSelectedAddons] = useState<BookingAddon[]>([])
   const selectedService = catServices.find(s => s.id === serviceId) || null
-  const subServices = services.filter(s => s.category === 'subservicios')
+  const subServices = services.filter(s =>
+    s.category === 'subservicios' &&
+    (!s.applies_to || s.applies_to.length === 0 || s.applies_to.includes(serviceCat))
+  )
   const round2 = (n: number) => Math.round(n * 100) / 100
   const addonsTotal = round2(selectedAddons.reduce((s, a) => s + (Number(a.price) || 0), 0))
 
@@ -1164,9 +1167,13 @@ function BookingFormModal({
                       const age = c.birth_date ? fmtChildAge(c.birth_date) : null
                       return (
                         <button key={c.name} type="button"
-                          onClick={() => setSelectedChildren(prev =>
-                            sel ? prev.filter(n => n !== c.name) : [...prev, c.name]
-                          )}
+                          onClick={() => setSelectedChildren(prev => {
+                            const next = sel ? prev.filter(n => n !== c.name) : [...prev, c.name]
+                            if (bookingType === 'custodia') {
+                              setTitle(next.length > 0 ? `Custodia de ${next.join(', ')}` : `Custodia de ${member.name}`)
+                            }
+                            return next
+                          })}
                           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
                             sel ? 'border-iris/30 bg-iris/5' : 'border-line bg-surface2 hover:border-line2'
                           }`}>
@@ -1412,6 +1419,7 @@ type BookingService = {
   price_per_guest_adult: number | null
   price_per_guest_child: number | null
   included_guests: number | null
+  applies_to: string[] | null
 }
 
 type BookingAddon = { name: string; price: number }
@@ -1714,7 +1722,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (cust)  setRateCustodia(Number(cust.price))
       })
     supabase.from('services')
-      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests')
+      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to')
       .eq('active', true).order('sort_order')
       .then(({ data }) => { if (data) setBookingServices(data as BookingService[]) })
   }, [])

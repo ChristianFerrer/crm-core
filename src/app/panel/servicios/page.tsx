@@ -19,7 +19,15 @@ type Service = {
   price_per_guest_adult: number | null
   price_per_guest_child: number | null
   included_guests: number | null
+  applies_to: string[] | null
 }
+
+// Tipos de reserva a los que puede asociarse un sub-servicio
+const RESERVABLE_TYPES = [
+  { value: 'cumpleanos', label: 'Cumpleaños' },
+  { value: 'custodia',   label: 'Custodia' },
+  { value: 'otros',      label: 'Otros' },
+]
 
 type Category = {
   value: string
@@ -40,6 +48,7 @@ type FormData = {
   price_per_guest_adult: string
   price_per_guest_child: string
   included_guests: string
+  applies_to: string[]
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -48,6 +57,7 @@ const DEFAULT_CATEGORIES: Category[] = [
   { value: 'cumpleanos',label: 'Cumpleaños',   color: 'text-cyan-300',  bg: 'bg-cyan-300/10',  border: 'border-cyan-300/30' },
   { value: 'sala',      label: 'Sala privada', color: 'text-amber',     bg: 'bg-amber/10',     border: 'border-amber/30' },
   { value: 'custodia',    label: 'Custodia',     color: 'text-mint',      bg: 'bg-mint/10',      border: 'border-mint/30' },
+  { value: 'otros',       label: 'Otros',        color: 'text-lime',      bg: 'bg-lime/10',      border: 'border-lime/30' },
   { value: 'subservicios',label: 'Sub-servicios',color: 'text-rose',      bg: 'bg-rose/10',      border: 'border-rose/30' },
   { value: 'general',     label: 'General',      color: 'text-fog',       bg: 'bg-fog/10',       border: 'border-fog/30' },
 ]
@@ -65,7 +75,7 @@ const CAT_COLORS = [
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '' }
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [] }
 
 // Categorías que corresponden a paquetes reservables (muestran config de pagos)
 const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
@@ -150,6 +160,7 @@ export default function ServiciosPage() {
       price_per_guest_adult: s.price_per_guest_adult ? String(s.price_per_guest_adult) : '',
       price_per_guest_child: s.price_per_guest_child ? String(s.price_per_guest_child) : '',
       included_guests: s.included_guests ? String(s.included_guests) : '',
+      applies_to: s.applies_to ?? [],
     })
     setEditTarget(s); setModal('edit')
   }
@@ -166,6 +177,7 @@ export default function ServiciosPage() {
       price_per_guest_adult: form.price_per_guest_adult ? parseFloat(form.price_per_guest_adult) : 0,
       price_per_guest_child: form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
       included_guests: form.included_guests ? parseInt(form.included_guests) : 0,
+      applies_to: form.category === 'subservicios' ? form.applies_to : [],
     }
     if (modal === 'add') await supabase.from('services').insert({ ...payload, active: true })
     else if (editTarget) await supabase.from('services').update(payload).eq('id', editTarget.id)
@@ -461,6 +473,29 @@ export default function ServiciosPage() {
                   <p className="text-[11px] text-mist leading-relaxed">
                     El precio cubre las <span className="text-fog font-medium">personas incluidas</span> (niños + adultos). Solo se cobran los invitados que excedan ese número. Si dejas en blanco el precio por invitado extra, se usa la tarifa de <span className="text-fog font-medium">entrada libre</span>.
                   </p>
+                </div>
+              )}
+
+              {/* Sub-servicio: a qué tipos de reserva puede agregarse */}
+              {form.category === 'subservicios' && (
+                <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-2.5">
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Se puede agregar a</p>
+                  <div className="space-y-1.5">
+                    {RESERVABLE_TYPES.map(t => {
+                      const sel = form.applies_to.includes(t.value)
+                      return (
+                        <button key={t.value} type="button"
+                          onClick={() => setForm(f => ({ ...f, applies_to: sel ? f.applies_to.filter(v => v !== t.value) : [...f.applies_to, t.value] }))}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${sel ? 'border-iris/30 bg-iris/5' : 'border-line bg-surface2 hover:border-line2'}`}>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
+                            {sel && <Check size={11} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <span className={`text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{t.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[11px] text-mist">Si no marcas ninguno, el sub-servicio estará disponible en todas las reservas.</p>
                 </div>
               )}
             </div>
