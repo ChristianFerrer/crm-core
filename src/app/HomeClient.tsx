@@ -783,6 +783,270 @@ function CheckinNewMemberModal({
 }
 
 
+// ── Modal reserva 1: búsqueda de miembro ──
+function BookingSearchModal({
+  filtered, query, onQueryChange, onSelect, onNewMember, onClose,
+}: {
+  filtered: FullMember[]
+  query: string
+  onQueryChange: (q: string) => void
+  onSelect: (m: FullMember) => void
+  onNewMember: () => void
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+          <div className="flex items-center gap-2">
+            <CalendarClock size={15} className="text-iris shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-snow">Nueva reserva</p>
+              <p className="text-[11px] text-fog">Busca el miembro titular</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+        </div>
+        <div className="px-5 pt-4 pb-2 shrink-0">
+          <div className="relative">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+            <input value={query} onChange={e => onQueryChange(e.target.value)}
+              placeholder="Buscar por nombre o teléfono..." autoFocus
+              className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1 divide-y divide-line/50">
+          {filtered.map(m => (
+            <button key={m.id} onClick={() => onSelect(m)}
+              className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface2 transition-colors">
+              <span className="flex-1 min-w-0">
+                <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
+                {m.phone && <span className="block text-xs text-mist">{m.phone}</span>}
+              </span>
+              {m.children && m.children.length > 0 && (
+                <span className="text-xs text-fog shrink-0">{m.children.length} hijo{m.children.length !== 1 ? 's' : ''}</span>
+              )}
+            </button>
+          ))}
+          {query.trim().length > 0 && filtered.length === 0 && (
+            <div className="flex flex-col items-center gap-4 py-8 px-5">
+              <p className="text-sm text-fog text-center">No se encontró ningún miembro.</p>
+              <button onClick={onNewMember}
+                className="flex items-center gap-2 rounded-xl bg-lime/10 border border-lime/30 px-5 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors">
+                <UserPlus size={15} /> Crear nuevo miembro
+              </button>
+            </div>
+          )}
+          {query.trim().length === 0 && (
+            <p className="py-8 text-center text-sm text-mist">Escribe un nombre o teléfono para buscar</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Modal reserva 2: selección de tipo ──
+function BookingTypeModal({
+  member, onSelect, onBack, onClose,
+}: {
+  member: FullMember
+  onSelect: (type: 'birthday' | 'custodia' | 'other') => void
+  onBack: () => void
+  onClose: () => void
+}) {
+  const types = [
+    { key: 'birthday' as const, label: 'Cumpleaños', desc: 'Celebración con niños y sala reservada', icon: '🎂', cls: 'border-iris/30 bg-iris/5 hover:bg-iris/10' },
+    { key: 'custodia' as const, label: 'Custodia',   desc: 'Servicio de cuidado con horario fijo',    icon: '🕐', cls: 'border-cyan-300/30 bg-cyan-300/5 hover:bg-cyan-300/10' },
+    { key: 'other'    as const, label: 'Otro',        desc: 'Otro tipo de reserva o evento',           icon: '📅', cls: 'border-line bg-surface2 hover:bg-line' },
+  ]
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
+          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
+            <ChevronLeft size={16} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-snow truncate">{member.name}</p>
+            <p className="text-[11px] text-fog">Tipo de reserva</p>
+          </div>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-2">
+          {types.map(t => (
+            <button key={t.key} onClick={() => onSelect(t.key)}
+              className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl border transition-colors text-left ${t.cls}`}>
+              <span className="text-2xl shrink-0">{t.icon}</span>
+              <div>
+                <p className="text-sm font-semibold text-snow">{t.label}</p>
+                <p className="text-xs text-fog">{t.desc}</p>
+              </div>
+              <ChevronRight size={16} className="text-mist ml-auto shrink-0" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Modal reserva 3: formulario ──
+function BookingFormModal({
+  member, bookingType, selectedDate, tenantId, onBack, onClose, onSaved,
+}: {
+  member: FullMember
+  bookingType: 'birthday' | 'custodia' | 'other'
+  selectedDate: string
+  tenantId: string | null
+  onBack: () => void
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const defaultTitle =
+    bookingType === 'birthday' ? `Cumpleaños de ${member.name}` :
+    bookingType === 'custodia' ? `Custodia — ${member.name}` : ''
+
+  const [title, setTitle]       = useState(defaultTitle)
+  const [startTime, setStart]   = useState('')
+  const [endTime, setEnd]       = useState('')
+  const [guests, setGuests]     = useState(0)
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState<string | null>(null)
+  const [saved, setSaved]       = useState(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  const typeLabels = { birthday: 'Cumpleaños', custodia: 'Custodia', other: 'Otro' }
+  const guestLabel = bookingType === 'custodia' ? 'Niños en custodia' : 'Invitados / niños'
+  const needsTitle = bookingType === 'other'
+  const isValid = (!needsTitle || title.trim()) && startTime && endTime
+
+  async function handleSave() {
+    if (!isValid || saving) return
+    setSaving(true); setError(null)
+    const { error: err } = await supabase.from('bookings').insert({
+      tenant_id: tenantId,
+      member_id: member.id,
+      type: bookingType,
+      title: title.trim() || defaultTitle,
+      start_time: startTime,
+      end_time: endTime,
+      guests: guests > 0 ? guests : null,
+      date: selectedDate,
+      status: 'active',
+    })
+    if (err) { setError(err.message); setSaving(false); return }
+    setSaved(true)
+    onSaved()
+    closeTimer.current = setTimeout(onClose, 1800)
+  }
+
+  const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2.5 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
+          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
+            <ChevronLeft size={16} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-snow truncate">{member.name}</p>
+            <p className="text-[11px] text-fog">{typeLabels[bookingType]}</p>
+          </div>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+          {saved ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <div className="w-16 h-16 rounded-full bg-lime/15 border border-lime/30 flex items-center justify-center">
+                <Check size={30} className="text-lime" strokeWidth={2.5} />
+              </div>
+              <p className="text-lg font-bold text-snow">¡Reserva guardada!</p>
+              <p className="text-sm text-fog text-center">La reserva de <span className="text-snow font-medium">{member.name}</span> ha sido registrada.</p>
+              <p className="text-xs text-mist mt-1">Cerrando automáticamente...</p>
+            </div>
+          ) : (
+            <>
+              {/* Título */}
+              <div>
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
+                  Título {needsTitle && <span className="text-rose">*</span>}
+                </label>
+                <input value={title} onChange={e => setTitle(e.target.value)}
+                  placeholder={needsTitle ? 'Nombre del evento o reserva' : defaultTitle}
+                  className={inputCls} />
+              </div>
+
+              {/* Horario */}
+              <div>
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
+                  Horario <span className="text-rose">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-mist px-1">Inicio</p>
+                    <div className="flex items-center px-3 py-2.5 rounded-xl border border-line bg-surface2">
+                      <input type="time" value={startTime} onChange={e => setStart(e.target.value)}
+                        className="w-full bg-transparent text-sm text-snow outline-none" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-mist px-1">Fin</p>
+                    <div className="flex items-center px-3 py-2.5 rounded-xl border border-line bg-surface2">
+                      <input type="time" value={endTime} onChange={e => setEnd(e.target.value)}
+                        className="w-full bg-transparent text-sm text-snow outline-none" />
+                    </div>
+                  </div>
+                </div>
+                {startTime && endTime && endTime <= startTime && (
+                  <p className="text-xs text-amber mt-1.5 px-1">La hora de fin debe ser posterior a la de inicio</p>
+                )}
+              </div>
+
+              {/* Invitados */}
+              <div>
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{guestLabel}</label>
+                <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line bg-surface2">
+                  <span className="text-sm text-fog">{guestLabel}</span>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => setGuests(n => Math.max(0, n - 1))} disabled={guests === 0}
+                      className="w-8 h-8 rounded-lg border border-line bg-surface text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                    <span className="w-5 text-center font-bold text-snow text-sm">{guests}</span>
+                    <button type="button" onClick={() => setGuests(n => n + 1)}
+                      className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hijos registrados (solo cumpleaños) */}
+              {bookingType === 'birthday' && member.children && member.children.length > 0 && (
+                <div className="rounded-xl border border-iris/20 bg-iris/5 px-4 py-3">
+                  <p className="text-[10px] font-semibold text-iris uppercase tracking-wide mb-1">Hijos registrados</p>
+                  <p className="text-xs text-fog">{member.children.map((c: any) => c.name).join(', ')}</p>
+                </div>
+              )}
+
+              {error && <p className="text-sm text-rose text-center">{error}</p>}
+
+              <button onClick={handleSave} disabled={!isValid || saving || (!!startTime && !!endTime && endTime <= startTime)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
+                style={{ boxShadow: 'var(--shadow-lime)' }}>
+                <CalendarClock size={17} strokeWidth={2.2} />
+                {saving ? 'Guardando...' : 'Guardar reserva'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 type HomeClientProps = {
   todayVisits: TodayVisit[]
   todayCustodias: TodayVisit[]
@@ -977,6 +1241,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [checkinMembers, setCheckinMembers] = useState<FullMember[]>([])
   const [detailVisitId, setDetailVisitId] = useState<string | null>(null)
   const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
+  const [bookingModal, setBookingModal] = useState<null | 'search' | 'type' | 'form'>(null)
+  const [bookingMember, setBookingMember] = useState<FullMember | null>(null)
+  const [bookingType, setBookingType] = useState<'birthday' | 'custodia' | 'other' | null>(null)
+  const [bookingQuery, setBookingQuery] = useState('')
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -1031,12 +1299,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   }, [])
 
   useEffect(() => {
-    if (!checkinModal || checkinMembers.length > 0) return
+    if ((!checkinModal && !bookingModal) || checkinMembers.length > 0) return
     supabase.from('members')
       .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
       .order('name')
       .then(({ data }) => { if (data) setCheckinMembers(data as unknown as FullMember[]) })
-  }, [checkinModal])
+  }, [checkinModal, bookingModal])
 
   const loadOpenChecks = useCallback(async () => {
     const visitIds = activeVisits.map(v => v.id)
@@ -1815,7 +2083,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <div className="px-4 pt-4 pb-3 border-b border-line flex items-center gap-2">
           <CalendarClock size={13} className="text-fog" />
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide">Agenda de hoy</h2>
-          <span className="ml-auto text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
+          <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
+          <button
+            onClick={() => { setBookingModal('search'); setBookingQuery('') }}
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris/30 rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-colors"
+          >
+            <Plus size={12} /> Nueva reserva
+          </button>
         </div>
 
         {timeline.length === 0 ? (
@@ -2831,6 +3105,50 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )
       })()}
+
+      {/* ── Flujo nueva reserva ── */}
+      {bookingModal === 'search' && (() => {
+        const filtered = bookingQuery.trim().length > 0
+          ? checkinMembers.filter(m => {
+              const q = bookingQuery.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+              const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+              const qd = q.replace(/\D/g, '')
+              return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
+            })
+          : []
+        const closeAll = () => { setBookingModal(null); setBookingQuery(''); setBookingMember(null); setBookingType(null) }
+        return (
+          <BookingSearchModal
+            filtered={filtered}
+            query={bookingQuery}
+            onQueryChange={setBookingQuery}
+            onSelect={m => { setBookingMember(m); setBookingModal('type') }}
+            onNewMember={() => setCheckinModal('new-member')}
+            onClose={closeAll}
+          />
+        )
+      })()}
+
+      {bookingModal === 'type' && bookingMember && (
+        <BookingTypeModal
+          member={bookingMember}
+          onSelect={t => { setBookingType(t); setBookingModal('form') }}
+          onBack={() => setBookingModal('search')}
+          onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery('') }}
+        />
+      )}
+
+      {bookingModal === 'form' && bookingMember && bookingType && (
+        <BookingFormModal
+          member={bookingMember}
+          bookingType={bookingType}
+          selectedDate={selectedDate}
+          tenantId={getStoredTenant()?.id ?? null}
+          onBack={() => setBookingModal('type')}
+          onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery('') }}
+          onSaved={() => { router.refresh(); setCheckinMembers([]) }}
+        />
+      )}
 
       {/* Modal 1: búsqueda de miembro */}
       {checkinModal === 'search' && (() => {
