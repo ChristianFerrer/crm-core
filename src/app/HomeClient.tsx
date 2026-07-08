@@ -932,6 +932,7 @@ function BookingFormModal({
   const [endTime, setEnd]         = useState('')
   const [guestAdults, setGuestAdults]     = useState(0)
   const [guestChildren, setGuestChildren] = useState(0)
+  const [notes, setNotes]         = useState('')
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [saved, setSaved]         = useState(false)
@@ -978,6 +979,7 @@ function BookingFormModal({
           ? selectedChildren.join(', ')
           : null,
       date: date,
+      notes: notes.trim() || null,
       status: 'confirmed',
     })
     if (err) { setError(err.message); setSaving(false); return }
@@ -1009,20 +1011,22 @@ function BookingFormModal({
       <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-line shrink-0">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0 mt-0.5">
                 <ChevronLeft size={16} />
               </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <TypeIcon size={20} className="text-snow" />
-                  <p className="text-xl font-bold text-snow leading-tight">{typeLabels[bookingType]}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <TypeIcon size={20} className="text-snow shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <FitText className="font-bold text-snow leading-tight" min={15} max={20}>{typeLabels[bookingType]}</FitText>
+                  </div>
                 </div>
                 <p className="text-[11px] text-fog mt-1">Paso 2 de 2</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5"><X size={16} /></button>
+            <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5 shrink-0"><X size={16} /></button>
           </div>
         </div>
 
@@ -1173,6 +1177,17 @@ function BookingFormModal({
                 )}
               </div>
 
+              {/* Notas */}
+              <div>
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
+                  Notas
+                </label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                  rows={3}
+                  placeholder="Alergias, decoración, peticiones especiales..."
+                  className={`${inputCls} resize-none`} />
+              </div>
+
               {error && <p className="text-sm text-rose text-center">{error}</p>}
 
               <button onClick={handleSave} disabled={!isValid || saving || (!!startTime && !!endTime && endTime <= startTime)}
@@ -1305,6 +1320,38 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
         className="w-full bg-transparent text-base font-semibold text-snow outline-none"
       />
     </div>
+  )
+}
+
+// Título que se auto-ajusta al ancho disponible: crece hasta `max` y se reduce hasta `min`
+function FitText({ children, min = 14, max = 22, className = '' }: { children: React.ReactNode; min?: number; max?: number; className?: string }) {
+  const spanRef = useRef<HTMLSpanElement>(null)
+  const [size, setSize] = useState(max)
+
+  useEffect(() => {
+    const el = spanRef.current
+    const parent = el?.parentElement
+    if (!el || !parent) return
+    const fit = () => {
+      let s = max
+      el.style.fontSize = `${s}px`
+      const avail = parent.clientWidth
+      while (s > min && el.offsetWidth > avail) {
+        s -= 1
+        el.style.fontSize = `${s}px`
+      }
+      setSize(s)
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(parent)
+    return () => ro.disconnect()
+  }, [children, min, max])
+
+  return (
+    <span ref={spanRef} className={className} style={{ fontSize: size, whiteSpace: 'nowrap', display: 'inline-block', maxWidth: '100%' }}>
+      {children}
+    </span>
   )
 }
 
@@ -3174,7 +3221,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <CalendarClock size={13} className="text-fog shrink-0" />
                     <p className="text-xs font-semibold text-fog uppercase tracking-wide">Reserva</p>
                   </div>
-                  <p className="text-base font-bold text-snow leading-tight">{b.title}</p>
+                  <FitText className="font-bold text-snow leading-tight" min={13} max={18}>{b.title}</FitText>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${style.badge}`}>{style.label}</span>
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${st.cls}`}>{st.label}</span>
