@@ -800,13 +800,11 @@ function BookingSearchAndTypeModal({
   onClose: () => void
 }) {
   const [member, setMember] = useState<FullMember | null>(preselectedMember)
-  const [type, setType] = useState<'birthday' | 'custodia' | 'other' | null>(null)
-  const canProceed = !!member && !!type
 
   const types = [
-    { key: 'birthday' as const, label: 'Cumpleaños', desc: 'Celebración con sala reservada', Icon: Cake,     activeCls: 'border-iris/40 bg-iris/10',      iconCls: 'text-iris' },
-    { key: 'custodia' as const, label: 'Custodia',   desc: 'Servicio de cuidado con horario', Icon: Clock,   activeCls: 'border-cyan-300/40 bg-cyan-300/10', iconCls: 'text-cyan-300' },
-    { key: 'other'    as const, label: 'Otro',        desc: 'Otro tipo de reserva o evento',   Icon: Calendar, activeCls: 'border-lime/40 bg-lime/10',       iconCls: 'text-lime' },
+    { key: 'birthday' as const, label: 'Cumpleaños', desc: 'Celebración con sala reservada', Icon: Cake,     colorCls: 'text-iris',      activeCls: 'border-iris/40 bg-iris/10 hover:bg-iris/15' },
+    { key: 'custodia' as const, label: 'Custodia',   desc: 'Servicio de cuidado con horario', Icon: Clock,   colorCls: 'text-cyan-300',  activeCls: 'border-cyan-300/40 bg-cyan-300/10 hover:bg-cyan-300/15' },
+    { key: 'other'    as const, label: 'Otro',        desc: 'Otro tipo de reserva o evento',   Icon: Calendar, colorCls: 'text-lime',     activeCls: 'border-lime/40 bg-lime/10 hover:bg-lime/15' },
   ]
 
   return (
@@ -885,33 +883,24 @@ function BookingSearchAndTypeModal({
             <div className="space-y-2">
               {types.map(t => (
                 <button key={t.key}
-                  onClick={() => setType(prev => prev === t.key ? null : t.key)}
+                  onClick={() => { if (member) { onProceed(member, t.key) } }}
                   className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors text-left ${
-                    type === t.key ? t.activeCls : 'border-line bg-surface2 hover:border-line2'
+                    member ? `${t.activeCls}` : 'border-line bg-surface2 opacity-50 cursor-not-allowed'
                   }`}
                 >
-                  <t.Icon size={18} className={type === t.key ? t.iconCls : 'text-fog'} />
+                  <t.Icon size={18} className={member ? t.colorCls : 'text-fog'} />
                   <div className="flex-1">
-                    <p className={`text-sm font-semibold ${type === t.key ? 'text-snow' : 'text-fog'}`}>{t.label}</p>
+                    <p className={`text-sm font-semibold ${member ? 'text-snow' : 'text-fog'}`}>{t.label}</p>
                     <p className="text-xs text-mist">{t.desc}</p>
                   </div>
-                  {type === t.key && <Check size={15} className={t.iconCls} />}
+                  <ChevronRight size={15} className={member ? 'text-fog' : 'text-line2'} />
                 </button>
               ))}
             </div>
+            {!member && (
+              <p className="text-xs text-mist text-center pt-1">Selecciona un titular para continuar</p>
+            )}
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-line shrink-0">
-          <button
-            onClick={() => { if (canProceed) onProceed(member!, type!) }}
-            disabled={!canProceed}
-            className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-iris text-white font-semibold text-sm hover:brightness-110 transition active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <ChevronRight size={16} />
-            Continuar
-          </button>
         </div>
       </div>
     </div>
