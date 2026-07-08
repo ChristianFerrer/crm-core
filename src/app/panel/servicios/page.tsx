@@ -47,8 +47,9 @@ const DEFAULT_CATEGORIES: Category[] = [
   { value: 'bono',      label: 'Bono',         color: 'text-iris',      bg: 'bg-iris/10',      border: 'border-iris/30' },
   { value: 'cumpleanos',label: 'Cumpleaños',   color: 'text-cyan-300',  bg: 'bg-cyan-300/10',  border: 'border-cyan-300/30' },
   { value: 'sala',      label: 'Sala privada', color: 'text-amber',     bg: 'bg-amber/10',     border: 'border-amber/30' },
-  { value: 'custodia',  label: 'Custodia',     color: 'text-mint',      bg: 'bg-mint/10',      border: 'border-mint/30' },
-  { value: 'general',   label: 'General',      color: 'text-fog',       bg: 'bg-fog/10',       border: 'border-fog/30' },
+  { value: 'custodia',    label: 'Custodia',     color: 'text-mint',      bg: 'bg-mint/10',      border: 'border-mint/30' },
+  { value: 'subservicios',label: 'Sub-servicios',color: 'text-rose',      bg: 'bg-rose/10',      border: 'border-rose/30' },
+  { value: 'general',     label: 'General',      color: 'text-fog',       bg: 'bg-fog/10',       border: 'border-fog/30' },
 ]
 
 const CAT_COLORS = [

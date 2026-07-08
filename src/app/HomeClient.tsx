@@ -32,6 +32,7 @@ type TodayVisit = {
   bookings: {
     type: string; amount: number | null; deposit_amount: number | null; payment_status: string | null
     guest_adults: number | null; guest_children: number | null
+    addons: { name: string; price: number }[] | null
     services: { price: number | null; price_per_guest_adult: number | null; price_per_guest_child: number | null; included_guests: number | null } | null
   } | null
   members: { name: string } | null
@@ -63,6 +64,7 @@ type TodayBooking = {
   amount: number | null
   deposit_amount: number | null
   payment_status: string | null
+  addons: { name: string; price: number }[] | null
   members: { name: string } | null
 }
 
@@ -951,6 +953,7 @@ function BookingFormModal({
   const [endTime, setEnd]         = useState('')
   const [guestAdults, setGuestAdults]     = useState(0)
   const [guestChildren, setGuestChildren] = useState(0)
+  const [guestsOpen, setGuestsOpen] = useState(false)
   const [notes, setNotes]         = useState('')
   // Pagos
   const serviceCat = bookingType === 'birthday' ? 'cumpleanos' : bookingType === 'custodia' ? 'custodia' : null
@@ -959,25 +962,45 @@ function BookingFormModal({
   const [totalStr, setTotalStr]   = useState('')
   const [depositStr, setDepositStr] = useState('')
   const [paymentsOpen, setPaymentsOpen] = useState(false)
+  const [selectedAddons, setSelectedAddons] = useState<BookingAddon[]>([])
   const selectedService = catServices.find(s => s.id === serviceId) || null
+  const subServices = services.filter(s => s.category === 'subservicios')
   const round2 = (n: number) => Math.round(n * 100) / 100
-  // Recalcula total y adelanto sugerido al cambiar paquete o invitados
+  const addonsTotal = round2(selectedAddons.reduce((s, a) => s + (Number(a.price) || 0), 0))
+
+  // Cumpleaños: precio fijo del paquete. Al elegir servicio, precarga la capacidad dividida adultos/niños.
+  useEffect(() => {
+    if (bookingType !== 'birthday' || !selectedService) return
+    const cap = Number(selectedService.included_guests) || 0
+    if (cap > 0) {
+      const adults = Math.floor(cap / 2)
+      setGuestAdults(adults)
+      setGuestChildren(cap - adults)
+      setGuestsOpen(true)
+    }
+  }, [serviceId])
+
+  // Recalcula total y adelanto sugerido
   useEffect(() => {
     if (!selectedService) return
     const base = Number(selectedService.price) || 0
-    // Si no hay tarifa por invitado configurada en el servicio, se usa la de entrada libre
-    const cfgA = Number(selectedService.price_per_guest_adult) || 0
-    const cfgC = Number(selectedService.price_per_guest_child) || 0
-    const ppa  = cfgA > 0 ? cfgA : rateAdult
-    const ppc  = cfgC > 0 ? cfgC : rateChild
-    // El precio cubre N personas incluidas; solo se cobran los que excedan (niños primero)
-    const included = Number(selectedService.included_guests) || 0
-    const { chargeAdults, chargeChildren } = chargeableGuests(guestAdults, guestChildren, included)
-    const total = round2(base + chargeAdults * ppa + chargeChildren * ppc)
+    let guestsCharge = 0
+    // Cumpleaños es precio fijo por capacidad: los asistentes NO alteran el precio.
+    // Para el resto, los invitados que excedan la capacidad incluida se cobran (tarifa configurada o entrada libre).
+    if (bookingType !== 'birthday') {
+      const cfgA = Number(selectedService.price_per_guest_adult) || 0
+      const cfgC = Number(selectedService.price_per_guest_child) || 0
+      const ppa  = cfgA > 0 ? cfgA : rateAdult
+      const ppc  = cfgC > 0 ? cfgC : rateChild
+      const included = Number(selectedService.included_guests) || 0
+      const { chargeAdults, chargeChildren } = chargeableGuests(guestAdults, guestChildren, included)
+      guestsCharge = chargeAdults * ppa + chargeChildren * ppc
+    }
+    const total = round2(base + guestsCharge + addonsTotal)
     setTotalStr(String(total))
     const pct = selectedService.deposit_pct != null ? Number(selectedService.deposit_pct) : 50
     setDepositStr(String(round2(total * pct / 100)))
-  }, [serviceId, guestAdults, guestChildren, rateAdult, rateChild])
+  }, [serviceId, guestAdults, guestChildren, rateAdult, rateChild, addonsTotal, bookingType])
 
   const totalNum   = Number(totalStr) || 0
   const depositNum = Number(depositStr) || 0
@@ -997,7 +1020,6 @@ function BookingFormModal({
   const birthdayValid = bookingType !== 'birthday' || !!birthdayChild || member.children.length === 0
   const custodiaValid = bookingType !== 'custodia' || selectedChildren.length > 0 || member.children.length === 0
   const isValid = (!needsTitle || title.trim()) && startTime && endTime && birthdayValid && custodiaValid
-  const [guestsOpen, setGuestsOpen] = useState(false)
 
   function handleChildSelect(name: string) {
     setBirthdayChild(name)
@@ -1036,6 +1058,7 @@ function BookingFormModal({
       deposit_amount: depositNum,
       deposit_paid_at: depositNum > 0 ? new Date().toISOString() : null,
       payment_status: paymentStatus,
+      addons: selectedAddons,
       status: 'confirmed',
     })
     if (err) { setError(err.message); setSaving(false); return }
@@ -1208,13 +1231,13 @@ function BookingFormModal({
                   <button type="button" onClick={() => setGuestsOpen(true)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line2 py-3 text-sm font-medium text-fog hover:border-line hover:text-snow transition-colors">
                     <Plus size={14} />
-                    {bookingType === 'custodia' ? 'Añadir niños adicionales' : 'Añadir invitados adicionales'}
+                    {bookingType === 'custodia' ? 'Añadir niños adicionales' : bookingType === 'birthday' ? 'Asistentes previstos' : 'Añadir invitados adicionales'}
                   </button>
                 ) : (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">
-                        {bookingType === 'custodia' ? 'Niños adicionales' : 'Invitados'}
+                        {bookingType === 'custodia' ? 'Niños adicionales' : bookingType === 'birthday' ? 'Asistentes (capacidad)' : 'Invitados'}
                       </p>
                       <button type="button" onClick={() => { setGuestsOpen(false); setGuestAdults(0); setGuestChildren(0) }}
                         className="text-[10px] text-mist hover:text-rose transition-colors">Quitar</button>
@@ -1270,10 +1293,44 @@ function BookingFormModal({
                           </div>
                           {selectedService && Number(selectedService.included_guests) > 0 && (
                             <p className="text-[11px] text-mist mt-1.5">
-                              Incluye {Number(selectedService.included_guests)} personas. Los invitados que excedan se cobran aparte.
+                              {bookingType === 'birthday'
+                                ? `Precio fijo · capacidad ${Number(selectedService.included_guests)} personas.`
+                                : `Incluye ${Number(selectedService.included_guests)} personas. Los invitados que excedan se cobran aparte.`}
                             </p>
                           )}
                         </div>
+                        {/* Sub-servicios / Extras */}
+                        {subServices.length > 0 && (
+                          <div>
+                            <p className="text-[10px] text-mist mb-1.5">Sub-servicios</p>
+                            <div className="space-y-1.5">
+                              {subServices.map(s => {
+                                const sel = selectedAddons.some(a => a.name === s.name)
+                                const p = Number(s.price) || 0
+                                return (
+                                  <button key={s.id} type="button"
+                                    onClick={() => setSelectedAddons(prev => sel
+                                      ? prev.filter(a => a.name !== s.name)
+                                      : [...prev, { name: s.name, price: p }])}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${
+                                      sel ? 'border-iris/30 bg-iris/5' : 'border-line bg-surface2 hover:border-line2'
+                                    }`}>
+                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                      sel ? 'bg-iris border-iris' : 'bg-surface2 border-line2'
+                                    }`}>
+                                      {sel && <Check size={11} className="text-white" strokeWidth={3} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className={`text-sm font-medium truncate ${sel ? 'text-snow' : 'text-fog'}`}>{s.name}</p>
+                                      {s.description && <p className="text-[11px] text-mist truncate">{s.description}</p>}
+                                    </div>
+                                    <span className="text-xs font-semibold text-snow shrink-0">{p.toFixed(2)}€</span>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
                         {/* Total */}
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm text-fog">Total</span>
@@ -1347,6 +1404,7 @@ function BookingFormModal({
 type BookingService = {
   id: string
   name: string
+  description: string | null
   category: string
   price: number | null
   deposit_pct: number | null
@@ -1354,6 +1412,8 @@ type BookingService = {
   price_per_guest_child: number | null
   included_guests: number | null
 }
+
+type BookingAddon = { name: string; price: number }
 
 type HomeClientProps = {
   todayVisits: TodayVisit[]
@@ -1653,7 +1713,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (cust)  setRateCustodia(Number(cust.price))
       })
     supabase.from('services')
-      .select('id, name, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests')
+      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests')
       .eq('active', true).order('sort_order')
       .then(({ data }) => { if (data) setBookingServices(data as BookingService[]) })
   }, [])
@@ -1948,7 +2008,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       // Recálculo en vivo según asistentes presentes (cumpleaños y otro; custodia mantiene lo contratado)
       let total = bAmount
       let pkg: NonNullable<ReturnType<typeof calcImporte>['pkg']> | undefined
-      if (svc && svc.price != null && bk?.type !== 'custodia') {
+      // Cumpleaños y custodia: precio fijo (usa el importe contratado). Recálculo en vivo solo para 'other'.
+      if (svc && svc.price != null && bk?.type !== 'custodia' && bk?.type !== 'birthday') {
         const base = Number(svc.price) || 0
         const cfgA = Number(svc.price_per_guest_adult) || 0
         const cfgC = Number(svc.price_per_guest_child) || 0
@@ -2880,6 +2941,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           )}
                         </>
                       )}
+                      {(visit.bookings?.addons ?? []).length > 0 && (
+                        <div className="pt-1 border-t border-line/60 space-y-1.5">
+                          <p className="text-[10px] text-mist">Sub-servicios</p>
+                          {(visit.bookings?.addons ?? []).map((a, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="text-fog">+ {a.name}</span>
+                              <span className="text-snow">{(Number(a.price) || 0).toFixed(2)}€</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
                         <span className="text-fog">Total del paquete</span>
                         <span className="text-snow">{imp.total.toFixed(2)}€</span>
@@ -3578,6 +3650,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> Pagos</p>
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${badge.cls}`}>{badge.label}</span>
                       </div>
+                      {(b.addons ?? []).length > 0 && (
+                        <div className="space-y-1 pb-1.5 border-b border-line/60">
+                          {(b.addons ?? []).map((a, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                              <span className="text-xs text-fog">+ {a.name}</span>
+                              <span className="text-xs text-snow">{(Number(a.price) || 0).toFixed(2)}€</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-mist">Total</span>
                         <span className="text-sm font-semibold text-snow">{total.toFixed(2)}€</span>
