@@ -56,6 +56,9 @@ type TodayBooking = {
   child_name: string | null
   executed_at: string | null
   member_id: string | null
+  amount: number | null
+  deposit_amount: number | null
+  payment_status: string | null
   members: { name: string } | null
 }
 
@@ -909,11 +912,12 @@ function BookingSearchAndTypeModal({
 
 // ── Modal reserva 3: formulario ──
 function BookingFormModal({
-  member, bookingType, selectedDate, tenantId, onBack, onClose, onSaved,
+  member, bookingType, selectedDate, services, tenantId, onBack, onClose, onSaved,
 }: {
   member: FullMember
   bookingType: 'birthday' | 'custodia' | 'other'
   selectedDate: string
+  services: BookingService[]
   tenantId: string | null
   onBack: () => void
   onClose: () => void
@@ -933,6 +937,32 @@ function BookingFormModal({
   const [guestAdults, setGuestAdults]     = useState(0)
   const [guestChildren, setGuestChildren] = useState(0)
   const [notes, setNotes]         = useState('')
+  // Pagos
+  const serviceCat = bookingType === 'birthday' ? 'cumpleaos' : bookingType === 'custodia' ? 'custodia' : null
+  const catServices = serviceCat ? services.filter(s => s.category === serviceCat) : []
+  const [serviceId, setServiceId] = useState('')
+  const [totalStr, setTotalStr]   = useState('')
+  const [depositStr, setDepositStr] = useState('')
+  const [paymentsOpen, setPaymentsOpen] = useState(false)
+  const selectedService = catServices.find(s => s.id === serviceId) || null
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  // Recalcula total y adelanto sugerido al cambiar paquete o invitados
+  useEffect(() => {
+    if (!selectedService) return
+    const base = Number(selectedService.price) || 0
+    const ppa  = Number(selectedService.price_per_guest_adult) || 0
+    const ppc  = Number(selectedService.price_per_guest_child) || 0
+    const total = round2(base + guestAdults * ppa + guestChildren * ppc)
+    setTotalStr(String(total))
+    const pct = selectedService.deposit_pct != null ? Number(selectedService.deposit_pct) : 50
+    setDepositStr(String(round2(total * pct / 100)))
+  }, [serviceId, guestAdults, guestChildren])
+
+  const totalNum   = Number(totalStr) || 0
+  const depositNum = Number(depositStr) || 0
+  const pendingNum = round2(Math.max(0, totalNum - depositNum))
+  const paymentStatus = totalNum > 0 && depositNum >= totalNum ? 'paid' : depositNum > 0 ? 'partial' : 'pending'
+
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [saved, setSaved]         = useState(false)
@@ -980,6 +1010,11 @@ function BookingFormModal({
           : null,
       date: date,
       notes: notes.trim() || null,
+      service_id: serviceId || null,
+      amount: totalNum > 0 ? totalNum : null,
+      deposit_amount: depositNum,
+      deposit_paid_at: depositNum > 0 ? new Date().toISOString() : null,
+      payment_status: paymentStatus,
       status: 'confirmed',
     })
     if (err) { setError(err.message); setSaving(false); return }
@@ -1177,6 +1212,85 @@ function BookingFormModal({
                 )}
               </div>
 
+              {/* Pagos */}
+              {catServices.length > 0 && (
+                <div>
+                  {!paymentsOpen ? (
+                    <button type="button" onClick={() => setPaymentsOpen(true)}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-line2 px-4 py-3 text-sm font-medium text-fog hover:border-line hover:text-snow transition-colors">
+                      <span className="flex items-center gap-2"><Receipt size={14} /> Pagos y paquete</span>
+                      {totalNum > 0
+                        ? <span className="text-xs font-semibold text-snow">{totalNum.toFixed(2)}€</span>
+                        : <Plus size={14} />}
+                    </button>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+                          <Receipt size={12} /> Pagos
+                        </p>
+                        <button type="button" onClick={() => { setPaymentsOpen(false); setServiceId(''); setTotalStr(''); setDepositStr('') }}
+                          className="text-[10px] text-mist hover:text-rose transition-colors">Quitar</button>
+                      </div>
+                      <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
+                        {/* Paquete */}
+                        <div>
+                          <p className="text-[10px] text-mist mb-1.5">Paquete</p>
+                          <div className="relative">
+                            <select value={serviceId} onChange={e => setServiceId(e.target.value)}
+                              style={{ colorScheme: 'dark' }}
+                              className="w-full appearance-none bg-surface2 border border-line rounded-xl pl-4 pr-9 py-2.5 text-sm text-snow outline-none focus:border-line2 transition-colors cursor-pointer">
+                              <option value="">Selecciona un paquete</option>
+                              {catServices.map(s => (
+                                <option key={s.id} value={s.id}>{s.name} · {(Number(s.price) || 0).toFixed(2)}€</option>
+                              ))}
+                            </select>
+                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-fog pointer-events-none" />
+                          </div>
+                        </div>
+                        {/* Total */}
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm text-fog">Total</span>
+                          <div className="flex items-center gap-1 bg-surface2 border border-line rounded-lg px-3 py-2">
+                            <input type="number" min={0} step="0.01" value={totalStr}
+                              onChange={e => setTotalStr(e.target.value)}
+                              placeholder="0.00"
+                              className="w-20 bg-transparent text-right text-sm font-semibold text-snow outline-none" />
+                            <span className="text-sm text-fog">€</span>
+                          </div>
+                        </div>
+                        {/* Adelanto */}
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm text-fog">Adelanto</span>
+                          <div className="flex items-center gap-1 bg-surface2 border border-line rounded-lg px-3 py-2">
+                            <input type="number" min={0} step="0.01" value={depositStr}
+                              onChange={e => setDepositStr(e.target.value)}
+                              placeholder="0.00"
+                              className="w-20 bg-transparent text-right text-sm font-semibold text-lime outline-none" />
+                            <span className="text-sm text-fog">€</span>
+                          </div>
+                        </div>
+                        {/* Pendiente + estado */}
+                        <div className="flex items-center justify-between pt-2 border-t border-line/60">
+                          <span className="text-xs text-mist">Pendiente</span>
+                          <span className="text-sm font-bold text-snow">{pendingNum.toFixed(2)}€</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-mist">Estado</span>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${
+                            paymentStatus === 'paid'    ? 'bg-mint/10 text-mint border-mint/30' :
+                            paymentStatus === 'partial' ? 'bg-amber/10 text-amber border-amber/30' :
+                                                          'bg-surface2 text-fog border-line'
+                          }`}>
+                            {paymentStatus === 'paid' ? 'Pagado' : paymentStatus === 'partial' ? 'Adelanto' : 'Pendiente'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Notas */}
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
@@ -1202,6 +1316,16 @@ function BookingFormModal({
       </div>
     </div>
   )
+}
+
+type BookingService = {
+  id: string
+  name: string
+  category: string
+  price: number | null
+  deposit_pct: number | null
+  price_per_guest_adult: number | null
+  price_per_guest_child: number | null
 }
 
 type HomeClientProps = {
@@ -1411,6 +1535,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [chartsOpen, setChartsOpen] = useState(false)
   const [tenantName, setTenantName] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
+  const [bookingServices, setBookingServices] = useState<BookingService[]>([])
   const [openChecks, setOpenChecks] = useState<Map<string, OpenCheck>>(new Map())
   const [consumosVisitId, setConsumosVisitId] = useState<string | null>(null)
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
@@ -1500,6 +1625,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (child) setRateChild(Number(child.price))
         if (cust)  setRateCustodia(Number(cust.price))
       })
+    supabase.from('services')
+      .select('id, name, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child')
+      .eq('active', true).order('sort_order')
+      .then(({ data }) => { if (data) setBookingServices(data as BookingService[]) })
   }, [])
 
   useEffect(() => {
@@ -3281,6 +3410,39 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                 )}
 
+                {/* Pagos */}
+                {(b.amount != null || (b.deposit_amount != null && b.deposit_amount > 0)) && (() => {
+                  const total = Number(b.amount) || 0
+                  const dep   = Number(b.deposit_amount) || 0
+                  const pend  = Math.max(0, Math.round((total - dep) * 100) / 100)
+                  const ps = b.payment_status
+                  const badge = ps === 'paid'    ? { label: 'Pagado',    cls: 'bg-mint/10 text-mint border-mint/30' }
+                              : ps === 'partial' ? { label: 'Adelanto',  cls: 'bg-amber/10 text-amber border-amber/30' }
+                              :                    { label: 'Pendiente', cls: 'bg-surface2 text-fog border-line' }
+                  return (
+                    <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> Pagos</p>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${badge.cls}`}>{badge.label}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-mist">Total</span>
+                        <span className="text-sm font-semibold text-snow">{total.toFixed(2)}€</span>
+                      </div>
+                      {dep > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-mist">Adelanto</span>
+                          <span className="text-sm font-semibold text-lime">{dep.toFixed(2)}€</span>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-1.5 border-t border-line/60">
+                        <span className="text-xs text-mist">Pendiente</span>
+                        <span className="text-sm font-bold text-snow">{pend.toFixed(2)}€</span>
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 {/* Visita vinculada */}
                 {linkedVisit && (
                   <div className="rounded-xl border border-lime/20 bg-lime/5 px-4 py-3 flex items-center justify-between">
@@ -3343,6 +3505,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           member={bookingMember}
           bookingType={bookingType}
           selectedDate={selectedDate}
+          services={bookingServices}
           tenantId={getStoredTenant()?.id ?? null}
           onBack={() => setBookingModal('pick')}
           onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery('') }}
