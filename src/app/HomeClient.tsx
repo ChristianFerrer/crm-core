@@ -7,7 +7,7 @@ import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
-  Search, QrCode, RotateCcw, User, Phone, Loader2, Save,
+  Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -783,110 +783,132 @@ function CheckinNewMemberModal({
 }
 
 
-// ── Modal reserva 1: búsqueda de miembro ──
-function BookingSearchModal({
-  filtered, query, onQueryChange, onSelect, onNewMember, onClose,
+// ── Modal reserva: titular + tipo (paso 1 de 2) ──
+function BookingSearchAndTypeModal({
+  filtered, query, onQueryChange, preselectedMember,
+  onProceed, onNewMember, onClose,
 }: {
   filtered: FullMember[]
   query: string
   onQueryChange: (q: string) => void
-  onSelect: (m: FullMember) => void
+  preselectedMember: FullMember | null
+  onProceed: (member: FullMember, type: 'birthday' | 'custodia' | 'other') => void
   onNewMember: () => void
   onClose: () => void
 }) {
+  const [member, setMember] = useState<FullMember | null>(preselectedMember)
+  const [type, setType] = useState<'birthday' | 'custodia' | 'other' | null>(null)
+  const canProceed = !!member && !!type
+
+  const types = [
+    { key: 'birthday' as const, label: 'Cumpleaños', desc: 'Celebración con sala reservada', Icon: Cake,     activeCls: 'border-iris/40 bg-iris/10',      iconCls: 'text-iris' },
+    { key: 'custodia' as const, label: 'Custodia',   desc: 'Servicio de cuidado con horario', Icon: Clock,   activeCls: 'border-cyan-300/40 bg-cyan-300/10', iconCls: 'text-cyan-300' },
+    { key: 'other'    as const, label: 'Otro',        desc: 'Otro tipo de reserva o evento',   Icon: Calendar, activeCls: 'border-lime/40 bg-lime/10',       iconCls: 'text-lime' },
+  ]
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
           <div className="flex items-center gap-2">
             <CalendarClock size={15} className="text-iris shrink-0" />
             <div>
               <p className="text-sm font-semibold text-snow">Nueva reserva</p>
-              <p className="text-[11px] text-fog">Busca el miembro titular</p>
+              <p className="text-[11px] text-fog">Paso 1 de 2 — Titular y tipo</p>
             </div>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
         </div>
-        <div className="px-5 pt-4 pb-2 shrink-0">
-          <div className="relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-            <input value={query} onChange={e => onQueryChange(e.target.value)}
-              placeholder="Buscar por nombre o teléfono..." autoFocus
-              className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
-          </div>
-        </div>
-        <div className="overflow-y-auto flex-1 divide-y divide-line/50">
-          {filtered.map(m => (
-            <button key={m.id} onClick={() => onSelect(m)}
-              className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface2 transition-colors">
-              <span className="flex-1 min-w-0">
-                <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
-                {m.phone && <span className="block text-xs text-mist">{m.phone}</span>}
-              </span>
-              {m.children && m.children.length > 0 && (
-                <span className="text-xs text-fog shrink-0">{m.children.length} hijo{m.children.length !== 1 ? 's' : ''}</span>
-              )}
-            </button>
-          ))}
-          {query.trim().length > 0 && filtered.length === 0 && (
-            <div className="flex flex-col items-center gap-4 py-8 px-5">
-              <p className="text-sm text-fog text-center">No se encontró ningún miembro.</p>
-              <button onClick={onNewMember}
-                className="flex items-center gap-2 rounded-xl bg-lime/10 border border-lime/30 px-5 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors">
-                <UserPlus size={15} /> Crear nuevo miembro
-              </button>
-            </div>
-          )}
-          {query.trim().length === 0 && (
-            <p className="py-8 text-center text-sm text-mist">Escribe un nombre o teléfono para buscar</p>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
-// ── Modal reserva 2: selección de tipo ──
-function BookingTypeModal({
-  member, onSelect, onBack, onClose,
-}: {
-  member: FullMember
-  onSelect: (type: 'birthday' | 'custodia' | 'other') => void
-  onBack: () => void
-  onClose: () => void
-}) {
-  const types = [
-    { key: 'birthday' as const, label: 'Cumpleaños', desc: 'Celebración con niños y sala reservada', icon: '🎂', cls: 'border-iris/30 bg-iris/5 hover:bg-iris/10' },
-    { key: 'custodia' as const, label: 'Custodia',   desc: 'Servicio de cuidado con horario fijo',    icon: '🕐', cls: 'border-cyan-300/30 bg-cyan-300/5 hover:bg-cyan-300/10' },
-    { key: 'other'    as const, label: 'Otro',        desc: 'Otro tipo de reserva o evento',           icon: '📅', cls: 'border-line bg-surface2 hover:bg-line' },
-  ]
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
-          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
-            <ChevronLeft size={16} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-snow truncate">{member.name}</p>
-            <p className="text-[11px] text-fog">Tipo de reserva</p>
-          </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-2">
-          {types.map(t => (
-            <button key={t.key} onClick={() => onSelect(t.key)}
-              className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl border transition-colors text-left ${t.cls}`}>
-              <span className="text-2xl shrink-0">{t.icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-snow">{t.label}</p>
-                <p className="text-xs text-fog">{t.desc}</p>
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+          {/* Titular */}
+          <div>
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
+              Titular <span className="text-rose">*</span>
+            </p>
+            {member ? (
+              <div className="flex items-center gap-3 rounded-xl border border-lime/30 bg-lime/5 px-4 py-3">
+                <User size={14} className="text-lime shrink-0" />
+                <span className="flex-1 text-sm font-semibold text-snow">{member.name}</span>
+                <button onClick={() => { setMember(null); onQueryChange('') }}
+                  className="text-mist hover:text-rose transition-colors p-0.5">
+                  <X size={14} />
+                </button>
               </div>
-              <ChevronRight size={16} className="text-mist ml-auto shrink-0" />
-            </button>
-          ))}
+            ) : (
+              <div>
+                <div className="relative mb-1.5">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+                  <input value={query} onChange={e => onQueryChange(e.target.value)}
+                    placeholder="Buscar por nombre o teléfono..." autoFocus
+                    className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors" />
+                </div>
+                {query.trim().length > 0 ? (
+                  <div className="rounded-xl border border-line overflow-hidden divide-y divide-line/50 max-h-44 overflow-y-auto">
+                    {filtered.map(m => (
+                      <button key={m.id} onClick={() => { setMember(m); onQueryChange('') }}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface2 transition-colors">
+                        <User size={13} className="text-mist shrink-0" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
+                          {m.phone && <span className="block text-xs text-mist">{m.phone}</span>}
+                        </span>
+                      </button>
+                    ))}
+                    {filtered.length === 0 && (
+                      <div className="flex flex-col items-center gap-3 py-5 px-4">
+                        <p className="text-xs text-fog text-center">No se encontró ningún miembro.</p>
+                        <button onClick={onNewMember}
+                          className="flex items-center gap-2 rounded-xl bg-lime/10 border border-lime/30 px-4 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">
+                          <UserPlus size={13} /> Crear nuevo miembro
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-mist text-center py-1">Escribe para buscar</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tipo de reserva */}
+          <div>
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
+              Tipo de reserva <span className="text-rose">*</span>
+            </p>
+            <div className="space-y-2">
+              {types.map(t => (
+                <button key={t.key}
+                  onClick={() => setType(prev => prev === t.key ? null : t.key)}
+                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors text-left ${
+                    type === t.key ? t.activeCls : 'border-line bg-surface2 hover:border-line2'
+                  }`}
+                >
+                  <t.Icon size={18} className={type === t.key ? t.iconCls : 'text-fog'} />
+                  <div className="flex-1">
+                    <p className={`text-sm font-semibold ${type === t.key ? 'text-snow' : 'text-fog'}`}>{t.label}</p>
+                    <p className="text-xs text-mist">{t.desc}</p>
+                  </div>
+                  {type === t.key && <Check size={15} className={t.iconCls} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-line shrink-0">
+          <button
+            onClick={() => { if (canProceed) onProceed(member!, type!) }}
+            disabled={!canProceed}
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-iris text-white font-semibold text-sm hover:brightness-110 transition active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ChevronRight size={16} />
+            Continuar
+          </button>
         </div>
       </div>
     </div>
@@ -910,6 +932,7 @@ function BookingFormModal({
     bookingType === 'custodia' ? `Custodia — ${member.name}` : ''
 
   const [title, setTitle]       = useState(defaultTitle)
+  const [date, setDate]         = useState(selectedDate)
   const [startTime, setStart]   = useState('')
   const [endTime, setEnd]       = useState('')
   const [guests, setGuests]     = useState(0)
@@ -934,7 +957,7 @@ function BookingFormModal({
       start_time: startTime,
       end_time: endTime,
       guests: guests > 0 ? guests : null,
-      date: selectedDate,
+      date: date,
       status: 'active',
     })
     if (err) { setError(err.message); setSaving(false); return }
@@ -955,7 +978,7 @@ function BookingFormModal({
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-snow truncate">{member.name}</p>
-            <p className="text-[11px] text-fog">{typeLabels[bookingType]}</p>
+            <p className="text-[11px] text-fog">Paso 2 de 2 · {typeLabels[bookingType]}</p>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
         </div>
@@ -980,6 +1003,17 @@ function BookingFormModal({
                 <input value={title} onChange={e => setTitle(e.target.value)}
                   placeholder={needsTitle ? 'Nombre del evento o reserva' : defaultTitle}
                   className={inputCls} />
+              </div>
+
+              {/* Fecha */}
+              <div>
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
+                  Fecha <span className="text-rose">*</span>
+                </label>
+                <div className="flex items-center px-3 py-2.5 rounded-xl border border-line bg-surface2">
+                  <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                    className="w-full bg-transparent text-sm text-snow outline-none" />
+                </div>
               </div>
 
               {/* Horario */}
@@ -1012,14 +1046,11 @@ function BookingFormModal({
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{guestLabel}</label>
                 <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line bg-surface2">
-                  <span className="text-sm text-fog">{guestLabel}</span>
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={() => setGuests(n => Math.max(0, n - 1))} disabled={guests === 0}
-                      className="w-8 h-8 rounded-lg border border-line bg-surface text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
-                    <span className="w-5 text-center font-bold text-snow text-sm">{guests}</span>
-                    <button type="button" onClick={() => setGuests(n => n + 1)}
-                      className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
-                  </div>
+                  <button type="button" onClick={() => setGuests(n => Math.max(0, n - 1))} disabled={guests === 0}
+                    className="w-8 h-8 rounded-lg border border-line bg-surface text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+                  <span className="w-5 text-center font-bold text-snow text-sm">{guests}</span>
+                  <button type="button" onClick={() => setGuests(n => n + 1)}
+                    className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
                 </div>
               </div>
 
@@ -1241,7 +1272,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [checkinMembers, setCheckinMembers] = useState<FullMember[]>([])
   const [detailVisitId, setDetailVisitId] = useState<string | null>(null)
   const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
-  const [bookingModal, setBookingModal] = useState<null | 'search' | 'type' | 'form'>(null)
+  const [bookingModal, setBookingModal] = useState<null | 'pick' | 'form'>(null)
+  const newMemberReturnTo = useRef<'checkin' | 'booking'>('checkin')
   const [bookingMember, setBookingMember] = useState<FullMember | null>(null)
   const [bookingType, setBookingType] = useState<'birthday' | 'custodia' | 'other' | null>(null)
   const [bookingQuery, setBookingQuery] = useState('')
@@ -1876,7 +1908,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <span>en sala</span>
                             <span className="text-line2">·</span>
                             <span className={`font-semibold ${isLong ? 'text-amber' : 'text-snow'}`}>{fmtElapsed(visit.checked_in_at)}</span>
-                            {isLong && <span className="text-amber">⚠</span>}
+                            {isLong && <AlertTriangle size={11} className="text-amber" />}
                             <span className="text-line2">·</span>
                             <span className="font-semibold text-lime">{grandTotal.toFixed(2)}€</span>
                           </div>
@@ -2085,7 +2117,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide">Agenda de hoy</h2>
           <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
           <button
-            onClick={() => { setBookingModal('search'); setBookingQuery('') }}
+            onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
             className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris/30 rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-colors"
           >
             <Plus size={12} /> Nueva reserva
@@ -3107,7 +3139,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       })()}
 
       {/* ── Flujo nueva reserva ── */}
-      {bookingModal === 'search' && (() => {
+      {bookingModal === 'pick' && (() => {
         const filtered = bookingQuery.trim().length > 0
           ? checkinMembers.filter(m => {
               const q = bookingQuery.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -3118,25 +3150,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           : []
         const closeAll = () => { setBookingModal(null); setBookingQuery(''); setBookingMember(null); setBookingType(null) }
         return (
-          <BookingSearchModal
+          <BookingSearchAndTypeModal
             filtered={filtered}
             query={bookingQuery}
             onQueryChange={setBookingQuery}
-            onSelect={m => { setBookingMember(m); setBookingModal('type') }}
-            onNewMember={() => setCheckinModal('new-member')}
+            preselectedMember={bookingMember}
+            onProceed={(m, t) => { setBookingMember(m); setBookingType(t); setBookingModal('form') }}
+            onNewMember={() => { newMemberReturnTo.current = 'booking'; setCheckinModal('new-member') }}
             onClose={closeAll}
           />
         )
       })()}
-
-      {bookingModal === 'type' && bookingMember && (
-        <BookingTypeModal
-          member={bookingMember}
-          onSelect={t => { setBookingType(t); setBookingModal('form') }}
-          onBack={() => setBookingModal('search')}
-          onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery('') }}
-        />
-      )}
 
       {bookingModal === 'form' && bookingMember && bookingType && (
         <BookingFormModal
@@ -3144,7 +3168,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           bookingType={bookingType}
           selectedDate={selectedDate}
           tenantId={getStoredTenant()?.id ?? null}
-          onBack={() => setBookingModal('type')}
+          onBack={() => setBookingModal('pick')}
           onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery('') }}
           onSaved={() => { router.refresh(); setCheckinMembers([]) }}
         />
@@ -3168,7 +3192,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             onQueryChange={setCheckinQuery}
             activeVisits={activeVisits}
             onSelect={m => { setCheckinSelectedMember(m); setCheckinModal('confirm') }}
-            onNewMember={() => setCheckinModal('new-member')}
+            onNewMember={() => { newMemberReturnTo.current = 'checkin'; setCheckinModal('new-member') }}
             onClose={closeAll}
           />
         )
@@ -3194,8 +3218,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           onClose={() => { setCheckinModal(null); setCheckinSelectedMember(null); setCheckinQuery(''); setCheckinMembers([]) }}
           onCreated={(newMember) => {
             setCheckinMembers([])
-            setCheckinSelectedMember(newMember)
-            setCheckinModal('confirm')
+            if (newMemberReturnTo.current === 'booking') {
+              setBookingMember(newMember)
+              setBookingModal('pick')
+              setCheckinModal(null)
+            } else {
+              setCheckinSelectedMember(newMember)
+              setCheckinModal('confirm')
+            }
           }}
         />
       )}
