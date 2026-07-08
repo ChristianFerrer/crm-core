@@ -29,7 +29,7 @@ type TodayVisit = {
   children_count: number
   booking_id: string | null
   paid_at: string | null
-  bookings: { type: string } | null
+  bookings: { type: string; amount: number | null; deposit_amount: number | null; payment_status: string | null } | null
   members: { name: string } | null
   memberships: {
     sessions_remaining: number
@@ -1818,19 +1818,24 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     const now = new Date().toISOString()
     await supabase.from('bookings').update({ executed_at: now }).eq('id', booking.id)
     if (booking.member_id) {
-      // Calculate counts so that aforo is updated correctly
+      // Calculate counts so that aforo is updated correctly.
+      // Usamos guest_adults / guest_children (no `guests`, que es el total combinado)
+      const gAdults   = booking.guest_adults ?? 0
+      const gChildren = booking.guest_children ?? 0
       let adultsCount = 1
       let childrenCount = 0
       if (booking.type === 'custodia') {
+        // Custodia: sin adultos; los niños ya vienen agregados en guest_children
         adultsCount = 0
-        childrenCount = booking.guests ?? 1
+        childrenCount = gChildren > 0 ? gChildren : (booking.guests ?? 1)
       } else if (booking.type === 'birthday') {
-        adultsCount = 1
-        childrenCount = booking.guests ?? 0
+        // Cumpleaños: titular + adultos invitados / niño del cumple + niños invitados
+        adultsCount = 1 + gAdults
+        childrenCount = 1 + gChildren
       } else {
-        // other: guests are adults
-        adultsCount = booking.guests ?? 1
-        childrenCount = 0
+        // Otro: los invitados adultos + titular; niños invitados aparte
+        adultsCount = 1 + gAdults
+        childrenCount = gChildren
       }
       await supabase.from('visits').insert({
         member_id: booking.member_id,
@@ -1898,7 +1903,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   function calcImporte(visit: TodayVisit): {
     titular: number; ninos: number; regular: number
     bonoPrecioSesion: number | null; ahorro: number; total: number
+    isPackage: boolean; deposit: number; toPay: number
   } {
+    // Reserva con paquete contratado (cumpleaños/custodia/otro con importe): el total es el del paquete
+    const bAmount = visit.bookings?.amount != null ? Number(visit.bookings.amount) : null
+    if (bAmount != null) {
+      const deposit = visit.bookings?.deposit_amount != null ? Number(visit.bookings.deposit_amount) : 0
+      const toPay = Math.max(0, Math.round((bAmount - deposit) * 100) / 100)
+      return {
+        titular: 0, ninos: 0, regular: bAmount, bonoPrecioSesion: null, ahorro: 0,
+        total: bAmount, isPackage: true, deposit, toPay,
+      }
+    }
     const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
     const hours = elapsedMins / 60
     let titular = 0, ninos = 0
@@ -1917,7 +1933,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     }
     const total  = bonoPrecioSesion !== null ? bonoPrecioSesion : regular
     const ahorro = bonoPrecioSesion !== null ? Math.max(0, regular - bonoPrecioSesion) : 0
-    return { titular, ninos, regular, bonoPrecioSesion, ahorro, total }
+    return { titular, ninos, regular, bonoPrecioSesion, ahorro, total, isPackage: false, deposit: 0, toPay: total }
   }
 
   // Chart data
@@ -2175,7 +2191,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 const check = openChecks.get(visit.id)
                 const imp = calcImporte(visit)
                 const consumosTotal = (check?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
-                const grandTotal = imp.total + consumosTotal
+                const grandTotal = imp.toPay + consumosTotal
                 const numChildren = visit.children_count ?? 0
                 const tipo = fmtVisitType(visit)
                 const tipoColor = tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-mist'
@@ -2376,7 +2392,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           <td className="px-3 py-3 align-middle">
                             {(() => {
                               const consumosTotal = (openChecks.get(visit.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
-                              const grandTotal = imp.total + consumosTotal
+                              const grandTotal = imp.toPay + consumosTotal
                               return (
                                 <div className="flex items-center gap-1.5 whitespace-nowrap">
                                   <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>
@@ -2629,7 +2645,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               {alertLongStay.filter(v => !dismissedAlerts.has('long-' + v.id)).map(v => {
                 const imp = calcImporte(v)
                 const consumosTotal = (openChecks.get(v.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
-                const grandTotal = imp.total + consumosTotal
+                const grandTotal = imp.toPay + consumosTotal
                 return (
                   <div key={v.id} className="rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -2744,7 +2760,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           }, {})
         )
         const consumosTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
-        const grandTotal = imp.total + consumosTotal
+        const grandTotal = imp.toPay + consumosTotal
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setTotalVisitId(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -2763,7 +2779,28 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </button>
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-                {/* Sección importe por tiempo */}
+                {/* Sección paquete de reserva (cumpleaños/custodia/otro con importe) */}
+                {imp.isPackage ? (
+                  <div>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Reserva</p>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-fog">Total del paquete</span>
+                        <span className="text-snow font-semibold">{imp.total.toFixed(2)}€</span>
+                      </div>
+                      {imp.deposit > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-fog">Adelanto pagado</span>
+                          <span className="text-mint">−{imp.deposit.toFixed(2)}€</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
+                        <span className="text-fog">Pendiente reserva</span>
+                        <span className="text-lime">{imp.toPay.toFixed(2)}€</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                 <div>
                   <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Importe por tiempo</p>
                   <div className="space-y-1.5">
@@ -2811,6 +2848,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Sección consumos */}
                 <div>
@@ -3135,7 +3173,25 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <span>Tipo de visita</span><span className="text-snow font-medium">{fmtVisitType(visit)}</span>
                 </div>
 
+                {/* Paquete de reserva */}
+                {imp.isPackage && (
+                  <div className="border-t border-line pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-mist uppercase tracking-wide">Reserva</p>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-fog">Total del paquete</span>
+                      <span className="text-snow font-medium">{imp.total.toFixed(2)}€</span>
+                    </div>
+                    {imp.deposit > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-fog">Adelanto pagado</span>
+                        <span className="text-mint font-medium">−{imp.deposit.toFixed(2)}€</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Tarifa sin bono */}
+                {!imp.isPackage && (
                 <div className="border-t border-line pt-3 space-y-2">
                   <p className="text-xs font-semibold text-mist uppercase tracking-wide">Tarifa regular</p>
                   {visit.adults_count > 0 && (
@@ -3155,9 +3211,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <span className={imp.bonoPrecioSesion !== null ? 'text-mist line-through' : 'text-lime'}>{imp.regular.toFixed(2)}€</span>
                   </div>
                 </div>
+                )}
 
                 {/* Descuento bono */}
-                {imp.bonoPrecioSesion !== null && mt && (
+                {!imp.isPackage && imp.bonoPrecioSesion !== null && mt && (
                   <div className="border-t border-line pt-3 space-y-2">
                     <p className="text-xs font-semibold text-iris uppercase tracking-wide">{mt.name}</p>
                     <div className="flex justify-between text-sm">
@@ -3175,8 +3232,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Total */}
                 <div className="border-t border-line pt-4 flex justify-between items-center">
-                  <span className="text-base font-bold text-snow">Total a cobrar</span>
-                  <span className="text-2xl font-bold text-lime">{imp.total.toFixed(2)}€</span>
+                  <span className="text-base font-bold text-snow">{imp.isPackage ? 'Pendiente a cobrar' : 'Total a cobrar'}</span>
+                  <span className="text-2xl font-bold text-lime">{imp.toPay.toFixed(2)}€</span>
                 </div>
               </div>
             </div>
@@ -3192,7 +3249,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const check = openChecks.get(detailVisitId)
         const imp = calcImporte(visit)
         const consumosTotal = (check?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
-        const grandTotal = imp.total + consumosTotal
+        const grandTotal = imp.toPay + consumosTotal
         const numChildren = visit.children_count ?? 0
         const tipo = fmtVisitType(visit)
         const tipoColor = tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-mist'
