@@ -172,21 +172,35 @@ export default function ServiciosPage() {
   function openNewCat() { setCatForm({ label: '', value: '' }); setEditCat(null); setShowCatModal(true) }
   function openEditCat(c: Category) { setCatForm({ label: c.label, value: c.value }); setEditCat(c); setShowCatModal(true) }
 
-  function saveCat() {
+  async function saveCat() {
     if (!catForm.label.trim()) return
-    const slug = catForm.value.trim() || catForm.label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+    // Al editar, si no se indica identificador, se mantiene el valor original (no se regenera desde el nombre)
+    const slug = editCat
+      ? (catForm.value.trim() || editCat.value)
+      : (catForm.value.trim() || catForm.label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''))
     const colorIdx = categories.length % CAT_COLORS.length
     if (editCat) {
       const updated = categories.map(c => c.value === editCat.value
         ? { ...c, label: catForm.label.trim(), value: slug }
         : c)
       setCategories(updated); saveCategories(updated)
+      // Si el identificador cambió, los servicios siguen a la categoría (no quedan huérfanos)
+      if (slug !== editCat.value) {
+        await supabase.from('services').update({ category: slug }).eq('category', editCat.value)
+        setServices(prev => prev.map(s => s.category === editCat.value ? { ...s, category: slug } : s))
+      }
     } else {
       const newCat: Category = { value: slug, label: catForm.label.trim(), ...CAT_COLORS[colorIdx] }
       const updated = [...categories, newCat]
       setCategories(updated); saveCategories(updated)
     }
     setShowCatModal(false)
+  }
+
+  async function reassignService(id: string, category: string) {
+    if (!category) return
+    await supabase.from('services').update({ category }).eq('id', id)
+    setServices(prev => prev.map(s => s.id === id ? { ...s, category } : s))
   }
 
   function confirmDeleteCat(value: string) { setDeleteCat(value) }
@@ -328,6 +342,18 @@ export default function ServiciosPage() {
                       <p className="text-sm font-semibold text-snow truncate">{s.name}</p>
                     </div>
                     <p className="text-sm font-semibold text-snow shrink-0">{s.price}€</p>
+                    {/* Reasignar a una categoría disponible */}
+                    <div className="relative shrink-0">
+                      <select
+                        value=""
+                        onChange={e => reassignService(s.id, e.target.value)}
+                        className="appearance-none bg-surface2 border border-line rounded-lg pl-2.5 pr-7 py-1.5 text-xs text-fog outline-none focus:border-line2 cursor-pointer hover:text-snow transition-colors"
+                      >
+                        <option value="">Asignar a…</option>
+                        {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                      <FolderPlus size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-fog pointer-events-none" />
+                    </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
                       <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
