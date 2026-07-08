@@ -976,6 +976,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [checkinQuery, setCheckinQuery] = useState('')
   const [checkinMembers, setCheckinMembers] = useState<FullMember[]>([])
   const [detailVisitId, setDetailVisitId] = useState<string | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<TodayBooking | null>(null)
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
   const activeVisits = todayVisits.filter(v => !v.checked_out_at)
@@ -1828,7 +1829,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               return (
                 <div key={b.id} className={`flex gap-0 ${status === 'pasado' ? 'opacity-50' : ''}`}>
                   <div className={`w-1 shrink-0 ${style.bar}`} />
-                  <div className="flex-1 px-4 py-3 flex items-start gap-3">
+                  <button
+                    onClick={() => setSelectedBooking(b)}
+                    className="flex-1 px-4 py-3 flex items-start gap-3 text-left hover:bg-surface2 transition-colors"
+                  >
                     <div className="shrink-0 text-right w-14">
                       <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
                       {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
@@ -1856,16 +1860,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       )}
                     </div>
                     {isToday && canExecute && (
-                      <button
-                        onClick={() => handleExecuteBooking(b)}
-                        disabled={executingBooking === b.id}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-ink bg-lime border border-lime/50 rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all disabled:opacity-50 shrink-0"
-                      >
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime/30 rounded-lg px-2 py-1 shrink-0">
                         <Play size={9} fill="currentColor" />
-                        {executingBooking === b.id ? '...' : 'Ejecutar'}
-                      </button>
+                        Ejecutar
+                      </span>
                     )}
-                  </div>
+                  </button>
                 </div>
               )
             })}
@@ -2708,6 +2708,124 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <LogOut size={16} strokeWidth={2.2} />
                   Registrar salida
                 </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Popup detalle de reserva */}
+      {selectedBooking && (() => {
+        const b = selectedBooking
+        const status = getBookingStatus(b)
+        const style = bookingTypeStyle[b.type]
+        const canExecute = isToday && (status === 'pendiente' || status === 'en_curso')
+        const linkedVisit = activeVisits.find(v => v.booking_id === b.id)
+        const statusLabels: Record<string, { label: string; cls: string }> = {
+          ejecutado: { label: 'Ejecutado', cls: 'bg-mint/10 text-mint border-mint/30' },
+          en_curso:  { label: 'En curso',  cls: 'bg-lime/10 text-lime border-lime/30' },
+          pendiente: { label: 'Pendiente', cls: 'bg-surface2 text-fog border-line' },
+          pasado:    { label: 'Pasado',    cls: 'bg-surface2 text-mist border-line' },
+        }
+        const st = statusLabels[status]
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setSelectedBooking(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CalendarClock size={13} className="text-fog shrink-0" />
+                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Reserva</p>
+                  </div>
+                  <p className="text-base font-bold text-snow leading-tight">{b.title}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${style.badge}`}>{style.label}</span>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${st.cls}`}>{st.label}</span>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedBooking(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+                {/* Horario */}
+                <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Horario</p>
+                  <div className="flex items-center gap-4">
+                    {b.start_time && (
+                      <div>
+                        <p className="text-[10px] text-mist mb-0.5">Inicio</p>
+                        <p className="text-lg font-bold text-snow">{b.start_time.slice(0, 5)}</p>
+                      </div>
+                    )}
+                    {b.start_time && b.end_time && <span className="text-mist">→</span>}
+                    {b.end_time && (
+                      <div>
+                        <p className="text-[10px] text-mist mb-0.5">Fin</p>
+                        <p className="text-lg font-bold text-snow">{b.end_time.slice(0, 5)}</p>
+                      </div>
+                    )}
+                    {b.start_time && b.end_time && (() => {
+                      const diff = timeToMins(b.end_time) - timeToMins(b.start_time)
+                      const h = Math.floor(diff / 60), m = diff % 60
+                      return (
+                        <div className="ml-auto">
+                          <p className="text-[10px] text-mist mb-0.5">Duración</p>
+                          <p className="text-sm font-semibold text-fog">{h > 0 ? `${h}h ` : ''}{m > 0 ? `${m}min` : ''}</p>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                {/* Titular */}
+                {b.members?.name && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">Titular</span>
+                    <span className="text-sm font-semibold text-snow">{b.members.name}</span>
+                  </div>
+                )}
+
+                {/* Invitados / Niños */}
+                {b.guests != null && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">{b.type === 'custodia' ? 'Niños' : 'Invitados'}</span>
+                    <span className="text-sm font-semibold text-snow">
+                      {b.guests} {b.type === 'custodia' ? `niño${b.guests !== 1 ? 's' : ''}` : `invitado${b.guests !== 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+                )}
+
+                {/* Visita vinculada */}
+                {linkedVisit && (
+                  <div className="rounded-xl border border-lime/20 bg-lime/5 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">En sala ahora</span>
+                    <span className="text-sm font-semibold text-lime">{fmtElapsed(linkedVisit.checked_in_at)}</span>
+                  </div>
+                )}
+
+                {/* Botón ejecutar */}
+                {canExecute && (
+                  <button
+                    onClick={() => { handleExecuteBooking(b); setSelectedBooking(null) }}
+                    disabled={executingBooking === b.id}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
+                    style={{ boxShadow: 'var(--shadow-lime)' }}
+                  >
+                    <Play size={15} fill="currentColor" />
+                    {executingBooking === b.id ? 'Ejecutando...' : 'Ejecutar reserva'}
+                  </button>
+                )}
+
+                {status === 'ejecutado' && (
+                  <div className="flex items-center justify-center gap-2 rounded-xl py-3 bg-mint/10 border border-mint/20">
+                    <Check size={15} className="text-mint" strokeWidth={2.5} />
+                    <span className="text-sm font-semibold text-mint">Reserva ejecutada</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
