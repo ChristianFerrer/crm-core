@@ -51,6 +51,9 @@ type TodayBooking = {
   start_time: string | null
   end_time: string | null
   guests: number | null
+  guest_adults: number | null
+  guest_children: number | null
+  child_name: string | null
   executed_at: string | null
   member_id: string | null
   members: { name: string } | null
@@ -927,36 +930,51 @@ function BookingFormModal({
   onClose: () => void
   onSaved: () => void
 }) {
-  const defaultTitle =
-    bookingType === 'birthday' ? `Cumpleaños de ${member.name}` :
-    bookingType === 'custodia' ? `Custodia — ${member.name}` : ''
+  const firstChild = bookingType === 'birthday' && member.children?.length > 0 ? member.children[0].name : ''
 
-  const [title, setTitle]       = useState(defaultTitle)
-  const [date, setDate]         = useState(selectedDate)
-  const [startTime, setStart]   = useState('')
-  const [endTime, setEnd]       = useState('')
-  const [guests, setGuests]     = useState(0)
-  const [saving, setSaving]     = useState(false)
-  const [error, setError]       = useState<string | null>(null)
-  const [saved, setSaved]       = useState(false)
+  const [birthdayChild, setBirthdayChild] = useState(firstChild)
+  const [title, setTitle] = useState(
+    bookingType === 'birthday' ? `Cumple de ${firstChild || member.name}` :
+    bookingType === 'custodia' ? `Custodia — ${member.name}` : ''
+  )
+  const [date, setDate]           = useState(selectedDate)
+  const [startTime, setStart]     = useState('')
+  const [endTime, setEnd]         = useState('')
+  const [guestAdults, setGuestAdults]     = useState(0)
+  const [guestChildren, setGuestChildren] = useState(0)
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState<string | null>(null)
+  const [saved, setSaved]         = useState(false)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const typeLabels = { birthday: 'Cumpleaños', custodia: 'Custodia', other: 'Otro' }
-  const guestLabel = bookingType === 'custodia' ? 'Niños en custodia' : 'Invitados / niños'
   const needsTitle = bookingType === 'other'
-  const isValid = (!needsTitle || title.trim()) && startTime && endTime
+  const birthdayValid = bookingType !== 'birthday' || !!birthdayChild || member.children.length === 0
+  const isValid = (!needsTitle || title.trim()) && startTime && endTime && birthdayValid
+
+  function handleChildSelect(name: string) {
+    setBirthdayChild(name)
+    setTitle(`Cumple de ${name}`)
+  }
 
   async function handleSave() {
     if (!isValid || saving) return
     setSaving(true); setError(null)
+    const finalTitle = title.trim() || (
+      bookingType === 'birthday' ? `Cumple de ${birthdayChild || member.name}` :
+      bookingType === 'custodia' ? `Custodia — ${member.name}` : 'Reserva'
+    )
     const { error: err } = await supabase.from('bookings').insert({
       tenant_id: tenantId,
       member_id: member.id,
       type: bookingType,
-      title: title.trim() || defaultTitle,
+      title: finalTitle,
       start_time: startTime,
       end_time: endTime,
-      guests: guests > 0 ? guests : null,
+      guests: guestAdults + guestChildren > 0 ? guestAdults + guestChildren : null,
+      guest_adults: guestAdults,
+      guest_children: guestChildren,
+      child_name: bookingType === 'birthday' ? (birthdayChild || null) : null,
       date: date,
       status: 'active',
     })
@@ -968,10 +986,25 @@ function BookingFormModal({
 
   const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2.5 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
+  function Counter({ value, onChange, label }: { value: number; onChange: (n: number) => void; label: string }) {
+    return (
+      <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line bg-surface2">
+        <span className="text-sm text-fog">{label}</span>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => onChange(Math.max(0, value - 1))} disabled={value === 0}
+            className="w-8 h-8 rounded-lg border border-line bg-surface text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
+          <span className="w-6 text-center font-bold text-snow text-sm">{value}</span>
+          <button type="button" onClick={() => onChange(value + 1)}
+            className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
             <ChevronLeft size={16} />
@@ -995,13 +1028,34 @@ function BookingFormModal({
             </div>
           ) : (
             <>
+              {/* Niño/a que cumple — solo cumpleaños con hijos registrados */}
+              {bookingType === 'birthday' && member.children && member.children.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
+                    Niño/a que cumple <span className="text-rose">*</span>
+                  </p>
+                  <div className="space-y-1.5">
+                    {member.children.map((c: any) => (
+                      <button key={c.name} type="button" onClick={() => handleChildSelect(c.name)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
+                          birthdayChild === c.name ? 'border-iris/40 bg-iris/10' : 'border-line bg-surface2 hover:border-line2'
+                        }`}>
+                        <Cake size={15} className={birthdayChild === c.name ? 'text-iris' : 'text-fog'} />
+                        <span className={`flex-1 text-sm font-medium ${birthdayChild === c.name ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
+                        {birthdayChild === c.name && <Check size={14} className="text-iris" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Título */}
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
                   Título {needsTitle && <span className="text-rose">*</span>}
                 </label>
                 <input value={title} onChange={e => setTitle(e.target.value)}
-                  placeholder={needsTitle ? 'Nombre del evento o reserva' : defaultTitle}
+                  placeholder={needsTitle ? 'Nombre del evento o reserva' : ''}
                   className={inputCls} />
               </div>
 
@@ -1018,23 +1072,17 @@ function BookingFormModal({
 
               {/* Horario */}
               <div>
-                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
                   Horario <span className="text-rose">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <p className="text-[10px] text-mist px-1">Inicio</p>
-                    <div className="flex items-center px-3 py-2.5 rounded-xl border border-line bg-surface2">
-                      <input type="time" value={startTime} onChange={e => setStart(e.target.value)}
-                        className="w-full bg-transparent text-sm text-snow outline-none" />
-                    </div>
+                    <TimePicker value={startTime} onChange={setStart} />
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] text-mist px-1">Fin</p>
-                    <div className="flex items-center px-3 py-2.5 rounded-xl border border-line bg-surface2">
-                      <input type="time" value={endTime} onChange={e => setEnd(e.target.value)}
-                        className="w-full bg-transparent text-sm text-snow outline-none" />
-                    </div>
+                    <TimePicker value={endTime} onChange={setEnd} />
                   </div>
                 </div>
                 {startTime && endTime && endTime <= startTime && (
@@ -1044,23 +1092,20 @@ function BookingFormModal({
 
               {/* Invitados */}
               <div>
-                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{guestLabel}</label>
-                <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line bg-surface2">
-                  <button type="button" onClick={() => setGuests(n => Math.max(0, n - 1))} disabled={guests === 0}
-                    className="w-8 h-8 rounded-lg border border-line bg-surface text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
-                  <span className="w-5 text-center font-bold text-snow text-sm">{guests}</span>
-                  <button type="button" onClick={() => setGuests(n => n + 1)}
-                    className="w-8 h-8 rounded-lg border border-lime/40 bg-lime/10 text-lime hover:bg-lime/20 flex items-center justify-center text-lg font-bold transition-colors">+</button>
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
+                  {bookingType === 'custodia' ? 'Niños en custodia' : 'Invitados'}
+                </label>
+                <div className="space-y-2">
+                  {bookingType !== 'custodia' && (
+                    <Counter value={guestAdults} onChange={setGuestAdults} label="Adultos" />
+                  )}
+                  <Counter
+                    value={guestChildren}
+                    onChange={setGuestChildren}
+                    label={bookingType === 'custodia' ? 'Niños' : 'Niños'}
+                  />
                 </div>
               </div>
-
-              {/* Hijos registrados (solo cumpleaños) */}
-              {bookingType === 'birthday' && member.children && member.children.length > 0 && (
-                <div className="rounded-xl border border-iris/20 bg-iris/5 px-4 py-3">
-                  <p className="text-[10px] font-semibold text-iris uppercase tracking-wide mb-1">Hijos registrados</p>
-                  <p className="text-xs text-fog">{member.children.map((c: any) => c.name).join(', ')}</p>
-                </div>
-              )}
 
               {error && <p className="text-sm text-rose text-center">{error}</p>}
 
@@ -1181,6 +1226,33 @@ function fmtTime(iso: string) {
 function timeToMins(t: string): number {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
+}
+
+function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [h, m] = value ? value.split(':') : ['', '']
+  const hours = Array.from({ length: 17 }, (_, i) => String(i + 7).padStart(2, '0'))
+  const minutes = ['00', '15', '30', '45']
+  return (
+    <div className="flex items-center gap-1 bg-surface2 rounded-xl border border-line px-4 py-3">
+      <select
+        value={h}
+        onChange={e => { const hv = e.target.value; onChange(hv && m ? `${hv}:${m}` : hv ? `${hv}:00` : '') }}
+        className="bg-transparent text-2xl font-bold text-snow outline-none appearance-none cursor-pointer w-10 text-center"
+      >
+        <option value="">--</option>
+        {hours.map(hr => <option key={hr} value={hr}>{hr}</option>)}
+      </select>
+      <span className="text-2xl font-bold text-fog select-none">:</span>
+      <select
+        value={m}
+        onChange={e => { const mv = e.target.value; onChange(h && mv ? `${h}:${mv}` : '') }}
+        className="bg-transparent text-2xl font-bold text-snow outline-none appearance-none cursor-pointer w-10 text-center"
+      >
+        <option value="">--</option>
+        {minutes.map(min => <option key={min} value={min}>{min}</option>)}
+      </select>
+    </div>
+  )
 }
 
 function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: string; suffixClass: string }) {
