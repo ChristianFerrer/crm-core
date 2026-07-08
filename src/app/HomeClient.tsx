@@ -933,6 +933,7 @@ function BookingFormModal({
   const firstChild = bookingType === 'birthday' && member.children?.length > 0 ? member.children[0].name : ''
 
   const [birthdayChild, setBirthdayChild] = useState(firstChild)
+  const [selectedChildren, setSelectedChildren] = useState<string[]>([])
   const [title, setTitle] = useState(
     bookingType === 'birthday' ? `Cumple de ${firstChild || member.name}` :
     bookingType === 'custodia' ? `Custodia — ${member.name}` : ''
@@ -950,7 +951,8 @@ function BookingFormModal({
   const typeLabels = { birthday: 'Cumpleaños', custodia: 'Custodia', other: 'Otro' }
   const needsTitle = bookingType === 'other'
   const birthdayValid = bookingType !== 'birthday' || !!birthdayChild || member.children.length === 0
-  const isValid = (!needsTitle || title.trim()) && startTime && endTime && birthdayValid
+  const custodiaValid = bookingType !== 'custodia' || selectedChildren.length > 0 || member.children.length === 0
+  const isValid = (!needsTitle || title.trim()) && startTime && endTime && birthdayValid && custodiaValid
 
   function handleChildSelect(name: string) {
     setBirthdayChild(name)
@@ -971,10 +973,17 @@ function BookingFormModal({
       title: finalTitle,
       start_time: startTime,
       end_time: endTime,
-      guests: guestAdults + guestChildren > 0 ? guestAdults + guestChildren : null,
+      guests: guestAdults + guestChildren + selectedChildren.length > 0
+        ? guestAdults + guestChildren + selectedChildren.length : null,
       guest_adults: guestAdults,
-      guest_children: guestChildren,
-      child_name: bookingType === 'birthday' ? (birthdayChild || null) : null,
+      guest_children: bookingType === 'custodia'
+        ? selectedChildren.length + guestChildren
+        : guestChildren,
+      child_name: bookingType === 'birthday'
+        ? (birthdayChild || null)
+        : bookingType === 'custodia' && selectedChildren.length > 0
+          ? selectedChildren.join(', ')
+          : null,
       date: date,
       status: 'confirmed',
     })
@@ -1028,23 +1037,47 @@ function BookingFormModal({
             </div>
           ) : (
             <>
-              {/* Niño/a que cumple — solo cumpleaños con hijos registrados */}
-              {bookingType === 'birthday' && member.children && member.children.length > 0 && (
+              {/* Menores — selector para cumpleaños (único) y custodia (múltiple) */}
+              {member.children && member.children.length > 0 && (bookingType === 'birthday' || bookingType === 'custodia') && (
                 <div>
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
-                    Niño/a que cumple <span className="text-rose">*</span>
+                    {bookingType === 'birthday' ? 'Niño/a que cumple' : 'Menores'}
+                    {' '}<span className="text-rose">*</span>
                   </p>
                   <div className="space-y-1.5">
-                    {member.children.map((c: any) => (
-                      <button key={c.name} type="button" onClick={() => handleChildSelect(c.name)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
-                          birthdayChild === c.name ? 'border-iris/40 bg-iris/10' : 'border-line bg-surface2 hover:border-line2'
-                        }`}>
-                        <Cake size={15} className={birthdayChild === c.name ? 'text-iris' : 'text-fog'} />
-                        <span className={`flex-1 text-sm font-medium ${birthdayChild === c.name ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
-                        {birthdayChild === c.name && <Check size={14} className="text-iris" />}
-                      </button>
-                    ))}
+                    {member.children.map((c: any) => {
+                      if (bookingType === 'birthday') {
+                        return (
+                          <button key={c.name} type="button" onClick={() => handleChildSelect(c.name)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
+                              birthdayChild === c.name ? 'border-iris/40 bg-iris/10' : 'border-line bg-surface2 hover:border-line2'
+                            }`}>
+                            <Cake size={15} className={birthdayChild === c.name ? 'text-iris' : 'text-fog'} />
+                            <span className={`flex-1 text-sm font-medium ${birthdayChild === c.name ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
+                            {birthdayChild === c.name && <Check size={14} className="text-iris" />}
+                          </button>
+                        )
+                      }
+                      const sel = selectedChildren.includes(c.name)
+                      const age = c.birth_date ? fmtChildAge(c.birth_date) : null
+                      return (
+                        <button key={c.name} type="button"
+                          onClick={() => setSelectedChildren(prev =>
+                            sel ? prev.filter(n => n !== c.name) : [...prev, c.name]
+                          )}
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left ${
+                            sel ? 'border-cyan-300/40 bg-cyan-300/10' : 'border-line bg-surface2 hover:border-line2'
+                          }`}>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            sel ? 'bg-cyan-300 border-cyan-300' : 'border-line2'
+                          }`}>
+                            {sel && <Check size={11} className="text-ink" strokeWidth={3} />}
+                          </div>
+                          <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{c.name}</span>
+                          {age && <span className="text-xs text-mist shrink-0">{age}</span>}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -1090,10 +1123,10 @@ function BookingFormModal({
                 )}
               </div>
 
-              {/* Invitados */}
+              {/* Invitados adicionales */}
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
-                  {bookingType === 'custodia' ? 'Niños en custodia' : 'Invitados'}
+                  {bookingType === 'custodia' ? 'Niños adicionales' : 'Invitados'}
                 </label>
                 <div className="space-y-2">
                   {bookingType !== 'custodia' && (
@@ -1102,7 +1135,7 @@ function BookingFormModal({
                   <Counter
                     value={guestChildren}
                     onChange={setGuestChildren}
-                    label={bookingType === 'custodia' ? 'Niños' : 'Niños'}
+                    label={bookingType === 'custodia' ? 'Niños sin registrar' : 'Niños'}
                   />
                 </div>
               </div>
