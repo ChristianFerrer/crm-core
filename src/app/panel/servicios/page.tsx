@@ -70,6 +70,19 @@ const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', p
 const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
 
 const STORAGE_KEY = 'wm_service_categories'
+const STORAGE_KEY_DELETED = 'wm_service_categories_deleted'
+
+function loadDeletedDefaults(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DELETED)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return []
+}
+
+function saveDeletedDefaults(values: string[]) {
+  localStorage.setItem(STORAGE_KEY_DELETED, JSON.stringify(values))
+}
 
 function loadCategories(): Category[] {
   try {
@@ -77,8 +90,9 @@ function loadCategories(): Category[] {
     if (raw) {
       const stored: Category[] = JSON.parse(raw)
       const values = new Set(stored.map(c => c.value))
-      // Fusiona categorías por defecto que falten (p. ej. 'cumpleanos' añadida después)
-      const missing = DEFAULT_CATEGORIES.filter(c => !values.has(c.value))
+      const deleted = new Set(loadDeletedDefaults())
+      // Fusiona categorías por defecto que falten y que no hayan sido eliminadas por el usuario
+      const missing = DEFAULT_CATEGORIES.filter(c => !values.has(c.value) && !deleted.has(c.value))
       return missing.length > 0 ? [...stored, ...missing] : stored
     }
   } catch {}
@@ -193,6 +207,9 @@ export default function ServiciosPage() {
       const newCat: Category = { value: slug, label: catForm.label.trim(), ...CAT_COLORS[colorIdx] }
       const updated = [...categories, newCat]
       setCategories(updated); saveCategories(updated)
+      // Si se recrea una categoría por defecto antes eliminada, quítala de la lista de eliminadas
+      const deleted = loadDeletedDefaults()
+      if (deleted.includes(slug)) saveDeletedDefaults(deleted.filter(v => v !== slug))
     }
     setShowCatModal(false)
   }
@@ -207,7 +224,13 @@ export default function ServiciosPage() {
   function doDeleteCat() {
     if (!deleteCat) return
     const updated = categories.filter(c => c.value !== deleteCat)
-    setCategories(updated); saveCategories(updated); setDeleteCat(null)
+    setCategories(updated); saveCategories(updated)
+    // Si es una categoría por defecto, recuérdalo para que no reaparezca al recargar
+    if (DEFAULT_CATEGORIES.some(c => c.value === deleteCat)) {
+      const deleted = Array.from(new Set([...loadDeletedDefaults(), deleteCat]))
+      saveDeletedDefaults(deleted)
+    }
+    setDeleteCat(null)
   }
 
   const grouped = categories.map(cat => ({
