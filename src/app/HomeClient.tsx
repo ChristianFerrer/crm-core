@@ -2271,10 +2271,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       )}
                     </div>
                     {isToday && canExecute && (
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime/30 rounded-lg px-2 py-1 shrink-0">
+                      <button
+                        onClick={e => { e.stopPropagation(); handleExecuteBooking(b) }}
+                        disabled={executingBooking === b.id}
+                        className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime/30 bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                      >
                         <Play size={9} fill="currentColor" />
-                        Ejecutar
-                      </span>
+                        {executingBooking === b.id ? '...' : 'Ejecutar'}
+                      </button>
                     )}
                   </button>
                 </div>
