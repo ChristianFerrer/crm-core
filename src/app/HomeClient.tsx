@@ -976,7 +976,7 @@ function BookingFormModal({
       guest_children: guestChildren,
       child_name: bookingType === 'birthday' ? (birthdayChild || null) : null,
       date: date,
-      status: 'active',
+      status: 'confirmed',
     })
     if (err) { setError(err.message); setSaving(false); return }
     setSaved(true)
