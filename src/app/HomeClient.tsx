@@ -59,6 +59,7 @@ type TodayBooking = {
   guest_adults: number | null
   guest_children: number | null
   child_name: string | null
+  notes: string | null
   executed_at: string | null
   member_id: string | null
   amount: number | null
@@ -2599,11 +2600,21 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         )}
                       </div>
                       {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
-                      {b.guests != null && (
-                        <p className="text-[11px] text-mist">
-                          {b.guests} {b.type === 'custodia' ? `niño${b.guests !== 1 ? 's' : ''}` : `invitado${b.guests !== 1 ? 's' : ''}`}
-                        </p>
-                      )}
+                      {(() => {
+                        const gA = b.guest_adults ?? 0
+                        const gC = b.guest_children ?? 0
+                        const totalG = b.guests ?? (gA + gC)
+                        if (totalG <= 0 && gA === 0 && gC === 0) return null
+                        if (b.type === 'custodia') {
+                          return <p className="text-[11px] text-mist">{totalG} niño{totalG !== 1 ? 's' : ''}</p>
+                        }
+                        return (
+                          <p className="text-[11px] text-mist">
+                            {totalG} invitado{totalG !== 1 ? 's' : ''}
+                            {(gA > 0 || gC > 0) && <span> · {gA} adulto{gA !== 1 ? 's' : ''}, {gC} niño{gC !== 1 ? 's' : ''}</span>}
+                          </p>
+                        )
+                      })()}
                     </div>
                     {isToday && canExecute && (
                       <button
@@ -3625,15 +3636,38 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                 )}
 
-                {/* Invitados / Niños */}
-                {b.guests != null && (
+                {/* Menor (cumpleaños / custodia) */}
+                {b.child_name && (
                   <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">{b.type === 'custodia' ? 'Niños' : 'Invitados'}</span>
-                    <span className="text-sm font-semibold text-snow">
-                      {b.guests} {b.type === 'custodia' ? `niño${b.guests !== 1 ? 's' : ''}` : `invitado${b.guests !== 1 ? 's' : ''}`}
-                    </span>
+                    <span className="text-xs text-fog">{b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores'}</span>
+                    <span className="text-sm font-semibold text-snow">{b.child_name}</span>
                   </div>
                 )}
+
+                {/* Invitados / Niños con desglose */}
+                {(() => {
+                  const gA = b.guest_adults ?? 0
+                  const gC = b.guest_children ?? 0
+                  const totalG = b.guests ?? (gA + gC)
+                  if (totalG <= 0 && gA === 0 && gC === 0) return null
+                  return (
+                    <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-fog">{b.type === 'custodia' ? 'Niños' : 'Invitados'}</span>
+                        <span className="text-sm font-semibold text-snow">
+                          {totalG} {b.type === 'custodia' ? `niño${totalG !== 1 ? 's' : ''}` : `invitado${totalG !== 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+                      {b.type !== 'custodia' && (gA > 0 || gC > 0) && (
+                        <div className="flex items-center gap-3 mt-1.5 text-[11px] text-mist">
+                          <span>{gA} adulto{gA !== 1 ? 's' : ''}</span>
+                          <span>·</span>
+                          <span>{gC} niño{gC !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {/* Pagos */}
                 {(b.amount != null || (b.deposit_amount != null && b.deposit_amount > 0)) && (() => {
@@ -3677,6 +3711,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     </div>
                   )
                 })()}
+
+                {/* Notas */}
+                {b.notes && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</p>
+                    <p className="text-xs text-snow whitespace-pre-wrap leading-relaxed">{b.notes}</p>
+                  </div>
+                )}
 
                 {/* Visita vinculada */}
                 {linkedVisit && (
