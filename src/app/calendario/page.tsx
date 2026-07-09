@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List, LogIn, CheckCircle, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { getStoredTenant } from '@/lib/tenant'
+import { BookingSearchAndTypeModal, BookingFormModal, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
@@ -103,6 +105,86 @@ export default function CalendarioPage() {
   const [showAddMember, setShowAddMember] = useState(false)
   const [newMemberForm, setNewMemberForm] = useState(EMPTY_NEW_MEMBER)
   const [savingMember, setSavingMember] = useState(false)
+  const newMemberForFlow = useRef(false)
+
+  // ── Flujo compartido de reserva (mismo componente que Inicio) ──
+  const [flowStep, setFlowStep] = useState<null | 'pick' | 'form'>(null)
+  const [flowMember, setFlowMember] = useState<FullMember | null>(null)
+  const [flowType, setFlowType] = useState<'birthday' | 'custodia' | 'other'>('birthday')
+  const [flowCategory, setFlowCategory] = useState('otros')
+  const [flowQuery, setFlowQuery] = useState('')
+  const [flowEditId, setFlowEditId] = useState<string | null>(null)
+  const [flowInitial, setFlowInitial] = useState<BookingInitial | null>(null)
+  const [bookingServices, setBookingServices] = useState<BookingService[]>([])
+  const [rateAdult, setRateAdult] = useState(3)
+  const [rateChild, setRateChild] = useState(7)
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({ cumpleanos: 'Cumpleaños', custodia: 'Custodia', otros: 'Otro' })
+
+  useEffect(() => {
+    supabase.from('services')
+      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable')
+      .eq('active', true).order('sort_order')
+      .then(({ data }) => {
+        if (!data) return
+        setBookingServices(data as BookingService[])
+        const a = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Adulto')
+        const c = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Niño')
+        if (a) setRateAdult(Number(a.price))
+        if (c) setRateChild(Number(c.price))
+      })
+    try {
+      const raw = localStorage.getItem('wm_service_categories')
+      if (raw) {
+        const cats = JSON.parse(raw) as { value: string; label: string }[]
+        setCategoryLabels(prev => ({ ...prev, ...Object.fromEntries(cats.map(c => [c.value, c.label])) }))
+      }
+    } catch {}
+  }, [])
+
+  const reservableTypes = (() => {
+    const preferred = ['cumpleanos', 'custodia', 'otros']
+    const cats = Array.from(new Set(bookingServices.filter(s => s.reservable).map(s => s.category)))
+    cats.sort((x, y) => (preferred.indexOf(x) === -1 ? 99 : preferred.indexOf(x)) - (preferred.indexOf(y) === -1 ? 99 : preferred.indexOf(y)))
+    return cats.map(cat => ({
+      category: cat,
+      flow: (cat === 'cumpleanos' ? 'birthday' : cat === 'custodia' ? 'custodia' : 'other') as 'birthday' | 'custodia' | 'other',
+      label: categoryLabels[cat] ?? cat.charAt(0).toUpperCase() + cat.slice(1),
+    }))
+  })()
+
+  const flowMembers: FullMember[] = members.map(m => ({
+    id: m.id, name: m.name, phone: (m as any).phone ?? null, family_id: null, memberships: [],
+    children: (m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })),
+  }))
+  const flowFiltered = flowQuery.trim().length > 0
+    ? flowMembers.filter(m => {
+        const q = flowQuery.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        const n = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        const qd = q.replace(/\D/g, '')
+        return n.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
+      })
+    : []
+
+  function closeFlow() { setFlowStep(null); setFlowMember(null); setFlowQuery(''); setFlowEditId(null); setFlowInitial(null) }
+  function openNewFlow() { setFlowEditId(null); setFlowInitial(null); setFlowMember(null); setFlowQuery(''); setFlowStep('pick') }
+  function openEditFlow(b: Booking) {
+    if (!b.member_id || !b.members) return
+    const mem: FullMember = {
+      id: b.members.id, name: b.members.name, phone: null, family_id: null, memberships: [],
+      children: (b.members.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })),
+    }
+    const cat = bookingServices.find(s => s.id === b.service_id)?.category ?? (b.type === 'birthday' ? 'cumpleanos' : b.type === 'custodia' ? 'custodia' : 'otros')
+    setFlowMember(mem)
+    setFlowType(b.type)
+    setFlowCategory(cat)
+    setFlowInitial({
+      title: b.title, child_name: b.child_name, date: b.date, start_time: b.start_time, end_time: b.end_time,
+      guest_adults: b.guest_adults, guest_children: b.guest_children, service_id: b.service_id,
+      amount: b.amount, deposit_amount: b.deposit_amount, addons: b.addons ?? [], notes: b.notes,
+    })
+    setFlowEditId(b.id)
+    setFlowStep('form')
+  }
 
   const fetchBookings = useCallback(async () => {
     const from = `${year}-${String(month + 1).padStart(2, '0')}-01`
@@ -115,7 +197,7 @@ export default function CalendarioPage() {
   }, [year, month])
 
   const fetchMembers = useCallback(() => {
-    supabase.from('members').select('id, name, children').order('name').then(({ data }) => setMembers((data ?? []) as Member[]))
+    supabase.from('members').select('id, name, phone, children').order('name').then(({ data }) => setMembers((data ?? []) as Member[]))
   }, [])
 
   async function handleExecute(b: Booking) {
@@ -234,16 +316,23 @@ export default function CalendarioPage() {
       name: newMemberForm.name,
       phone: newMemberForm.phone || null,
       birth_date: newMemberForm.birth_date || null,
-    }).select('id, name, children').single()
+    }).select('id, name, phone, children').single()
     setSavingMember(false)
     if (data) {
       fetchMembers()
       const member = data as Member
-      setForm(f => ({
-        ...f,
-        member_id: member.id,
-        title: f.type === 'custodia' ? `Custodia · ${member.name}` : f.title,
-      }))
+      if (newMemberForFlow.current) {
+        // Volver al flujo compartido con el titular recién creado preseleccionado
+        newMemberForFlow.current = false
+        setFlowMember({ id: member.id, name: member.name, phone: (member as any).phone ?? null, family_id: null, memberships: [], children: (member.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })) })
+        setFlowStep('pick')
+      } else {
+        setForm(f => ({
+          ...f,
+          member_id: member.id,
+          title: f.type === 'custodia' ? `Custodia · ${member.name}` : f.title,
+        }))
+      }
     }
     setShowAddMember(false)
     setNewMemberForm(EMPTY_NEW_MEMBER)
@@ -271,7 +360,7 @@ export default function CalendarioPage() {
             >
               <List size={15} /> Próximas
             </button>
-            <button onClick={openNewBooking} className="flex items-center gap-2 bg-lime text-ink font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/90 transition-colors">
+            <button onClick={openNewFlow} className="flex items-center gap-2 bg-lime text-ink font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/90 transition-colors">
               <Plus size={16} /> Nueva reserva
             </button>
           </div>
@@ -777,7 +866,7 @@ export default function CalendarioPage() {
                   </button>
                 )}
                 {b.status !== 'cancelled' && (
-                  <button onClick={() => { setDetailBooking(null); router.push(`/?editar=${b.id}`) }}
+                  <button onClick={() => { setDetailBooking(null); openEditFlow(b) }}
                     className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-line text-fog font-semibold text-sm hover:text-snow transition-colors">
                     <Pencil size={14} /> Editar reserva
                   </button>
@@ -794,6 +883,37 @@ export default function CalendarioPage() {
         )
       })()}
 
+      {/* ── Flujo compartido: crear/editar reserva (mismo componente que Inicio) ── */}
+      {flowStep === 'pick' && (
+        <BookingSearchAndTypeModal
+          filtered={flowFiltered}
+          query={flowQuery}
+          onQueryChange={setFlowQuery}
+          preselectedMember={flowMember}
+          types={reservableTypes}
+          onProceed={(m, t, cat) => { setFlowMember(m); setFlowType(t); setFlowCategory(cat); setFlowStep('form') }}
+          onNewMember={() => { newMemberForFlow.current = true; setShowAddMember(true) }}
+          onClose={closeFlow}
+        />
+      )}
+      {flowStep === 'form' && flowMember && (
+        <BookingFormModal
+          key={flowEditId ?? 'nuevo'}
+          member={flowMember}
+          bookingType={flowType}
+          serviceCategory={flowCategory}
+          selectedDate={selectedDate ?? todayStr}
+          services={bookingServices}
+          rateAdult={rateAdult}
+          rateChild={rateChild}
+          tenantId={getStoredTenant()?.id ?? null}
+          editId={flowEditId}
+          initial={flowInitial}
+          onBack={() => { if (flowEditId) closeFlow(); else setFlowStep('pick') }}
+          onClose={closeFlow}
+          onSaved={() => { fetchBookings() }}
+        />
+      )}
     </div>
   )
 }

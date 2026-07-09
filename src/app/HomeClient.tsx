@@ -100,7 +100,7 @@ type MemberData = {
   children: { name: string; birth_date?: string; age?: number }[]
 }
 
-type FullMember = {
+export type FullMember = {
   id: string
   name: string
   phone: string | null
@@ -799,7 +799,7 @@ function CheckinNewMemberModal({
 
 
 // ── Modal reserva: titular + tipo (paso 1 de 2) ──
-function BookingSearchAndTypeModal({
+export function BookingSearchAndTypeModal({
   filtered, query, onQueryChange, preselectedMember, types: reservableTypes,
   onProceed, onNewMember, onClose,
 }: {
@@ -935,7 +935,7 @@ function chargeableGuests(adults: number, children: number, included: number) {
   return { chargeAdults: Math.max(0, adults - freeAdults), chargeChildren: Math.max(0, children - freeChildren) }
 }
 
-type BookingInitial = {
+export type BookingInitial = {
   title?: string | null; child_name?: string | null; date?: string | null
   start_time?: string | null; end_time?: string | null
   guest_adults?: number | null; guest_children?: number | null
@@ -944,7 +944,7 @@ type BookingInitial = {
 }
 
 // ── Modal reserva 3: formulario ──
-function BookingFormModal({
+export function BookingFormModal({
   member, bookingType, serviceCategory, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
   editId = null, initial = null,
 }: {
@@ -1439,7 +1439,7 @@ function BookingFormModal({
   )
 }
 
-type BookingService = {
+export type BookingService = {
   id: string
   name: string
   description: string | null
@@ -1453,7 +1453,7 @@ type BookingService = {
   reservable: boolean | null
 }
 
-type BookingAddon = { name: string; price: number }
+export type BookingAddon = { name: string; price: number }
 
 type HomeClientProps = {
   todayVisits: TodayVisit[]
