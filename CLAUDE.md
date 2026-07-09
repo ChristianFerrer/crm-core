@@ -90,8 +90,56 @@ Adaptar producto para peluquerías caninas y academias deportivas
 
 ---
 
+## Módulo de Reservas y Pagos (implementado)
+
+Flujo de creación (en `HomeClient.tsx`): `BookingSearchAndTypeModal` (titular + tipo) → `BookingFormModal` (formulario). El mismo flujo se dispara desde el calendario con `/?nueva=1&date=...`.
+
+**Tipos de reserva dinámicos:** la lista de tipos se genera desde los servicios marcados como `reservable`. Categoría `cumpleanos` → flujo Cumpleaños; `custodia` → flujo Custodia; cualquier otra categoría reservable → flujo genérico ("Otro") con su paquete. Modelo elegido: **especiales + genéricos** (Cumpleaños y Custodia conservan UX propia).
+
+**Precio:**
+- **Cumpleaños:** precio FIJO del paquete por capacidad. Al elegir servicio se precarga la capacidad dividida 50/50 adultos/niños (editable, no altera el precio).
+- **Custodia:** precio fijo contratado.
+- **Otro:** recálculo en vivo — invitados que exceden la capacidad incluida se cobran (tarifa por invitado del servicio, o tarifa de "entrada libre" como fallback).
+- **Adelanto (señal):** `deposit_pct` del servicio (default 50%), editable. Estado de pago derivado: `pending` / `partial` / `paid`.
+- **Sub-servicios:** categoría `subservicios` (Tarta, Decoración, Catering, Globos…). Se suman al total. Campo `applies_to` (jsonb) define a qué tipos de reserva pueden agregarse.
+
+**Título:** Cumpleaños = `Cumple de {niño}`; Custodia = `Custodia de {menor(es)}`.
+
+**Detalle de reserva** (popup en agenda) alineado con el formulario: Titular, Menor, Fecha, Horario, Invitados (adultos/niños), Pagos (paquete, sub-servicios, total, adelanto, pendiente, estado), Notas.
+
+### Esquema de BD relevante
+
+```sql
+-- bookings
+service_id uuid REFERENCES services(id)
+amount numeric              -- total de la reserva
+deposit_amount numeric      -- adelanto pagado
+deposit_paid_at timestamptz
+payment_status text         -- pending | partial | paid (sin CHECK)
+addons jsonb DEFAULT '[]'   -- sub-servicios: [{name, price}]
+guest_adults int, guest_children int
+notes text
+-- CHECK type IN ('birthday','custodia','other')
+-- CHECK status IN ('pending','confirmed','cancelled')
+
+-- services
+category text               -- entrada|bono|cumpleanos|custodia|otros|subservicios|general
+reservable boolean          -- aparece como tipo al crear reserva
+included_guests int         -- personas cubiertas por el precio
+deposit_pct numeric DEFAULT 50
+price_per_guest_adult numeric, price_per_guest_child numeric
+applies_to jsonb            -- (subservicios) tipos a los que aplica
+```
+
+Config de servicios en `/panel/servicios` (CRUD + categorías en localStorage `wm_service_categories`, eliminadas en `wm_service_categories_deleted`).
+
+## ⚠️ Seguridad pendiente
+
+RLS **desactivado** en 11 tablas (bookings, members, services, etc.) — expuestas con la anon key. Pendiente definir políticas por `tenant_id`.
+
 ## Contexto de sesiones anteriores
 
 - Backup disponible en commit `083a83d` (antes de mejoras UX)
 - Último commit estable con todas las mejoras UX: `7cbff4d`
+- Módulo de reservas/pagos/sub-servicios: hasta commit `1f4ac6a` (rama `claude/stoic-brown-tqnz3g`)
 - Mejoras UX implementadas: FAB en inicio y miembros, filtros de miembros, QR expandible, reordenación home, alertas de visitas largas, próximas reservas en agenda, top5 clickable, días restantes de bono en ficha de miembro

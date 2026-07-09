@@ -53,6 +53,7 @@ type TodayBooking = {
   id: string
   type: 'birthday' | 'custodia' | 'other'
   title: string
+  date: string | null
   start_time: string | null
   end_time: string | null
   guests: number | null
@@ -67,6 +68,7 @@ type TodayBooking = {
   payment_status: string | null
   addons: { name: string; price: number }[] | null
   members: { name: string } | null
+  services: { name: string } | null
 }
 
 type Product = {
@@ -3658,6 +3660,32 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </div>
 
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+                {/* Titular */}
+                {b.members?.name && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">Titular</span>
+                    <span className="text-sm font-semibold text-snow">{b.members.name}</span>
+                  </div>
+                )}
+
+                {/* Menor (cumpleaños / custodia) */}
+                {b.child_name && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">{b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores'}</span>
+                    <span className="text-sm font-semibold text-snow">{b.child_name}</span>
+                  </div>
+                )}
+
+                {/* Fecha */}
+                {b.date && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">Fecha</span>
+                    <span className="text-sm font-semibold text-snow capitalize">
+                      {new Date(b.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </span>
+                  </div>
+                )}
+
                 {/* Horario */}
                 <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Horario</p>
@@ -3687,22 +3715,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     })()}
                   </div>
                 </div>
-
-                {/* Titular */}
-                {b.members?.name && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">Titular</span>
-                    <span className="text-sm font-semibold text-snow">{b.members.name}</span>
-                  </div>
-                )}
-
-                {/* Menor (cumpleaños / custodia) */}
-                {b.child_name && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">{b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores'}</span>
-                    <span className="text-sm font-semibold text-snow">{b.child_name}</span>
-                  </div>
-                )}
 
                 {/* Invitados / Niños con desglose */}
                 {(() => {
@@ -3744,6 +3756,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> Pagos</p>
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${badge.cls}`}>{badge.label}</span>
                       </div>
+                      {b.services?.name && (
+                        <div className="flex items-center justify-between pb-1.5 border-b border-line/60">
+                          <span className="text-xs text-mist">Paquete</span>
+                          <span className="text-xs font-medium text-snow">{b.services.name}</span>
+                        </div>
+                      )}
                       {(b.addons ?? []).length > 0 && (
                         <div className="space-y-1 pb-1.5 border-b border-line/60">
                           {(b.addons ?? []).map((a, i) => (
