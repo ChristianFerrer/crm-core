@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, List, LogIn, CheckCircle, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -22,8 +22,13 @@ interface Booking {
   notes: string | null
   status: BookingStatus
   guests: number | null
+  guest_adults: number | null
+  guest_children: number | null
   payment_status: PaymentStatus
   amount: number | null
+  deposit_amount: number | null
+  addons: { name: string; price: number }[] | null
+  services: { name: string } | null
   executed_at: string | null
 }
 
@@ -85,7 +90,7 @@ export default function CalendarioPage() {
     const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(getDaysInMonth(year, month)).padStart(2, '0')}`
     const { data } = await supabase
       .from('bookings')
-      .select('id, date, start_time, end_time, type, title, child_name, member_id, members(id, name, children), notes, status, guests, payment_status, amount, executed_at')
+      .select('id, date, start_time, end_time, type, title, child_name, member_id, members(id, name, children), notes, status, guests, guest_adults, guest_children, payment_status, amount, deposit_amount, addons, services(name), executed_at')
       .gte('date', from).lte('date', to).order('start_time')
     setBookings((data ?? []) as unknown as Booking[])
   }, [year, month])
@@ -390,31 +395,53 @@ export default function CalendarioPage() {
                         )}
                       </div>
 
-                      {/* Main info */}
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div className="min-w-0 space-y-1">
-                          {b.child_name ? (
-                            <p className="text-sm font-semibold text-cyan-300">{b.child_name}{childAge ? ` · ${childAge}` : ''}</p>
-                          ) : (
-                            <p className="text-sm font-semibold text-snow">{b.title}</p>
-                          )}
-                          {b.members?.name && <p className="text-xs text-fog">{b.members.name}</p>}
-                          {(b.start_time || b.end_time) && (
-                            <p className="text-xs text-mist flex items-center gap-1">
-                              <Clock size={11} />{b.start_time?.slice(0, 5)}{b.end_time ? ` → ${b.end_time.slice(0, 5)}` : ''}
-                            </p>
-                          )}
-                          {b.guests != null && b.guests > 0 && (
-                            <p className="text-xs text-mist flex items-center gap-1">
-                              <Users size={11} /> {b.guests} {b.type === 'custodia' ? 'niño' + (b.guests !== 1 ? 's' : '') : 'invitado' + (b.guests !== 1 ? 's' : '')}
-                            </p>
-                          )}
-                          {b.notes && <p className="text-xs text-fog italic">{b.notes}</p>}
-                        </div>
-                        {b.amount != null && (
-                          <p className="text-lg font-bold text-snow shrink-0">{b.amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</p>
-                        )}
-                      </div>
+                      {/* Título */}
+                      <p className="text-sm font-semibold text-snow mb-3">{b.title}</p>
+
+                      {/* Detalle alineado con el formulario de reserva */}
+                      {!isEditing && (() => {
+                        const gA = b.guest_adults ?? 0
+                        const gC = b.guest_children ?? 0
+                        const totalG = b.guests ?? (gA + gC)
+                        const total = Number(b.amount) || 0
+                        const dep = Number(b.deposit_amount) || 0
+                        const pend = Math.max(0, Math.round((total - dep) * 100) / 100)
+                        const row = (label: string, value: ReactNode) => (
+                          <div className="flex items-center justify-between gap-3 py-1.5 border-b border-line/40 last:border-0">
+                            <span className="text-xs text-fog">{label}</span>
+                            <span className="text-xs font-medium text-snow text-right">{value}</span>
+                          </div>
+                        )
+                        return (
+                          <div className="rounded-xl border border-line bg-surface2/40 px-4 py-2 mb-3">
+                            {b.members?.name && row('Titular', b.members.name)}
+                            {b.child_name && row(b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores', `${b.child_name}${childAge ? ` · ${childAge}` : ''}`)}
+                            {(b.start_time || b.end_time) && row('Horario', `${b.start_time?.slice(0, 5) ?? ''}${b.end_time ? ` → ${b.end_time.slice(0, 5)}` : ''}`)}
+                            {(totalG > 0 || gA > 0 || gC > 0) && row(
+                              b.type === 'custodia' ? 'Niños' : 'Invitados',
+                              b.type !== 'custodia' && (gA > 0 || gC > 0)
+                                ? `${totalG} · ${gA} adultos, ${gC} niños`
+                                : `${totalG} ${b.type === 'custodia' ? 'niño' + (totalG !== 1 ? 's' : '') : 'invitado' + (totalG !== 1 ? 's' : '')}`
+                            )}
+                            {b.services?.name && row('Paquete', b.services.name)}
+                            {(b.addons ?? []).map((a, i) => (
+                              <div key={i} className="flex items-center justify-between gap-3 py-1.5 border-b border-line/40 last:border-0">
+                                <span className="text-xs text-fog">+ {a.name}</span>
+                                <span className="text-xs text-snow">{(Number(a.price) || 0).toFixed(2)} €</span>
+                              </div>
+                            ))}
+                            {total > 0 && row('Total', `${total.toFixed(2)} €`)}
+                            {dep > 0 && row('Adelanto', <span className="text-lime">{dep.toFixed(2)} €</span>)}
+                            {total > 0 && row('Pendiente', `${pend.toFixed(2)} €`)}
+                            {b.notes && (
+                              <div className="pt-2">
+                                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1">Notas</p>
+                                <p className="text-xs text-snow whitespace-pre-wrap leading-relaxed">{b.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
 
                       {/* Execute reservation */}
                       {!isEditing && b.status !== 'cancelled' && b.member_id && selectedDate === toDateStr(today.getFullYear(), today.getMonth(), today.getDate()) && (
