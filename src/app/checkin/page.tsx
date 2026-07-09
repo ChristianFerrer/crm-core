@@ -53,7 +53,7 @@ type HistoryVisit = {
   membership_id: string | null
   visit_type: VisitType
   children_present: { name: string }[] | null
-  members: { id: string; name: string } | null
+  members: { id: string; name: string; phone: string | null } | null
 }
 
 type CheckoutSummary = {
@@ -792,118 +792,75 @@ function DentroTab({
 
 // ─── Tab: Historial ──────────────────────────────────────────────────────────
 
-type HistorialRange = 'day' | 'week' | 'month' | 'custom'
-
 function HistorialTab({ rates }: { rates: ServiceRates }) {
-  const [range, setRange] = useState<HistorialRange>('day')
-  const [customDate, setCustomDate] = useState(toLocalDate(new Date()))
+  const todayStr = toLocalDate(new Date())
+  const [dateFrom, setDateFrom] = useState(todayStr)
+  const [dateTo, setDateTo] = useState(todayStr)
+  const [query, setQuery] = useState('')
   const [visits, setVisits] = useState<HistoryVisit[]>([])
   const [loading, setLoading] = useState(false)
-  const [weekOffset, setWeekOffset] = useState(0) // 0 = current week
-  const [monthOffset, setMonthOffset] = useState(0)
 
   useEffect(() => {
     fetchVisits()
-  }, [range, customDate, weekOffset, monthOffset])
+  }, [dateFrom, dateTo])
 
   async function fetchVisits() {
     setLoading(true)
-    const now = new Date()
-    let from: string, to: string
-
-    if (range === 'day') {
-      const d = toLocalDate(now)
-      from = `${d}T00:00:00`
-      to = `${d}T23:59:59`
-    } else if (range === 'week') {
-      const d = new Date(now)
-      d.setDate(d.getDate() + weekOffset * 7)
-      const day = d.getDay() === 0 ? 6 : d.getDay() - 1
-      const mon = new Date(d); mon.setDate(d.getDate() - day)
-      const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
-      from = `${toLocalDate(mon)}T00:00:00`
-      to = `${toLocalDate(sun)}T23:59:59`
-    } else if (range === 'month') {
-      const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
-      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-      from = `${toLocalDate(d)}T00:00:00`
-      to = `${toLocalDate(last)}T23:59:59`
-    } else {
-      from = `${customDate}T00:00:00`
-      to = `${customDate}T23:59:59`
-    }
+    // Normaliza el rango (permite «desde» y «hasta» en cualquier orden)
+    const lo = dateFrom <= dateTo ? dateFrom : dateTo
+    const hi = dateFrom <= dateTo ? dateTo : dateFrom
 
     const { data } = await supabase
       .from('visits')
-      .select('id, checked_in_at, checked_out_at, membership_id, visit_type, children_present, members(id, name)')
-      .gte('checked_in_at', from)
-      .lte('checked_in_at', to)
+      .select('id, checked_in_at, checked_out_at, membership_id, visit_type, children_present, members(id, name, phone)')
+      .gte('checked_in_at', `${lo}T00:00:00`)
+      .lte('checked_in_at', `${hi}T23:59:59`)
       .order('checked_in_at', { ascending: false })
 
     setVisits((data as unknown as HistoryVisit[]) ?? [])
     setLoading(false)
   }
 
-  function rangeLabel() {
-    const now = new Date()
-    if (range === 'week') {
-      const d = new Date(now); d.setDate(d.getDate() + weekOffset * 7)
-      const day = d.getDay() === 0 ? 6 : d.getDay() - 1
-      const mon = new Date(d); mon.setDate(d.getDate() - day)
-      const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
-      return `${mon.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} – ${sun.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
-    }
-    if (range === 'month') {
-      const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
-      return d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
-    }
-    return ''
-  }
+  const filteredVisits = query.trim().length > 0
+    ? visits.filter(v => {
+        const q = query.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        const name = (v.members?.name ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        const qDigits = q.replace(/\D/g, '')
+        const phone = (v.members?.phone ?? '').replace(/\D/g, '')
+        return name.includes(q) || (qDigits.length > 0 && phone.includes(qDigits))
+      })
+    : visits
 
   return (
     <div className="space-y-4">
-      {/* Range selector */}
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line">
-        {(['day', 'week', 'month', 'custom'] as HistorialRange[]).map(r => (
-          <button key={r} onClick={() => { setRange(r); setWeekOffset(0); setMonthOffset(0) }}
-            className={`flex-1 lg:flex-none px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${range === r ? 'bg-lime text-ink' : 'text-fog hover:text-snow'}`}>
-            {r === 'day' ? 'Hoy' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : 'Fecha'}
-          </button>
-        ))}
+      {/* Filtro de rango de fechas */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Desde</label>
+          <input type="date" value={dateFrom} max={todayStr} onChange={e => setDateFrom(e.target.value)}
+            style={{ colorScheme: 'dark' }}
+            className="w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow outline-none focus:border-line2" />
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Hasta</label>
+          <input type="date" value={dateTo} max={todayStr} onChange={e => setDateTo(e.target.value)}
+            style={{ colorScheme: 'dark' }}
+            className="w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow outline-none focus:border-line2" />
+        </div>
       </div>
 
-      {/* Navigation for week/month */}
-      {(range === 'week' || range === 'month') && (
-        <div className="flex items-center justify-between gap-2">
-          <button onClick={() => range === 'week' ? setWeekOffset(o => o - 1) : setMonthOffset(o => o - 1)}
-            className="w-8 h-8 flex items-center justify-center rounded-xl border border-line bg-surface text-fog hover:text-snow hover:border-line2 transition-colors">
-            <ChevronLeft size={15} />
-          </button>
-          <span className="text-sm font-semibold text-snow capitalize">{rangeLabel()}</span>
-          <button
-            onClick={() => range === 'week' ? setWeekOffset(o => o + 1) : setMonthOffset(o => o + 1)}
-            disabled={(range === 'week' && weekOffset >= 0) || (range === 'month' && monthOffset >= 0)}
-            className="w-8 h-8 flex items-center justify-center rounded-xl border border-line bg-surface text-fog hover:text-snow hover:border-line2 transition-colors disabled:opacity-30">
-            <ChevronRight size={15} />
-          </button>
-        </div>
-      )}
-
-      {/* Custom date picker */}
-      {range === 'custom' && (
-        <input
-          type="date"
-          value={customDate}
-          max={toLocalDate(new Date())}
-          onChange={e => setCustomDate(e.target.value)}
-          className="w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow outline-none focus:border-line2"
-        />
-      )}
+      {/* Búsqueda por nombre o teléfono */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+        <input value={query} onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar por nombre o teléfono..."
+          className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors" />
+      </div>
 
       {/* Visit count */}
       <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide">
         <History size={13} className="text-lime" />
-        {loading ? 'Cargando...' : `${visits.length} visitas`}
+        {loading ? 'Cargando...' : `${filteredVisits.length} visitas`}
       </div>
 
       {/* List */}
@@ -911,13 +868,13 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
         <div className="space-y-2">
           {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl bg-surface border border-line animate-pulse" />)}
         </div>
-      ) : visits.length === 0 ? (
+      ) : filteredVisits.length === 0 ? (
         <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">
-          Sin visitas en este período
+          {query.trim().length > 0 ? 'Sin resultados para la búsqueda' : 'Sin visitas en este período'}
         </div>
       ) : (
         <div className="space-y-1.5">
-          {visits.map(v => {
+          {filteredVisits.map(v => {
             const dmin = v.checked_out_at ? calcDurationMin(v.checked_in_at, v.checked_out_at) : null
             const numChildren = Math.max(1, v.children_present?.length ?? 0)
             const cost = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin), numChildren, v.visit_type, rates) : null
@@ -930,9 +887,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    {range !== 'day' && range !== 'custom' && (
-                      <span className="text-[10px] text-mist capitalize">{dateStr} ·</span>
-                    )}
+                    <span className="text-[10px] text-mist capitalize">{dateStr} ·</span>
                     <span className="text-xs text-fog">{entryTime}{exitTime ? ` → ${exitTime}` : ' → en curso'}</span>
                     {dmin != null && <span className="text-xs text-mist">· {fmtDuration(dmin)}</span>}
                   </div>
