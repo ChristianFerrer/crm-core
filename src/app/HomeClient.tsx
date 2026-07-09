@@ -935,9 +935,18 @@ function chargeableGuests(adults: number, children: number, included: number) {
   return { chargeAdults: Math.max(0, adults - freeAdults), chargeChildren: Math.max(0, children - freeChildren) }
 }
 
+type BookingInitial = {
+  title?: string | null; child_name?: string | null; date?: string | null
+  start_time?: string | null; end_time?: string | null
+  guest_adults?: number | null; guest_children?: number | null
+  service_id?: string | null; amount?: number | null; deposit_amount?: number | null
+  addons?: BookingAddon[] | null; notes?: string | null
+}
+
 // ── Modal reserva 3: formulario ──
 function BookingFormModal({
   member, bookingType, serviceCategory, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
+  editId = null, initial = null,
 }: {
   member: FullMember
   bookingType: 'birthday' | 'custodia' | 'other'
@@ -950,30 +959,38 @@ function BookingFormModal({
   onBack: () => void
   onClose: () => void
   onSaved: () => void
+  editId?: string | null
+  initial?: BookingInitial | null
 }) {
   const firstChild = bookingType === 'birthday' && member.children?.length > 0 ? member.children[0].name : ''
 
-  const [birthdayChild, setBirthdayChild] = useState(firstChild)
-  const [selectedChildren, setSelectedChildren] = useState<string[]>([])
-  const [title, setTitle] = useState(
-    bookingType === 'birthday' ? `Cumple de ${firstChild || member.name}` :
-    bookingType === 'custodia' ? `Custodia de ${member.children?.length > 0 ? member.children[0].name : member.name}` : ''
+  const [birthdayChild, setBirthdayChild] = useState(
+    bookingType === 'birthday' ? (initial?.child_name || firstChild) : firstChild
   )
-  const [date, setDate]           = useState(selectedDate)
-  const [startTime, setStart]     = useState('')
-  const [endTime, setEnd]         = useState('')
-  const [guestAdults, setGuestAdults]     = useState(0)
-  const [guestChildren, setGuestChildren] = useState(0)
-  const [guestsOpen, setGuestsOpen] = useState(false)
-  const [notes, setNotes]         = useState('')
+  const [selectedChildren, setSelectedChildren] = useState<string[]>(
+    bookingType === 'custodia' && initial?.child_name ? initial.child_name.split(',').map(s => s.trim()).filter(Boolean) : []
+  )
+  const [title, setTitle] = useState(
+    initial?.title ??
+    (bookingType === 'birthday' ? `Cumple de ${firstChild || member.name}` :
+    bookingType === 'custodia' ? `Custodia de ${member.children?.length > 0 ? member.children[0].name : member.name}` : '')
+  )
+  const [date, setDate]           = useState(initial?.date || selectedDate)
+  const [startTime, setStart]     = useState(initial?.start_time?.slice(0, 5) ?? '')
+  const [endTime, setEnd]         = useState(initial?.end_time?.slice(0, 5) ?? '')
+  const [guestAdults, setGuestAdults]     = useState(initial?.guest_adults ?? 0)
+  const [guestChildren, setGuestChildren] = useState(initial?.guest_children ?? 0)
+  const [guestsOpen, setGuestsOpen] = useState(!!editId && ((initial?.guest_adults ?? 0) > 0 || (initial?.guest_children ?? 0) > 0))
+  const [notes, setNotes]         = useState(initial?.notes ?? '')
   // Pagos
   const serviceCat = serviceCategory
   const catServices = serviceCat ? services.filter(s => s.category === serviceCat) : []
-  const [serviceId, setServiceId] = useState('')
-  const [totalStr, setTotalStr]   = useState('')
-  const [depositStr, setDepositStr] = useState('')
-  const [paymentsOpen, setPaymentsOpen] = useState(false)
-  const [selectedAddons, setSelectedAddons] = useState<BookingAddon[]>([])
+  const [serviceId, setServiceId] = useState(initial?.service_id ?? '')
+  const [totalStr, setTotalStr]   = useState(initial?.amount != null ? String(initial.amount) : '')
+  const [depositStr, setDepositStr] = useState(initial?.deposit_amount != null ? String(initial.deposit_amount) : '')
+  const [paymentsOpen, setPaymentsOpen] = useState(!!editId && (initial?.amount != null || !!initial?.service_id))
+  const [selectedAddons, setSelectedAddons] = useState<BookingAddon[]>(initial?.addons ?? [])
+  const skipRecompute = useRef<boolean>(!!editId)
   const selectedService = catServices.find(s => s.id === serviceId) || null
   const subServices = services.filter(s =>
     s.category === 'subservicios' &&
@@ -984,6 +1001,7 @@ function BookingFormModal({
 
   // Cumpleaños: precio fijo del paquete. Al elegir servicio, precarga la capacidad dividida adultos/niños.
   useEffect(() => {
+    if (editId) return  // en edición se respetan los valores guardados
     if (bookingType !== 'birthday' || !selectedService) return
     const cap = Number(selectedService.included_guests) || 0
     if (cap > 0) {
@@ -996,6 +1014,7 @@ function BookingFormModal({
 
   // Recalcula total y adelanto sugerido
   useEffect(() => {
+    if (skipRecompute.current) { skipRecompute.current = false; return }  // preserva importes al abrir en edición
     if (!selectedService) return
     const base = Number(selectedService.price) || 0
     let guestsCharge = 0
@@ -1047,8 +1066,7 @@ function BookingFormModal({
       bookingType === 'birthday' ? `Cumple de ${birthdayChild || member.name}` :
       bookingType === 'custodia' ? `Custodia — ${member.name}` : 'Reserva'
     )
-    const { error: err } = await supabase.from('bookings').insert({
-      tenant_id: tenantId,
+    const payload = {
       member_id: member.id,
       type: bookingType,
       title: finalTitle,
@@ -1073,8 +1091,10 @@ function BookingFormModal({
       deposit_paid_at: depositNum > 0 ? new Date().toISOString() : null,
       payment_status: paymentStatus,
       addons: selectedAddons,
-      status: 'confirmed',
-    })
+    }
+    const { error: err } = editId
+      ? await supabase.from('bookings').update(payload).eq('id', editId)
+      : await supabase.from('bookings').insert({ ...payload, tenant_id: tenantId, status: 'confirmed' })
     if (err) { setError(err.message); setSaving(false); return }
     setSaved(true)
     onSaved()
@@ -1116,7 +1136,7 @@ function BookingFormModal({
                     <FitText className="font-bold text-snow leading-tight" min={15} max={20}>{typeLabels[bookingType]}</FitText>
                   </div>
                 </div>
-                <p className="text-[11px] text-fog mt-1">Paso 2 de 2</p>
+                <p className="text-[11px] text-fog mt-1">{editId ? 'Editar reserva' : 'Paso 2 de 2'}</p>
               </div>
             </div>
             <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5 shrink-0"><X size={16} /></button>
@@ -1129,8 +1149,8 @@ function BookingFormModal({
               <div className="w-16 h-16 rounded-full bg-lime/15 border border-lime/30 flex items-center justify-center">
                 <Check size={30} className="text-lime" strokeWidth={2.5} />
               </div>
-              <p className="text-lg font-bold text-snow">¡Reserva guardada!</p>
-              <p className="text-sm text-fog text-center">La reserva de <span className="text-snow font-medium">{member.name}</span> ha sido registrada.</p>
+              <p className="text-lg font-bold text-snow">{editId ? '¡Reserva actualizada!' : '¡Reserva guardada!'}</p>
+              <p className="text-sm text-fog text-center">La reserva de <span className="text-snow font-medium">{member.name}</span> ha sido {editId ? 'actualizada' : 'registrada'}.</p>
               <p className="text-xs text-mist mt-1">Cerrando automáticamente...</p>
             </div>
           ) : (
@@ -1409,7 +1429,7 @@ function BookingFormModal({
                 className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <CalendarClock size={17} strokeWidth={2.2} />
-                {saving ? 'Guardando...' : 'Guardar reserva'}
+                {saving ? 'Guardando...' : editId ? 'Guardar cambios' : 'Guardar reserva'}
               </button>
             </>
           )}
@@ -1683,6 +1703,44 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [bookingType, setBookingType] = useState<'birthday' | 'custodia' | 'other' | null>(null)
   const [bookingCategory, setBookingCategory] = useState<string>('otros')
   const [bookingQuery, setBookingQuery] = useState('')
+  const [editBookingId, setEditBookingId] = useState<string | null>(null)
+  const [editInitial, setEditInitial] = useState<BookingInitial | null>(null)
+
+  // Abrir el formulario en modo edición cuando se llega con ?editar=<id> (p. ej. desde la agenda)
+  useEffect(() => {
+    const editarId = searchParams.get('editar')
+    if (!editarId) return
+    ;(async () => {
+      const { data: bk } = await supabase
+        .from('bookings')
+        .select('*, services(category)')
+        .eq('id', editarId).single()
+      if (!bk) return
+      const { data: mem } = await supabase
+        .from('members')
+        .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
+        .eq('id', (bk as any).member_id).single()
+      if (!mem) return
+      const b = bk as any
+      const cat = b.services?.category ?? (b.type === 'birthday' ? 'cumpleanos' : b.type === 'custodia' ? 'custodia' : 'otros')
+      setBookingMember(mem as unknown as FullMember)
+      setBookingType(b.type)
+      setBookingCategory(cat)
+      setEditInitial({
+        title: b.title, child_name: b.child_name, date: b.date,
+        start_time: b.start_time, end_time: b.end_time,
+        guest_adults: b.guest_adults, guest_children: b.guest_children,
+        service_id: b.service_id, amount: b.amount, deposit_amount: b.deposit_amount,
+        addons: b.addons ?? [], notes: b.notes,
+      })
+      setEditBookingId(editarId)
+      setBookingModal('form')
+      const params = new URLSearchParams(Array.from(searchParams.entries()))
+      params.delete('editar')
+      router.replace(params.toString() ? `/?${params.toString()}` : '/')
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Abrir el flujo de nueva reserva cuando se llega con ?nueva=1 (p. ej. desde el calendario)
   useEffect(() => {
@@ -3858,6 +3916,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
       {bookingModal === 'form' && bookingMember && bookingType && (
         <BookingFormModal
+          key={editBookingId ?? 'nuevo'}
           member={bookingMember}
           bookingType={bookingType}
           serviceCategory={bookingCategory}
@@ -3866,8 +3925,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           rateAdult={rateAdult}
           rateChild={rateChild}
           tenantId={getStoredTenant()?.id ?? null}
-          onBack={() => setBookingModal('pick')}
-          onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery('') }}
+          editId={editBookingId}
+          initial={editInitial}
+          onBack={() => { if (editBookingId) { setBookingModal(null); setBookingMember(null); setBookingType(null); setEditBookingId(null); setEditInitial(null) } else { setBookingModal('pick') } }}
+          onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery(''); setEditBookingId(null); setEditInitial(null) }}
           onSaved={() => { router.refresh(); setCheckinMembers([]) }}
         />
       )}
