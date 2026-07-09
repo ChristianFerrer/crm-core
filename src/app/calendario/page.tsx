@@ -56,6 +56,27 @@ function bookingBadge(t: BookingType) { return t === 'birthday' ? 'bg-iris/20 te
 function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'bg-lime/20 text-lime border border-lime/30' : s === 'cancelled' ? 'bg-rose/20 text-rose border border-rose/30' : 'bg-fog/20 text-fog border border-fog/30' }
 function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'bg-mint/20 text-mint border border-mint/30' : 'bg-amber/20 text-amber border border-amber/30' }
 
+// Estilo por tipo alineado con la "Agenda de hoy" del inicio
+const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; label: string }> = {
+  birthday: { bar: 'bg-iris',     badge: 'bg-iris/10 text-iris border-iris/30',           label: 'Cumpleaños' },
+  custodia: { bar: 'bg-cyan-300', badge: 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30', label: 'Custodia' },
+  other:    { bar: 'bg-lime',     badge: 'bg-lime/10 text-lime border-lime/30',            label: 'Otro' },
+}
+
+function bookingLiveStatus(b: Booking, todayStr: string): 'ejecutado' | 'en_curso' | 'pendiente' | 'pasado' {
+  if (b.executed_at) return 'ejecutado'
+  if (b.date !== todayStr) return b.date < todayStr ? 'pasado' : 'pendiente'
+  if (!b.start_time) return 'pendiente'
+  const now = new Date()
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+  const [sh, sm] = b.start_time.split(':').map(Number)
+  const startMins = sh * 60 + sm
+  const endMins = b.end_time ? (() => { const [h, m] = b.end_time!.split(':').map(Number); return h * 60 + m })() : startMins + 120
+  if (nowMins >= startMins && nowMins < endMins) return 'en_curso'
+  if (nowMins >= endMins) return 'pasado'
+  return 'pendiente'
+}
+
 const EMPTY_FORM = { type: 'birthday' as BookingType, title: '', child_name: '', date: '', start_time: '', end_time: '', member_id: '', guests: '', amount: '', notes: '' }
 const EMPTY_NEW_MEMBER = { name: '', phone: '', birth_date: '' }
 
@@ -77,6 +98,8 @@ export default function CalendarioPage() {
   // For custodia: independently track selected children names
   const [custodiaChildren, setCustodiaChildren] = useState<string[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [detailBooking, setDetailBooking] = useState<Booking | null>(null)
+  const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
   const [editForm, setEditForm] = useState<EditForm>({ guests: '', member_id: '', status: 'pending', payment_status: 'pending', notes: '' })
   const [saving, setSaving] = useState(false)
   const [executingId, setExecutingId] = useState<string | null>(null)
@@ -369,163 +392,47 @@ export default function CalendarioPage() {
             ) : (
               <div className="divide-y divide-line">
                 {allSelectedBookings.map(b => {
-                  const childObj = b.child_name && b.members?.children
-                    ? (b.members.children as any[]).find(c => c.name.toLowerCase() === b.child_name!.toLowerCase())
-                    : null
-                  const childAge = childObj?.birth_date ? calcAge(childObj.birth_date) : null
-                  const isEditing = editingId === b.id
-
+                  const ts = TYPE_STYLE[b.type]
+                  const st = bookingLiveStatus(b, todayStr)
+                  const gA = b.guest_adults ?? 0
+                  const gC = b.guest_children ?? 0
+                  const totalG = b.guests ?? (gA + gC)
+                  const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
                   return (
-                    <div key={b.id} className="px-5 py-4">
-                      {/* Badges */}
-                      <div className="flex items-center gap-2 flex-wrap mb-3">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${bookingBadge(b.type)}`}>
-                          {b.type === 'birthday' ? 'Cumpleaños' : b.type === 'custodia' ? 'Custodia' : 'Otro'}
-                        </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusBadge(b.status)}`}>
-                          {b.status === 'confirmed' ? 'Confirmada' : b.status === 'cancelled' ? 'Cancelada' : 'Solicitud'}
-                        </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${paymentBadge(b.payment_status)}`}>
-                          {b.payment_status === 'paid' ? 'Pagado' : 'Pago pendiente'}
-                        </span>
-                        {!isEditing && b.status !== 'cancelled' && (
-                          <button onClick={() => openEdit(b)} className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-fog hover:text-snow transition-colors">
-                            <Pencil size={11} /> Editar
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Título */}
-                      <p className="text-sm font-semibold text-snow mb-3">{b.title}</p>
-
-                      {/* Detalle alineado con el formulario de reserva */}
-                      {!isEditing && (() => {
-                        const gA = b.guest_adults ?? 0
-                        const gC = b.guest_children ?? 0
-                        const totalG = b.guests ?? (gA + gC)
-                        const total = Number(b.amount) || 0
-                        const dep = Number(b.deposit_amount) || 0
-                        const pend = Math.max(0, Math.round((total - dep) * 100) / 100)
-                        const row = (label: string, value: ReactNode) => (
-                          <div className="flex items-center justify-between gap-3 py-1.5 border-b border-line/40 last:border-0">
-                            <span className="text-xs text-fog">{label}</span>
-                            <span className="text-xs font-medium text-snow text-right">{value}</span>
+                    <div key={b.id} className={`flex gap-0 ${st === 'pasado' ? 'opacity-50' : ''}`}>
+                      <div className={`w-1 shrink-0 ${ts.bar}`} />
+                      <button onClick={() => setDetailBooking(b)} className="flex-1 px-4 py-3 flex items-start gap-3 text-left hover:bg-surface2 transition-colors">
+                        <div className="shrink-0 text-right w-14">
+                          <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
+                          {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                            <p className="text-xs font-semibold text-snow">{b.title}</p>
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${ts.badge}`}>{ts.label}</span>
+                            {st === 'ejecutado' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-mint/10 text-mint border-mint/30 flex items-center gap-0.5"><CheckCircle size={9} />Ejecutado</span>}
+                            {st === 'en_curso' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-lime/10 text-lime border-lime/30 flex items-center gap-0.5"><Clock size={9} />En curso</span>}
+                            {b.status === 'cancelled' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-rose/10 text-rose border-rose/30">Cancelada</span>}
                           </div>
-                        )
-                        return (
-                          <div className="rounded-xl border border-line bg-surface2/40 px-4 py-2 mb-3">
-                            {b.members?.name && row('Titular', b.members.name)}
-                            {b.child_name && row(b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores', `${b.child_name}${childAge ? ` · ${childAge}` : ''}`)}
-                            {(b.start_time || b.end_time) && row('Horario', `${b.start_time?.slice(0, 5) ?? ''}${b.end_time ? ` → ${b.end_time.slice(0, 5)}` : ''}`)}
-                            {(totalG > 0 || gA > 0 || gC > 0) && row(
-                              b.type === 'custodia' ? 'Niños' : 'Invitados',
-                              b.type !== 'custodia' && (gA > 0 || gC > 0)
-                                ? `${totalG} · ${gA} adultos, ${gC} niños`
-                                : `${totalG} ${b.type === 'custodia' ? 'niño' + (totalG !== 1 ? 's' : '') : 'invitado' + (totalG !== 1 ? 's' : '')}`
-                            )}
-                            {b.services?.name && row('Paquete', b.services.name)}
-                            {(b.addons ?? []).map((a, i) => (
-                              <div key={i} className="flex items-center justify-between gap-3 py-1.5 border-b border-line/40 last:border-0">
-                                <span className="text-xs text-fog">+ {a.name}</span>
-                                <span className="text-xs text-snow">{(Number(a.price) || 0).toFixed(2)} €</span>
-                              </div>
-                            ))}
-                            {total > 0 && row('Total', `${total.toFixed(2)} €`)}
-                            {dep > 0 && row('Adelanto', <span className="text-lime">{dep.toFixed(2)} €</span>)}
-                            {total > 0 && row('Pendiente', `${pend.toFixed(2)} €`)}
-                            {b.notes && (
-                              <div className="pt-2">
-                                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1">Notas</p>
-                                <p className="text-xs text-snow whitespace-pre-wrap leading-relaxed">{b.notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })()}
-
-                      {/* Execute reservation */}
-                      {!isEditing && b.status !== 'cancelled' && b.member_id && selectedDate === toDateStr(today.getFullYear(), today.getMonth(), today.getDate()) && (
-                        <div className="mb-3">
-                          {b.executed_at ? (
-                            <div className="flex items-center gap-1.5 text-xs text-lime font-semibold">
-                              <CheckCircle size={13} /> Ejecutada · check-in registrado
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleExecute(b)}
-                              disabled={executingId === b.id}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-lime/15 text-lime border border-lime/30 text-xs font-semibold hover:bg-lime/25 transition-colors disabled:opacity-50"
-                            >
-                              <LogIn size={13} /> {executingId === b.id ? 'Ejecutando...' : 'Ejecutar reserva · registrar entrada'}
-                            </button>
+                          {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
+                          {(totalG > 0 || gA > 0 || gC > 0) && (
+                            <p className="text-[11px] text-mist">
+                              {totalG} {b.type === 'custodia' ? `niño${totalG !== 1 ? 's' : ''}` : `invitado${totalG !== 1 ? 's' : ''}`}
+                              {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} adulto{gA !== 1 ? 's' : ''}, {gC} niño{gC !== 1 ? 's' : ''}</span>}
+                            </p>
                           )}
                         </div>
-                      )}
-
-                      {/* Inline edit form */}
-                      {isEditing && (
-                        <div className="mt-3 pt-3 border-t border-line space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Estado</label>
-                              <div className="flex gap-1.5">
-                                {(['pending', 'confirmed'] as BookingStatus[]).map(s => (
-                                  <button key={s} type="button" onClick={() => setEditForm(f => ({ ...f, status: s }))}
-                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${editForm.status === s ? s === 'confirmed' ? 'bg-lime/20 text-lime border-lime/40' : 'bg-fog/20 text-fog border-fog/40' : 'bg-surface2 text-mist border-line'}`}>
-                                    {s === 'confirmed' ? 'Confirmada' : 'Solicitud'}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Pago</label>
-                              <div className="flex gap-1.5">
-                                {(['pending', 'paid'] as PaymentStatus[]).map(p => (
-                                  <button key={p} type="button" onClick={() => setEditForm(f => ({ ...f, payment_status: p }))}
-                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${editForm.payment_status === p ? p === 'paid' ? 'bg-mint/20 text-mint border-mint/40' : 'bg-amber/20 text-amber border-amber/40' : 'bg-surface2 text-mist border-line'}`}>
-                                    {p === 'paid' ? 'Pagado' : 'Pendiente'}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Nº invitados</label>
-                              <input type="number" min="1" value={editForm.guests}
-                                onChange={e => setEditForm(f => ({ ...f, guests: e.target.value }))}
-                                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Titular de contacto</label>
-                              <select value={editForm.member_id} onChange={e => setEditForm(f => ({ ...f, member_id: e.target.value }))}
-                                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2">
-                                <option value="">Sin asignar</option>
-                                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</label>
-                            <textarea rows={2} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-                              className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2 resize-none" />
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <button onClick={handleSaveEdit} disabled={saving}
-                              className="flex-1 min-w-[120px] bg-lime text-ink font-semibold py-2 rounded-lg text-xs hover:bg-lime/90 transition-colors disabled:opacity-50">
-                              {saving ? 'Guardando...' : 'Guardar cambios'}
-                            </button>
-                            <button onClick={() => handleCancel(b.id)}
-                              className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-rose border border-rose/30 hover:bg-rose/10 transition-colors whitespace-nowrap">
-                              <Trash2 size={12} /> Cancelar reserva
-                            </button>
-                            <button onClick={() => setEditingId(null)}
-                              className="px-3 py-2 rounded-lg text-xs font-semibold text-fog border border-line hover:text-snow transition-colors">
-                              Cerrar
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                        {canExecute && (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); handleExecute(b) }}
+                            disabled={executingId === b.id}
+                            className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime/30 bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            <LogIn size={11} /> {executingId === b.id ? '...' : 'Ejecutar'}
+                          </button>
+                        )}
+                      </button>
                     </div>
                   )
                 })}
@@ -774,6 +681,210 @@ export default function CalendarioPage() {
                 {savingMember ? 'Guardando...' : 'Crear titular'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Popup detalle de reserva (misma vista que Inicio) ── */}
+      {detailBooking && (() => {
+        const b = detailBooking
+        const ts = TYPE_STYLE[b.type]
+        const st = bookingLiveStatus(b, todayStr)
+        const statusLabels = {
+          ejecutado: { label: 'Ejecutado', cls: 'bg-mint/10 text-mint border-mint/30' },
+          en_curso:  { label: 'En curso',  cls: 'bg-lime/10 text-lime border-lime/30' },
+          pendiente: { label: 'Pendiente', cls: 'bg-surface2 text-fog border-line' },
+          pasado:    { label: 'Pasado',    cls: 'bg-surface2 text-mist border-line' },
+        }
+        const stl = statusLabels[st]
+        const childObj = b.child_name && b.members?.children
+          ? (b.members.children as any[]).find(c => c.name.toLowerCase() === b.child_name!.toLowerCase()) : null
+        const childAge = childObj?.birth_date ? calcAge(childObj.birth_date) : null
+        const gA = b.guest_adults ?? 0, gC = b.guest_children ?? 0
+        const totalG = b.guests ?? (gA + gC)
+        const total = Number(b.amount) || 0, dep = Number(b.deposit_amount) || 0
+        const pend = Math.max(0, Math.round((total - dep) * 100) / 100)
+        const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
+        const paidBadge = b.payment_status === 'paid'
+          ? { label: 'Pagado', cls: 'bg-mint/10 text-mint border-mint/30' }
+          : { label: 'Pago pendiente', cls: 'bg-amber/10 text-amber border-amber/30' }
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setDetailBooking(null)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+              <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calendar size={13} className="text-fog shrink-0" />
+                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Reserva</p>
+                  </div>
+                  <p className="text-base font-bold text-snow leading-tight">{b.title}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${ts.badge}`}>{ts.label}</span>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${stl.cls}`}>{stl.label}</span>
+                  </div>
+                </div>
+                <button onClick={() => setDetailBooking(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+                {b.members?.name && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">Titular</span>
+                    <span className="text-sm font-semibold text-snow">{b.members.name}</span>
+                  </div>
+                )}
+                {b.child_name && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">{b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores'}</span>
+                    <span className="text-sm font-semibold text-snow">{b.child_name}{childAge ? ` · ${childAge}` : ''}</span>
+                  </div>
+                )}
+                {b.date && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-fog">Fecha</span>
+                    <span className="text-sm font-semibold text-snow capitalize">{new Date(b.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                  </div>
+                )}
+                <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Horario</p>
+                  <div className="flex items-center gap-4">
+                    {b.start_time && (<div><p className="text-[10px] text-mist mb-0.5">Inicio</p><p className="text-lg font-bold text-snow">{b.start_time.slice(0, 5)}</p></div>)}
+                    {b.start_time && b.end_time && <span className="text-mist">→</span>}
+                    {b.end_time && (<div><p className="text-[10px] text-mist mb-0.5">Fin</p><p className="text-lg font-bold text-snow">{b.end_time.slice(0, 5)}</p></div>)}
+                  </div>
+                </div>
+                {(totalG > 0 || gA > 0 || gC > 0) && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-fog">{b.type === 'custodia' ? 'Niños' : 'Invitados'}</span>
+                      <span className="text-sm font-semibold text-snow">{totalG} {b.type === 'custodia' ? `niño${totalG !== 1 ? 's' : ''}` : `invitado${totalG !== 1 ? 's' : ''}`}</span>
+                    </div>
+                    {b.type !== 'custodia' && (gA > 0 || gC > 0) && (
+                      <div className="flex items-center gap-3 mt-1.5 text-[11px] text-mist">
+                        <span>{gA} adulto{gA !== 1 ? 's' : ''}</span><span>·</span><span>{gC} niño{gC !== 1 ? 's' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(total > 0 || dep > 0) && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Euro size={12} /> Pagos</p>
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${paidBadge.cls}`}>{paidBadge.label}</span>
+                    </div>
+                    {b.services?.name && (
+                      <div className="flex items-center justify-between pb-1.5 border-b border-line/60">
+                        <span className="text-xs text-mist">Paquete</span><span className="text-xs font-medium text-snow">{b.services.name}</span>
+                      </div>
+                    )}
+                    {(b.addons ?? []).length > 0 && (
+                      <div className="space-y-1 pb-1.5 border-b border-line/60">
+                        {(b.addons ?? []).map((a, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <span className="text-xs text-fog">+ {a.name}</span><span className="text-xs text-snow">{(Number(a.price) || 0).toFixed(2)} €</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between"><span className="text-xs text-mist">Total</span><span className="text-sm font-semibold text-snow">{total.toFixed(2)} €</span></div>
+                    {dep > 0 && (<div className="flex items-center justify-between"><span className="text-xs text-mist">Adelanto</span><span className="text-sm font-semibold text-lime">{dep.toFixed(2)} €</span></div>)}
+                    <div className="flex items-center justify-between pt-1.5 border-t border-line/60"><span className="text-xs text-mist">Pendiente</span><span className="text-sm font-bold text-snow">{pend.toFixed(2)} €</span></div>
+                  </div>
+                )}
+                {b.notes && (
+                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</p>
+                    <p className="text-xs text-snow whitespace-pre-wrap leading-relaxed">{b.notes}</p>
+                  </div>
+                )}
+                {canExecute && (
+                  <button onClick={() => { handleExecute(b); setDetailBooking(null) }} disabled={executingId === b.id}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60">
+                    <LogIn size={15} /> {executingId === b.id ? 'Ejecutando...' : 'Ejecutar reserva · registrar entrada'}
+                  </button>
+                )}
+                {b.status !== 'cancelled' && (
+                  <button onClick={() => { openEdit(b); setDetailBooking(null) }}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-line text-fog font-semibold text-sm hover:text-snow transition-colors">
+                    <Pencil size={14} /> Editar reserva
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Modal edición de reserva ── */}
+      {editingId && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={() => setEditingId(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md rounded-2xl border border-line bg-surface shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+              <h2 className="text-base font-semibold text-snow">Editar reserva</h2>
+              <button onClick={() => setEditingId(null)} className="text-mist hover:text-fog"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Estado</label>
+                  <div className="flex gap-1.5">
+                    {(['pending', 'confirmed'] as BookingStatus[]).map(s => (
+                      <button key={s} type="button" onClick={() => setEditForm(f => ({ ...f, status: s }))}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${editForm.status === s ? s === 'confirmed' ? 'bg-lime/20 text-lime border-lime/40' : 'bg-fog/20 text-fog border-fog/40' : 'bg-surface2 text-mist border-line'}`}>
+                        {s === 'confirmed' ? 'Confirmada' : 'Solicitud'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Pago</label>
+                  <div className="flex gap-1.5">
+                    {(['pending', 'paid'] as PaymentStatus[]).map(p => (
+                      <button key={p} type="button" onClick={() => setEditForm(f => ({ ...f, payment_status: p }))}
+                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors ${editForm.payment_status === p ? p === 'paid' ? 'bg-mint/20 text-mint border-mint/40' : 'bg-amber/20 text-amber border-amber/40' : 'bg-surface2 text-mist border-line'}`}>
+                        {p === 'paid' ? 'Pagado' : 'Pendiente'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Nº invitados</label>
+                  <input type="number" min="1" value={editForm.guests}
+                    onChange={e => setEditForm(f => ({ ...f, guests: e.target.value }))}
+                    className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Titular de contacto</label>
+                  <select value={editForm.member_id} onChange={e => setEditForm(f => ({ ...f, member_id: e.target.value }))}
+                    className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2">
+                    <option value="">Sin asignar</option>
+                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</label>
+                <textarea rows={2} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full bg-surface2 border border-line rounded-lg px-3 py-2 text-sm text-snow outline-none focus:border-line2 resize-none" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={handleSaveEdit} disabled={saving}
+                  className="flex-1 min-w-[120px] bg-lime text-ink font-semibold py-2 rounded-lg text-xs hover:bg-lime/90 transition-colors disabled:opacity-50">
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+                <button onClick={() => handleCancel(editingId)}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-rose border border-rose/30 hover:bg-rose/10 transition-colors whitespace-nowrap">
+                  <Trash2 size={12} /> Cancelar reserva
+                </button>
+                <button onClick={() => setEditingId(null)}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold text-fog border border-line hover:text-snow transition-colors">
+                  Cerrar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
