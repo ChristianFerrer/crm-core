@@ -161,11 +161,13 @@ export default function CalendarioPage() {
   function closeFlow() { setFlowStep(null); setFlowMember(null); setFlowQuery(''); setFlowEditId(null); setFlowInitial(null) }
   function openNewFlow() { setFlowEditId(null); setFlowInitial(null); setFlowMember(null); setFlowQuery(''); setFlowStep('pick') }
   function openEditFlow(b: Booking) {
-    if (!b.member_id || !b.members) return
-    const mem: FullMember = {
-      id: b.members.id, name: b.members.name, phone: null, family_id: null, memberships: [],
-      children: (b.members.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })),
-    }
+    // Las reservas sin titular (datos antiguos) también deben poder editarse
+    const mem: FullMember = b.members
+      ? {
+          id: b.members.id, name: b.members.name, phone: null, family_id: null, memberships: [],
+          children: (b.members.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })),
+        }
+      : { id: '', name: '(Sin titular)', phone: null, family_id: null, memberships: [], children: [] }
     const cat = bookingServices.find(s => s.id === b.service_id)?.category ?? (b.type === 'birthday' ? 'cumpleanos' : b.type === 'custodia' ? 'custodia' : 'otros')
     setFlowMember(mem)
     setFlowType(b.type)

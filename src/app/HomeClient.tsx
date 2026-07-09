@@ -968,9 +968,9 @@ export function BookingFormModal({
   const [birthdayChild, setBirthdayChild] = useState(
     bookingType === 'birthday' ? (initial?.child_name || firstChild) : firstChild
   )
-  const [selectedChildren, setSelectedChildren] = useState<string[]>(
-    bookingType === 'custodia' && initial?.child_name ? initial.child_name.split(',').map(s => s.trim()).filter(Boolean) : []
-  )
+  const initialCustodiaChildren = bookingType === 'custodia' && initial?.child_name
+    ? initial.child_name.split(',').map(s => s.trim()).filter(Boolean) : []
+  const [selectedChildren, setSelectedChildren] = useState<string[]>(initialCustodiaChildren)
   const [title, setTitle] = useState(
     initial?.title ??
     (bookingType === 'birthday' ? `Cumple de ${firstChild || member.name}` :
@@ -980,7 +980,12 @@ export function BookingFormModal({
   const [startTime, setStart]     = useState(initial?.start_time?.slice(0, 5) ?? '')
   const [endTime, setEnd]         = useState(initial?.end_time?.slice(0, 5) ?? '')
   const [guestAdults, setGuestAdults]     = useState(initial?.guest_adults ?? 0)
-  const [guestChildren, setGuestChildren] = useState(initial?.guest_children ?? 0)
+  // En custodia, guest_children guardado incluye los menores seleccionados; aquí solo son los adicionales
+  const [guestChildren, setGuestChildren] = useState(
+    bookingType === 'custodia'
+      ? Math.max(0, (initial?.guest_children ?? 0) - initialCustodiaChildren.length)
+      : (initial?.guest_children ?? 0)
+  )
   const [guestsOpen, setGuestsOpen] = useState(!!editId && ((initial?.guest_adults ?? 0) > 0 || (initial?.guest_children ?? 0) > 0))
   const [notes, setNotes]         = useState(initial?.notes ?? '')
   // Pagos
@@ -1068,7 +1073,7 @@ export function BookingFormModal({
       bookingType === 'custodia' ? `Custodia — ${member.name}` : 'Reserva'
     )
     const payload = {
-      member_id: member.id,
+      member_id: member.id || null,
       type: bookingType,
       title: finalTitle,
       start_time: startTime,
