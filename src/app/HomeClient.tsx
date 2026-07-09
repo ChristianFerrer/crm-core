@@ -7,7 +7,7 @@ import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
-  Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar,
+  Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -946,7 +946,7 @@ export type BookingInitial = {
 // ── Modal reserva 3: formulario ──
 export function BookingFormModal({
   member, bookingType, serviceCategory, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
-  editId = null, initial = null,
+  editId = null, initial = null, onCancelBooking,
 }: {
   member: FullMember
   bookingType: 'birthday' | 'custodia' | 'other'
@@ -961,6 +961,7 @@ export function BookingFormModal({
   onSaved: () => void
   editId?: string | null
   initial?: BookingInitial | null
+  onCancelBooking?: () => void
 }) {
   const firstChild = bookingType === 'birthday' && member.children?.length > 0 ? member.children[0].name : ''
 
@@ -1431,6 +1432,13 @@ export function BookingFormModal({
                 <CalendarClock size={17} strokeWidth={2.2} />
                 {saving ? 'Guardando...' : editId ? 'Guardar cambios' : 'Guardar reserva'}
               </button>
+
+              {editId && onCancelBooking && (
+                <button onClick={onCancelBooking}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-rose/30 text-rose font-semibold text-sm hover:bg-rose/10 transition-colors">
+                  <Trash2 size={15} /> Cancelar reserva
+                </button>
+              )}
             </>
           )}
         </div>

@@ -92,7 +92,6 @@ export default function CalendarioPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [detailBooking, setDetailBooking] = useState<Booking | null>(null)
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
   const [executingId, setExecutingId] = useState<string | null>(null)
   // Add-member popup
@@ -392,7 +391,7 @@ export default function CalendarioPage() {
                   return (
                     <div key={b.id} className={`flex gap-0 ${st === 'pasado' ? 'opacity-50' : ''}`}>
                       <div className={`w-1 shrink-0 ${ts.bar}`} />
-                      <button onClick={() => setDetailBooking(b)} className="flex-1 px-4 py-3 flex items-start gap-3 text-left hover:bg-surface2 transition-colors">
+                      <button onClick={() => openEditFlow(b)} className="flex-1 px-4 py-3 flex items-start gap-3 text-left hover:bg-surface2 transition-colors">
                         <div className="shrink-0 text-right w-14">
                           <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
                           {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
@@ -487,141 +486,6 @@ export default function CalendarioPage() {
         </div>
       )}
 
-      {/* ── Popup detalle de reserva (misma vista que Inicio) ── */}
-      {detailBooking && (() => {
-        const b = detailBooking
-        const ts = TYPE_STYLE[b.type]
-        const st = bookingLiveStatus(b, todayStr)
-        const statusLabels = {
-          ejecutado: { label: 'Ejecutado', cls: 'bg-mint/10 text-mint border-mint/30' },
-          en_curso:  { label: 'En curso',  cls: 'bg-lime/10 text-lime border-lime/30' },
-          pendiente: { label: 'Pendiente', cls: 'bg-surface2 text-fog border-line' },
-          pasado:    { label: 'Pasado',    cls: 'bg-surface2 text-mist border-line' },
-        }
-        const stl = statusLabels[st]
-        const childObj = b.child_name && b.members?.children
-          ? (b.members.children as any[]).find(c => c.name.toLowerCase() === b.child_name!.toLowerCase()) : null
-        const childAge = childObj?.birth_date ? calcAge(childObj.birth_date) : null
-        const gA = b.guest_adults ?? 0, gC = b.guest_children ?? 0
-        const totalG = b.guests ?? (gA + gC)
-        const total = Number(b.amount) || 0, dep = Number(b.deposit_amount) || 0
-        const pend = Math.max(0, Math.round((total - dep) * 100) / 100)
-        const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
-        const paidBadge = b.payment_status === 'paid'
-          ? { label: 'Pagado', cls: 'bg-mint/10 text-mint border-mint/30' }
-          : { label: 'Pago pendiente', cls: 'bg-amber/10 text-amber border-amber/30' }
-        return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setDetailBooking(null)}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
-              <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calendar size={13} className="text-fog shrink-0" />
-                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Reserva</p>
-                  </div>
-                  <p className="text-base font-bold text-snow leading-tight">{b.title}</p>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${ts.badge}`}>{ts.label}</span>
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${stl.cls}`}>{stl.label}</span>
-                  </div>
-                </div>
-                <button onClick={() => setDetailBooking(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
-              </div>
-              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
-                {b.members?.name && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">Titular</span>
-                    <span className="text-sm font-semibold text-snow">{b.members.name}</span>
-                  </div>
-                )}
-                {b.child_name && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">{b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores'}</span>
-                    <span className="text-sm font-semibold text-snow">{b.child_name}{childAge ? ` · ${childAge}` : ''}</span>
-                  </div>
-                )}
-                {b.date && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">Fecha</span>
-                    <span className="text-sm font-semibold text-snow capitalize">{new Date(b.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                  </div>
-                )}
-                <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Horario</p>
-                  <div className="flex items-center gap-4">
-                    {b.start_time && (<div><p className="text-[10px] text-mist mb-0.5">Inicio</p><p className="text-lg font-bold text-snow">{b.start_time.slice(0, 5)}</p></div>)}
-                    {b.start_time && b.end_time && <span className="text-mist">→</span>}
-                    {b.end_time && (<div><p className="text-[10px] text-mist mb-0.5">Fin</p><p className="text-lg font-bold text-snow">{b.end_time.slice(0, 5)}</p></div>)}
-                  </div>
-                </div>
-                {(totalG > 0 || gA > 0 || gC > 0) && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-fog">{b.type === 'custodia' ? 'Niños' : 'Invitados'}</span>
-                      <span className="text-sm font-semibold text-snow">{totalG} {b.type === 'custodia' ? `niño${totalG !== 1 ? 's' : ''}` : `invitado${totalG !== 1 ? 's' : ''}`}</span>
-                    </div>
-                    {b.type !== 'custodia' && (gA > 0 || gC > 0) && (
-                      <div className="flex items-center gap-3 mt-1.5 text-[11px] text-mist">
-                        <span>{gA} adulto{gA !== 1 ? 's' : ''}</span><span>·</span><span>{gC} niño{gC !== 1 ? 's' : ''}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {(total > 0 || dep > 0) && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Euro size={12} /> Pagos</p>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${paidBadge.cls}`}>{paidBadge.label}</span>
-                    </div>
-                    {b.services?.name && (
-                      <div className="flex items-center justify-between pb-1.5 border-b border-line/60">
-                        <span className="text-xs text-mist">Paquete</span><span className="text-xs font-medium text-snow">{b.services.name}</span>
-                      </div>
-                    )}
-                    {(b.addons ?? []).length > 0 && (
-                      <div className="space-y-1 pb-1.5 border-b border-line/60">
-                        {(b.addons ?? []).map((a, i) => (
-                          <div key={i} className="flex items-center justify-between">
-                            <span className="text-xs text-fog">+ {a.name}</span><span className="text-xs text-snow">{(Number(a.price) || 0).toFixed(2)} €</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between"><span className="text-xs text-mist">Total</span><span className="text-sm font-semibold text-snow">{total.toFixed(2)} €</span></div>
-                    {dep > 0 && (<div className="flex items-center justify-between"><span className="text-xs text-mist">Adelanto</span><span className="text-sm font-semibold text-lime">{dep.toFixed(2)} €</span></div>)}
-                    <div className="flex items-center justify-between pt-1.5 border-t border-line/60"><span className="text-xs text-mist">Pendiente</span><span className="text-sm font-bold text-snow">{pend.toFixed(2)} €</span></div>
-                  </div>
-                )}
-                {b.notes && (
-                  <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
-                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</p>
-                    <p className="text-xs text-snow whitespace-pre-wrap leading-relaxed">{b.notes}</p>
-                  </div>
-                )}
-                {canExecute && (
-                  <button onClick={() => { handleExecute(b); setDetailBooking(null) }} disabled={executingId === b.id}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60">
-                    <LogIn size={15} /> {executingId === b.id ? 'Ejecutando...' : 'Ejecutar reserva · registrar entrada'}
-                  </button>
-                )}
-                {b.status !== 'cancelled' && (
-                  <button onClick={() => { setDetailBooking(null); openEditFlow(b) }}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-line text-fog font-semibold text-sm hover:text-snow transition-colors">
-                    <Pencil size={14} /> Editar reserva
-                  </button>
-                )}
-                {b.status !== 'cancelled' && (
-                  <button onClick={() => { handleCancel(b.id); setDetailBooking(null) }}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-rose/30 text-rose font-semibold text-sm hover:bg-rose/10 transition-colors">
-                    <Trash2 size={14} /> Cancelar reserva
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
 
       {/* ── Flujo compartido: crear/editar reserva (mismo componente que Inicio) ── */}
       {flowStep === 'pick' && (
@@ -649,6 +513,7 @@ export default function CalendarioPage() {
           tenantId={getStoredTenant()?.id ?? null}
           editId={flowEditId}
           initial={flowInitial}
+          onCancelBooking={flowEditId ? () => { const id = flowEditId; handleCancel(id); closeFlow() } : undefined}
           onBack={() => { if (flowEditId) closeFlow(); else setFlowStep('pick') }}
           onClose={closeFlow}
           onSaved={() => { fetchBookings() }}
