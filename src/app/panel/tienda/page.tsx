@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import Link from 'next/link'
-import { BarChart2, Tag, ShoppingBag, Plus, Pencil, Trash2, X, Check, Building2, ScanBarcode, PackagePlus, Loader2, Package } from 'lucide-react'
+import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { getStoredTenant } from '@/lib/tenant'
@@ -35,30 +34,6 @@ function categoryFromTags(tags: string[]): string {
   return 'otro'
 }
 
-function ProductThumb({ src, name }: { src: string | null; name: string }) {
-  if (src) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={name}
-        className="w-10 h-10 object-contain rounded-lg bg-white shrink-0"
-        onError={e => {
-          const img = e.currentTarget
-          img.style.display = 'none'
-          const fb = img.parentElement?.querySelector('.img-fallback') as HTMLElement | null
-          if (fb) fb.style.display = 'flex'
-        }}
-      />
-    )
-  }
-  return (
-    <div className="w-10 h-10 rounded-lg bg-surface2 border border-line flex items-center justify-center shrink-0">
-      <Package size={18} className="text-mist" />
-    </div>
-  )
-}
-
 export default function TiendaPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -77,7 +52,6 @@ export default function TiendaPage() {
   const [showScanner, setShowScanner] = useState(false)
   const [lookingUp, setLookingUp] = useState(false)
   const [lookupMsg, setLookupMsg] = useState<string | null>(null)
-  const [lookupImage, setLookupImage] = useState<string | null>(null)
   const [lookupWeight, setLookupWeight] = useState<string | null>(null)
 
   // Stock entry modal
@@ -97,7 +71,7 @@ export default function TiendaPage() {
 
   function resetForm() {
     setName(''); setCategory('bebida'); setPrice(''); setBarcode('')
-    setStockInput('0'); setLookupMsg(null); setLookupImage(null); setLookupWeight(null)
+    setStockInput('0'); setLookupMsg(null); setLookupWeight(null)
   }
 
   function openNew() {
@@ -110,7 +84,7 @@ export default function TiendaPage() {
     setEditing(p)
     setName(p.name); setCategory(p.category); setPrice(String(p.price))
     setBarcode(p.barcode ?? ''); setStockInput(String(p.stock))
-    setLookupMsg(null); setLookupImage(p.image_url); setLookupWeight(p.weight)
+    setLookupMsg(null); setLookupWeight(p.weight)
     setShowModal(true)
   }
 
@@ -118,7 +92,6 @@ export default function TiendaPage() {
     if (!code.trim()) return
     setLookingUp(true)
     setLookupMsg(null)
-    setLookupImage(null)
     setLookupWeight(null)
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code.trim()}.json`)
@@ -129,7 +102,6 @@ export default function TiendaPage() {
         const tags: string[] = p.categories_tags ?? []
         if (pname) setName(pname)
         setCategory(categoryFromTags(tags))
-        setLookupImage(p.image_front_url || p.image_url || null)
         setLookupWeight(p.quantity || p.product_quantity || null)
         setLookupMsg(pname ? `✓ ${pname}` : '✓ Producto encontrado')
       } else {
@@ -168,7 +140,6 @@ export default function TiendaPage() {
       name: name.trim(), category, price: parseFloat(price),
       tenant_id: tenant.id, active: true,
       barcode: barcode.trim() || null,
-      image_url: lookupImage || null,
       weight: lookupWeight || null,
     }
     if (editing) {
@@ -207,30 +178,29 @@ export default function TiendaPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Tienda</h1>
+        <p className="text-sm text-fog mt-0.5">Productos de venta durante la visita</p>
+      </div>
+
       {/* Sub-nav panel */}
       <PanelNav />
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-snow">Tienda</h1>
-          <p className="text-sm text-fog mt-0.5">Productos de venta durante la visita</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowScanner(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
-            title="Escanear — añade stock si existe, crea producto si es nuevo"
-          >
-            <ScanBarcode size={15} />
-          </button>
-          <button
-            onClick={openNew}
-            className="flex items-center gap-1.5 rounded-xl bg-lime px-4 py-2.5 text-sm font-semibold text-ink hover:bg-lime/90 transition-colors"
-          >
-            <Plus size={15} /> Añadir producto
-          </button>
-        </div>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={() => setShowScanner(true)}
+          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
+          title="Escanear — añade stock si existe, crea producto si es nuevo"
+        >
+          <ScanBarcode size={15} />
+        </button>
+        <button
+          onClick={openNew}
+          className="flex items-center gap-1.5 rounded-xl bg-lime px-4 py-2.5 text-sm font-semibold text-ink hover:bg-lime/90 transition-colors"
+        >
+          <Plus size={15} /> Añadir producto
+        </button>
       </div>
 
       {loading ? (
@@ -242,7 +212,57 @@ export default function TiendaPage() {
           <p className="text-xs text-mist mt-1">Añade agua, snacks u otros artículos para vender durante las visitas</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+        <>
+        {/* ── MÓVIL: tarjetas (< md) ── */}
+        <div className="md:hidden space-y-2.5">
+          {products.map((p, idx) => (
+            <div key={p.id} className={`rounded-2xl border border-line bg-surface p-4 ${!p.active ? 'opacity-50' : ''}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-mist font-mono shrink-0">#{idx + 1}</span>
+                    <p className="font-semibold text-snow truncate">{p.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</span>
+                    {p.weight && <><span className="text-line2 text-[10px]">·</span><span className="text-xs text-mist">{p.weight}</span></>}
+                    {p.barcode && <><span className="text-line2 text-[10px]">·</span><span className="text-[10px] font-mono text-mist">{p.barcode}</span></>}
+                  </div>
+                </div>
+                <span className="font-bold text-lime shrink-0">{p.price.toFixed(2)} €</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 mt-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setStockProduct(p); setStockEntry('1') }}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                      p.stock === 0 ? 'bg-rose/10 border-rose/30 text-rose' :
+                      p.stock <= 3 ? 'bg-amber/10 border-amber/30 text-amber' :
+                      'bg-surface2 border-line text-fog'
+                    }`}
+                    title="Añadir unidades"
+                  >
+                    <PackagePlus size={12} />{p.stock} ud.
+                  </button>
+                  <button onClick={() => handleToggle(p)} className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition-colors ${p.active ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'}`}>
+                    {p.active ? 'Activo' : 'Inactivo'}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => openEdit(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
+                    <Pencil size={13} />
+                  </button>
+                  <button onClick={() => handleDelete(p.id)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── ESCRITORIO: tabla (md+) ── */}
+        <div className="hidden md:block rounded-2xl border border-line bg-surface overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -265,12 +285,7 @@ export default function TiendaPage() {
                       <span className="text-xs text-mist font-mono">{idx + 1}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="shrink-0">
-                          <ProductThumb src={p.image_url} name={p.name} />
-                        </div>
-                        <p className="font-semibold text-snow truncate max-w-[130px]">{p.name}</p>
-                      </div>
+                      <p className="font-semibold text-snow truncate max-w-[180px]">{p.name}</p>
                     </td>
                     <td className="px-3 py-3 hidden lg:table-cell">
                       <span className="text-xs text-mist">{p.weight ?? '—'}</span>
@@ -320,6 +335,7 @@ export default function TiendaPage() {
             </table>
           </div>
         </div>
+        </>
       )}
 
       {/* Product modal */}
@@ -358,27 +374,10 @@ export default function TiendaPage() {
                 )}
               </div>
 
-              {/* Product image preview (from lookup or editing) */}
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 shrink-0">
-                  {lookupImage ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={lookupImage} alt="producto" className="w-16 h-16 object-contain rounded-xl bg-white" />
-                  ) : (
-                    <div className="w-16 h-16 rounded-xl bg-surface2 border border-line flex items-center justify-center">
-                      <Package size={28} className="text-mist" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  {lookupMsg && (
-                    <p className={`text-xs font-medium ${lookupMsg.startsWith('✓') ? 'text-lime' : 'text-amber'}`}>{lookupMsg}</p>
-                  )}
-                  {!lookupMsg && !lookupImage && (
-                    <p className="text-xs text-mist">Escanea el código para cargar la imagen y datos del producto.</p>
-                  )}
-                </div>
-              </div>
+              {/* Resultado de la búsqueda por código */}
+              {lookupMsg && (
+                <p className={`text-xs font-medium ${lookupMsg.startsWith('✓') ? 'text-lime' : 'text-amber'}`}>{lookupMsg}</p>
+              )}
 
               {/* Nombre */}
               <div>
@@ -460,16 +459,6 @@ export default function TiendaPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setStockProduct(null)}>
           <div className="w-full max-w-xs rounded-2xl border border-line bg-surface p-5 space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 shrink-0">
-                {stockProduct.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={stockProduct.image_url} alt={stockProduct.name} className="w-12 h-12 object-contain rounded-xl bg-white" />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-surface2 border border-line flex items-center justify-center">
-                    <Package size={22} className="text-mist" />
-                  </div>
-                )}
-              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-snow truncate">{stockProduct.name}</p>
                 <p className="text-xs text-fog mt-0.5">Stock actual: <span className="font-semibold text-snow">{stockProduct.stock} ud.</span></p>

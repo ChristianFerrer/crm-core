@@ -130,10 +130,8 @@ export default function PerfilPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-snow">Panel</h1>
-        <p className="text-fog mt-1 text-sm">
-          {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </p>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Perfil</h1>
+        <p className="text-sm text-fog mt-0.5">Datos del establecimiento y acceso</p>
       </div>
 
       <PanelNav />

@@ -10,7 +10,7 @@ const ITEMS = [
   { href: '/panel/servicios', label: 'Servicios', icon: Tag },
   { href: '/panel/tienda', label: 'Tienda', icon: ShoppingBag },
   { href: '/panel/perfil', label: 'Perfil', icon: Building2 },
-  { href: '/checkin', label: 'Visitas', icon: CalendarDays },
+  { href: '/checkin', label: 'Histórico de visitas', icon: CalendarDays },
 ]
 
 export function PanelNav() {

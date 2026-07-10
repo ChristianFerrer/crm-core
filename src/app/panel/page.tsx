@@ -278,8 +278,8 @@ export default async function PanelPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-snow">Panel</h1>
-        <p className="text-fog mt-1 text-sm">
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Resumen</h1>
+        <p className="text-sm text-fog mt-0.5 capitalize">
           {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
