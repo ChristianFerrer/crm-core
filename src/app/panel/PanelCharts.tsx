@@ -24,27 +24,24 @@ export function MemberGrowthChart({
   newThisMonth: number
 }) {
   const delta = newThisMonth
-  const today = new Date().getDate()
-  const visible = data.slice(0, today)
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
       <div className="flex items-start justify-between mb-1">
-        <p className="text-sm font-semibold text-snow">Miembros · mes en curso</p>
+        <p className="text-sm font-semibold text-snow">Miembros · este año</p>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${delta > 0 ? 'bg-lime/15 text-lime' : delta < 0 ? 'bg-rose/15 text-rose' : 'bg-fog/15 text-fog'}`}>
-          {delta > 0 ? `+${delta}` : delta === 0 ? '±0' : delta} este mes
+          {delta > 0 ? `+${delta}` : delta === 0 ? '±0' : delta} este año
         </span>
       </div>
       <p className="text-xs text-mist mb-4">
-        {lastMonthAdults} adultos · {lastMonthChildren} niños al inicio del mes
+        {lastMonthAdults} adultos · {lastMonthChildren} niños al inicio del año
       </p>
 
       <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={visible} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false}
-              interval={Math.max(0, Math.floor(visible.length / 6) - 1)} />
+            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
             <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip {...TOOLTIP_STYLE} cursor={{ stroke: '#1e2530' }}
               formatter={(v: any, name: any) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
@@ -206,17 +203,18 @@ export function PeakHoursChart({ data }: { data: HourPoint[] }) {
 
       <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
             <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} interval={1} />
             <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
-            <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: any) => [v, 'Visitas']} />
-            <Bar dataKey="visitas" radius={[3, 3, 0, 0]}>
-              {data.map((d, i) => (
-                <Cell key={i} fill={peak.visitas > 0 && d.visitas === peak.visitas ? '#8b8bff' : '#3a3f49'} />
-              ))}
-            </Bar>
-          </BarChart>
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [v, 'Visitas']} />
+            <Line type="monotone" dataKey="visitas" stroke="#8b8bff" strokeWidth={2.5}
+              dot={(props: any) => {
+                const isPeak = peak.visitas > 0 && props.payload.visitas === peak.visitas
+                return <circle key={props.key ?? props.index} cx={props.cx} cy={props.cy} r={isPeak ? 4 : 0} fill="#8b8bff" stroke="#16181d" strokeWidth={1.5} />
+              }}
+              activeDot={{ r: 4, fill: '#8b8bff' }} />
+          </LineChart>
         </ResponsiveContainer>
       </div>
 

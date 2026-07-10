@@ -97,26 +97,26 @@ export default async function PanelPage() {
     }
   })
 
-  // ── Member growth chart ────────────────────────────────────────────────────
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  const membersThisMonth = (allMembers ?? []).filter((m: any) => m.created_at >= startOfMonth)
-  const membersBeforeMonth = (allMembers ?? []).filter((m: any) => m.created_at < startOfMonth)
-  const lastMonthAdults = membersBeforeMonth.length
-  const lastMonthChildren = membersBeforeMonth.reduce((s: number, m: any) => s + ((m.children as any[])?.length ?? 0), 0)
-  const newThisMonth = membersThisMonth.length
-  const dailyAdults = Array(daysInMonth).fill(0)
-  const dailyChildren = Array(daysInMonth).fill(0)
-  membersThisMonth.forEach((m: any) => {
-    const d = new Date(m.created_at).getDate() - 1
-    if (d >= 0 && d < daysInMonth) {
-      dailyAdults[d]++
-      dailyChildren[d] += (m.children as any[])?.length ?? 0
+  // ── Member growth chart (flujo de todo el año, acumulado por mes) ───────────
+  const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString()
+  const membersBeforeYear = (allMembers ?? []).filter((m: any) => m.created_at < startOfYear)
+  const lastMonthAdults = membersBeforeYear.length
+  const lastMonthChildren = membersBeforeYear.reduce((s: number, m: any) => s + ((m.children as any[])?.length ?? 0), 0)
+  const newThisMonth = (allMembers ?? []).filter((m: any) => m.created_at >= startOfYear).length
+  const monthlyAdults = Array(12).fill(0)
+  const monthlyChildren = Array(12).fill(0)
+  ;(allMembers ?? []).forEach((m: any) => {
+    const d = new Date(m.created_at)
+    if (d.getFullYear() === now.getFullYear()) {
+      monthlyAdults[d.getMonth()]++
+      monthlyChildren[d.getMonth()] += (m.children as any[])?.length ?? 0
     }
   })
   let runAdults = lastMonthAdults, runChildren = lastMonthChildren
-  const growthBuckets = Array.from({ length: daysInMonth }, (_, i) => {
-    runAdults += dailyAdults[i]; runChildren += dailyChildren[i]
-    return { label: `${i + 1}`, adultos: runAdults, ninos: runChildren }
+  const growthBuckets = Array.from({ length: now.getMonth() + 1 }, (_, i) => {
+    runAdults += monthlyAdults[i]; runChildren += monthlyChildren[i]
+    return { label: MONTHS[i], adultos: runAdults, ninos: runChildren }
   })
 
   // ── Bono distribution ──────────────────────────────────────────────────────
