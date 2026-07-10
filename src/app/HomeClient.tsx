@@ -2321,14 +2321,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <div className="px-4 pt-4 pb-3 border-b border-line space-y-3">
           {/* Title row */}
           <div className="flex items-center gap-2">
-            {isToday && (
-              <button
-                onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
-                className="flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-lime rounded-lg px-2.5 py-1.5 hover:brightness-105 active:scale-95 transition-all"
-              >
-                <LogIn size={12} /> Registrar entrada
-              </button>
-            )}
             <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
               <Users size={13} />
               {isToday ? 'En sala ahora' : 'Visitas del día'}
@@ -2342,6 +2334,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </span>
               )}
             </h2>
+            {isToday && (
+              <button
+                onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
+                className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-lime rounded-lg px-2.5 py-1.5 hover:brightness-105 active:scale-95 transition-all"
+              >
+                <LogIn size={12} /> Registrar entrada
+              </button>
+            )}
           </div>
 
           {/* Aforo bar */}
