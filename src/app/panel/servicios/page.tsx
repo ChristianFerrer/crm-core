@@ -126,6 +126,7 @@ export default function ServiciosPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [view, setView] = useState<'tabla' | 'tarjetas'>('tabla')
 
   // Category management
   const [showCatModal, setShowCatModal] = useState(false)
@@ -274,6 +275,14 @@ export default function ServiciosPage() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-fog">{services.length} servicios · {categories.length} categorías</p>
         <div className="flex items-center gap-2">
+          <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
+            {(['tabla', 'tarjetas'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${view === v ? 'bg-lime text-ink' : 'text-fog hover:text-snow'}`}>
+                {v}
+              </button>
+            ))}
+          </div>
           <button
             onClick={openNewCat}
             className="flex items-center gap-1.5 border border-line bg-surface text-fog text-xs font-semibold px-3 py-2 rounded-xl hover:text-snow hover:border-line2 transition-colors"
@@ -320,6 +329,71 @@ export default function ServiciosPage() {
         <div className="text-center py-16 text-mist text-sm">Cargando...</div>
       ) : services.length === 0 ? (
         <div className="text-center py-16 text-mist text-sm">No hay servicios. Crea el primero.</div>
+      ) : view === 'tabla' ? (
+        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead>
+                <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
+                  <th className="px-4 py-3">Servicio</th>
+                  <th className="px-3 py-3">Categoría</th>
+                  <th className="px-3 py-3 text-center">Reservable</th>
+                  <th className="px-3 py-3 text-right">Precio</th>
+                  <th className="px-3 py-3">Unidad</th>
+                  <th className="px-3 py-3 text-right">Duración</th>
+                  <th className="px-3 py-3 text-right">Capacidad</th>
+                  <th className="px-3 py-3 text-right">Adelanto</th>
+                  <th className="px-3 py-3 text-right">€/adulto</th>
+                  <th className="px-3 py-3 text-right">€/niño</th>
+                  <th className="px-3 py-3">Aplica a</th>
+                  <th className="px-3 py-3 text-center">Activo</th>
+                  <th className="px-3 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line/60">
+                {services.map(s => {
+                  const cat = categories.find(c => c.value === s.category)
+                  const applies = (s.applies_to ?? []).map(v => RESERVABLE_TYPES.find(t => t.value === v)?.label ?? v).join(', ')
+                  const dash = <span className="text-mist">—</span>
+                  return (
+                    <tr key={s.id} className={`${s.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
+                      <td className="px-4 py-2.5 max-w-[220px]">
+                        <p className="font-semibold text-snow truncate">{s.name}</p>
+                        {s.description && <p className="text-xs text-mist truncate">{s.description}</p>}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {cat
+                          ? <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cat.bg} ${cat.color}`}>{cat.label}</span>
+                          : <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-fog/10 text-fog">{s.category}</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">{s.reservable ? <Check size={14} className="inline text-lime" /> : dash}</td>
+                      <td className="px-3 py-2.5 text-right font-semibold text-snow">{s.price != null ? `${s.price}€` : dash}</td>
+                      <td className="px-3 py-2.5 text-fog">{s.price_unit || dash}</td>
+                      <td className="px-3 py-2.5 text-right text-fog">{s.duration_min != null ? `${s.duration_min} min` : dash}</td>
+                      <td className="px-3 py-2.5 text-right text-fog">{s.included_guests ? s.included_guests : dash}</td>
+                      <td className="px-3 py-2.5 text-right text-fog">{s.deposit_pct != null ? `${s.deposit_pct}%` : dash}</td>
+                      <td className="px-3 py-2.5 text-right text-fog">{s.price_per_guest_adult ? `${s.price_per_guest_adult}€` : dash}</td>
+                      <td className="px-3 py-2.5 text-right text-fog">{s.price_per_guest_child ? `${s.price_per_guest_child}€` : dash}</td>
+                      <td className="px-3 py-2.5 text-fog">{applies || dash}</td>
+                      <td className="px-3 py-2.5 text-center">
+                        <button onClick={() => toggleActive(s)}
+                          className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${s.active ? 'bg-lime' : 'bg-line'}`}>
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${s.active ? 'translate-x-4' : ''}`} />
+                        </button>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
+                          <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           {grouped.map(cat => (
