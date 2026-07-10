@@ -9,10 +9,10 @@ import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart, Visit
 
 const ResponsiveGrid = WidthProvider(Responsive)
 
-type GrowthPoint = { label: string; adultos: number; ninos: number }
+type GrowthPoint = { label: string; adultos: number | null; ninos: number | null }
 type VisitBucket = { label: string; adultos: number; ninos: number }
 type HourPoint = { hour: string; visitas: number }
-type MonthVisitPoint = { label: string; visitas: number }
+type MonthVisitPoint = { label: string; visitas: number | null }
 
 export type DashboardData = {
   stats: { totalMembers: number; todayCount: number; monthCount: number }

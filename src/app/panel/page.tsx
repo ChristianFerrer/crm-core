@@ -122,12 +122,15 @@ export default async function PanelPage() {
       monthlyChildren[d.getMonth()] += (m.children as any[])?.length ?? 0
     }
   })
+  const currentMonth = now.getMonth()
   let runAdults = lastMonthAdults, runChildren = lastMonthChildren
   const growthBuckets = MONTHS.map((label, i) => {
     runAdults += monthlyAdults[i]; runChildren += monthlyChildren[i]
-    return { label, adultos: runAdults, ninos: runChildren }
+    return i <= currentMonth
+      ? { label, adultos: runAdults, ninos: runChildren }
+      : { label, adultos: null, ninos: null }
   })
-  const visitsMonthBuckets = MONTHS.map((label, i) => ({ label, visitas: visitsByMonth[i] }))
+  const visitsMonthBuckets = MONTHS.map((label, i) => ({ label, visitas: i <= currentMonth ? visitsByMonth[i] : null }))
 
   // ── Bono distribution ──────────────────────────────────────────────────────
   const bonoByMember = new Map<string, number | null>()

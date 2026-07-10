@@ -10,7 +10,7 @@ const TOOLTIP_STYLE = {
   labelStyle: { color: '#6b7280', fontSize: 11 },
 }
 
-type GrowthPoint = { label: string; adultos: number; ninos: number }
+type GrowthPoint = { label: string; adultos: number | null; ninos: number | null }
 
 export function MemberGrowthChart({
   data,
@@ -227,11 +227,11 @@ export function PeakHoursChart({ data }: { data: HourPoint[] }) {
   )
 }
 
-type MonthVisitPoint = { label: string; visitas: number }
+type MonthVisitPoint = { label: string; visitas: number | null }
 
 export function VisitsPerMonthChart({ data }: { data: MonthVisitPoint[] }) {
-  const max = Math.max(1, ...data.map(d => d.visitas))
-  const total = data.reduce((s, d) => s + d.visitas, 0)
+  const max = Math.max(1, ...data.map(d => d.visitas ?? 0))
+  const total = data.reduce((s, d) => s + (d.visitas ?? 0), 0)
 
   return (
     <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
