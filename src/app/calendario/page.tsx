@@ -115,13 +115,14 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     supabase.from('services')
-      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable')
+      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')
       .eq('active', true).order('sort_order')
       .then(({ data }) => {
         if (!data) return
         setBookingServices(data as BookingService[])
-        const a = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Adulto')
-        const c = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Niño')
+        const entradas = (data as any[]).filter(r => r.tipo === 'entrada')
+        const a = entradas.find(r => /adult/i.test(r.name)) ?? entradas.find(r => r.price_unit !== 'hora')
+        const c = entradas.find(r => /ni[ñn]/i.test(r.name)) ?? entradas.find(r => r.price_unit === 'hora')
         if (a) setRateAdult(Number(a.price))
         if (c) setRateChild(Number(c.price))
       })
@@ -135,13 +136,15 @@ export default function CalendarioPage() {
   }, [])
 
   const reservableTypes = (() => {
-    const preferred = ['cumpleanos', 'custodia', 'otros']
-    const cats = Array.from(new Set(bookingServices.filter(s => s.reservable).map(s => s.category)))
-    cats.sort((x, y) => (preferred.indexOf(x) === -1 ? 99 : preferred.indexOf(x)) - (preferred.indexOf(y) === -1 ? 99 : preferred.indexOf(y)))
-    return cats.map(cat => ({
-      category: cat,
-      flow: (cat === 'cumpleanos' ? 'birthday' : cat === 'custodia' ? 'custodia' : 'other') as 'birthday' | 'custodia' | 'other',
-      label: categoryLabels[cat] ?? cat.charAt(0).toUpperCase() + cat.slice(1),
+    const preferred = ['cumpleanos', 'custodia', 'generico']
+    const seen = new Map<string, { category: string; flujo: string | null }>()
+    bookingServices.filter(s => s.tipo === 'reservable').forEach(s => { if (!seen.has(s.category)) seen.set(s.category, { category: s.category, flujo: s.flujo }) })
+    const groups = Array.from(seen.values())
+    groups.sort((x, y) => (preferred.indexOf(x.flujo ?? 'generico') === -1 ? 99 : preferred.indexOf(x.flujo ?? 'generico')) - (preferred.indexOf(y.flujo ?? 'generico') === -1 ? 99 : preferred.indexOf(y.flujo ?? 'generico')))
+    return groups.map(g => ({
+      category: g.category,
+      flow: (g.flujo === 'cumpleanos' ? 'birthday' : g.flujo === 'custodia' ? 'custodia' : 'other') as 'birthday' | 'custodia' | 'other',
+      label: categoryLabels[g.category] ?? g.category.charAt(0).toUpperCase() + g.category.slice(1),
     }))
   })()
 

@@ -990,7 +990,7 @@ export function BookingFormModal({
   const [notes, setNotes]         = useState(initial?.notes ?? '')
   // Pagos
   const serviceCat = serviceCategory
-  const catServices = serviceCat ? services.filter(s => s.category === serviceCat) : []
+  const catServices = serviceCat ? services.filter(s => s.tipo === 'reservable' && s.category === serviceCat) : []
   const [serviceId, setServiceId] = useState(initial?.service_id ?? '')
   const [totalStr, setTotalStr]   = useState(initial?.amount != null ? String(initial.amount) : '')
   const [depositStr, setDepositStr] = useState(initial?.deposit_amount != null ? String(initial.deposit_amount) : '')
@@ -999,7 +999,7 @@ export function BookingFormModal({
   const skipRecompute = useRef<boolean>(!!editId)
   const selectedService = catServices.find(s => s.id === serviceId) || null
   const subServices = services.filter(s =>
-    s.category === 'subservicios' &&
+    s.tipo === 'subservicio' &&
     (!s.applies_to || s.applies_to.length === 0 || s.applies_to.includes(serviceCat))
   )
   const round2 = (n: number) => Math.round(n * 100) / 100
@@ -1464,6 +1464,8 @@ export type BookingService = {
   included_guests: number | null
   applies_to: string[] | null
   reservable: boolean | null
+  tipo: string | null
+  flujo: string | null
 }
 
 export type BookingAddon = { name: string; price: number }
@@ -1782,17 +1784,23 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   }, [])
 
   // Tipos reservables: una tarjeta por categoría con al menos un servicio reservable
+  // El comportamiento lo define `flujo` (no el nombre de la categoría). La categoría es solo etiqueta/agrupación.
+  const flujoToFlow = (flujo: string | null): 'birthday' | 'custodia' | 'other' =>
+    flujo === 'cumpleanos' ? 'birthday' : flujo === 'custodia' ? 'custodia' : 'other'
   const reservableTypes = (() => {
-    const preferred = ['cumpleanos', 'custodia', 'otros']
-    const cats = Array.from(new Set(bookingServices.filter(s => s.reservable).map(s => s.category)))
-    cats.sort((a, b) => {
-      const ia = preferred.indexOf(a), ib = preferred.indexOf(b)
+    const reservables = bookingServices.filter(s => s.tipo === 'reservable')
+    const preferredFlujo = ['cumpleanos', 'custodia', 'generico']
+    const seen = new Map<string, { category: string; flujo: string | null }>()
+    reservables.forEach(s => { if (!seen.has(s.category)) seen.set(s.category, { category: s.category, flujo: s.flujo }) })
+    const groups = Array.from(seen.values())
+    groups.sort((a, b) => {
+      const ia = preferredFlujo.indexOf(a.flujo ?? 'generico'), ib = preferredFlujo.indexOf(b.flujo ?? 'generico')
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
     })
-    return cats.map(cat => ({
-      category: cat,
-      flow: (cat === 'cumpleanos' ? 'birthday' : cat === 'custodia' ? 'custodia' : 'other') as 'birthday' | 'custodia' | 'other',
-      label: categoryLabels[cat] ?? cat.charAt(0).toUpperCase() + cat.slice(1),
+    return groups.map(g => ({
+      category: g.category,
+      flow: flujoToFlow(g.flujo),
+      label: categoryLabels[g.category] ?? g.category.charAt(0).toUpperCase() + g.category.slice(1),
     }))
   })()
 
@@ -1836,18 +1844,21 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   useEffect(() => {
     supabase.from('products').select('id, name, category, price, emoji').eq('active', true).order('category').order('name')
       .then(({ data }) => { if (data) setProducts(data as Product[]) })
-    supabase.from('services').select('name, category, price, price_unit').eq('active', true)
+    supabase.from('services').select('name, category, price, price_unit, tipo, flujo').eq('active', true)
       .then(({ data }) => {
         if (!data) return
-        const adult = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Adulto')
-        const child = (data as any[]).find(r => r.category === 'entrada' && r.name === 'Niño')
-        const cust  = (data as any[]).find(r => r.category === 'custodia' && r.price_unit === 'hora')
+        const rows = data as any[]
+        // Tarifa de entrada libre por TIPO (no por el nombre de la categoría, que es renombrable)
+        const entradas = rows.filter(r => r.tipo === 'entrada')
+        const adult = entradas.find(r => /adult/i.test(r.name)) ?? entradas.find(r => r.price_unit !== 'hora')
+        const child = entradas.find(r => /ni[ñn]/i.test(r.name)) ?? entradas.find(r => r.price_unit === 'hora')
+        const cust  = rows.find(r => r.flujo === 'custodia' && r.price_unit === 'hora')
         if (adult) setRateAdult(Number(adult.price))
         if (child) setRateChild(Number(child.price))
         if (cust)  setRateCustodia(Number(cust.price))
       })
     supabase.from('services')
-      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable')
+      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')
       .eq('active', true).order('sort_order')
       .then(({ data }) => { if (data) setBookingServices(data as BookingService[]) })
   }, [])
