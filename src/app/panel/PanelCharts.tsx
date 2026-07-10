@@ -189,3 +189,42 @@ export function BonoDistChart({
     </div>
   )
 }
+
+type HourPoint = { hour: string; visitas: number }
+
+export function PeakHoursChart({ data }: { data: HourPoint[] }) {
+  const max = Math.max(1, ...data.map(d => d.visitas))
+  const peak = data.reduce((a, b) => (b.visitas > a.visitas ? b : a), { hour: '', visitas: 0 } as HourPoint)
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
+      <div className="flex items-start justify-between mb-1">
+        <p className="text-sm font-semibold text-snow">Horas pico</p>
+        {peak.visitas > 0 && <span className="text-xs font-semibold text-iris">Pico {peak.hour}</span>}
+      </div>
+      <p className="text-xs text-mist mb-4">Frecuencia de visitas por hora (últimos 30 días)</p>
+
+      <div style={{ height: 180 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+            <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} interval={1} />
+            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: any) => [v, 'Visitas']} />
+            <Bar dataKey="visitas" radius={[3, 3, 0, 0]}>
+              {data.map((d, i) => (
+                <Cell key={i} fill={peak.visitas > 0 && d.visitas === peak.visitas ? '#8b8bff' : '#3a3f49'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <p className="text-xs text-fog mt-3 pt-3 border-t border-line">
+        {peak.visitas > 0
+          ? <>Mayor afluencia alrededor de las <span className="text-iris font-semibold">{peak.hour}</span>.</>
+          : 'Aún no hay suficientes visitas registradas.'}
+      </p>
+    </div>
+  )
+}

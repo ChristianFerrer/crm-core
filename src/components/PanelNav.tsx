@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { BarChart2, Tag, ShoppingBag, Building2, ChevronDown, Check } from 'lucide-react'
+import { BarChart2, Tag, ShoppingBag, Building2, CalendarDays, ChevronDown, Check } from 'lucide-react'
 
 const ITEMS = [
   { href: '/panel', label: 'Resumen', icon: BarChart2 },
   { href: '/panel/servicios', label: 'Servicios', icon: Tag },
   { href: '/panel/tienda', label: 'Tienda', icon: ShoppingBag },
   { href: '/panel/perfil', label: 'Perfil', icon: Building2 },
+  { href: '/checkin', label: 'Visitas', icon: CalendarDays },
 ]
 
 export function PanelNav() {

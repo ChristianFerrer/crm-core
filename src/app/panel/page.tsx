@@ -1,11 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Users, TrendingUp, BarChart2, Tag, Building2, ShoppingBag } from 'lucide-react'
-import { MemberGrowthChart, BonoDistChart, VisitMiniChart } from './PanelCharts'
+import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
 import { PanelNav } from '@/components/PanelNav'
+import { StatFlipCards } from './StatFlipCards'
 
 export const revalidate = 0
 
@@ -42,6 +43,7 @@ export default async function PanelPage() {
     { data: followUpLeadsData },
     { data: monthVisits },
     { data: bonosSemanaRaw },
+    { data: visitTimes },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
@@ -61,7 +63,24 @@ export default async function PanelPage() {
     supabase.from('follow_up_leads').select('*').eq('period', currentPeriod),
     supabase.from('visits').select('member_id').gte('checked_in_at', startOfMonth).limit(500),
     supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').gte('expires_at', todayStr).lte('expires_at', weekFromNow).limit(20),
+    supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(5000),
   ])
+
+  // ── Horas pico de visitas (últimos 30 días, hora local España) ─────────────
+  const hourCounts = Array(24).fill(0)
+  ;(visitTimes ?? []).forEach((v: any) => {
+    const h = parseInt(new Date(v.checked_in_at).toLocaleString('en-US', { hour: '2-digit', hour12: false, timeZone: 'Europe/Madrid' }))
+    if (h >= 0 && h < 24) hourCounts[h % 24]++
+  })
+  const anyHour = hourCounts.findIndex(c => c > 0)
+  let firstH = anyHour === -1 ? 8 : anyHour
+  let lastH = anyHour === -1 ? 21 : (23 - [...hourCounts].reverse().findIndex(c => c > 0))
+  firstH = Math.min(firstH, 8)
+  lastH = Math.max(lastH, 21)
+  const peakHourBuckets = Array.from({ length: lastH - firstH + 1 }, (_, i) => ({
+    hour: `${firstH + i}h`,
+    visitas: hourCounts[firstH + i],
+  }))
 
   // ── 7-day visit chart ──────────────────────────────────────────────────────
   const DAY = ['D','L','M','X','J','V','S']
@@ -258,28 +277,13 @@ export default async function PanelPage() {
 
       {/* Charts + Stat cards grouped */}
       <div className="rounded-3xl border border-line bg-surface/40 p-4 space-y-4">
-        {/* Compact stats row */}
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { icon: Users,      label: 'Miembros', value: totalMembers ?? 0, accent: 'text-lime', bg: 'bg-lime/10' },
-            { icon: TrendingUp, label: 'Hoy',      value: todayCount ?? 0,   accent: 'text-iris', bg: 'bg-iris/10' },
-            { icon: TrendingUp, label: 'Este mes',  value: monthCount ?? 0,   accent: 'text-mint', bg: 'bg-mint/10' },
-          ].map(({ icon: Icon, label, value, accent, bg }) => (
-            <div key={label} className="rounded-2xl border border-line bg-surface p-3 flex flex-col gap-2">
-              <div className={`w-7 h-7 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
-                <Icon size={13} className={accent} />
-              </div>
-              <div>
-                <div className={`font-display text-2xl font-bold leading-none ${accent}`}>{value}</div>
-                <div className="text-[11px] text-fog mt-1 leading-tight">{label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr]">
+        {/* Compact stats row (flip cards) */}
+        <StatFlipCards totalMembers={totalMembers ?? 0} todayCount={todayCount ?? 0} monthCount={monthCount ?? 0} />
+        <div className="grid gap-4 md:grid-cols-2">
           <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
           <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
           <VisitMiniChart data={buckets} capacity={capacity} />
+          <PeakHoursChart data={peakHourBuckets} />
         </div>
       </div>
 

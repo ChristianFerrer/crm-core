@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { PanelNav } from '@/components/PanelNav'
 import { Check, X, QrCode, RotateCcw, LogIn, LogOut, Search, User, UserPlus, Clock, AlertTriangle, Timer, History, CalendarDays, ChevronLeft, ChevronRight, Users, ShoppingBag, Phone } from 'lucide-react'
 import Link from 'next/link'
 import { OpenCheckPanel } from './OpenCheckPanel'
@@ -992,6 +993,8 @@ function VisitasPageInner() {
         <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Visitas</h1>
         <p className="text-sm text-fog mt-0.5">Entradas, salidas e historial</p>
       </div>
+
+      <PanelNav />
 
       {/* Aforo gauge — always visible */}
       {capacity != null && (() => {
