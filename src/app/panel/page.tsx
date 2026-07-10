@@ -6,7 +6,7 @@ import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
 import { PanelNav } from '@/components/PanelNav'
-import { StatFlipCards } from './StatFlipCards'
+import { CustomizableDashboard } from './CustomizableDashboard'
 
 export const revalidate = 0
 
@@ -285,18 +285,17 @@ export default async function PanelPage() {
 
       <PanelNav />
 
-      {/* Charts + Stat cards grouped */}
-      <div className="rounded-3xl border border-line bg-surface/40 p-4 space-y-4">
-        {/* Compact stats row (flip cards) */}
-        <StatFlipCards totalMembers={totalMembers ?? 0} todayCount={todayCount ?? 0} monthCount={monthCount ?? 0} />
-        <div className="grid gap-4 md:grid-cols-2">
-          <MemberGrowthChart data={growthBuckets} lastMonthAdults={lastMonthAdults} lastMonthChildren={lastMonthChildren} newThisMonth={newThisMonth} />
-          <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
-          <VisitMiniChart data={buckets} capacity={capacity} />
-          <PeakHoursChart data={peakHourBuckets} />
-          <VisitsPerMonthChart data={visitsMonthBuckets} />
-        </div>
-      </div>
+      {/* Dashboard personalizable (mover / redimensionar / añadir / quitar) */}
+      <CustomizableDashboard
+        data={{
+          stats: { totalMembers: totalMembers ?? 0, todayCount: todayCount ?? 0, monthCount: monthCount ?? 0 },
+          growth: { data: growthBuckets, lastMonthAdults, lastMonthChildren, newThisMonth },
+          bono: { withFullBono, withLowBono, withoutBono },
+          visit7: { data: buckets, capacity },
+          peak: { data: peakHourBuckets },
+          visitsYear: { data: visitsMonthBuckets },
+        }}
+      />
 
       {/* Opportunity indicators */}
       <OpportunityDashboard

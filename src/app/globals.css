@@ -63,3 +63,17 @@ body {
 .animate-scroll-once {
   animation: scroll-names-once 3s ease-in-out 1 forwards;
 }
+
+/* react-grid-layout — ajustes de tema */
+.react-grid-item.react-grid-placeholder {
+  background: var(--color-lime) !important;
+  opacity: 0.15;
+  border-radius: 16px;
+}
+.react-grid-item > .react-resizable-handle::after {
+  border-right-color: var(--color-line2);
+  border-bottom-color: var(--color-line2);
+}
+.react-grid-item.react-draggable-dragging {
+  z-index: 60;
+}

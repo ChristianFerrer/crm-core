@@ -26,7 +26,7 @@ export function MemberGrowthChart({
   const delta = newThisMonth
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Miembros · este año</p>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${delta > 0 ? 'bg-lime/15 text-lime' : delta < 0 ? 'bg-rose/15 text-rose' : 'bg-fog/15 text-fog'}`}>
@@ -37,7 +37,7 @@ export function MemberGrowthChart({
         {lastMonthAdults} adultos · {lastMonthChildren} niños al inicio del año
       </p>
 
-      <div style={{ height: 180 }}>
+      <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
@@ -77,7 +77,7 @@ export function VisitMiniChart({
   const max = Math.max(1, ...data.map(d => d.adultos + d.ninos), capacity ?? 0)
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Visitas · últimos 7 días</p>
         {capacity != null && (
@@ -86,7 +86,7 @@ export function VisitMiniChart({
       </div>
       <p className="text-xs text-mist mb-4">Adultos y niños por día</p>
 
-      <div style={{ height: 180 }}>
+      <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
@@ -140,14 +140,14 @@ export function BonoDistChart({
   const bonoPct = total > 0 ? Math.round(((withFullBono + withLowBono) / total) * 100) : 0
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Bonos activos</p>
         <span className="text-xs font-bold text-iris">{bonoPct}% con bono</span>
       </div>
       <p className="text-xs text-mist mb-4">Sobre el total de miembros</p>
 
-      <div style={{ height: 180 }}>
+      <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 36, left: 0, bottom: 0 }}>
             <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
@@ -194,14 +194,14 @@ export function PeakHoursChart({ data }: { data: HourPoint[] }) {
   const peak = data.reduce((a, b) => (b.visitas > a.visitas ? b : a), { hour: '', visitas: 0 } as HourPoint)
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Horas pico</p>
         {peak.visitas > 0 && <span className="text-xs font-semibold text-iris">Pico {peak.hour}</span>}
       </div>
       <p className="text-xs text-mist mb-4">Frecuencia de visitas por hora (últimos 30 días)</p>
 
-      <div style={{ height: 180 }}>
+      <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
@@ -234,14 +234,14 @@ export function VisitsPerMonthChart({ data }: { data: MonthVisitPoint[] }) {
   const total = data.reduce((s, d) => s + d.visitas, 0)
 
   return (
-    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Visitas · este año</p>
         <span className="text-xs font-bold text-lime">{total} en total</span>
       </div>
       <p className="text-xs text-mist mb-4">Afluencia mensual (enero – diciembre)</p>
 
-      <div style={{ height: 180 }}>
+      <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
