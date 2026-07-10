@@ -421,7 +421,7 @@ function CheckInTab({
                   onClick={handleCheckIn}
                   disabled={registering || !custodiaValid}
                   className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 font-semibold text-sm transition active:scale-[0.99] disabled:opacity-60 ${
-                    bono?.ok ? 'bg-lime text-ink hover:bg-lime-deep' : 'bg-amber/20 text-amber border border-amber/30 hover:bg-amber/30'
+                    bono?.ok ? 'bg-lime text-ink hover:bg-lime-deep' : 'bg-amber text-ink hover:brightness-105'
                   }`}
                   style={bono?.ok ? { boxShadow: 'var(--shadow-lime)' } : {}}
                 >

@@ -2469,7 +2469,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </button>
                           <button
                             onClick={() => setConfirmCheckout(visit.id)}
-                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose/10 border border-rose/30 text-rose hover:bg-rose/20 active:scale-[0.98] transition-all"
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose text-white hover:brightness-110 active:scale-[0.98] transition-all"
                           >
                             <LogOut size={14} strokeWidth={2.2} />
                           </button>
@@ -2667,7 +2667,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           <td className="pl-3 pr-4 py-3 align-top">
                             <button
                               onClick={() => setConfirmCheckout(visit.id)}
-                              className="flex items-center justify-center text-rose bg-rose/10 border border-rose/30 rounded-lg w-7 h-7 hover:bg-rose/20 transition-colors"
+                              className="flex items-center justify-center text-white bg-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
                             >
                               <LogOut size={12} />
                             </button>
@@ -2692,7 +2692,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
           <button
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
-            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris/30 rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-colors"
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-white bg-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
           >
             <Plus size={12} /> Nueva reserva
           </button>
@@ -2753,7 +2753,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       <button
                         onClick={e => { e.stopPropagation(); handleExecuteBooking(b) }}
                         disabled={executingBooking === b.id}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime/30 bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                        className="flex items-center gap-1 text-[10px] font-semibold text-ink bg-lime rounded-lg px-2 py-1 shrink-0 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
                       >
                         <Play size={9} fill="currentColor" />
                         {executingBooking === b.id ? '...' : 'Ejecutar'}
@@ -2934,7 +2934,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </div>
                       <button
                         onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
-                        className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose/30 rounded-lg px-2 py-1 hover:bg-rose/20 transition-colors shrink-0"
+                        className="flex items-center gap-1 text-[10px] font-medium text-white bg-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
                       >
                         <LogOut size={10} /> Salida
                       </button>
@@ -3684,7 +3684,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </button>
 
                 <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose/10 border border-rose/30 text-rose font-semibold text-sm hover:bg-rose/20 transition active:scale-[0.99]">
+                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose text-white font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
                   <LogOut size={16} strokeWidth={2.2} />
                   Registrar salida
                 </button>

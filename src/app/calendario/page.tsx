@@ -419,7 +419,7 @@ export default function CalendarioPage() {
                             type="button"
                             onClick={e => { e.stopPropagation(); handleExecute(b) }}
                             disabled={executingId === b.id}
-                            className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime/30 bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                            className="flex items-center gap-1 text-[10px] font-semibold text-ink bg-lime rounded-lg px-2 py-1 shrink-0 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
                           >
                             <LogIn size={11} /> {executingId === b.id ? '...' : 'Ejecutar'}
                           </button>
