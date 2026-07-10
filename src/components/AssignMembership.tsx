@@ -15,7 +15,7 @@ export function AssignMembership({ memberId }: { memberId: string }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    supabase.from('membership_types').select('*').order('price')
+    supabase.from('membership_types').select('*').eq('active', true).order('price')
       .then(({ data }) => setTypes((data as MembershipType[]) ?? []))
   }, [])
 

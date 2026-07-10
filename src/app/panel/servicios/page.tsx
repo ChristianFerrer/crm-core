@@ -26,10 +26,12 @@ type Service = {
   flujo: string | null
 }
 
-// Tipo de servicio — define el comportamiento y los campos que se muestran
+type MembershipType = { id: string; name: string; sessions: number | null; price: number | null; validity_days: number | null; active: boolean | null }
+
+// Tipo de servicio — define el comportamiento y los campos que se muestran.
+// Los BONOS se gestionan en su propia sección (membership_types), fuente única para venta y check-in.
 const TIPOS = [
   { value: 'entrada',     label: 'Entrada',            desc: 'Tarifa por persona o tiempo' },
-  { value: 'bono',        label: 'Bono',               desc: 'Paquete de sesiones' },
   { value: 'reservable',  label: 'Paquete reservable', desc: 'Cumpleaños, custodia o evento' },
   { value: 'subservicio', label: 'Sub-servicio',       desc: 'Extra que se añade a una reserva' },
 ] as const
@@ -147,6 +149,14 @@ export default function ServiciosPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [view, setView] = useState<'tabla' | 'tarjetas'>('tabla')
 
+  // Bonos (membership_types) — fuente única para venta y check-in
+  const [bonos, setBonos] = useState<MembershipType[]>([])
+  const [bonoModal, setBonoModal] = useState<'add' | 'edit' | null>(null)
+  const [bonoTarget, setBonoTarget] = useState<MembershipType | null>(null)
+  const [bonoForm, setBonoForm] = useState({ name: '', ilimitado: false, sessions: '', price: '', validity_days: '' })
+  const [bonoSaving, setBonoSaving] = useState(false)
+  const [bonoDeleteId, setBonoDeleteId] = useState<string | null>(null)
+
   // Category management
   const [showCatModal, setShowCatModal] = useState(false)
   const [catForm, setCatForm] = useState({ label: '', value: '' })
@@ -159,16 +169,46 @@ export default function ServiciosPage() {
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
-      .from('services')
-      .select('*')
-      .order('sort_order', { ascending: true, nullsFirst: false })
-      .order('name')
+    const [{ data }, { data: mt }] = await Promise.all([
+      supabase.from('services').select('*').order('sort_order', { ascending: true, nullsFirst: false }).order('name'),
+      supabase.from('membership_types').select('id, name, sessions, price, validity_days, active').order('price'),
+    ])
     setServices(data ?? [])
+    setBonos((mt ?? []) as MembershipType[])
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
+
+  // ── Bonos CRUD (membership_types) ──
+  function openBonoAdd() { setBonoForm({ name: '', ilimitado: false, sessions: '', price: '', validity_days: '' }); setBonoTarget(null); setBonoModal('add') }
+  function openBonoEdit(b: MembershipType) {
+    setBonoForm({ name: b.name, ilimitado: b.sessions == null, sessions: b.sessions != null ? String(b.sessions) : '', price: b.price != null ? String(b.price) : '', validity_days: b.validity_days != null ? String(b.validity_days) : '' })
+    setBonoTarget(b); setBonoModal('edit')
+  }
+  function closeBonoModal() { setBonoModal(null); setBonoTarget(null) }
+  async function saveBono() {
+    if (!bonoForm.name.trim() || !bonoForm.price) return
+    setBonoSaving(true)
+    const payload = {
+      name: bonoForm.name.trim(),
+      sessions: bonoForm.ilimitado ? null : (bonoForm.sessions ? parseInt(bonoForm.sessions) : null),
+      price: parseFloat(bonoForm.price),
+      validity_days: bonoForm.validity_days ? parseInt(bonoForm.validity_days) : null,
+    }
+    if (bonoModal === 'add') await supabase.from('membership_types').insert({ ...payload, active: true })
+    else if (bonoTarget) await supabase.from('membership_types').update(payload).eq('id', bonoTarget.id)
+    setBonoSaving(false); closeBonoModal(); load()
+  }
+  async function toggleBonoActive(b: MembershipType) {
+    await supabase.from('membership_types').update({ active: !b.active }).eq('id', b.id)
+    setBonos(prev => prev.map(x => x.id === b.id ? { ...x, active: !x.active } : x))
+  }
+  async function deleteBono(id: string) {
+    await supabase.from('membership_types').delete().eq('id', id)
+    setBonoDeleteId(null)
+    setBonos(prev => prev.filter(x => x.id !== id))
+  }
 
   function getCat(value: string): Category {
     return categories.find(c => c.value === value) ?? categories[categories.length - 1] ?? DEFAULT_CATEGORIES[4]
@@ -500,6 +540,60 @@ export default function ServiciosPage() {
         </div>
       )}
 
+      {/* ── Bonos (fuente única: membership_types) ── */}
+      <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-snow">Bonos</p>
+            <p className="text-[11px] text-mist">Se venden a los miembros y se descuentan en el check-in</p>
+          </div>
+          <button onClick={openBonoAdd}
+            className="flex items-center gap-1.5 bg-iris text-ink text-xs font-semibold px-3 py-2 rounded-xl hover:brightness-110 transition-all">
+            <Plus size={13} /> Nuevo bono
+          </button>
+        </div>
+        {bonos.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-mist">Sin bonos. Crea el primero.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm whitespace-nowrap">
+              <thead>
+                <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
+                  <th className="px-4 py-3">Bono</th>
+                  <th className="px-3 py-3 text-right">Sesiones</th>
+                  <th className="px-3 py-3 text-right">Precio</th>
+                  <th className="px-3 py-3 text-right">Vigencia</th>
+                  <th className="px-3 py-3 text-center">Activo</th>
+                  <th className="px-3 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line/60">
+                {bonos.map(b => (
+                  <tr key={b.id} className={`${b.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
+                    <td className="px-4 py-2.5 font-semibold text-snow">{b.name}</td>
+                    <td className="px-3 py-2.5 text-right text-fog">{b.sessions == null ? <span className="text-iris font-medium">Ilimitado</span> : b.sessions}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-snow">{b.price != null ? `${b.price}€` : '—'}</td>
+                    <td className="px-3 py-2.5 text-right text-fog">{b.validity_days != null ? `${b.validity_days} días` : '—'}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <button onClick={() => toggleBonoActive(b)}
+                        className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${b.active ? 'bg-lime' : 'bg-line'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${b.active ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openBonoEdit(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
+                        <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Add / Edit Service Modal */}
       {modal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
@@ -700,6 +794,70 @@ export default function ServiciosPage() {
             <div className="flex gap-2">
               <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
               <button onClick={() => deleteService(deleteId)} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bono Add/Edit Modal */}
+      {bonoModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-semibold text-snow">{bonoModal === 'add' ? 'Nuevo bono' : 'Editar bono'}</h2>
+              <button onClick={closeBonoModal} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Nombre *</label>
+                <input className={INPUT_CLASS} placeholder="Ej. Bono x10" value={bonoForm.name} onChange={e => setBonoForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <button type="button" onClick={() => setBonoForm(f => ({ ...f, ilimitado: !f.ilimitado }))}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40 text-left">
+                <div className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${bonoForm.ilimitado ? 'bg-lime' : 'bg-line'}`}>
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${bonoForm.ilimitado ? 'translate-x-4' : ''}`} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-snow">Ilimitado</p>
+                  <p className="text-[11px] text-mist">Sin límite de sesiones (ej. mensual)</p>
+                </div>
+              </button>
+              <div className="grid grid-cols-2 gap-3">
+                {!bonoForm.ilimitado && (
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">Nº sesiones *</label>
+                    <input className={INPUT_CLASS} type="number" min="1" placeholder="Ej. 10" value={bonoForm.sessions} onChange={e => setBonoForm(f => ({ ...f, sessions: e.target.value }))} />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
+                  <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="60.00" value={bonoForm.price} onChange={e => setBonoForm(f => ({ ...f, price: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Vigencia en días (opcional)</label>
+                <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 90" value={bonoForm.validity_days} onChange={e => setBonoForm(f => ({ ...f, validity_days: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={closeBonoModal} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={saveBono} disabled={bonoSaving || !bonoForm.name.trim() || !bonoForm.price} className="flex-1 py-2.5 rounded-xl bg-lime text-carbon text-sm font-semibold hover:bg-lime/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <Check size={14} /> {bonoSaving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete bono confirmation */}
+      {bonoDeleteId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
+            <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar bono?</h2>
+            <p className="text-sm text-fog mb-6">Los bonos ya vendidos a miembros no se eliminan; solo se quita este tipo del catálogo.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setBonoDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => deleteBono(bonoDeleteId)} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
             </div>
           </div>
         </div>
