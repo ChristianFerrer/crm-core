@@ -437,6 +437,35 @@ export default function ServiciosPage() {
                     </tr>
                   )
                 })}
+                {/* Bonos (membership_types) en la misma tabla */}
+                {bonos.map(b => (
+                  <tr key={`bono-${b.id}`} className={`${b.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
+                    <td className="px-4 py-2.5 font-semibold text-snow">{b.name}</td>
+                    <td className="px-3 py-2.5"><span className="text-xs font-medium text-snow">Bono</span></td>
+                    <td className="px-3 py-2.5"><span className="text-mist">—</span></td>
+                    <td className="px-3 py-2.5 text-center"><span className="text-mist">—</span></td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-snow">{b.price != null ? `${b.price}€` : '—'}</td>
+                    <td className="px-3 py-2.5 text-fog"><span className="text-mist">—</span></td>
+                    <td className="px-3 py-2.5 text-right text-fog">{b.validity_days != null ? `${b.validity_days} días` : '—'}</td>
+                    <td className="px-3 py-2.5 text-right text-fog">{b.sessions == null ? <span className="text-iris">ilimitado</span> : `${b.sessions} ses.`}</td>
+                    <td className="px-3 py-2.5 text-right"><span className="text-mist">—</span></td>
+                    <td className="px-3 py-2.5 text-right"><span className="text-mist">—</span></td>
+                    <td className="px-3 py-2.5 text-right"><span className="text-mist">—</span></td>
+                    <td className="px-3 py-2.5"><span className="text-mist">—</span></td>
+                    <td className="px-3 py-2.5 text-center">
+                      <button onClick={() => toggleBonoActive(b)}
+                        className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${b.active ? 'bg-lime' : 'bg-line'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${b.active ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEditBono(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
+                        <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -483,54 +512,6 @@ export default function ServiciosPage() {
           ))}
         </div>
       )}
-
-      {/* ── Bonos (fuente única: membership_types; se crean desde "Nuevo servicio" → tipo Bono) ── */}
-      <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-        <div className="px-4 py-3 border-b border-line">
-          <p className="text-sm font-semibold text-snow">Bonos</p>
-          <p className="text-[11px] text-mist">Se crean en «Nuevo servicio» (tipo Bono). Se venden a los miembros y se descuentan en el check-in.</p>
-        </div>
-        {bonos.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-mist">Sin bonos. Crea uno desde «Nuevo servicio».</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm whitespace-nowrap">
-              <thead>
-                <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
-                  <th className="px-4 py-3">Bono</th>
-                  <th className="px-3 py-3 text-right">Sesiones</th>
-                  <th className="px-3 py-3 text-right">Precio</th>
-                  <th className="px-3 py-3 text-right">Vigencia</th>
-                  <th className="px-3 py-3 text-center">Activo</th>
-                  <th className="px-3 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/60">
-                {bonos.map(b => (
-                  <tr key={b.id} className={`${b.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
-                    <td className="px-4 py-2.5 font-semibold text-snow">{b.name}</td>
-                    <td className="px-3 py-2.5 text-right text-fog">{b.sessions == null ? <span className="text-iris font-medium">Ilimitado</span> : b.sessions}</td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-snow">{b.price != null ? `${b.price}€` : '—'}</td>
-                    <td className="px-3 py-2.5 text-right text-fog">{b.validity_days != null ? `${b.validity_days} días` : '—'}</td>
-                    <td className="px-3 py-2.5 text-center">
-                      <button onClick={() => toggleBonoActive(b)}
-                        className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${b.active ? 'bg-lime' : 'bg-line'}`}>
-                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${b.active ? 'translate-x-4' : ''}`} />
-                      </button>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEditBono(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
-                        <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       {/* Add / Edit Service Modal */}
       {modal && (
