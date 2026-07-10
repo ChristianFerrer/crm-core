@@ -2348,7 +2348,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between">
                 <div className="flex items-baseline gap-1.5">
-                  <span className={`text-2xl font-bold leading-none ${aforoTextColor}`}>{activeTotal}</span>
+                  <span className={`font-display text-2xl font-bold leading-none ${aforoTextColor}`}>{activeTotal}</span>
                   <span className="text-xs text-fog">de {capacity} plazas</span>
                 </div>
                 <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
@@ -2358,13 +2358,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${Math.min(100, (activeChildren / capacity) * 100)}%` }} />
               </div>
               <div className="flex items-center gap-4 text-xs">
-                <span className="flex items-center gap-1.5 text-fog">
+                <span className="flex items-center gap-1.5 text-lime">
                   <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
-                  <span className="font-semibold text-snow">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}
+                  <span className="font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}
                 </span>
-                <span className="flex items-center gap-1.5 text-fog">
+                <span className="flex items-center gap-1.5 text-cyan-300">
                   <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
-                  <span className="font-semibold text-snow">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}
+                  <span className="font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}
                 </span>
               </div>
             </div>
