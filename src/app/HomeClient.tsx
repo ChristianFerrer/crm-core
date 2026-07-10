@@ -807,8 +807,8 @@ export function BookingSearchAndTypeModal({
   query: string
   onQueryChange: (q: string) => void
   preselectedMember: FullMember | null
-  types: { category: string; flow: 'birthday' | 'custodia' | 'other'; label: string }[]
-  onProceed: (member: FullMember, type: 'birthday' | 'custodia' | 'other', category: string) => void
+  types: { flujo: string; flow: 'birthday' | 'custodia' | 'other'; label: string; serviceId?: string; desc?: string }[]
+  onProceed: (member: FullMember, type: 'birthday' | 'custodia' | 'other', flujo: string, serviceId?: string) => void
   onNewMember: () => void
   onClose: () => void
 }) {
@@ -819,7 +819,7 @@ export function BookingSearchAndTypeModal({
     custodia: { Icon: Clock,    colorCls: 'text-cyan-300', activeCls: 'border-cyan-300/40 bg-cyan-300/10 hover:bg-cyan-300/15', desc: 'Servicio de cuidado con horario' },
     other:    { Icon: Calendar, colorCls: 'text-lime',     activeCls: 'border-lime/40 bg-lime/10 hover:bg-lime/15',            desc: 'Reserva con paquete de servicio' },
   } as const
-  const types = reservableTypes.map(t => ({ key: t.flow, category: t.category, label: t.label, ...flowMeta[t.flow] }))
+  const types = reservableTypes.map(t => { const m = flowMeta[t.flow]; return { ...m, flow: t.flow, flujo: t.flujo, label: t.label, serviceId: t.serviceId, desc: t.desc ?? m.desc } })
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
@@ -895,9 +895,9 @@ export function BookingSearchAndTypeModal({
               Tipo de reserva <span className="text-rose">*</span>
             </p>
             <div className="space-y-2">
-              {types.map(t => (
-                <button key={t.category}
-                  onClick={() => { if (member) { onProceed(member, t.key, t.category) } }}
+              {types.map((t, i) => (
+                <button key={`${t.flow}-${t.serviceId ?? t.flujo}-${i}`}
+                  onClick={() => { if (member) { onProceed(member, t.flow, t.flujo, t.serviceId) } }}
                   className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl border transition-colors text-left ${
                     member ? `${t.activeCls}` : 'border-line bg-surface2 opacity-50 cursor-not-allowed'
                   }`}
@@ -946,11 +946,11 @@ export type BookingInitial = {
 // ── Modal reserva 3: formulario ──
 export function BookingFormModal({
   member, bookingType, serviceCategory, selectedDate, services, rateAdult, rateChild, tenantId, onBack, onClose, onSaved,
-  editId = null, initial = null, onCancelBooking,
+  editId = null, initial = null, onCancelBooking, preselectServiceId = null,
 }: {
   member: FullMember
   bookingType: 'birthday' | 'custodia' | 'other'
-  serviceCategory: string
+  serviceCategory: string   // flujo del paquete (cumpleanos | custodia | generico)
   selectedDate: string
   services: BookingService[]
   rateAdult: number
@@ -962,6 +962,7 @@ export function BookingFormModal({
   editId?: string | null
   initial?: BookingInitial | null
   onCancelBooking?: () => void
+  preselectServiceId?: string | null
 }) {
   const firstChild = bookingType === 'birthday' && member.children?.length > 0 ? member.children[0].name : ''
 
@@ -990,11 +991,11 @@ export function BookingFormModal({
   const [notes, setNotes]         = useState(initial?.notes ?? '')
   // Pagos
   const serviceCat = serviceCategory
-  const catServices = serviceCat ? services.filter(s => s.tipo === 'reservable' && s.category === serviceCat) : []
-  const [serviceId, setServiceId] = useState(initial?.service_id ?? '')
+  const catServices = serviceCat ? services.filter(s => s.tipo === 'reservable' && s.flujo === serviceCat) : []
+  const [serviceId, setServiceId] = useState(initial?.service_id ?? preselectServiceId ?? '')
   const [totalStr, setTotalStr]   = useState(initial?.amount != null ? String(initial.amount) : '')
   const [depositStr, setDepositStr] = useState(initial?.deposit_amount != null ? String(initial.deposit_amount) : '')
-  const [paymentsOpen, setPaymentsOpen] = useState(!!editId && (initial?.amount != null || !!initial?.service_id))
+  const [paymentsOpen, setPaymentsOpen] = useState(!!editId && (initial?.amount != null || !!initial?.service_id) || !!preselectServiceId)
   const [selectedAddons, setSelectedAddons] = useState<BookingAddon[]>(initial?.addons ?? [])
   const skipRecompute = useRef<boolean>(!!editId)
   const selectedService = catServices.find(s => s.id === serviceId) || null
@@ -1716,7 +1717,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const newMemberReturnTo = useRef<'checkin' | 'booking'>('checkin')
   const [bookingMember, setBookingMember] = useState<FullMember | null>(null)
   const [bookingType, setBookingType] = useState<'birthday' | 'custodia' | 'other' | null>(null)
-  const [bookingCategory, setBookingCategory] = useState<string>('otros')
+  const [bookingCategory, setBookingCategory] = useState<string>('generico')
+  const [bookingPreselectService, setBookingPreselectService] = useState<string | null>(null)
   const [bookingQuery, setBookingQuery] = useState('')
   const [editBookingId, setEditBookingId] = useState<string | null>(null)
   const [editInitial, setEditInitial] = useState<BookingInitial | null>(null)
@@ -1728,7 +1730,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     ;(async () => {
       const { data: bk } = await supabase
         .from('bookings')
-        .select('*, services(category)')
+        .select('*, services(flujo)')
         .eq('id', editarId).single()
       if (!bk) return
       const { data: mem } = await supabase
@@ -1737,10 +1739,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         .eq('id', (bk as any).member_id).single()
       if (!mem) return
       const b = bk as any
-      const cat = b.services?.category ?? (b.type === 'birthday' ? 'cumpleanos' : b.type === 'custodia' ? 'custodia' : 'otros')
+      const flujo = b.services?.flujo ?? (b.type === 'birthday' ? 'cumpleanos' : b.type === 'custodia' ? 'custodia' : 'generico')
       setBookingMember(mem as unknown as FullMember)
       setBookingType(b.type)
-      setBookingCategory(cat)
+      setBookingCategory(flujo)
       setEditInitial({
         title: b.title, child_name: b.child_name, date: b.date,
         start_time: b.start_time, end_time: b.end_time,
@@ -1784,24 +1786,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   }, [])
 
   // Tipos reservables: una tarjeta por categoría con al menos un servicio reservable
-  // El comportamiento lo define `flujo` (no el nombre de la categoría). La categoría es solo etiqueta/agrupación.
-  const flujoToFlow = (flujo: string | null): 'birthday' | 'custodia' | 'other' =>
-    flujo === 'cumpleanos' ? 'birthday' : flujo === 'custodia' ? 'custodia' : 'other'
+  // Tipos de reserva: Cumpleaños y Custodia son especiales (una tarjeta); los genéricos aparecen uno por servicio (por su nombre).
   const reservableTypes = (() => {
-    const reservables = bookingServices.filter(s => s.tipo === 'reservable')
-    const preferredFlujo = ['cumpleanos', 'custodia', 'generico']
-    const seen = new Map<string, { category: string; flujo: string | null }>()
-    reservables.forEach(s => { if (!seen.has(s.category)) seen.set(s.category, { category: s.category, flujo: s.flujo }) })
-    const groups = Array.from(seen.values())
-    groups.sort((a, b) => {
-      const ia = preferredFlujo.indexOf(a.flujo ?? 'generico'), ib = preferredFlujo.indexOf(b.flujo ?? 'generico')
-      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
-    })
-    return groups.map(g => ({
-      category: g.category,
-      flow: flujoToFlow(g.flujo),
-      label: categoryLabels[g.category] ?? g.category.charAt(0).toUpperCase() + g.category.slice(1),
-    }))
+    const svc = bookingServices.filter(s => s.tipo === 'reservable')
+    const items: { flujo: string; flow: 'birthday' | 'custodia' | 'other'; label: string; serviceId?: string; desc?: string }[] = []
+    if (svc.some(s => s.flujo === 'cumpleanos')) items.push({ flujo: 'cumpleanos', flow: 'birthday', label: 'Cumpleaños' })
+    if (svc.some(s => s.flujo === 'custodia'))   items.push({ flujo: 'custodia',   flow: 'custodia', label: 'Custodia' })
+    svc.filter(s => s.flujo !== 'cumpleanos' && s.flujo !== 'custodia')
+      .forEach(s => items.push({ flujo: 'generico', flow: 'other', label: s.name, serviceId: s.id, desc: s.description ?? 'Reserva con paquete de servicio' }))
+    return items
   })()
 
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
@@ -3926,7 +3919,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
             })
           : []
-        const closeAll = () => { setBookingModal(null); setBookingQuery(''); setBookingMember(null); setBookingType(null) }
+        const closeAll = () => { setBookingModal(null); setBookingQuery(''); setBookingMember(null); setBookingType(null); setBookingPreselectService(null) }
         return (
           <BookingSearchAndTypeModal
             filtered={filtered}
@@ -3934,7 +3927,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             onQueryChange={setBookingQuery}
             preselectedMember={bookingMember}
             types={reservableTypes}
-            onProceed={(m, t, cat) => { setBookingMember(m); setBookingType(t); setBookingCategory(cat); setBookingModal('form') }}
+            onProceed={(m, t, flujo, serviceId) => { setBookingMember(m); setBookingType(t); setBookingCategory(flujo); setBookingPreselectService(serviceId ?? null); setBookingModal('form') }}
             onNewMember={() => { newMemberReturnTo.current = 'booking'; setCheckinModal('new-member') }}
             onClose={closeAll}
           />
@@ -3947,6 +3940,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           member={bookingMember}
           bookingType={bookingType}
           serviceCategory={bookingCategory}
+          preselectServiceId={bookingPreselectService}
           selectedDate={selectedDate}
           services={bookingServices}
           rateAdult={rateAdult}
@@ -3955,7 +3949,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           editId={editBookingId}
           initial={editInitial}
           onBack={() => { if (editBookingId) { setBookingModal(null); setBookingMember(null); setBookingType(null); setEditBookingId(null); setEditInitial(null) } else { setBookingModal('pick') } }}
-          onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery(''); setEditBookingId(null); setEditInitial(null) }}
+          onClose={() => { setBookingModal(null); setBookingMember(null); setBookingType(null); setBookingQuery(''); setBookingPreselectService(null); setEditBookingId(null); setEditInitial(null) }}
           onSaved={() => { router.refresh(); setCheckinMembers([]) }}
         />
       )}

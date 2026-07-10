@@ -104,7 +104,8 @@ export default function CalendarioPage() {
   const [flowStep, setFlowStep] = useState<null | 'pick' | 'form'>(null)
   const [flowMember, setFlowMember] = useState<FullMember | null>(null)
   const [flowType, setFlowType] = useState<'birthday' | 'custodia' | 'other'>('birthday')
-  const [flowCategory, setFlowCategory] = useState('otros')
+  const [flowCategory, setFlowCategory] = useState('generico')
+  const [flowPreselectService, setFlowPreselectService] = useState<string | null>(null)
   const [flowQuery, setFlowQuery] = useState('')
   const [flowEditId, setFlowEditId] = useState<string | null>(null)
   const [flowInitial, setFlowInitial] = useState<BookingInitial | null>(null)
@@ -136,16 +137,13 @@ export default function CalendarioPage() {
   }, [])
 
   const reservableTypes = (() => {
-    const preferred = ['cumpleanos', 'custodia', 'generico']
-    const seen = new Map<string, { category: string; flujo: string | null }>()
-    bookingServices.filter(s => s.tipo === 'reservable').forEach(s => { if (!seen.has(s.category)) seen.set(s.category, { category: s.category, flujo: s.flujo }) })
-    const groups = Array.from(seen.values())
-    groups.sort((x, y) => (preferred.indexOf(x.flujo ?? 'generico') === -1 ? 99 : preferred.indexOf(x.flujo ?? 'generico')) - (preferred.indexOf(y.flujo ?? 'generico') === -1 ? 99 : preferred.indexOf(y.flujo ?? 'generico')))
-    return groups.map(g => ({
-      category: g.category,
-      flow: (g.flujo === 'cumpleanos' ? 'birthday' : g.flujo === 'custodia' ? 'custodia' : 'other') as 'birthday' | 'custodia' | 'other',
-      label: categoryLabels[g.category] ?? g.category.charAt(0).toUpperCase() + g.category.slice(1),
-    }))
+    const svc = bookingServices.filter(s => s.tipo === 'reservable')
+    const items: { flujo: string; flow: 'birthday' | 'custodia' | 'other'; label: string; serviceId?: string; desc?: string }[] = []
+    if (svc.some(s => s.flujo === 'cumpleanos')) items.push({ flujo: 'cumpleanos', flow: 'birthday', label: 'Cumpleaños' })
+    if (svc.some(s => s.flujo === 'custodia'))   items.push({ flujo: 'custodia',   flow: 'custodia', label: 'Custodia' })
+    svc.filter(s => s.flujo !== 'cumpleanos' && s.flujo !== 'custodia')
+      .forEach(s => items.push({ flujo: 'generico', flow: 'other', label: s.name, serviceId: s.id, desc: s.description ?? 'Reserva con paquete de servicio' }))
+    return items
   })()
 
   const flowMembers: FullMember[] = members.map(m => ({
@@ -161,7 +159,7 @@ export default function CalendarioPage() {
       })
     : []
 
-  function closeFlow() { setFlowStep(null); setFlowMember(null); setFlowQuery(''); setFlowEditId(null); setFlowInitial(null) }
+  function closeFlow() { setFlowStep(null); setFlowMember(null); setFlowQuery(''); setFlowEditId(null); setFlowInitial(null); setFlowPreselectService(null) }
   function openNewFlow() { setFlowEditId(null); setFlowInitial(null); setFlowMember(null); setFlowQuery(''); setFlowStep('pick') }
   function openEditFlow(b: Booking) {
     // Las reservas sin titular (datos antiguos) también deben poder editarse
@@ -171,10 +169,11 @@ export default function CalendarioPage() {
           children: (b.members.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })),
         }
       : { id: '', name: '(Sin titular)', phone: null, family_id: null, memberships: [], children: [] }
-    const cat = bookingServices.find(s => s.id === b.service_id)?.category ?? (b.type === 'birthday' ? 'cumpleanos' : b.type === 'custodia' ? 'custodia' : 'otros')
+    const cat = bookingServices.find(s => s.id === b.service_id)?.flujo ?? (b.type === 'birthday' ? 'cumpleanos' : b.type === 'custodia' ? 'custodia' : 'generico')
     setFlowMember(mem)
     setFlowType(b.type)
     setFlowCategory(cat)
+    setFlowPreselectService(null)
     setFlowInitial({
       title: b.title, child_name: b.child_name, date: b.date, start_time: b.start_time, end_time: b.end_time,
       guest_adults: b.guest_adults, guest_children: b.guest_children, service_id: b.service_id,
@@ -500,7 +499,7 @@ export default function CalendarioPage() {
           onQueryChange={setFlowQuery}
           preselectedMember={flowMember}
           types={reservableTypes}
-          onProceed={(m, t, cat) => { setFlowMember(m); setFlowType(t); setFlowCategory(cat); setFlowStep('form') }}
+          onProceed={(m, t, flujo, serviceId) => { setFlowMember(m); setFlowType(t); setFlowCategory(flujo); setFlowPreselectService(serviceId ?? null); setFlowStep('form') }}
           onNewMember={() => { newMemberForFlow.current = true; setShowAddMember(true) }}
           onClose={closeFlow}
         />
@@ -511,6 +510,7 @@ export default function CalendarioPage() {
           member={flowMember}
           bookingType={flowType}
           serviceCategory={flowCategory}
+          preselectServiceId={flowPreselectService}
           selectedDate={selectedDate ?? todayStr}
           services={bookingServices}
           rateAdult={rateAdult}
