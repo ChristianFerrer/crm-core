@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { Users, TrendingUp, BarChart2, Tag, Building2, ShoppingBag } from 'lucide-react'
-import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart } from './PanelCharts'
+import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart, VisitsPerMonthChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
@@ -44,6 +44,7 @@ export default async function PanelPage() {
     { data: monthVisits },
     { data: bonosSemanaRaw },
     { data: visitTimes },
+    { data: yearVisits },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
@@ -64,7 +65,15 @@ export default async function PanelPage() {
     supabase.from('visits').select('member_id').gte('checked_in_at', startOfMonth).limit(500),
     supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').gte('expires_at', todayStr).lte('expires_at', weekFromNow).limit(20),
     supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(5000),
+    supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getFullYear(), 0, 1).toISOString()).limit(20000),
   ])
+
+  // ── Visitas por mes (todo el año) ──────────────────────────────────────────
+  const visitsByMonth = Array(12).fill(0)
+  ;(yearVisits ?? []).forEach((v: any) => {
+    const d = new Date(v.checked_in_at)
+    if (d.getFullYear() === now.getFullYear()) visitsByMonth[d.getMonth()]++
+  })
 
   // ── Horas pico de visitas (últimos 30 días, hora local España) ─────────────
   const hourCounts = Array(24).fill(0)
@@ -114,10 +123,11 @@ export default async function PanelPage() {
     }
   })
   let runAdults = lastMonthAdults, runChildren = lastMonthChildren
-  const growthBuckets = Array.from({ length: now.getMonth() + 1 }, (_, i) => {
+  const growthBuckets = MONTHS.map((label, i) => {
     runAdults += monthlyAdults[i]; runChildren += monthlyChildren[i]
-    return { label: MONTHS[i], adultos: runAdults, ninos: runChildren }
+    return { label, adultos: runAdults, ninos: runChildren }
   })
+  const visitsMonthBuckets = MONTHS.map((label, i) => ({ label, visitas: visitsByMonth[i] }))
 
   // ── Bono distribution ──────────────────────────────────────────────────────
   const bonoByMember = new Map<string, number | null>()
@@ -284,6 +294,7 @@ export default async function PanelPage() {
           <BonoDistChart withFullBono={withFullBono} withLowBono={withLowBono} withoutBono={withoutBono} />
           <VisitMiniChart data={buckets} capacity={capacity} />
           <PeakHoursChart data={peakHourBuckets} />
+          <VisitsPerMonthChart data={visitsMonthBuckets} />
         </div>
       </div>
 

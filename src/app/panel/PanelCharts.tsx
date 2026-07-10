@@ -226,3 +226,32 @@ export function PeakHoursChart({ data }: { data: HourPoint[] }) {
     </div>
   )
 }
+
+type MonthVisitPoint = { label: string; visitas: number }
+
+export function VisitsPerMonthChart({ data }: { data: MonthVisitPoint[] }) {
+  const max = Math.max(1, ...data.map(d => d.visitas))
+  const total = data.reduce((s, d) => s + d.visitas, 0)
+
+  return (
+    <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col">
+      <div className="flex items-start justify-between mb-1">
+        <p className="text-sm font-semibold text-snow">Visitas · este año</p>
+        <span className="text-xs font-bold text-lime">{total} en total</span>
+      </div>
+      <p className="text-xs text-mist mb-4">Afluencia mensual (enero – diciembre)</p>
+
+      <div style={{ height: 180 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
+            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [v, 'Visitas']} />
+            <Line type="monotone" dataKey="visitas" stroke="#c6f24e" strokeWidth={2.5} dot={{ r: 2.5, fill: '#c6f24e' }} activeDot={{ r: 4 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
