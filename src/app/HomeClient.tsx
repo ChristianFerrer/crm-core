@@ -2320,12 +2320,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         {/* Stats header */}
         <div className="px-4 pt-4 pb-3 border-b border-line space-y-3">
           {/* Title row */}
-          <div className="flex items-center gap-2">
-            <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
-              <Users size={13} />
-              {isToday ? 'En sala ahora' : 'Visitas del día'}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
+                <Users size={13} className="shrink-0" />
+                {isToday ? 'En sala ahora' : 'Visitas del día'}
+              </h2>
               {isToday && (
-                <span className="flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
+                <span className="mt-1 inline-flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
                   <span className="relative flex h-2 w-2 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-white animate-pulse" />
@@ -2333,13 +2335,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   En vivo
                 </span>
               )}
-            </h2>
+            </div>
             {isToday && (
               <button
                 onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
-                className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-lime rounded-lg px-2.5 py-1.5 hover:brightness-105 active:scale-95 transition-all"
+                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-lime rounded-lg px-2.5 py-1.5 hover:brightness-105 active:scale-95 transition-all"
               >
-                <LogIn size={12} /> Registrar entrada
+                <LogIn size={12} className="shrink-0" /> Registrar entrada
               </button>
             )}
           </div>
