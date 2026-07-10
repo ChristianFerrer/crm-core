@@ -2469,7 +2469,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </button>
                           <button
                             onClick={() => setConfirmCheckout(visit.id)}
-                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose text-white hover:brightness-110 active:scale-[0.98] transition-all"
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose text-ink hover:brightness-110 active:scale-[0.98] transition-all"
                           >
                             <LogOut size={14} strokeWidth={2.2} />
                           </button>
@@ -2667,7 +2667,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           <td className="pl-3 pr-4 py-3 align-top">
                             <button
                               onClick={() => setConfirmCheckout(visit.id)}
-                              className="flex items-center justify-center text-white bg-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
+                              className="flex items-center justify-center text-ink bg-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
                             >
                               <LogOut size={12} />
                             </button>
@@ -2692,7 +2692,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
           <button
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
-            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-white bg-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
           >
             <Plus size={12} /> Nueva reserva
           </button>
@@ -2934,7 +2934,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </div>
                       <button
                         onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
-                        className="flex items-center gap-1 text-[10px] font-medium text-white bg-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
+                        className="flex items-center gap-1 text-[10px] font-medium text-ink bg-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
                       >
                         <LogOut size={10} /> Salida
                       </button>
@@ -3240,7 +3240,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <button
                     onClick={() => handleCheckout(visit.id)}
                     disabled={checkingOut === visit.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-ink bg-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
                   >
                     <LogOut size={14} />
                     {checkingOut === visit.id ? 'Registrando...' : 'Confirmar salida'}
@@ -3684,7 +3684,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </button>
 
                 <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose text-white font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
+                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose text-ink font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
                   <LogOut size={16} strokeWidth={2.2} />
                   Registrar salida
                 </button>
