@@ -22,7 +22,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   startOfMonth.setDate(1)
   startOfMonth.setHours(0, 0, 0, 0)
 
-  const [{ data: member }, { data: visits }, { data: monthVisits }] = await Promise.all([
+  const [{ data: member }, { data: visits }, { count: monthVisitsCount }] = await Promise.all([
     supabase
       .from('members')
       .select('id, name, phone, email, birth_date, notes, qr_code, created_at, consent_accepted_at, children, children_count, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
@@ -231,7 +231,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           {/* Monthly visits */}
           <div className="rounded-2xl border border-line bg-surface p-4 grid grid-cols-2 gap-4">
             <div className="text-center">
-              <p className="font-display text-3xl font-semibold text-lime">{(monthVisits as any)?.count ?? 0}</p>
+              <p className="font-display text-3xl font-semibold text-lime">{monthVisitsCount ?? 0}</p>
               <p className="text-xs text-mist mt-1">Visitas este mes</p>
             </div>
             <div className="text-center">

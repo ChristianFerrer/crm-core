@@ -2535,7 +2535,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <tr className={isLong ? 'bg-amber/5' : ''}>
                           {/* Titular */}
                           <td className="pl-4 pr-3 py-3 align-top">
-                            <p className="text-xs font-semibold text-snow whitespace-nowrap">{visit.members?.name ?? '—'}</p>
+                            {visit.member_id ? (
+                              <Link href={`/miembros/${visit.member_id}`} className="text-xs font-semibold text-snow whitespace-nowrap hover:text-lime hover:underline transition-colors">
+                                {visit.members?.name ?? '—'}
+                              </Link>
+                            ) : (
+                              <p className="text-xs font-semibold text-snow whitespace-nowrap">{visit.members?.name ?? '—'}</p>
+                            )}
                           </td>
                           {/* Acompañantes */}
                           <td className="px-3 py-3 align-middle">
