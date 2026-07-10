@@ -7,7 +7,7 @@ import {
   LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
-  Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2,
+  Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2, CalendarPlus,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -2312,13 +2312,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </span>
             </button>
           )}
-          <button
-            onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
-            className="flex items-center justify-center bg-lime text-ink font-semibold rounded-xl w-10 h-10 active:scale-95 transition-transform"
-            style={{ boxShadow: 'var(--shadow-lime)' }}
-          >
-            <LogIn size={18} strokeWidth={2.4} />
-          </button>
         </div>
       </div>
 
@@ -2327,7 +2320,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         {/* Stats header */}
         <div className="px-4 pt-4 pb-3 border-b border-line space-y-3">
           {/* Title row */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isToday && (
+              <button
+                onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
+                className="flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-lime rounded-lg px-2.5 py-1.5 hover:brightness-105 active:scale-95 transition-all"
+              >
+                <LogIn size={12} /> Registrar entrada
+              </button>
+            )}
             <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
               <Users size={13} />
               {isToday ? 'En sala ahora' : 'Visitas del día'}
@@ -2694,7 +2695,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
             className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
           >
-            <Plus size={12} /> Nueva reserva
+            <CalendarPlus size={13} /> Nueva reserva
           </button>
         </div>
 
