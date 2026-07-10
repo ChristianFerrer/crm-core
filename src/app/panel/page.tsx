@@ -5,6 +5,7 @@ import { MemberGrowthChart, BonoDistChart, VisitMiniChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
+import { PanelNav } from '@/components/PanelNav'
 
 export const revalidate = 0
 
@@ -253,20 +254,7 @@ export default async function PanelPage() {
 
       {urgentAlerts.length > 0 && <UrgentAlerts alerts={urgentAlerts} />}
 
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line mb-6 overflow-x-auto">
-        <div className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-lime text-ink">
-          <BarChart2 size={13} /> Resumen
-        </div>
-        <Link href="/panel/servicios" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <Tag size={13} /> Servicios
-        </Link>
-        <Link href="/panel/tienda" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <ShoppingBag size={13} /> Tienda
-        </Link>
-        <Link href="/panel/perfil" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <Building2 size={13} /> Perfil
-        </Link>
-      </div>
+      <PanelNav />
 
       {/* Charts + Stat cards grouped */}
       <div className="rounded-3xl border border-line bg-surface/40 p-4 space-y-4">

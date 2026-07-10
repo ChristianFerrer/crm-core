@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { PanelNav } from '@/components/PanelNav'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 
 type TenantProfile = {
@@ -135,20 +136,7 @@ export default function PerfilPage() {
         </p>
       </div>
 
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line overflow-x-auto">
-        <Link href="/panel" className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <BarChart2 size={13} /> Resumen
-        </Link>
-        <Link href="/panel/servicios" className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <Tag size={13} /> Servicios
-        </Link>
-        <Link href="/panel/tienda" className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <ShoppingBag size={13} /> Tienda
-        </Link>
-        <div className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-lime text-ink">
-          <Building2 size={13} /> Perfil
-        </div>
-      </div>
+      <PanelNav />
 
       {loading ? (
         <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">Cargando...</div>

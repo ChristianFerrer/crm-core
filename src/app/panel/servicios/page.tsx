@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag, FolderPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { PanelNav } from '@/components/PanelNav'
 
 type Service = {
   id: string
@@ -267,20 +268,7 @@ export default function ServiciosPage() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line overflow-x-auto">
-        <Link href="/panel" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <BarChart2 size={13} /> Resumen
-        </Link>
-        <div className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-lime text-ink">
-          <Tag size={13} /> Servicios
-        </div>
-        <Link href="/panel/tienda" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <ShoppingBag size={13} /> Tienda
-        </Link>
-        <Link href="/panel/perfil" className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-fog hover:text-snow transition-colors">
-          <Building2 size={13} /> Perfil
-        </Link>
-      </div>
+      <PanelNav />
 
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
