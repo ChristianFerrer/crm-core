@@ -29,9 +29,10 @@ type Service = {
 type MembershipType = { id: string; name: string; sessions: number | null; price: number | null; validity_days: number | null; active: boolean | null }
 
 // Tipo de servicio — define el comportamiento y los campos que se muestran.
-// Los BONOS se gestionan en su propia sección (membership_types), fuente única para venta y check-in.
+// El BONO se crea en el mismo asistente pero se guarda en membership_types (fuente única para venta y check-in).
 const TIPOS = [
   { value: 'entrada',     label: 'Entrada',            desc: 'Tarifa por persona o tiempo' },
+  { value: 'bono',        label: 'Bono',               desc: 'Paquete de sesiones (venta y check-in)' },
   { value: 'reservable',  label: 'Paquete reservable', desc: 'Cumpleaños, custodia o evento' },
   { value: 'subservicio', label: 'Sub-servicio',       desc: 'Extra que se añade a una reserva' },
 ] as const
@@ -73,6 +74,10 @@ type FormData = {
   reservable: boolean
   tipo: string
   flujo: string
+  // bono
+  sessions: string
+  validity_days: string
+  ilimitado: boolean
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -99,7 +104,7 @@ const CAT_COLORS = [
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [], reservable: false, tipo: 'entrada', flujo: 'cumpleanos' }
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [], reservable: false, tipo: 'entrada', flujo: 'cumpleanos', sessions: '', validity_days: '', ilimitado: false }
 
 // Categorías que corresponden a paquetes reservables (muestran config de pagos)
 const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
@@ -149,12 +154,9 @@ export default function ServiciosPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [view, setView] = useState<'tabla' | 'tarjetas'>('tabla')
 
-  // Bonos (membership_types) — fuente única para venta y check-in
+  // Bonos (membership_types) — fuente única para venta y check-in; se crean en el mismo asistente
   const [bonos, setBonos] = useState<MembershipType[]>([])
-  const [bonoModal, setBonoModal] = useState<'add' | 'edit' | null>(null)
-  const [bonoTarget, setBonoTarget] = useState<MembershipType | null>(null)
-  const [bonoForm, setBonoForm] = useState({ name: '', ilimitado: false, sessions: '', price: '', validity_days: '' })
-  const [bonoSaving, setBonoSaving] = useState(false)
+  const [editBonoId, setEditBonoId] = useState<string | null>(null)
   const [bonoDeleteId, setBonoDeleteId] = useState<string | null>(null)
 
   // Category management
@@ -180,25 +182,18 @@ export default function ServiciosPage() {
 
   useEffect(() => { load() }, [])
 
-  // ── Bonos CRUD (membership_types) ──
-  function openBonoAdd() { setBonoForm({ name: '', ilimitado: false, sessions: '', price: '', validity_days: '' }); setBonoTarget(null); setBonoModal('add') }
-  function openBonoEdit(b: MembershipType) {
-    setBonoForm({ name: b.name, ilimitado: b.sessions == null, sessions: b.sessions != null ? String(b.sessions) : '', price: b.price != null ? String(b.price) : '', validity_days: b.validity_days != null ? String(b.validity_days) : '' })
-    setBonoTarget(b); setBonoModal('edit')
-  }
-  function closeBonoModal() { setBonoModal(null); setBonoTarget(null) }
-  async function saveBono() {
-    if (!bonoForm.name.trim() || !bonoForm.price) return
-    setBonoSaving(true)
-    const payload = {
-      name: bonoForm.name.trim(),
-      sessions: bonoForm.ilimitado ? null : (bonoForm.sessions ? parseInt(bonoForm.sessions) : null),
-      price: parseFloat(bonoForm.price),
-      validity_days: bonoForm.validity_days ? parseInt(bonoForm.validity_days) : null,
-    }
-    if (bonoModal === 'add') await supabase.from('membership_types').insert({ ...payload, active: true })
-    else if (bonoTarget) await supabase.from('membership_types').update(payload).eq('id', bonoTarget.id)
-    setBonoSaving(false); closeBonoModal(); load()
+  // ── Bonos (membership_types) ──
+  function openEditBono(b: MembershipType) {
+    setForm({
+      ...EMPTY_FORM,
+      tipo: 'bono',
+      name: b.name,
+      ilimitado: b.sessions == null,
+      sessions: b.sessions != null ? String(b.sessions) : '',
+      price: b.price != null ? String(b.price) : '',
+      validity_days: b.validity_days != null ? String(b.validity_days) : '',
+    })
+    setEditBonoId(b.id); setEditTarget(null); setModal('edit')
   }
   async function toggleBonoActive(b: MembershipType) {
     await supabase.from('membership_types').update({ active: !b.active }).eq('id', b.id)
@@ -214,7 +209,7 @@ export default function ServiciosPage() {
     return categories.find(c => c.value === value) ?? categories[categories.length - 1] ?? DEFAULT_CATEGORIES[4]
   }
 
-  function openAdd() { setForm(EMPTY_FORM); setEditTarget(null); setModal('add') }
+  function openAdd() { setForm(EMPTY_FORM); setEditTarget(null); setEditBonoId(null); setModal('add') }
   function openEdit(s: Service) {
     setForm({
       name: s.name, description: s.description ?? '', category: s.category, price: String(s.price),
@@ -227,23 +222,42 @@ export default function ServiciosPage() {
       reservable: s.reservable ?? false,
       tipo: s.tipo ?? 'entrada',
       flujo: s.flujo ?? 'cumpleanos',
+      sessions: '', validity_days: '', ilimitado: false,
     })
-    setEditTarget(s); setModal('edit')
+    setEditTarget(s); setEditBonoId(null); setModal('edit')
   }
-  function closeModal() { setModal(null); setEditTarget(null); setForm(EMPTY_FORM) }
+  function closeModal() { setModal(null); setEditTarget(null); setEditBonoId(null); setForm(EMPTY_FORM) }
 
   async function saveForm() {
-    if (!form.name.trim() || !form.price) return
+    if (!form.name.trim()) return
     setSaving(true)
+
+    // BONO → membership_types (fuente única para venta y check-in)
+    if (form.tipo === 'bono') {
+      if (!form.price) { setSaving(false); return }
+      const bonoPayload = {
+        name: form.name.trim(),
+        sessions: form.ilimitado ? null : (form.sessions ? parseInt(form.sessions) : null),
+        price: parseFloat(form.price),
+        validity_days: form.validity_days ? parseInt(form.validity_days) : null,
+      }
+      if (editBonoId) await supabase.from('membership_types').update(bonoPayload).eq('id', editBonoId)
+      else await supabase.from('membership_types').insert({ ...bonoPayload, active: true })
+      setSaving(false); closeModal(); load()
+      return
+    }
+
+    if (!form.price) { setSaving(false); return }
     const isReservable = form.tipo === 'reservable'
     const isSub = form.tipo === 'subservicio'
+    // La categoría se retiró: se guarda un valor derivado (flujo para reservables, tipo para el resto) solo por compatibilidad.
+    const derivedCategory = isReservable ? form.flujo : form.tipo
     const payload = {
       name: form.name.trim(), description: form.description.trim() || null,
-      category: form.category, price: parseFloat(form.price),
+      category: derivedCategory, price: parseFloat(form.price),
       price_unit: form.price_unit, duration_min: form.duration_min ? parseInt(form.duration_min) : null,
       tipo: form.tipo,
       flujo: isReservable ? form.flujo : null,
-      // El comportamiento de reserva solo aplica a paquetes reservables
       deposit_pct: isReservable ? (form.deposit_pct ? parseFloat(form.deposit_pct) : null) : null,
       price_per_guest_adult: isReservable && form.price_per_guest_adult ? parseFloat(form.price_per_guest_adult) : 0,
       price_per_guest_child: isReservable && form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
@@ -350,43 +364,10 @@ export default function ServiciosPage() {
             ))}
           </div>
           <button
-            onClick={openNewCat}
-            className="flex items-center gap-1.5 border border-line bg-surface text-fog text-xs font-semibold px-3 py-2 rounded-xl hover:text-snow hover:border-line2 transition-colors"
-          >
-            <FolderPlus size={13} /> Categoría
-          </button>
-          <button
             onClick={openAdd}
             className="flex items-center gap-1.5 bg-lime text-carbon text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/90 transition-colors"
           >
             <Plus size={13} /> Nuevo servicio
-          </button>
-        </div>
-      </div>
-
-      {/* Categories management strip */}
-      <div className="rounded-2xl border border-line bg-surface p-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Categorías</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(cat => (
-            <div key={cat.value} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 ${cat.bg} ${cat.border}`}>
-              <span className={`text-xs font-semibold ${cat.color}`}>{cat.label}</span>
-              <span className="text-xs text-fog/60">({services.filter(s => s.category === cat.value).length})</span>
-              <button onClick={() => openEditCat(cat)} className={`${cat.color} opacity-60 hover:opacity-100 transition-opacity ml-0.5`}>
-                <Pencil size={10} />
-              </button>
-              <button onClick={() => confirmDeleteCat(cat.value)} className="text-rose/50 hover:text-rose transition-colors">
-                <X size={10} />
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={openNewCat}
-            className="flex items-center gap-1 rounded-full border border-dashed border-line px-3 py-1.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
-          >
-            <Plus size={11} /> Nueva
           </button>
         </div>
       </div>
@@ -403,7 +384,6 @@ export default function ServiciosPage() {
                 <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
                   <th className="px-4 py-3">Servicio</th>
                   <th className="px-3 py-3">Tipo</th>
-                  <th className="px-3 py-3">Categoría</th>
                   <th className="px-3 py-3">Flujo</th>
                   <th className="px-3 py-3 text-center">Reservable</th>
                   <th className="px-3 py-3 text-right">Precio</th>
@@ -431,11 +411,6 @@ export default function ServiciosPage() {
                       </td>
                       <td className="px-3 py-2.5">
                         <span className="text-xs font-medium text-snow">{TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? dash}</span>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {cat
-                          ? <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cat.bg} ${cat.color}`}>{cat.label}</span>
-                          : <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-fog/10 text-fog">{s.category}</span>}
                       </td>
                       <td className="px-3 py-2.5 text-fog">{s.flujo ? (FLUJOS.find(f => f.value === s.flujo)?.label ?? s.flujo) : dash}</td>
                       <td className="px-3 py-2.5 text-center">{s.reservable ? <Check size={14} className="inline text-lime" /> : dash}</td>
@@ -506,54 +481,17 @@ export default function ServiciosPage() {
               </div>
             </div>
           ))}
-          {uncategorized.length > 0 && (
-            <div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-fog bg-fog/10 px-3 py-1 rounded-full mb-3">Sin categoría</div>
-              <div className="space-y-2">
-                {uncategorized.map(s => (
-                  <div key={s.id} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-snow truncate">{s.name}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-snow shrink-0">{s.price}€</p>
-                    {/* Reasignar a una categoría disponible */}
-                    <div className="relative shrink-0">
-                      <select
-                        value=""
-                        onChange={e => reassignService(s.id, e.target.value)}
-                        className="appearance-none bg-surface2 border border-line rounded-lg pl-2.5 pr-7 py-1.5 text-xs text-fog outline-none focus:border-line2 cursor-pointer hover:text-snow transition-colors"
-                      >
-                        <option value="">Asignar a…</option>
-                        {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                      </select>
-                      <FolderPlus size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-fog pointer-events-none" />
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
-                      <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* ── Bonos (fuente única: membership_types) ── */}
+      {/* ── Bonos (fuente única: membership_types; se crean desde "Nuevo servicio" → tipo Bono) ── */}
       <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line flex-wrap">
-          <div>
-            <p className="text-sm font-semibold text-snow">Bonos</p>
-            <p className="text-[11px] text-mist">Se venden a los miembros y se descuentan en el check-in</p>
-          </div>
-          <button onClick={openBonoAdd}
-            className="flex items-center gap-1.5 bg-iris text-ink text-xs font-semibold px-3 py-2 rounded-xl hover:brightness-110 transition-all">
-            <Plus size={13} /> Nuevo bono
-          </button>
+        <div className="px-4 py-3 border-b border-line">
+          <p className="text-sm font-semibold text-snow">Bonos</p>
+          <p className="text-[11px] text-mist">Se crean en «Nuevo servicio» (tipo Bono). Se venden a los miembros y se descuentan en el check-in.</p>
         </div>
         {bonos.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-mist">Sin bonos. Crea el primero.</div>
+          <div className="px-4 py-8 text-center text-sm text-mist">Sin bonos. Crea uno desde «Nuevo servicio».</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm whitespace-nowrap">
@@ -582,7 +520,7 @@ export default function ServiciosPage() {
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openBonoEdit(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
+                        <button onClick={() => openEditBono(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
                         <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
                       </div>
                     </td>
@@ -629,12 +567,37 @@ export default function ServiciosPage() {
                 <label className="block text-xs font-semibold text-fog mb-1.5">Descripción (opcional)</label>
                 <input className={INPUT_CLASS} placeholder="Breve descripción" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Categoría</label>
-                <select className={INPUT_CLASS} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                  {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
+              {/* BONO — campos propios (se guardan en membership_types) */}
+              {form.tipo === 'bono' && (
+                <>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, ilimitado: !f.ilimitado }))}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40 text-left">
+                    <div className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${form.ilimitado ? 'bg-lime' : 'bg-line'}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.ilimitado ? 'translate-x-4' : ''}`} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-snow">Ilimitado</p>
+                      <p className="text-[11px] text-mist">Sin límite de sesiones (ej. mensual)</p>
+                    </div>
+                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    {!form.ilimitado && (
+                      <div>
+                        <label className="block text-xs font-semibold text-fog mb-1.5">Nº sesiones *</label>
+                        <input className={INPUT_CLASS} type="number" min="1" placeholder="Ej. 10" value={form.sessions} onChange={e => setForm(f => ({ ...f, sessions: e.target.value }))} />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
+                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="60.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">Vigencia en días (opcional)</label>
+                    <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 90" value={form.validity_days} onChange={e => setForm(f => ({ ...f, validity_days: e.target.value }))} />
+                  </div>
+                </>
+              )}
 
               {/* Flujo de reserva — solo para paquetes reservables (define la UX de la reserva) */}
               {form.tipo === 'reservable' && (
@@ -646,22 +609,26 @@ export default function ServiciosPage() {
                   <p className="text-[11px] text-mist mt-1">Cumpleaños y Custodia tienen pantallas propias; Genérico sirve para cualquier evento.</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
-                  <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-fog mb-1.5">Unidad de precio</label>
-                  <select className={INPUT_CLASS} value={form.price_unit} onChange={e => setForm(f => ({ ...f, price_unit: e.target.value }))}>
-                    {PRICE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Duración en minutos (opcional)</label>
-                <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 60" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
-              </div>
+              {form.tipo !== 'bono' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
+                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">Unidad de precio</label>
+                      <select className={INPUT_CLASS} value={form.price_unit} onChange={e => setForm(f => ({ ...f, price_unit: e.target.value }))}>
+                        {PRICE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">Duración en minutos (opcional)</label>
+                    <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 60" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
+                  </div>
+                </>
+              )}
 
               {/* Config de reservas — solo para paquetes reservables */}
               {form.tipo === 'reservable' && (
@@ -794,56 +761,6 @@ export default function ServiciosPage() {
             <div className="flex gap-2">
               <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
               <button onClick={() => deleteService(deleteId)} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bono Add/Edit Modal */}
-      {bonoModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-snow">{bonoModal === 'add' ? 'Nuevo bono' : 'Editar bono'}</h2>
-              <button onClick={closeBonoModal} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Nombre *</label>
-                <input className={INPUT_CLASS} placeholder="Ej. Bono x10" value={bonoForm.name} onChange={e => setBonoForm(f => ({ ...f, name: e.target.value }))} />
-              </div>
-              <button type="button" onClick={() => setBonoForm(f => ({ ...f, ilimitado: !f.ilimitado }))}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40 text-left">
-                <div className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${bonoForm.ilimitado ? 'bg-lime' : 'bg-line'}`}>
-                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${bonoForm.ilimitado ? 'translate-x-4' : ''}`} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-snow">Ilimitado</p>
-                  <p className="text-[11px] text-mist">Sin límite de sesiones (ej. mensual)</p>
-                </div>
-              </button>
-              <div className="grid grid-cols-2 gap-3">
-                {!bonoForm.ilimitado && (
-                  <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5">Nº sesiones *</label>
-                    <input className={INPUT_CLASS} type="number" min="1" placeholder="Ej. 10" value={bonoForm.sessions} onChange={e => setBonoForm(f => ({ ...f, sessions: e.target.value }))} />
-                  </div>
-                )}
-                <div>
-                  <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
-                  <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="60.00" value={bonoForm.price} onChange={e => setBonoForm(f => ({ ...f, price: e.target.value }))} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Vigencia en días (opcional)</label>
-                <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 90" value={bonoForm.validity_days} onChange={e => setBonoForm(f => ({ ...f, validity_days: e.target.value }))} />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-6">
-              <button onClick={closeBonoModal} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={saveBono} disabled={bonoSaving || !bonoForm.name.trim() || !bonoForm.price} className="flex-1 py-2.5 rounded-xl bg-lime text-carbon text-sm font-semibold hover:bg-lime/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
-                <Check size={14} /> {bonoSaving ? 'Guardando...' : 'Guardar'}
-              </button>
             </div>
           </div>
         </div>

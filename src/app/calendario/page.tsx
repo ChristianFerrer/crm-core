@@ -111,7 +111,7 @@ export default function CalendarioPage() {
   const [bookingServices, setBookingServices] = useState<BookingService[]>([])
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
-  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({ cumpleanos: 'Cumpleaños', custodia: 'Custodia', otros: 'Otro' })
+  const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({ cumpleanos: 'Cumpleaños', custodia: 'Custodia', generico: 'Otro', otros: 'Otro' })
 
   useEffect(() => {
     supabase.from('services')

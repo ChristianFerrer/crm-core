@@ -1771,7 +1771,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   // Etiquetas de categorías (compartidas con la pantalla de servicios vía localStorage)
   const [categoryLabels, setCategoryLabels] = useState<Record<string, string>>({
-    cumpleanos: 'Cumpleaños', custodia: 'Custodia', otros: 'Otro',
+    cumpleanos: 'Cumpleaños', custodia: 'Custodia', generico: 'Otro', otros: 'Otro',
   })
   useEffect(() => {
     try {
