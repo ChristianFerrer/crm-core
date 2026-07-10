@@ -22,13 +22,30 @@ type Service = {
   included_guests: number | null
   applies_to: string[] | null
   reservable: boolean | null
+  tipo: string | null
+  flujo: string | null
 }
 
-// Tipos de reserva a los que puede asociarse un sub-servicio
+// Tipo de servicio — define el comportamiento y los campos que se muestran
+const TIPOS = [
+  { value: 'entrada',     label: 'Entrada',            desc: 'Tarifa por persona o tiempo' },
+  { value: 'bono',        label: 'Bono',               desc: 'Paquete de sesiones' },
+  { value: 'reservable',  label: 'Paquete reservable', desc: 'Cumpleaños, custodia o evento' },
+  { value: 'subservicio', label: 'Sub-servicio',       desc: 'Extra que se añade a una reserva' },
+] as const
+
+// Flujo de reserva (solo para paquetes reservables) — define la UX de la reserva
+const FLUJOS = [
+  { value: 'cumpleanos', label: 'Cumpleaños' },
+  { value: 'custodia',   label: 'Custodia' },
+  { value: 'generico',   label: 'Genérico (evento)' },
+]
+
+// Flujos a los que puede asociarse un sub-servicio
 const RESERVABLE_TYPES = [
   { value: 'cumpleanos', label: 'Cumpleaños' },
   { value: 'custodia',   label: 'Custodia' },
-  { value: 'otros',      label: 'Otros' },
+  { value: 'generico',   label: 'Genérico' },
 ]
 
 type Category = {
@@ -52,6 +69,8 @@ type FormData = {
   included_guests: string
   applies_to: string[]
   reservable: boolean
+  tipo: string
+  flujo: string
 }
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -78,7 +97,7 @@ const CAT_COLORS = [
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [], reservable: false }
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [], reservable: false, tipo: 'entrada', flujo: 'cumpleanos' }
 
 // Categorías que corresponden a paquetes reservables (muestran config de pagos)
 const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
@@ -166,6 +185,8 @@ export default function ServiciosPage() {
       included_guests: s.included_guests ? String(s.included_guests) : '',
       applies_to: s.applies_to ?? [],
       reservable: s.reservable ?? false,
+      tipo: s.tipo ?? 'entrada',
+      flujo: s.flujo ?? 'cumpleanos',
     })
     setEditTarget(s); setModal('edit')
   }
@@ -174,16 +195,21 @@ export default function ServiciosPage() {
   async function saveForm() {
     if (!form.name.trim() || !form.price) return
     setSaving(true)
+    const isReservable = form.tipo === 'reservable'
+    const isSub = form.tipo === 'subservicio'
     const payload = {
       name: form.name.trim(), description: form.description.trim() || null,
       category: form.category, price: parseFloat(form.price),
       price_unit: form.price_unit, duration_min: form.duration_min ? parseInt(form.duration_min) : null,
-      deposit_pct: form.deposit_pct ? parseFloat(form.deposit_pct) : null,
-      price_per_guest_adult: form.price_per_guest_adult ? parseFloat(form.price_per_guest_adult) : 0,
-      price_per_guest_child: form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
-      included_guests: form.included_guests ? parseInt(form.included_guests) : 0,
-      applies_to: form.category === 'subservicios' ? form.applies_to : [],
-      reservable: form.reservable,
+      tipo: form.tipo,
+      flujo: isReservable ? form.flujo : null,
+      // El comportamiento de reserva solo aplica a paquetes reservables
+      deposit_pct: isReservable ? (form.deposit_pct ? parseFloat(form.deposit_pct) : null) : null,
+      price_per_guest_adult: isReservable && form.price_per_guest_adult ? parseFloat(form.price_per_guest_adult) : 0,
+      price_per_guest_child: isReservable && form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
+      included_guests: isReservable && form.included_guests ? parseInt(form.included_guests) : 0,
+      applies_to: isSub ? form.applies_to : [],
+      reservable: isReservable,
     }
     if (modal === 'add') await supabase.from('services').insert({ ...payload, active: true })
     else if (editTarget) await supabase.from('services').update(payload).eq('id', editTarget.id)
@@ -336,7 +362,9 @@ export default function ServiciosPage() {
               <thead>
                 <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
                   <th className="px-4 py-3">Servicio</th>
+                  <th className="px-3 py-3">Tipo</th>
                   <th className="px-3 py-3">Categoría</th>
+                  <th className="px-3 py-3">Flujo</th>
                   <th className="px-3 py-3 text-center">Reservable</th>
                   <th className="px-3 py-3 text-right">Precio</th>
                   <th className="px-3 py-3">Unidad</th>
@@ -362,10 +390,14 @@ export default function ServiciosPage() {
                         {s.description && <p className="text-xs text-mist truncate">{s.description}</p>}
                       </td>
                       <td className="px-3 py-2.5">
+                        <span className="text-xs font-medium text-snow">{TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? dash}</span>
+                      </td>
+                      <td className="px-3 py-2.5">
                         {cat
                           ? <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cat.bg} ${cat.color}`}>{cat.label}</span>
                           : <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-fog/10 text-fog">{s.category}</span>}
                       </td>
+                      <td className="px-3 py-2.5 text-fog">{s.flujo ? (FLUJOS.find(f => f.value === s.flujo)?.label ?? s.flujo) : dash}</td>
                       <td className="px-3 py-2.5 text-center">{s.reservable ? <Check size={14} className="inline text-lime" /> : dash}</td>
                       <td className="px-3 py-2.5 text-right font-semibold text-snow">{s.price != null ? `${s.price}€` : dash}</td>
                       <td className="px-3 py-2.5 text-fog">{s.price_unit || dash}</td>
@@ -477,6 +509,24 @@ export default function ServiciosPage() {
               <button onClick={closeModal} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
             </div>
             <div className="space-y-4">
+              {/* Paso 1 — Tipo de servicio (define el comportamiento y los campos) */}
+              <div>
+                <label className="block text-xs font-semibold text-fog mb-1.5">Tipo de servicio *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {TIPOS.map(t => {
+                    const sel = form.tipo === t.value
+                    return (
+                      <button key={t.value} type="button"
+                        onClick={() => setForm(f => ({ ...f, tipo: t.value, flujo: f.flujo || 'cumpleanos' }))}
+                        className={`px-3 py-2.5 rounded-xl border text-left transition-colors ${sel ? 'border-lime/40 bg-lime/10' : 'border-line bg-surface2 hover:border-line2'}`}>
+                        <p className={`text-sm font-semibold ${sel ? 'text-snow' : 'text-fog'}`}>{t.label}</p>
+                        <p className="text-[10px] text-mist leading-tight">{t.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5">Nombre *</label>
                 <input className={INPUT_CLASS} placeholder="Ej. Entrada diaria" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -492,18 +542,15 @@ export default function ServiciosPage() {
                 </select>
               </div>
 
-              {/* Reservable: aparece como tipo en el flujo de crear reserva */}
-              {form.category !== 'subservicios' && (
-                <button type="button" onClick={() => setForm(f => ({ ...f, reservable: !f.reservable }))}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40 text-left">
-                  <div className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${form.reservable ? 'bg-lime' : 'bg-line'}`}>
-                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.reservable ? 'translate-x-4' : ''}`} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-snow">Reservable</p>
-                    <p className="text-[11px] text-mist">Aparece como tipo al crear una reserva</p>
-                  </div>
-                </button>
+              {/* Flujo de reserva — solo para paquetes reservables (define la UX de la reserva) */}
+              {form.tipo === 'reservable' && (
+                <div>
+                  <label className="block text-xs font-semibold text-fog mb-1.5">Flujo de reserva *</label>
+                  <select className={INPUT_CLASS} value={form.flujo} onChange={e => setForm(f => ({ ...f, flujo: e.target.value }))}>
+                    {FLUJOS.map(fl => <option key={fl.value} value={fl.value}>{fl.label}</option>)}
+                  </select>
+                  <p className="text-[11px] text-mist mt-1">Cumpleaños y Custodia tienen pantallas propias; Genérico sirve para cualquier evento.</p>
+                </div>
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -523,7 +570,7 @@ export default function ServiciosPage() {
               </div>
 
               {/* Config de reservas — solo para paquetes reservables */}
-              {BOOKING_CATEGORIES.includes(form.category) && (
+              {form.tipo === 'reservable' && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Configuración de reservas</p>
                   <div className="grid grid-cols-2 gap-3">
@@ -557,7 +604,7 @@ export default function ServiciosPage() {
               )}
 
               {/* Sub-servicio: a qué tipos de reserva puede agregarse */}
-              {form.category === 'subservicios' && (
+              {form.tipo === 'subservicio' && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-2.5">
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Se puede agregar a</p>
                   <div className="space-y-1.5">
