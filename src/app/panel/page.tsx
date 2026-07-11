@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerSupabase } from '@/lib/supabase-server'
 import Link from 'next/link'
 import { Users, TrendingUp, BarChart2, Tag, Building2, ShoppingBag } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart, VisitsPerMonthChart } from './PanelCharts'
@@ -13,6 +13,7 @@ export const revalidate = 0
 
 
 export default async function PanelPage() {
+  const supabase = await createServerSupabase()
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()

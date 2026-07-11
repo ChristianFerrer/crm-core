@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerSupabase } from '@/lib/supabase-server'
 import HomeClient from './HomeClient'
 
 export const revalidate = 0
@@ -8,6 +8,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ date?: string }>
 }) {
+  const supabase = await createServerSupabase()
   const { date: dateParam } = await searchParams
 
   // Determine selected date — fallback to today if param is absent or malformed

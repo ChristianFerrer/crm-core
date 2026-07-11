@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerSupabase } from '@/lib/supabase-server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, CreditCard, Clock, Users, Baby, AlertTriangle } from 'lucide-react'
@@ -16,6 +16,7 @@ function calcAge(d: string) {
 type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
 
 export default async function FamiliaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createServerSupabase()
   const { id } = await params
 
   const [{ data: family }, { data: members }] = await Promise.all([

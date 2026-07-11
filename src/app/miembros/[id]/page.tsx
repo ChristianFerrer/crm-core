@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createServerSupabase } from '@/lib/supabase-server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, FileText, CreditCard, Clock, Users, Calendar, AlertTriangle, Pencil, LogIn, ShieldCheck } from 'lucide-react'
@@ -16,6 +16,7 @@ function calcAge(d: string) {
 }
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createServerSupabase()
   const { id } = await params
 
   const startOfMonth = new Date()
