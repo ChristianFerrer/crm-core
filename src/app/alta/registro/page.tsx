@@ -25,10 +25,13 @@ export default function RegistroPage() {
   // Result
   const [qrCode, setQrCode] = useState('')
   const [memberName, setMemberName] = useState('')
+  const [tenantName, setTenantName] = useState('')
 
   useEffect(() => {
     supabase.from('membership_types').select('*').eq('active', true).order('price')
       .then(({ data }) => setTypes((data as MembershipType[]) ?? []))
+    supabase.from('tenants').select('name').limit(1).maybeSingle()
+      .then(({ data }) => { if (data?.name) setTenantName(data.name) })
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -95,7 +98,7 @@ export default function RegistroPage() {
           <div>
             <h1 className="font-display text-2xl font-semibold text-snow">¡Hola, {memberName}!</h1>
             <p className="text-fog text-sm mt-2 leading-relaxed">
-              Ya eres socio de El Bosc Màgic. Guarda este código — lo necesitarás cada vez que entres.
+              Ya eres miembro{tenantName ? ` de ${tenantName}` : ''}. Guarda este código — lo necesitarás cada vez que entres.
             </p>
           </div>
 
@@ -133,10 +136,10 @@ export default function RegistroPage() {
         {/* Header */}
         <div className="text-center space-y-1">
           <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center mx-auto mb-4" style={{ boxShadow: '0 10px 40px -12px rgba(198,242,78,0.5)' }}>
-            <span className="text-ink font-bold text-lg">B</span>
+            <span className="text-ink font-bold text-lg">{(tenantName || 'W').charAt(0).toUpperCase()}</span>
           </div>
-          <h1 className="font-display text-2xl font-semibold text-snow">Hazte socio</h1>
-          <p className="text-fog text-sm">El Bosc Màgic · Alta de familia</p>
+          <h1 className="font-display text-2xl font-semibold text-snow">Hazte miembro</h1>
+          <p className="text-fog text-sm">{tenantName ? `${tenantName} · ` : ''}Alta de familia</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

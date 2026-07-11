@@ -3,12 +3,16 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 export default function AltaPage() {
   const [registroUrl, setRegistroUrl] = useState('')
+  const [tenantName, setTenantName] = useState('')
 
   useEffect(() => {
     setRegistroUrl(`${window.location.origin}/alta/registro`)
+    supabase.from('tenants').select('name').limit(1).maybeSingle()
+      .then(({ data }) => { if (data?.name) setTenantName(data.name) })
   }, [])
 
   return (
@@ -17,14 +21,14 @@ export default function AltaPage() {
       <div className="text-center mb-10 w-full max-w-sm">
         <div className="flex items-center justify-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center" style={{ boxShadow: '0 10px 40px -12px rgba(198,242,78,0.5)' }}>
-            <span className="text-ink font-bold text-lg">B</span>
+            <span className="text-ink font-bold text-lg">{(tenantName || 'W').charAt(0).toUpperCase()}</span>
           </div>
-          <span className="font-display text-xl font-semibold text-snow">El Bosc Màgic</span>
+          <span className="font-display text-xl font-semibold text-snow">{tenantName || 'Watermelon CRM'}</span>
         </div>
 
-        <h1 className="font-display text-3xl font-semibold text-snow mb-2">Alta de socio</h1>
+        <h1 className="font-display text-3xl font-semibold text-snow mb-2">Alta de miembro</h1>
         <p className="text-fog text-sm leading-relaxed">
-          El cliente se registra en menos de un minuto, sin instalar nada.
+          El miembro se registra en menos de un minuto, sin instalar nada.
         </p>
       </div>
 
