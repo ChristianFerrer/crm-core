@@ -14,6 +14,8 @@ type MemberRow = {
   families: { name: string } | null
   memberships: {
     sessions_remaining: number | null
+    created_at: string
+    expires_at: string | null
     membership_types: { name: string } | null
   }[]
 }
@@ -35,10 +37,15 @@ function getAge(d: string) {
 }
 
 function statusDot(m: MemberRow) {
-  const bono = m.memberships?.[0]
+  // El bono vigente es el más reciente (no un registro antiguo apilado)
+  const bono = [...(m.memberships ?? [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )[0]
   if (!bono) return { cls: 'bg-rose', label: 'Sin bono' }
   const s = bono.sessions_remaining
-  if (bono.membership_types?.name?.toLowerCase().includes('ilimitado')) return { cls: 'bg-iris', label: '∞' }
+  const expired = bono.expires_at != null && new Date(bono.expires_at).getTime() < Date.now()
+  if (bono.membership_types?.name?.toLowerCase().includes('ilimitado') && !expired) return { cls: 'bg-iris', label: '∞' }
+  if (expired) return { cls: 'bg-rose', label: 'Caducado' }
   if (s === 0) return { cls: 'bg-rose', label: '0 ses.' }
   if (s != null && s <= 2) return { cls: 'bg-amber', label: `${s} ses.` }
   if (s != null) return { cls: 'bg-mint', label: `${s} ses.` }
@@ -57,7 +64,7 @@ export default function MiembrosPage() {
     Promise.all([
       supabase
         .from('members')
-        .select('id, name, phone, birth_date, created_at, families(name), memberships(sessions_remaining, membership_types(name))')
+        .select('id, name, phone, birth_date, created_at, families(name), memberships(sessions_remaining, created_at, expires_at, membership_types(name))')
         .order('name'),
       supabase
         .from('families')

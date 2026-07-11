@@ -44,7 +44,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   if (!member) notFound()
 
   const m = member as any
-  const bono = m.memberships?.[0]
+  // El bono vigente es el más reciente (evita mostrar uno viejo/caducado como activo)
+  const bono = [...(m.memberships ?? [])].sort(
+    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )[0]
   const isUnlimited = bono?.membership_types?.name?.toLowerCase().includes('ilimitado')
   const s = bono?.sessions_remaining
   const isLow = !isUnlimited && s != null && s <= 2
@@ -53,6 +56,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const expiresAt = bono?.expires_at ? new Date(bono.expires_at) : null
   const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null
   const isExpiringSoon = daysLeft != null && daysLeft <= 7 && daysLeft >= 0
+  const isExpired = daysLeft != null && daysLeft < 0
+  // Un bono caducado o sin sesiones es inservible, aunque queden sesiones
+  const isDepleted = s === 0 || isExpired
 
   // Other adult members in the same family (papá + mamá)
   let familyAdults: any[] = []
@@ -241,7 +247,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </div>
 
           {/* Membership */}
-          <div className={`rounded-2xl border p-4 ${isLow && s !== 0 ? 'border-amber/30 bg-amber/5' : s === 0 ? 'border-rose/30 bg-rose-soft' : isExpiringSoon ? 'border-amber/30 bg-amber/5' : 'border-line bg-surface'}`}>
+          <div className={`rounded-2xl border p-4 ${isDepleted ? 'border-rose/30 bg-rose-soft' : (isLow || isExpiringSoon) ? 'border-amber/30 bg-amber/5' : 'border-line bg-surface'}`}>
             <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
               <CreditCard size={13} className="text-lime" /> Bono activo
             </div>
@@ -260,10 +266,11 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                   {isUnlimited ? (
                     <span className="text-2xl font-bold text-iris">∞</span>
                   ) : s != null ? (
-                    <span className={`text-2xl font-bold ${isLow ? (s === 0 ? 'text-rose' : 'text-amber') : 'text-lime'}`}>{s}</span>
+                    <span className={`text-2xl font-bold ${isDepleted ? 'text-rose' : isLow ? 'text-amber' : 'text-lime'}`}>{s}</span>
                   ) : null}
                 </div>
-                {isLow && s !== 0 && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Quedan pocas sesiones</p>}
+                {isExpired && <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Bono caducado — necesita renovar</p>}
+                {isLow && s !== 0 && !isExpired && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Quedan pocas sesiones</p>}
                 {s === 0 && <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Bono agotado — necesita renovar</p>}
                 {isExpiringSoon && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Vence en {daysLeft} día{daysLeft === 1 ? '' : 's'}</p>}
                 <div className="mt-3 pt-3 border-t border-line">
