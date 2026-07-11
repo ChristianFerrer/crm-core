@@ -592,7 +592,7 @@ function CheckinNewMemberModal({
     setPartnerSearching(true)
     partnerTimer.current = setTimeout(async () => {
       const { data } = await supabase.from('members').select('id, name, phone')
-        .or(`phone.eq.${val.trim()},phone.ilike.%${val.replace(/\s/g, '')}%`).limit(1).single()
+        .eq('phone', val.trim()).limit(1).maybeSingle()
       setPartnerSearching(false); setPartnerFound(data ?? null)
     }, 400)
   }
@@ -1074,7 +1074,7 @@ export function BookingFormModal({
       bookingType === 'birthday' ? `Cumple de ${birthdayChild || member.name}` :
       bookingType === 'custodia' ? `Custodia — ${member.name}` : 'Reserva'
     )
-    const payload = {
+    const payload: Record<string, unknown> = {
       member_id: member.id || null,
       type: bookingType,
       title: finalTitle,
@@ -1096,9 +1096,18 @@ export function BookingFormModal({
       service_id: serviceId || null,
       amount: totalNum > 0 ? totalNum : null,
       deposit_amount: depositNum,
-      deposit_paid_at: depositNum > 0 ? new Date().toISOString() : null,
       payment_status: paymentStatus,
       addons: selectedAddons,
+    }
+    // Solo fijar la fecha de pago de la señal cuando el adelanto pasa de 0 a >0;
+    // en ediciones posteriores no se reescribe (conserva la fecha real de cobro).
+    const prevDeposit = initial?.deposit_amount ?? 0
+    if (!editId) {
+      payload.deposit_paid_at = depositNum > 0 ? new Date().toISOString() : null
+    } else if (prevDeposit <= 0 && depositNum > 0) {
+      payload.deposit_paid_at = new Date().toISOString()
+    } else if (depositNum <= 0) {
+      payload.deposit_paid_at = null
     }
     const { error: err } = editId
       ? await supabase.from('bookings').update(payload).eq('id', editId)

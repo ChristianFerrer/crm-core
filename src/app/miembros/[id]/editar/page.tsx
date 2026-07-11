@@ -83,8 +83,8 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
     partnerTimer.current = setTimeout(async () => {
       const { data } = await supabase
         .from('members').select('id, name, phone')
-        .or(`phone.eq.${val.trim()},phone.ilike.%${val.replace(/\s/g, '')}%`)
-        .limit(1).single()
+        .eq('phone', val.trim())
+        .limit(1).maybeSingle()
       setPartnerSearching(false)
       setPartnerFound(data ?? null)
     }, 400)

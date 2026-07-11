@@ -55,9 +55,9 @@ export default function NuevoMiembroPage() {
       const { data } = await supabase
         .from('members')
         .select('id, name, phone')
-        .or(`phone.eq.${val.trim()},phone.ilike.%${val.replace(/\s/g, '')}%`)
+        .eq('phone', val.trim())
         .limit(1)
-        .single()
+        .maybeSingle()
       setPartnerSearching(false)
       setPartnerFound(data ?? null)
     }, 400)
