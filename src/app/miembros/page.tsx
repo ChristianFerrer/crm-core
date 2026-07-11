@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { memberMatchesQuery, normalizeSearch } from '@/lib/searchMembers'
+import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { Search, Plus, User, Users, ChevronRight, LogIn } from 'lucide-react'
 import Link from 'next/link'
 
@@ -38,19 +39,8 @@ function getAge(d: string) {
 }
 
 function statusDot(m: MemberRow) {
-  // El bono vigente es el más reciente (no un registro antiguo apilado)
-  const bono = [...(m.memberships ?? [])].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )[0]
-  if (!bono) return { cls: 'bg-rose', label: 'Sin bono' }
-  const s = bono.sessions_remaining
-  const expired = bono.expires_at != null && new Date(bono.expires_at).getTime() < Date.now()
-  if (bono.membership_types?.name?.toLowerCase().includes('ilimitado') && !expired) return { cls: 'bg-iris', label: '∞' }
-  if (expired) return { cls: 'bg-rose', label: 'Caducado' }
-  if (s === 0) return { cls: 'bg-rose', label: '0 ses.' }
-  if (s != null && s <= 2) return { cls: 'bg-amber', label: `${s} ses.` }
-  if (s != null) return { cls: 'bg-mint', label: `${s} ses.` }
-  return { cls: 'bg-fog', label: '-' }
+  const st = bonoStatus(activeBono(m.memberships))
+  return { cls: `bg-${st.color}`, label: st.label }
 }
 
 export default function MiembrosPage() {
@@ -84,12 +74,9 @@ export default function MiembrosPage() {
     ? members.filter(m => memberMatchesQuery(search, m))
     : members
   ).filter(m => {
-    if (filter === 'sin_bono') return !m.memberships?.[0]
-    if (filter === 'bono_bajo') {
-      const s = m.memberships?.[0]?.sessions_remaining
-      const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
-      return !isUnlimited && s != null && s <= 2
-    }
+    const st = bonoStatus(activeBono(m.memberships))
+    if (filter === 'sin_bono') return !st.has
+    if (filter === 'bono_bajo') return st.low
     return true
   })
 

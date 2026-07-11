@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
+import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { DatePickerModal } from '@/components/DatePickerModal'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -120,12 +121,15 @@ export type FullMember = {
 }
 
 function getBonoInfo(m: FullMember) {
-  const bono = m.memberships?.[0]
+  const bono = activeBono(m.memberships)
   if (!bono) return null
-  const isUnlimited = bono.membership_types?.name?.toLowerCase().includes('ilimitado')
-  if (isUnlimited) return { ok: true, unlimited: true, label: 'Bono ilimitado', sessions: null }
-  if ((bono.sessions_remaining ?? 0) <= 0) return { ok: false, unlimited: false, label: 'Bono agotado', sessions: 0 }
-  return { ok: true, unlimited: false, label: bono.membership_types?.name ?? 'Bono', sessions: bono.sessions_remaining }
+  const st = bonoStatus(bono)
+  return {
+    ok: st.ok,
+    unlimited: st.unlimited,
+    label: st.unlimited ? 'Bono ilimitado' : st.depleted ? 'Bono agotado' : (bono.membership_types?.name ?? 'Bono'),
+    sessions: st.unlimited ? null : st.sessions,
+  }
 }
 
 // ── Modal 1: búsqueda + QR ──
