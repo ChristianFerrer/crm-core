@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, LogIn, CheckCircle, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
+import { executeBooking } from '@/lib/bookingExecution'
 import { BookingSearchAndTypeModal, BookingFormModal, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
-type PaymentStatus = 'pending' | 'paid'
+type PaymentStatus = 'pending' | 'partial' | 'paid'
 
 interface Booking {
   id: string
@@ -54,10 +55,11 @@ function calcAge(birth_date: string) {
   return y === 0 ? `${m}m` : m === 0 ? `${y}a` : `${y}a ${m}m`
 }
 
-function bookingColor(t: BookingType) { return t === 'birthday' ? 'bg-iris' : t === 'custodia' ? 'bg-amber-400' : 'bg-fog' }
-function bookingBadge(t: BookingType) { return t === 'birthday' ? 'bg-iris/20 text-iris border border-iris/30' : t === 'custodia' ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30' : 'bg-fog/20 text-fog border border-fog/30' }
+// Custodia = cian en toda la app (coherente con Inicio y el detalle del día)
+function bookingColor(t: BookingType) { return t === 'birthday' ? 'bg-iris' : t === 'custodia' ? 'bg-cyan-300' : 'bg-lime' }
 function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'bg-lime/20 text-lime border border-lime/30' : s === 'cancelled' ? 'bg-rose/20 text-rose border border-rose/30' : 'bg-fog/20 text-fog border border-fog/30' }
-function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'bg-mint/20 text-mint border border-mint/30' : 'bg-amber/20 text-amber border border-amber/30' }
+function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'bg-mint/20 text-mint border border-mint/30' : p === 'partial' ? 'bg-cyan-300/20 text-cyan-300 border border-cyan-300/30' : 'bg-amber/20 text-amber border border-amber/30' }
+function paymentLabel(p: PaymentStatus) { return p === 'paid' ? 'Pagado' : p === 'partial' ? 'Señal' : 'Pendiente' }
 
 // Estilo por tipo alineado con la "Agenda de hoy" del inicio
 const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; label: string }> = {
@@ -198,32 +200,11 @@ export default function CalendarioPage() {
   async function handleExecute(b: Booking) {
     if (!b.member_id) return
     setExecutingId(b.id)
-
-    const guestsCount = b.guests ?? 0
-    // For birthday: 1 adult (titular) + guests as children (party attendees)
-    // For custodia: 0 adults (no parent stays) + guests as children (kids left in custody)
-    // For other: 1 adult + guests as guests
-    const adultsCount = b.type === 'custodia' ? 0 : 1
-    const childrenCount = b.type === 'other' ? 0 : guestsCount
-
-    const { error } = await supabase.from('visits').insert({
-      member_id: b.member_id,
-      checked_in_at: new Date().toISOString(),
-      visit_type: b.type === 'custodia' ? 'custodia' : 'entrada',
-      booking_id: b.id,
-      adults_count: adultsCount,
-      children_count: childrenCount,
-    })
-
-    if (error) {
-      alert(`Error al registrar la visita: ${error.message}`)
-      setExecutingId(null)
-      return
-    }
-
-    await supabase.from('bookings').update({ executed_at: new Date().toISOString(), status: 'confirmed' }).eq('id', b.id)
+    // Fuente única de verdad para el conteo de aforo (compartida con Inicio)
+    const { error } = await executeBooking(b)
     setExecutingId(null)
-    router.push('/checkin?tab=dentro')
+    if (error) { alert(`Error al ejecutar la reserva: ${error}`); return }
+    fetchBookings()
   }
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
@@ -319,7 +300,7 @@ export default function CalendarioPage() {
             <div className="px-5 py-4 border-b border-line flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-snow">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                <p className="text-xs text-mist mt-0.5">{allSelectedBookings.length} reserva{allSelectedBookings.length !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-mist mt-0.5">{(() => { const n = allSelectedBookings.filter(b => b.status !== 'cancelled').length; return `${n} reserva${n !== 1 ? 's' : ''}` })()}</p>
               </div>
               <button onClick={() => setSelectedDate(null)} className="text-mist hover:text-fog"><X size={16} /></button>
             </div>
@@ -334,10 +315,12 @@ export default function CalendarioPage() {
                   const gC = b.guest_children ?? 0
                   const totalG = b.guests ?? (gA + gC)
                   const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
+                  const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
+                  const showPago = b.status !== 'cancelled' && (b.amount != null && b.amount > 0)
                   return (
-                    <div key={b.id} className={`flex gap-0 ${st === 'pasado' ? 'opacity-50' : ''}`}>
+                    <div key={b.id} className={`flex items-stretch gap-0 hover:bg-surface2 transition-colors ${st === 'pasado' ? 'opacity-50' : ''}`}>
                       <div className={`w-1 shrink-0 ${ts.bar}`} />
-                      <button onClick={() => openEditFlow(b)} className="flex-1 px-4 py-3 flex items-start gap-3 text-left hover:bg-surface2 transition-colors">
+                      <button onClick={() => openEditFlow(b)} className="flex-1 min-w-0 px-4 py-3 flex items-start gap-3 text-left">
                         <div className="shrink-0 text-right w-14">
                           <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
                           {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
@@ -349,6 +332,11 @@ export default function CalendarioPage() {
                             {st === 'ejecutado' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-mint/10 text-mint border-mint/30 flex items-center gap-0.5"><CheckCircle size={9} />Ejecutado</span>}
                             {st === 'en_curso' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-lime/10 text-lime border-lime/30 flex items-center gap-0.5"><Clock size={9} />En curso</span>}
                             {b.status === 'cancelled' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-rose/10 text-rose border-rose/30">Cancelada</span>}
+                            {showPago && (
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${paymentBadge(b.payment_status)}`}>
+                                {paymentLabel(b.payment_status)}{b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
+                              </span>
+                            )}
                           </div>
                           {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
                           {(totalG > 0 || gA > 0 || gC > 0) && (
@@ -358,17 +346,17 @@ export default function CalendarioPage() {
                             </p>
                           )}
                         </div>
-                        {canExecute && (
-                          <button
-                            type="button"
-                            onClick={e => { e.stopPropagation(); handleExecute(b) }}
-                            disabled={executingId === b.id}
-                            className="flex items-center gap-1 text-[10px] font-semibold text-ink bg-lime rounded-lg px-2 py-1 shrink-0 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
-                          >
-                            <LogIn size={11} /> {executingId === b.id ? '...' : 'Ejecutar'}
-                          </button>
-                        )}
                       </button>
+                      {canExecute && (
+                        <button
+                          type="button"
+                          onClick={() => handleExecute(b)}
+                          disabled={executingId === b.id}
+                          className="flex items-center gap-1 self-center text-[10px] font-semibold text-ink bg-lime rounded-lg px-2 py-1 mr-4 shrink-0 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          <LogIn size={11} /> {executingId === b.id ? '...' : 'Ejecutar'}
+                        </button>
+                      )}
                     </div>
                   )
                 })}

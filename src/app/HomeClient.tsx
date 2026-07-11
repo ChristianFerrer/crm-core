@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
+import { executeBooking } from '@/lib/bookingExecution'
 import { DatePickerModal } from '@/components/DatePickerModal'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -2040,39 +2041,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   async function handleExecuteBooking(booking: TodayBooking) {
     setExecutingBooking(booking.id)
-    const now = new Date().toISOString()
-    await supabase.from('bookings').update({ executed_at: now }).eq('id', booking.id)
-    if (booking.member_id) {
-      // Calculate counts so that aforo is updated correctly.
-      // Usamos guest_adults / guest_children (no `guests`, que es el total combinado)
-      const gAdults   = booking.guest_adults ?? 0
-      const gChildren = booking.guest_children ?? 0
-      let adultsCount = 1
-      let childrenCount = 0
-      if (booking.type === 'custodia') {
-        // Custodia: sin adultos; los niños ya vienen agregados en guest_children
-        adultsCount = 0
-        childrenCount = gChildren > 0 ? gChildren : (booking.guests ?? 1)
-      } else if (booking.type === 'birthday') {
-        // Cumpleaños: titular + adultos invitados / niño del cumple + niños invitados
-        adultsCount = 1 + gAdults
-        childrenCount = 1 + gChildren
-      } else {
-        // Otro: los invitados adultos + titular; niños invitados aparte
-        adultsCount = 1 + gAdults
-        childrenCount = gChildren
-      }
-      await supabase.from('visits').insert({
-        member_id: booking.member_id,
-        visit_type: booking.type === 'custodia' ? 'custodia' : 'entrada',
-        checked_in_at: now,
-        adults_count: adultsCount,
-        children_count: childrenCount,
-        children_present: [],
-        booking_id: booking.id,
-      })
-    }
+    const { error } = await executeBooking(booking)
     setExecutingBooking(null)
+    if (error) { alert(`No se pudo ejecutar la reserva: ${error}`); return }
     router.refresh()
   }
 
