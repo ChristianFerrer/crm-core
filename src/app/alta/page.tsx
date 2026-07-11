@@ -11,8 +11,8 @@ export default function AltaPage() {
 
   useEffect(() => {
     setRegistroUrl(`${window.location.origin}/alta/registro`)
-    supabase.from('tenants').select('name').limit(1).maybeSingle()
-      .then(({ data }) => { if (data?.name) setTenantName(data.name) })
+    supabase.rpc('public_tenant_info', { p_slug: null })
+      .then(({ data }) => { const n = (data as { tenant?: { name?: string } } | null)?.tenant?.name; if (n) setTenantName(n) })
   }, [])
 
   return (

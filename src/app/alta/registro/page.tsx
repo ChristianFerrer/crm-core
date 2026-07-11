@@ -28,10 +28,13 @@ export default function RegistroPage() {
   const [tenantName, setTenantName] = useState('')
 
   useEffect(() => {
-    supabase.from('membership_types').select('*').eq('active', true).order('price')
-      .then(({ data }) => setTypes((data as MembershipType[]) ?? []))
-    supabase.from('tenants').select('name').limit(1).maybeSingle()
-      .then(({ data }) => { if (data?.name) setTenantName(data.name) })
+    // Alta pública vía RPC SECURITY DEFINER: el cliente anónimo no accede a las
+    // tablas directamente (compatible con RLS). p_slug=null → tenant único.
+    supabase.rpc('public_tenant_info', { p_slug: null }).then(({ data }) => {
+      const info = data as { tenant?: { name?: string }; membershipTypes?: MembershipType[] } | null
+      if (info?.tenant?.name) setTenantName(info.tenant.name)
+      if (info?.membershipTypes) setTypes(info.membershipTypes)
+    })
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -42,41 +45,21 @@ export default function RegistroPage() {
 
     try {
       const cleanChildren = children.filter(c => c.name.trim())
+      const { data, error: rpcErr } = await supabase.rpc('public_register', {
+        p_slug: null,
+        p_name: name.trim(),
+        p_phone: phone.trim(),
+        p_email: email.trim() || null,
+        p_children: cleanChildren,
+        p_membership_type_id: selectedType || null,
+        p_consent: consentAccepted,
+      })
+      if (rpcErr) throw rpcErr
+      const res = data as { qr_code?: string; memberName?: string; error?: string }
+      if (res?.error) throw new Error(res.error)
 
-      // Sin familia para un titular único (se crea familia solo al vincular una
-      // pareja, criterio unificado con el alta interna). Evita familias huérfanas.
-      const { data: member, error: me } = await supabase
-        .from('members')
-        .insert({
-          name: name.trim(),
-          phone: phone.trim(),
-          email: email.trim() || null,
-          children: cleanChildren,
-          children_count: cleanChildren.length,
-          consent_accepted_at: new Date().toISOString(),
-          consent_version: 'v1.0',
-        })
-        .select('id, qr_code')
-        .single()
-      if (me) throw me
-
-      // Assign membership if selected
-      if (selectedType) {
-        const type = types.find(t => t.id === selectedType)
-        if (type) {
-          const expiresAt = new Date()
-          expiresAt.setDate(expiresAt.getDate() + type.validity_days)
-          await supabase.from('memberships').insert({
-            member_id: member.id,
-            membership_type_id: type.id,
-            sessions_remaining: type.sessions,
-            expires_at: expiresAt.toISOString().split('T')[0],
-          })
-        }
-      }
-
-      setQrCode(member.qr_code)
-      setMemberName(name.trim().split(' ')[0])
+      setQrCode(res.qr_code ?? '')
+      setMemberName(res.memberName ?? name.trim().split(' ')[0])
       setStep('done')
     } catch (err: any) {
       setError(err.message ?? 'Error al registrarse. Inténtalo de nuevo.')
