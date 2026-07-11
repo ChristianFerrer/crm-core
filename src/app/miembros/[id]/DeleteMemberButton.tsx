@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Trash2, AlertTriangle } from 'lucide-react'
+import { Modal } from '@/components/Modal'
 
 export function DeleteMemberButton({ memberId }: { memberId: string }) {
   const router = useRouter()
@@ -46,9 +47,8 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
         <Trash2 size={13} /> Eliminar
       </button>
 
-      {step !== 'idle' && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => step === 'confirm' && setStep('idle')}>
-          <div className="w-full max-w-sm rounded-2xl border border-rose/30 bg-surface p-5 space-y-4" onClick={e => e.stopPropagation()}>
+      <Modal open={step !== 'idle'} onClose={() => step === 'confirm' && setStep('idle')} z="z-[70]" label="Eliminar miembro">
+        <div className="p-5 space-y-4">
             <div className="flex items-start gap-2">
               <AlertTriangle size={16} className="text-rose shrink-0 mt-0.5" />
               <div>
@@ -74,9 +74,8 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
                 {step === 'deleting' ? 'Eliminando...' : 'Sí, eliminar'}
               </button>
             </div>
-          </div>
         </div>
-      )}
+      </Modal>
     </>
   )
 }

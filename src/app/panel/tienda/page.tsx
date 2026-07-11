@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
+import { Modal } from '@/components/Modal'
 import { getStoredTenant } from '@/lib/tenant'
 import { BarcodeScanner } from '@/components/BarcodeScanner'
 
@@ -496,9 +497,9 @@ export default function TiendaPage() {
       )}
 
       {/* Confirmar borrado */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setConfirmDelete(null)}>
-          <div className="w-full max-w-xs rounded-2xl border border-rose/30 bg-surface p-5 space-y-4" onClick={e => e.stopPropagation()}>
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} maxWidth="max-w-xs" z="z-[70]" label="Eliminar producto">
+        {confirmDelete && (
+          <div className="p-5 space-y-4">
             <div>
               <p className="text-sm font-semibold text-snow">¿Eliminar producto?</p>
               <p className="text-xs text-fog mt-1">Se eliminará <span className="font-semibold text-snow">{confirmDelete.name}</span> de forma permanente.</p>
@@ -514,8 +515,8 @@ export default function TiendaPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Barcode scanner */}
       {showScanner && (
