@@ -179,8 +179,8 @@ function CheckinSearchModal({
           <div className="flex items-center gap-2">
             <LogIn size={15} className="text-lime shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-snow">Registrar Entrada</p>
-              <p className="text-[11px] text-fog">Check-in de visitantes</p>
+              <p className="text-sm font-semibold text-snow">Registrar entrada</p>
+              <p className="text-[11px] text-fog">Registro de entrada de visitantes</p>
             </div>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
@@ -548,7 +548,7 @@ function CheckinConfirmModal({
                 className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <LogIn size={17} strokeWidth={2.2} />
-                {registering ? 'Registrando...' : 'Registrar Entrada'}
+                {registering ? 'Registrando...' : 'Registrar entrada'}
               </button>
             </>
           )}
@@ -2403,7 +2403,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 options={[
                   { value: 'all', label: 'Sesiones: Todas' },
                   { value: 'critical', label: 'Críticas (≤2)' },
-                  { value: 'low', label: 'Bajas (≤5)' },
+                  { value: 'low', label: 'Bajas (3-5)' },
                   { value: 'ok', label: 'OK (>5)' },
                 ]}
               />
@@ -3115,7 +3115,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <span className="text-snow">{imp.ninos.toFixed(2)}€</span>
                       </div>
                     )}
-                    {imp.bonoPrecioSesion !== null && mt ? (
+                    {imp.bonoPrecioSesion !== null && mt && (
                       <>
                         <div className="flex justify-between text-xs">
                           <span className="text-fog line-through">Subtotal regular</span>
@@ -3132,11 +3132,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </div>
                         )}
                       </>
-                    ) : (
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-fog">Subtotal tiempo</span>
-                        <span className="text-snow">{imp.total.toFixed(2)}€</span>
-                      </div>
                     )}
                     <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
                       <span className="text-fog">Subtotal tiempo</span>

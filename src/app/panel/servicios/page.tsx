@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag, FolderPlus } from 'lucide-react'
+import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 
@@ -353,7 +353,7 @@ export default function ServiciosPage() {
 
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-fog">{services.length} servicios · {categories.length} categorías</p>
+        <p className="text-sm text-fog">{services.length} servicio{services.length !== 1 ? 's' : ''} · {services.filter(s => s.active).length} activo{services.filter(s => s.active).length !== 1 ? 's' : ''}</p>
         <div className="flex items-center gap-2">
           <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
             {(['tabla', 'tarjetas'] as const).map(v => (

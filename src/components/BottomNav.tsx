@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Users, LogIn, BarChart2, CalendarDays } from 'lucide-react'
+import { Home, Users, BarChart2, CalendarDays } from 'lucide-react'
 import { useNavBadges } from '@/lib/useNavBadges'
 
 function Badge({ count }: { count: number }) {
@@ -29,7 +29,12 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden">
       <div className="flex">
         {navItems.map(({ href, label, icon: Icon, badge }) => {
-          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
+          const isActive =
+            href === '/'
+              ? pathname === '/'
+              : href === '/panel'
+                ? pathname.startsWith('/panel') || pathname.startsWith('/checkin')
+                : pathname.startsWith(href)
           return (
             <Link
               key={href}
