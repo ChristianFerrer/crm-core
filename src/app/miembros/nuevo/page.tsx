@@ -98,18 +98,15 @@ export default function NuevoMiembroPage() {
       if (me) throw me
 
       if (hasPartner && familyId) {
+        // Los hijos viven en el titular principal (no se duplican en la pareja,
+        // así se evita que diverjan al editar).
         if (partnerFound && partnerConfirmed) {
-          await supabase.from('members').update({
-            family_id: familyId,
-            ...(cleanChildren.length > 0 ? { children: cleanChildren, children_count: cleanChildren.length } : {}),
-          }).eq('id', partnerFound.id)
+          await supabase.from('members').update({ family_id: familyId }).eq('id', partnerFound.id)
         } else if (partnerName.trim()) {
           await supabase.from('members').insert({
             name: partnerName.trim(),
             phone: partnerPhone.trim(),
             family_id: familyId,
-            children: cleanChildren,
-            children_count: cleanChildren.length,
             consent_accepted_at: new Date().toISOString(),
             consent_version: 'v1.0',
           })

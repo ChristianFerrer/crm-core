@@ -120,17 +120,13 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         await supabase.from('members').update({ family_id: null }).eq('id', pid)
       }
 
-      // Add new partner
+      // Add new partner — los hijos viven en el titular principal, no se duplican
       if (hasNewPartner && fid) {
         if (partnerFound && partnerConfirmed) {
-          await supabase.from('members').update({
-            family_id: fid,
-            ...(cleanChildren.length > 0 ? { children: cleanChildren, children_count: cleanChildren.length } : {}),
-          }).eq('id', partnerFound.id)
+          await supabase.from('members').update({ family_id: fid }).eq('id', partnerFound.id)
         } else if (partnerName.trim()) {
           await supabase.from('members').insert({
             name: partnerName.trim(), phone: partnerPhone.trim(), family_id: fid,
-            children: cleanChildren, children_count: cleanChildren.length,
           })
         }
       }

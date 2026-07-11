@@ -98,6 +98,7 @@ export default function CalendarioPage() {
   const [showAddMember, setShowAddMember] = useState(false)
   const [newMemberForm, setNewMemberForm] = useState(EMPTY_NEW_MEMBER)
   const [savingMember, setSavingMember] = useState(false)
+  const [newMemberConsent, setNewMemberConsent] = useState(false)
   const newMemberForFlow = useRef(false)
 
   // ── Flujo compartido de reserva (mismo componente que Inicio) ──
@@ -219,11 +220,15 @@ export default function CalendarioPage() {
   }
 
   async function handleAddMember(e: React.FormEvent) {
-    e.preventDefault(); setSavingMember(true)
+    e.preventDefault()
+    if (!newMemberConsent) return
+    setSavingMember(true)
     const { data } = await supabase.from('members').insert({
       name: newMemberForm.name,
       phone: newMemberForm.phone || null,
       birth_date: newMemberForm.birth_date || null,
+      consent_accepted_at: new Date().toISOString(),
+      consent_version: 'v1.0',
     }).select('id, name, phone, children').single()
     setSavingMember(false)
     if (data) {
@@ -236,6 +241,7 @@ export default function CalendarioPage() {
     }
     setShowAddMember(false)
     setNewMemberForm(EMPTY_NEW_MEMBER)
+    setNewMemberConsent(false)
   }
 
   const cells: (number | null)[] = [...Array(getFirstDayOfWeek(year, month)).fill(null), ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1)]
@@ -408,9 +414,21 @@ export default function CalendarioPage() {
                   className={inputClass}
                 />
               </div>
+              <label className="flex items-start gap-2.5 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={newMemberConsent}
+                  onChange={e => setNewMemberConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-lime"
+                />
+                <span className="text-[11px] text-fog leading-relaxed">
+                  El titular consiente el tratamiento de sus datos y los de sus hijos (
+                  <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="text-lime underline">política de privacidad</a>). *
+                </span>
+              </label>
               <button
                 type="submit"
-                disabled={savingMember}
+                disabled={savingMember || !newMemberConsent}
                 className="w-full bg-iris text-snow font-semibold py-2.5 rounded-xl text-sm hover:bg-iris/80 transition-colors disabled:opacity-50"
               >
                 {savingMember ? 'Guardando...' : 'Crear titular'}

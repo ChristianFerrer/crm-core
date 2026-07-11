@@ -38,23 +38,16 @@ export default function RegistroPage() {
     setError(null)
 
     try {
-      // Create family
-      const { data: family, error: fe } = await supabase
-        .from('families')
-        .insert({ name: `Familia ${name.trim().split(' ')[0]}` })
-        .select('id')
-        .single()
-      if (fe) throw fe
-
       const cleanChildren = children.filter(c => c.name.trim())
 
+      // Sin familia para un titular único (se crea familia solo al vincular una
+      // pareja, criterio unificado con el alta interna). Evita familias huérfanas.
       const { data: member, error: me } = await supabase
         .from('members')
         .insert({
           name: name.trim(),
           phone: phone.trim(),
           email: email.trim() || null,
-          family_id: family.id,
           children: cleanChildren,
           children_count: cleanChildren.length,
           consent_accepted_at: new Date().toISOString(),
