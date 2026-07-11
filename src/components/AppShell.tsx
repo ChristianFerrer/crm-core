@@ -164,12 +164,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { href: '/calendario', label: 'Agenda',   icon: CalendarDays,badge: badges.agenda },
             { href: '/panel',      label: 'Panel',    icon: BarChart2,   badge: badges.panel },
           ].map(({ href, label, icon: Icon, badge }) => {
-            const isActive =
-              href === '/'
-                ? pathname === '/'
-                : href === '/panel'
-                  ? pathname.startsWith('/panel') || pathname.startsWith('/checkin')
-                  : pathname.startsWith(href)
+            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
             return (
               <Link
                 key={href}

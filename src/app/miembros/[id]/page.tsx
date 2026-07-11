@@ -103,7 +103,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <Pencil size={13} /> Editar
         </Link>
         <Link
-          href={`/checkin?member=${id}`}
+          href={`/?checkin=${id}`}
           className="flex items-center gap-1.5 rounded-xl bg-lime px-3 py-2 text-xs font-semibold text-ink hover:bg-lime/90 transition-colors shrink-0"
           style={{ boxShadow: 'var(--shadow-lime)' }}
         >

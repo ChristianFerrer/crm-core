@@ -1782,6 +1782,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       params.delete('nueva')
       router.replace(params.toString() ? `/?${params.toString()}` : '/')
     }
+    // Deep-link de registro de entrada para un miembro concreto (botón "Entrada" de la ficha)
+    const checkinId = searchParams.get('checkin')
+    if (checkinId) {
+      supabase.from('members')
+        .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
+        .eq('id', checkinId).maybeSingle()
+        .then(({ data }) => {
+          if (data) { setCheckinSelectedMember(data as unknown as FullMember); setCheckinModal('confirm') }
+        })
+      const params = new URLSearchParams(Array.from(searchParams.entries()))
+      params.delete('checkin')
+      router.replace(params.toString() ? `/?${params.toString()}` : '/')
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
