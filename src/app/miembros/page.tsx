@@ -116,7 +116,7 @@ export default function MiembrosPage() {
             view === 'miembros' ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
           }`}
         >
-          <User size={14} /> Titulares
+          <User size={14} /> Miembros
         </button>
         <button
           onClick={() => { setView('familias'); setSearch('') }}

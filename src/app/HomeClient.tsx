@@ -192,7 +192,7 @@ function CheckinSearchModal({
               <p className="text-[11px] text-fog">Registro de entrada de visitantes</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
         </div>
 
         {/* Tabs manual / QR */}
@@ -377,7 +377,7 @@ function CheckinConfirmModal({
             <p className="text-lg font-bold text-snow truncate">{currentMember.name}</p>
             <p className="text-xs text-fog">Registro de entrada</p>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -669,7 +669,7 @@ function CheckinNewMemberModal({
             <p className="text-sm font-semibold text-snow">Nuevo miembro</p>
             <p className="text-[11px] text-fog">Registro de entrada</p>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -849,7 +849,7 @@ export function BookingSearchAndTypeModal({
               <p className="text-[11px] text-fog">Paso 1 de 2 — Titular y tipo</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
@@ -2513,6 +2513,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           {isToday && (
                             <button
                               onClick={() => setConfirmCheckout(visit.id)}
+                              aria-label="Registrar salida"
                               className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose text-ink hover:brightness-110 active:scale-[0.98] transition-all"
                             >
                               <LogOut size={14} strokeWidth={2.2} />
@@ -2719,6 +2720,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {isToday ? (
                               <button
                                 onClick={() => setConfirmCheckout(visit.id)}
+                                aria-label="Registrar salida"
                                 className="flex items-center justify-center text-ink bg-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
                               >
                                 <LogOut size={12} />
@@ -3690,7 +3692,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                   <p className="text-xs text-fog mt-0.5">Entrada {fmtTime(visit.checked_in_at)} · <span className={isLong ? 'text-amber font-semibold' : 'text-snow'}>{fmtElapsed(visit.checked_in_at)}</span></p>
                 </div>
-                <button onClick={() => setDetailVisitId(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
+                <button onClick={() => setDetailVisitId(null)} aria-label="Cerrar" className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
               </div>
 
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">

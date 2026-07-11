@@ -310,7 +310,7 @@ export default function CalendarioPage() {
                 <p className="text-sm font-semibold text-snow">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
                 <p className="text-xs text-mist mt-0.5">{(() => { const n = allSelectedBookings.filter(b => b.status !== 'cancelled').length; return `${n} reserva${n !== 1 ? 's' : ''}` })()}</p>
               </div>
-              <button onClick={() => setSelectedDate(null)} className="text-mist hover:text-fog"><X size={16} /></button>
+              <button onClick={() => setSelectedDate(null)} aria-label="Cerrar" className="text-mist hover:text-fog"><X size={16} /></button>
             </div>
             {allSelectedBookings.length === 0 ? (
               <div className="px-5 py-8 text-center text-sm text-mist">No hay reservas este día</div>
@@ -383,7 +383,7 @@ export default function CalendarioPage() {
           <div className="relative w-full max-w-sm bg-surface border border-line rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-line">
               <h3 className="text-sm font-semibold text-snow">Nuevo titular</h3>
-              <button onClick={() => setShowAddMember(false)} className="text-mist hover:text-fog"><X size={16} /></button>
+              <button onClick={() => setShowAddMember(false)} aria-label="Cerrar" className="text-mist hover:text-fog"><X size={16} /></button>
             </div>
             <form onSubmit={handleAddMember} className="p-5 space-y-3">
               <div>

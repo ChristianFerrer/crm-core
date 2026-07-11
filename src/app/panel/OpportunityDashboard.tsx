@@ -209,13 +209,13 @@ export function OpportunityDashboard({
       )}
       {open === 'inactivos' && (
         <FollowUpSection
-          title="Clientes inactivos"
+          title="Miembros inactivos"
           description="No han visitado en más de 10 días — recupera el hábito"
           icon="UserMinus"
           iconColor="text-rose"
           items={inactivosItems}
           tenantId={tenantId}
-          emptyText="Todos los clientes han visitado recientemente"
+          emptyText="Todos los miembros han visitado recientemente"
         />
       )}
       {open === 'caducados' && (
@@ -232,7 +232,7 @@ export function OpportunityDashboard({
       {open === 'sin_bono' && (
         <FollowUpSection
           title="Visitan sin bono activo"
-          description="Clientes habituales que pagan al contado — candidatos a contratar bono"
+          description="Miembros habituales que pagan al contado — candidatos a contratar bono"
           icon="WalletCards"
           iconColor="text-lime"
           items={sinBonoItems}

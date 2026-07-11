@@ -84,7 +84,7 @@ export function BirthdayLeads({ leads: initialLeads, tenantId }: { leads: Lead[]
           )}
         </div>
       </div>
-      <p className="text-xs text-mist mb-4">Niños de clientes que cumplen años este mes</p>
+      <p className="text-xs text-mist mb-4">Niños de miembros que cumplen años este mes</p>
 
       {leads.length === 0 ? (
         <p className="text-sm text-mist text-center py-4">No hay cumpleaños registrados este mes</p>

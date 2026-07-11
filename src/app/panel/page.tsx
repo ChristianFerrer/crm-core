@@ -272,7 +272,7 @@ export default async function PanelPage() {
   }).forEach(l => urgentAlerts.push({
     id: `bday-${l.member_id}-${l.child_name}`,
     type: 'birthday',
-    message: `${l.child_name} cumple ${l.age + 1} años el día ${l.birthday_day} — cliente: ${l.member_name}`,
+    message: `${l.child_name} cumple ${l.age + 1} años el día ${l.birthday_day} — miembro: ${l.member_name}`,
   }))
 
   return (
