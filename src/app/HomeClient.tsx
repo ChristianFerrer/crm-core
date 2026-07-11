@@ -305,10 +305,14 @@ function CheckinConfirmModal({
   const alreadyInside = !!activeVisit
   const custodiaValid = visitType !== 'custodia' || (custodiaStart.trim() !== '' && custodiaEnd.trim() !== '')
 
-  // Mejora #5: checkout desde "ya dentro"
+  // Checkout desde "ya dentro" — mismo efecto que el checkout de la tabla:
+  // cierra cualquier cuenta abierta y marca la salida (sin dejar cuentas fantasma).
   async function handleCheckOut() {
     if (!activeVisit) return
-    await supabase.from('visits').update({ checked_out_at: new Date().toISOString() }).eq('id', activeVisit.id)
+    const now = new Date().toISOString()
+    await supabase.from('open_checks').update({ closed_at: now, status: 'closed' })
+      .eq('visit_id', activeVisit.id).is('closed_at', null)
+    await supabase.from('visits').update({ checked_out_at: now, paid_at: now }).eq('id', activeVisit.id)
     setCheckedOut(true)
     onCheckedIn()
     closeTimer.current = setTimeout(onClose, 1500)
