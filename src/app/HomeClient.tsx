@@ -1065,6 +1065,7 @@ export function BookingFormModal({
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [saved, setSaved]         = useState(false)
+  const [overlap, setOverlap]     = useState<string | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const typeLabels  = { birthday: 'Reserva de Cumpleaños', custodia: 'Reserva de Custodia', other: 'Otra Reserva' }
@@ -1081,9 +1082,26 @@ export function BookingFormModal({
     setTitle(`Cumple de ${name}`)
   }
 
-  async function handleSave() {
+  async function handleSave(force = false) {
     if (!isValid || saving) return
     setSaving(true); setError(null)
+    // Aviso de solape: otra reserva activa en la misma franja horaria y fecha.
+    // No bloquea (puede haber varias salas); pide una confirmación extra.
+    if (!force && startTime && endTime) {
+      const { data: sameDay } = await supabase
+        .from('bookings')
+        .select('id, start_time, end_time, title')
+        .eq('date', date).neq('status', 'cancelled')
+      const clash = (sameDay ?? []).find(b =>
+        b.id !== editId && b.start_time && b.end_time &&
+        b.start_time < endTime && startTime < b.end_time
+      )
+      if (clash) {
+        setOverlap(clash.title ?? 'otra reserva')
+        setSaving(false)
+        return
+      }
+    }
     const finalTitle = title.trim() || (
       bookingType === 'birthday' ? `Cumple de ${birthdayChild || member.name}` :
       bookingType === 'custodia' ? `Custodia — ${member.name}` : 'Reserva'
@@ -1456,7 +1474,19 @@ export function BookingFormModal({
 
               {error && <p className="text-sm text-rose text-center">{error}</p>}
 
-              <button onClick={handleSave} disabled={!isValid || saving || (!!startTime && !!endTime && endTime <= startTime)}
+              {overlap && (
+                <div className="rounded-xl bg-amber/10 border border-amber/30 px-3 py-2.5 space-y-2">
+                  <p className="flex items-center gap-1.5 text-xs text-amber">
+                    <AlertTriangle size={13} className="shrink-0" /> Ya hay otra reserva en esa franja («{overlap}»).
+                  </p>
+                  <button onClick={() => { setOverlap(null); handleSave(true) }}
+                    className="w-full rounded-lg bg-amber/20 border border-amber/30 py-2 text-xs font-semibold text-amber hover:bg-amber/30 transition-colors">
+                    Guardar de todos modos
+                  </button>
+                </div>
+              )}
+
+              <button onClick={() => handleSave()} disabled={!isValid || saving || (!!startTime && !!endTime && endTime <= startTime)}
                 className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <CalendarClock size={17} strokeWidth={2.2} />

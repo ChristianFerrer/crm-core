@@ -266,7 +266,15 @@ export default function CalendarioPage() {
         <div className="bg-surface border border-line rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-line">
             <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronLeft size={18} /></button>
-            <span className="text-sm font-semibold text-snow">{MONTH_NAMES[month]} {year}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-snow">{MONTH_NAMES[month]} {year}</span>
+              <button
+                onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelectedDate(toDateStr(today.getFullYear(), today.getMonth(), today.getDate())) }}
+                className="text-[11px] font-semibold text-fog hover:text-lime border border-line rounded-lg px-2 py-1 transition-colors"
+              >
+                Hoy
+              </button>
+            </div>
             <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronRight size={18} /></button>
           </div>
           <div className="grid grid-cols-7 border-b border-line">
