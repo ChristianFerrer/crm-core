@@ -58,10 +58,11 @@ export default function TiendaPage() {
   const [stockProduct, setStockProduct] = useState<Product | null>(null)
   const [stockEntry, setStockEntry] = useState('1')
   const [savingStock, setSavingStock] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<Product | null>(null)
 
   const load = useCallback(async () => {
     const tenant = getStoredTenant()
-    if (!tenant) return
+    if (!tenant) { setLoading(false); return }
     const { data } = await supabase.from('products').select('*').eq('tenant_id', tenant.id).order('name')
     setProducts((data ?? []) as Product[])
     setLoading(false)
@@ -135,7 +136,7 @@ export default function TiendaPage() {
     if (!name.trim() || !price) return
     setSaving(true)
     const tenant = getStoredTenant()
-    if (!tenant) return
+    if (!tenant) { setSaving(false); return }
     const payload: Record<string, unknown> = {
       name: name.trim(), category, price: parseFloat(price),
       tenant_id: tenant.id, active: true,
@@ -160,8 +161,8 @@ export default function TiendaPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('¿Eliminar este producto?')) return
     await supabase.from('products').delete().eq('id', id)
+    setConfirmDelete(null)
     await load()
   }
 
@@ -252,7 +253,7 @@ export default function TiendaPage() {
                   <button onClick={() => openEdit(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
                     <Pencil size={13} />
                   </button>
-                  <button onClick={() => handleDelete(p.id)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
+                  <button onClick={() => setConfirmDelete(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -324,7 +325,7 @@ export default function TiendaPage() {
                         <button onClick={() => openEdit(p)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
                           <Pencil size={12} />
                         </button>
-                        <button onClick={() => handleDelete(p.id)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
+                        <button onClick={() => setConfirmDelete(p)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
                           <Trash2 size={12} />
                         </button>
                       </div>
@@ -490,6 +491,28 @@ export default function TiendaPage() {
               className="w-full rounded-xl bg-lime py-3 text-sm font-semibold text-ink hover:bg-lime/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
               <Check size={15} /> {savingStock ? 'Guardando...' : `Añadir ${stockEntry} unidades`}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmar borrado */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setConfirmDelete(null)}>
+          <div className="w-full max-w-xs rounded-2xl border border-rose/30 bg-surface p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div>
+              <p className="text-sm font-semibold text-snow">¿Eliminar producto?</p>
+              <p className="text-xs text-fog mt-1">Se eliminará <span className="font-semibold text-snow">{confirmDelete.name}</span> de forma permanente.</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 rounded-xl border border-line py-2.5 text-xs font-semibold text-fog hover:text-snow transition-colors">
+                Cancelar
+              </button>
+              <button onClick={() => handleDelete(confirmDelete.id)}
+                className="flex-1 rounded-xl bg-rose/20 border border-rose/30 py-2.5 text-xs font-semibold text-rose hover:bg-rose/30 transition-colors">
+                Sí, eliminar
+              </button>
+            </div>
           </div>
         </div>
       )}
