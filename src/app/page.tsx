@@ -33,7 +33,7 @@ export default async function DashboardPage({
   ] = await Promise.all([
     supabase
       .from('visits')
-      .select('id, checked_in_at, checked_out_at, member_id, membership_id, visit_type, children_present, adults_count, children_count, booking_id, paid_at, members(name), memberships(sessions_remaining, membership_types(name, sessions, price)), bookings(type, amount, deposit_amount, payment_status, guest_adults, guest_children, addons, services(price, price_per_guest_adult, price_per_guest_child, included_guests))')
+      .select('id, checked_in_at, checked_out_at, member_id, membership_id, visit_type, children_present, adults_count, children_count, booking_id, paid_at, paid_amount, payment_method, members(name), memberships(sessions_remaining, membership_types(name, sessions, price)), bookings(type, amount, deposit_amount, payment_status, guest_adults, guest_children, addons, services(price, price_per_guest_adult, price_per_guest_child, included_guests))')
       // Visits active during the selected day:
       // started before/on dayEnd AND (still open OR checked out during/after dayStart)
       .lte('checked_in_at', dayEnd.toISOString())

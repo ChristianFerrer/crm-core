@@ -8,6 +8,7 @@ import {
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
   Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2, CalendarPlus,
+  Euro, CreditCard,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -30,6 +31,8 @@ type TodayVisit = {
   children_count: number
   booking_id: string | null
   paid_at: string | null
+  paid_amount: number | null
+  payment_method: string | null
   bookings: {
     type: string; amount: number | null; deposit_amount: number | null; payment_status: string | null
     guest_adults: number | null; guest_children: number | null
@@ -312,7 +315,8 @@ function CheckinConfirmModal({
     const now = new Date().toISOString()
     await supabase.from('open_checks').update({ closed_at: now, status: 'closed' })
       .eq('visit_id', activeVisit.id).is('closed_at', null)
-    await supabase.from('visits').update({ checked_out_at: now, paid_at: now }).eq('id', activeVisit.id)
+    // La salida no marca el cobro (paso explícito aparte)
+    await supabase.from('visits').update({ checked_out_at: now }).eq('id', activeVisit.id)
     setCheckedOut(true)
     onCheckedIn()
     closeTimer.current = setTimeout(onClose, 1500)
@@ -1699,6 +1703,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
   const [importeVisitId, setImporteVisitId] = useState<string | null>(null)
   const [totalVisitId, setTotalVisitId] = useState<string | null>(null)
+  const [payingVisit, setPayingVisit] = useState<string | null>(null)
   const [acompVisitId, setAcompVisitId] = useState<string | null>(null)
   const [acompCoTitulares, setAcompCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>([])
   const [acompChildren, setAcompChildren] = useState<{ name: string; birth_date?: string; isGuest?: boolean }[]>([])
@@ -2044,8 +2049,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [acompTitularPresent, acompCoTitulares, acompChildren, acompGuestAdults, acompGuestChildren])
 
-  async function handlePayVisit(visitId: string) {
-    await supabase.from('visits').update({ paid_at: new Date().toISOString() }).eq('id', visitId)
+  async function handlePayVisit(visitId: string, amount: number, method: 'efectivo' | 'tarjeta') {
+    setPayingVisit(visitId)
+    await supabase.from('visits')
+      .update({ paid_at: new Date().toISOString(), paid_amount: amount, payment_method: method })
+      .eq('id', visitId)
+    setPayingVisit(null)
     setTotalVisitId(null)
     router.refresh()
   }
@@ -2058,7 +2067,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     if (check) {
       await supabase.from('open_checks').update({ closed_at: now, status: 'closed' }).eq('id', check.id)
     }
-    await supabase.from('visits').update({ checked_out_at: now, paid_at: now }).eq('id', visitId)
+    // La salida no marca el cobro: el cobro es un paso explícito (botón "Cobrar")
+    await supabase.from('visits').update({ checked_out_at: now }).eq('id', visitId)
     setCheckingOut(null)
     setConfirmCheckout(null)
     setConsumosVisitId(null)
@@ -3198,10 +3208,36 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </div>
               </div>
 
-              {/* Total */}
-              <div className="px-5 py-4 border-t border-line shrink-0 flex items-center justify-between">
-                <span className="text-sm font-bold text-snow">Total a pagar</span>
-                <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+              {/* Total + cobro */}
+              <div className="px-5 py-4 border-t border-line shrink-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-snow">Total a pagar</span>
+                  <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                </div>
+                {visit.paid_at ? (
+                  <div className="flex items-center justify-center gap-2 rounded-xl bg-mint/10 border border-mint/20 py-2.5 text-sm font-semibold text-mint">
+                    <Check size={15} /> Cobrado
+                    {visit.paid_amount != null && <span className="text-mint/80">· {visit.paid_amount.toFixed(2)}€</span>}
+                    {visit.payment_method && <span className="text-mint/60 capitalize">· {visit.payment_method}</span>}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handlePayVisit(totalVisitId, grandTotal, 'efectivo')}
+                      disabled={payingVisit === totalVisitId}
+                      className="flex items-center justify-center gap-1.5 rounded-xl bg-lime py-3 text-sm font-semibold text-ink hover:bg-lime-deep transition-colors disabled:opacity-50"
+                    >
+                      <Euro size={15} /> Efectivo
+                    </button>
+                    <button
+                      onClick={() => handlePayVisit(totalVisitId, grandTotal, 'tarjeta')}
+                      disabled={payingVisit === totalVisitId}
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime/40 bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
+                    >
+                      <CreditCard size={15} /> Tarjeta
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -3240,6 +3276,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       Hay {check.items.length} consumo{check.items.length !== 1 ? 's' : ''} abierto{check.items.length !== 1 ? 's' : ''} por <span className="font-bold text-lime">{check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€</span> — se cerrarán al salir.
                     </p>
                   </div>
+                )}
+                {!visit.paid_at && (
+                  <button
+                    onClick={() => { setConfirmCheckout(null); setTotalVisitId(visit.id) }}
+                    className="flex w-full items-center justify-between gap-2 rounded-xl bg-amber/10 border border-amber/30 px-3 py-2.5 hover:bg-amber/15 transition-colors"
+                  >
+                    <span className="flex items-center gap-2 text-xs text-amber">
+                      <Euro size={13} className="shrink-0" /> Aún sin cobrar — pasar a cobro
+                    </span>
+                    <ChevronRight size={14} className="text-amber shrink-0" />
+                  </button>
                 )}
                 <div className="flex gap-2 pt-1">
                   <button
