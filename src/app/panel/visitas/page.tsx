@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
+import { memberMatchesQuery } from '@/lib/searchMembers'
 import { Search, History } from 'lucide-react'
 
 const FALLBACK_HOURLY_RATE = 5
@@ -89,13 +90,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
   }
 
   const filteredVisits = query.trim().length > 0
-    ? visits.filter(v => {
-        const q = query.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        const name = (v.members?.name ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        const qDigits = q.replace(/\D/g, '')
-        const phone = (v.members?.phone ?? '').replace(/\D/g, '')
-        return name.includes(q) || (qDigits.length > 0 && phone.includes(qDigits))
-      })
+    ? visits.filter(v => memberMatchesQuery(query, v.members ?? {}))
     : visits
 
   return (

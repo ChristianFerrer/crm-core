@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { memberMatchesQuery, normalizeSearch } from '@/lib/searchMembers'
 import { Search, Plus, User, Users, ChevronRight, LogIn } from 'lucide-react'
 import Link from 'next/link'
 
@@ -77,15 +78,10 @@ export default function MiembrosPage() {
     })
   }, [])
 
-  const q = search.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  const qDigits = q.replace(/\D/g, '')
+  const q = normalizeSearch(search.trim())
 
   const filteredMembers = (q
-    ? members.filter(m => {
-        const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        return mName.includes(q) ||
-          (qDigits.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qDigits))
-      })
+    ? members.filter(m => memberMatchesQuery(search, m))
     : members
   ).filter(m => {
     if (filter === 'sin_bono') return !m.memberships?.[0]
@@ -99,8 +95,8 @@ export default function MiembrosPage() {
 
   const filteredFamilies = q
     ? families.filter(f =>
-        f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes(q) ||
-        f.members?.some(m => m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes(q))
+        normalizeSearch(f.name).includes(q) ||
+        f.members?.some(m => normalizeSearch(m.name).includes(q))
       )
     : families
 

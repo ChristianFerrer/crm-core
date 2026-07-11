@@ -13,6 +13,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
+import { memberMatchesQuery } from '@/lib/searchMembers'
 import { DatePickerModal } from '@/components/DatePickerModal'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -3965,12 +3966,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* ── Flujo nueva reserva ── */}
       {bookingModal === 'pick' && (() => {
         const filtered = bookingQuery.trim().length > 0
-          ? checkinMembers.filter(m => {
-              const q = bookingQuery.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-              const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-              const qd = q.replace(/\D/g, '')
-              return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
-            })
+          ? checkinMembers.filter(m => memberMatchesQuery(bookingQuery, m))
           : []
         const closeAll = () => { setBookingModal(null); setBookingQuery(''); setBookingMember(null); setBookingType(null); setBookingPreselectService(null) }
         return (
@@ -4010,12 +4006,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Modal 1: búsqueda de miembro */}
       {checkinModal === 'search' && (() => {
         const filtered = checkinQuery.trim().length > 0
-          ? checkinMembers.filter(m => {
-              const q = checkinQuery.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-              const mName = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-              const qd = q.replace(/\D/g, '')
-              return mName.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
-            })
+          ? checkinMembers.filter(m => memberMatchesQuery(checkinQuery, m))
           : []
         const closeAll = () => { setCheckinModal(null); setCheckinQuery(''); setCheckinSelectedMember(null) }
         return (

@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calenda
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
+import { memberMatchesQuery } from '@/lib/searchMembers'
 import { BookingSearchAndTypeModal, BookingFormModal, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
@@ -152,12 +153,7 @@ export default function CalendarioPage() {
     children: (m.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })),
   }))
   const flowFiltered = flowQuery.trim().length > 0
-    ? flowMembers.filter(m => {
-        const q = flowQuery.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        const n = m.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        const qd = q.replace(/\D/g, '')
-        return n.includes(q) || (qd.length > 0 && (m.phone ?? '').replace(/\D/g, '').includes(qd))
-      })
+    ? flowMembers.filter(m => memberMatchesQuery(flowQuery, m))
     : []
 
   function closeFlow() { setFlowStep(null); setFlowMember(null); setFlowQuery(''); setFlowEditId(null); setFlowInitial(null); setFlowPreselectService(null) }
