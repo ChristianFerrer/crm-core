@@ -2445,12 +2445,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <span className="text-line2 shrink-0">·</span>
                             <span className={`text-[10px] font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
                           </button>
-                          <button
-                            onClick={() => setConfirmCheckout(visit.id)}
-                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose text-ink hover:brightness-110 active:scale-[0.98] transition-all"
-                          >
-                            <LogOut size={14} strokeWidth={2.2} />
-                          </button>
+                          {isToday && (
+                            <button
+                              onClick={() => setConfirmCheckout(visit.id)}
+                              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose text-ink hover:brightness-110 active:scale-[0.98] transition-all"
+                            >
+                              <LogOut size={14} strokeWidth={2.2} />
+                            </button>
+                          )}
                         </div>
 
                         {/* Línea 2: stats inline */}
@@ -2649,12 +2651,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </td>
                           {/* Salida */}
                           <td className="pl-3 pr-4 py-3 align-top">
-                            <button
-                              onClick={() => setConfirmCheckout(visit.id)}
-                              className="flex items-center justify-center text-ink bg-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
-                            >
-                              <LogOut size={12} />
-                            </button>
+                            {isToday ? (
+                              <button
+                                onClick={() => setConfirmCheckout(visit.id)}
+                                className="flex items-center justify-center text-ink bg-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
+                              >
+                                <LogOut size={12} />
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-mist">—</span>
+                            )}
                           </td>
                         </tr>
                       </Fragment>
@@ -3662,11 +3668,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                 </button>
 
-                <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose text-ink font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
-                  <LogOut size={16} strokeWidth={2.2} />
-                  Registrar salida
-                </button>
+                {isToday && (
+                  <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose text-ink font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
+                    <LogOut size={16} strokeWidth={2.2} />
+                    Registrar salida
+                  </button>
+                )}
               </div>
             </div>
           </div>

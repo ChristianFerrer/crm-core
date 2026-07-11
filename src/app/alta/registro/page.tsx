@@ -20,6 +20,7 @@ export default function RegistroPage() {
   const [email, setEmail] = useState('')
   const [selectedType, setSelectedType] = useState('')
   const [children, setChildren] = useState<Child[]>([])
+  const [consentAccepted, setConsentAccepted] = useState(false)
 
   // Result
   const [qrCode, setQrCode] = useState('')
@@ -32,7 +33,7 @@ export default function RegistroPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !phone.trim()) return
+    if (!name.trim() || !phone.trim() || !consentAccepted) return
     setSaving(true)
     setError(null)
 
@@ -56,6 +57,8 @@ export default function RegistroPage() {
           family_id: family.id,
           children: cleanChildren,
           children_count: cleanChildren.length,
+          consent_accepted_at: new Date().toISOString(),
+          consent_version: 'v1.0',
         })
         .select('id, qr_code')
         .single()
@@ -247,20 +250,36 @@ export default function RegistroPage() {
             </div>
           </div>
 
+          {/* Consentimiento RGPD (obligatorio) */}
+          <label className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consentAccepted}
+              onChange={e => setConsentAccepted(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-lime"
+            />
+            <span className="text-xs text-fog leading-relaxed">
+              Doy mi consentimiento para el tratamiento de mis datos y los de mis hijos conforme a la{' '}
+              <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="text-lime underline">política de privacidad</a>. *
+            </span>
+          </label>
+
           {error && <p className="text-sm text-rose text-center">{error}</p>}
 
           <button
             type="submit"
-            disabled={saving || !name.trim() || !phone.trim()}
+            disabled={saving || !name.trim() || !phone.trim() || !consentAccepted}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-4 font-semibold text-ink text-sm disabled:opacity-50 hover:bg-lime-deep transition-colors active:scale-[0.99]"
             style={{ boxShadow: '0 10px 40px -12px rgba(198,242,78,0.4)' }}
           >
-            {saving ? 'Registrando...' : type ? `Unirme — ${type.price}€` : 'Registrarme gratis'}
+            {saving ? 'Registrando...' : 'Completar registro'}
           </button>
 
-          <p className="text-[11px] text-mist text-center">
-            Demo · no se realiza ningún cobro real
-          </p>
+          {type && (
+            <p className="text-[11px] text-mist text-center">
+              El bono <span className="text-fog font-medium">{type.name}</span> ({type.price}€) se abona en recepción.
+            </p>
+          )}
         </form>
       </div>
     </div>
