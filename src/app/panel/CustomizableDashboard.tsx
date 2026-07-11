@@ -6,6 +6,7 @@ import 'react-grid-layout/css/styles.css'
 import { GripVertical, X, Plus, Settings2, Check } from 'lucide-react'
 import { StatFlipCards } from './StatFlipCards'
 import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart, VisitsPerMonthChart } from './PanelCharts'
+import { getStoredTenant } from '@/lib/tenant'
 
 const ResponsiveGrid = WidthProvider(Responsive)
 
@@ -44,8 +45,12 @@ const DEFAULT_LAYOUT: LayoutItem[] = [
   { i: 'peak',       x: 8, y: 11, w: 4,  h: 8, minH: 6, minW: 3 },
 ]
 
-const LS_LAYOUT = 'wm_panel_layout_v1'
-const LS_HIDDEN = 'wm_panel_hidden_v1'
+// Claves namespaced por tenant (evita que en un equipo compartido un usuario
+// vea el layout de otro establecimiento).
+function lsKeys() {
+  const t = getStoredTenant()?.id ?? 'anon'
+  return { layout: `wm_panel_layout_v1_${t}`, hidden: `wm_panel_hidden_v1_${t}` }
+}
 
 function stackLayout(visible: PanelId[], cols: number): LayoutItem[] {
   let y = 0
@@ -66,9 +71,10 @@ export function CustomizableDashboard({ data }: { data: DashboardData }) {
 
   useEffect(() => {
     try {
-      const rawL = localStorage.getItem(LS_LAYOUT)
+      const { layout: kL, hidden: kH } = lsKeys()
+      const rawL = localStorage.getItem(kL)
       if (rawL) setLayout(JSON.parse(rawL))
-      const rawH = localStorage.getItem(LS_HIDDEN)
+      const rawH = localStorage.getItem(kH)
       if (rawH) setHidden(JSON.parse(rawH))
     } catch {}
     setMounted(true)
@@ -76,11 +82,11 @@ export function CustomizableDashboard({ data }: { data: DashboardData }) {
 
   function persistLayout(l: LayoutItem[]) {
     setLayout(l)
-    try { localStorage.setItem(LS_LAYOUT, JSON.stringify(l)) } catch {}
+    try { localStorage.setItem(lsKeys().layout, JSON.stringify(l)) } catch {}
   }
   function persistHidden(h: PanelId[]) {
     setHidden(h)
-    try { localStorage.setItem(LS_HIDDEN, JSON.stringify(h)) } catch {}
+    try { localStorage.setItem(lsKeys().hidden, JSON.stringify(h)) } catch {}
   }
 
   function removePanel(id: PanelId) {
@@ -133,8 +139,8 @@ export function CustomizableDashboard({ data }: { data: DashboardData }) {
 
   return (
     <div>
-      {/* Barra de control del layout */}
-      <div className="flex items-center gap-2 mb-3">
+      {/* Barra de control del layout — solo en pantallas donde la edición persiste */}
+      <div className="hidden sm:flex items-center gap-2 mb-3">
         <button
           onClick={() => { setEditing(e => !e); setAddOpen(false) }}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
