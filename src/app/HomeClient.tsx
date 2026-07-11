@@ -15,6 +15,7 @@ import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
+import { resolveRates } from '@/lib/pricing'
 import { DatePickerModal } from '@/components/DatePickerModal'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1874,18 +1875,11 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   useEffect(() => {
     supabase.from('products').select('id, name, category, price, emoji').eq('active', true).order('category').order('name')
       .then(({ data }) => { if (data) setProducts(data as Product[]) })
-    supabase.from('services').select('name, category, price, price_unit, tipo, flujo').eq('active', true)
+    supabase.from('services').select('name, price, price_unit, tipo, flujo').eq('active', true)
       .then(({ data }) => {
         if (!data) return
-        const rows = data as any[]
-        // Tarifa de entrada libre por TIPO (no por el nombre de la categoría, que es renombrable)
-        const entradas = rows.filter(r => r.tipo === 'entrada')
-        const adult = entradas.find(r => /adult/i.test(r.name)) ?? entradas.find(r => r.price_unit !== 'hora')
-        const child = entradas.find(r => /ni[ñn]/i.test(r.name)) ?? entradas.find(r => r.price_unit === 'hora')
-        const cust  = rows.find(r => r.flujo === 'custodia' && r.price_unit === 'hora')
-        if (adult) setRateAdult(Number(adult.price))
-        if (child) setRateChild(Number(child.price))
-        if (cust)  setRateCustodia(Number(cust.price))
+        const r = resolveRates(data)
+        setRateAdult(r.adult); setRateChild(r.child); setRateCustodia(r.custodia)
       })
     supabase.from('services')
       .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')

@@ -4,17 +4,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { memberMatchesQuery } from '@/lib/searchMembers'
+import { resolveRates, calcHourlyCost, FALLBACK_RATE, type Rates } from '@/lib/pricing'
 import { Search, History } from 'lucide-react'
-
-const FALLBACK_HOURLY_RATE = 5
 
 type VisitType = 'entrada' | 'custodia'
 
-type ServiceRates = {
-  adult: number       // entrada adulto €/hora
-  child: number       // entrada niño €/hora
-  custodia: number    // custodia €/hora por niño
-}
+type ServiceRates = Rates
 
 type HistoryVisit = {
   id: string
@@ -43,15 +38,7 @@ function calcDurationMin(from: string, to?: string | null) {
   return Math.max(0, Math.floor((end - new Date(from).getTime()) / 60000))
 }
 
-function calcCost(minutes: number, numChildren: number, visitType: VisitType, rates: ServiceRates) {
-  const fractions = Math.ceil(minutes / 60) // por hora o fracción
-  if (visitType === 'custodia') {
-    // Custodia: tarifa/hora × niños (el adulto acompañante no se cobra aparte)
-    return fractions * rates.custodia * Math.max(1, numChildren)
-  }
-  // Entrada: adulto + cada niño, por hora o fracción
-  return fractions * (rates.adult + numChildren * rates.child)
-}
+const calcCost = calcHourlyCost
 
 // Format a Date as YYYY-MM-DD in local time
 function toLocalDate(d: Date) {
@@ -183,26 +170,15 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function VisitasPage() {
-  const [rates, setRates] = useState<ServiceRates>({ adult: FALLBACK_HOURLY_RATE, child: FALLBACK_HOURLY_RATE, custodia: FALLBACK_HOURLY_RATE })
+  const [rates, setRates] = useState<ServiceRates>({ adult: FALLBACK_RATE, child: FALLBACK_RATE, custodia: FALLBACK_RATE })
 
   useEffect(() => {
     // Load service rates
     supabase
       .from('services')
-      .select('name, category, price, price_unit')
-      .in('category', ['entrada', 'custodia'])
+      .select('name, price, price_unit, tipo, flujo')
       .eq('active', true)
-      .then(({ data }) => {
-        const rows = data ?? []
-        const adult = rows.find(s => s.category === 'entrada' && /adulto/i.test(s.name))
-        const child = rows.find(s => s.category === 'entrada' && /ni[ñn]/i.test(s.name))
-        const custodiaHour = rows.find(s => s.category === 'custodia' && s.price_unit === 'hora')
-        setRates({
-          adult: adult?.price ?? FALLBACK_HOURLY_RATE,
-          child: child?.price ?? FALLBACK_HOURLY_RATE,
-          custodia: custodiaHour?.price ?? FALLBACK_HOURLY_RATE,
-        })
-      })
+      .then(({ data }) => setRates(resolveRates(data)))
   }, [])
 
   return (

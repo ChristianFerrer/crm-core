@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
+import { resolveRates } from '@/lib/pricing'
 import { BookingSearchAndTypeModal, BookingFormModal, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
@@ -118,16 +119,13 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     supabase.from('services')
-      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')
+      .select('id, name, description, category, price, price_unit, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')
       .eq('active', true).order('sort_order')
       .then(({ data }) => {
         if (!data) return
         setBookingServices(data as BookingService[])
-        const entradas = (data as any[]).filter(r => r.tipo === 'entrada')
-        const a = entradas.find(r => /adult/i.test(r.name)) ?? entradas.find(r => r.price_unit !== 'hora')
-        const c = entradas.find(r => /ni[ñn]/i.test(r.name)) ?? entradas.find(r => r.price_unit === 'hora')
-        if (a) setRateAdult(Number(a.price))
-        if (c) setRateChild(Number(c.price))
+        const r = resolveRates(data as any[])
+        setRateAdult(r.adult); setRateChild(r.child)
       })
     try {
       const raw = localStorage.getItem('wm_service_categories')
