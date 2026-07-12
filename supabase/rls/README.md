@@ -1,9 +1,27 @@
-# RLS multi-tenant — estado y guía de activación
+# RLS multi-tenant — estado y guía
 
 Objetivo: aislar los datos de cada ludoteca (tenant) para poder tener muchos
 clientes en el mismo proyecto Supabase sin que unos vean los datos de otros.
 
-## Ya aplicado en producción (no-destructivo, RLS AÚN APAGADO)
+## ✅ ESTADO: RLS ACTIVO EN PRODUCCIÓN
+Activado y verificado a nivel BD:
+- Todas las tablas con RLS on; el aviso crítico "Row Level Security is disabled" desapareció.
+- El tenant real ve todos sus datos (18 miembros, 46 visitas, 30 reservas, 13 servicios, 19 productos).
+- `anon` (sin sesión) ve **0** en todas las tablas.
+- Aislamiento probado: un tenant no ve a otro (`isolation_test.sql`).
+- Se backfilleó `bookings.tenant_id` (21 filas antiguas tenían NULL) y se puso NOT NULL + DEFAULT.
+- Helpers internos (`auth_tenant_id`, `is_super_admin`) sin acceso `anon`.
+
+**Rollback** (si hiciera falta): `DISABLE_RLS_rollback.sql` (revierte en segundos).
+
+**Pendiente de verificar por el usuario** (no accesible desde el sandbox): abrir la
+app, **hacer login limpio** (la sesión pasó a cookies) y comprobar que todas las
+pantallas cargan. Si alguna sale en blanco → avisar para rollback inmediato.
+
+Nota de config Auth recomendada (no crítica): activar "Leaked Password Protection"
+en Supabase Auth.
+
+## Infraestructura aplicada
 - **Puente auth→tenant**: tablas `tenant_users`, `app_super_admins`; funciones
   `auth_tenant_id()` e `is_super_admin()`.
 - **`tenant_id`** añadido y backfilleado en `members, families, memberships,
