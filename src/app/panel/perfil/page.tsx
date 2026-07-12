@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag } from 'lucide-react'
+import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag, LogOut } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
-import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
+import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 
 type TenantProfile = {
   id: string
@@ -45,6 +46,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Building2; label: 
 const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
 export default function PerfilPage() {
+  const router = useRouter()
   const [profile, setProfile] = useState<TenantProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -125,6 +127,13 @@ export default function PerfilPage() {
       capacity: profile.capacity?.toString() ?? '',
     })
     setEditing(false)
+  }
+
+  async function handleLogout() {
+    localStorage.removeItem('viewingAsTenant')
+    clearStoredTenant()
+    await supabase.auth.signOut()
+    router.push('/login')
   }
 
   return (
@@ -221,6 +230,14 @@ export default function PerfilPage() {
             <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1">Acceso</p>
             <InfoRow icon={Mail} label="Email de administrador" value={profile.admin_email} />
           </div>
+
+          {/* Cerrar sesión */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-fog hover:text-rose hover:border-rose/40 transition-colors"
+          >
+            <LogOut size={15} /> Cerrar sesión
+          </button>
 
         </div>
       )}

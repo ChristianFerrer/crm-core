@@ -64,7 +64,7 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {viewingAs && (
-        <div className="fixed top-14 lg:top-0 left-0 right-0 z-50 flex items-center justify-between gap-3 bg-amber/10 border-b border-amber/30 px-4 py-2 lg:pl-56">
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between gap-3 bg-amber/10 border-b border-amber/30 px-4 py-2 lg:pl-56">
           <div className="flex items-center gap-2">
             <Eye size={13} className="text-amber shrink-0" />
             <span className="text-xs font-semibold text-amber">
@@ -80,7 +80,7 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <AppShell>
-        <main className={`pb-20 lg:pb-0 px-4 md:px-6 lg:px-8 lg:pt-8 ${viewingAs ? 'pt-24 lg:pt-4' : 'pt-16 lg:pt-4'}`}>
+        <main className={`pb-20 lg:pb-0 px-4 md:px-6 lg:px-8 lg:pt-8 ${viewingAs ? 'pt-12 lg:pt-4' : 'pt-6 lg:pt-4'}`}>
           {children}
         </main>
       </AppShell>
