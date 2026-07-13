@@ -2503,7 +2503,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         ) : (
           <>
             {/* ── MOBILE: expandable cards (< md) ──────────────────────── */}
-            <div className="md:hidden px-3 py-3 space-y-2.5">
+            <div className="xl:hidden px-3 py-3 space-y-2.5">
               {filteredVisits.map(visit => {
                 const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
                 const isLong = elapsedMins > 180
@@ -2562,7 +2562,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             </div>
 
             {/* ── DESKTOP: table (md+) ─────────────────────────────────── */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden xl:block overflow-x-auto">
               <table className="w-full min-w-[820px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-line">

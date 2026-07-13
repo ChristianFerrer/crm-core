@@ -216,7 +216,7 @@ export default function TiendaPage() {
       ) : (
         <>
         {/* ── MÓVIL: tarjetas (< md) ── */}
-        <div className="md:hidden space-y-2.5">
+        <div className="lg:hidden space-y-2.5">
           {products.map((p, idx) => (
             <div key={p.id} className={`rounded-2xl border border-line bg-surface p-4 ${!p.active ? 'opacity-50' : ''}`}>
               <div className="flex items-start justify-between gap-3">
@@ -264,7 +264,7 @@ export default function TiendaPage() {
         </div>
 
         {/* ── ESCRITORIO: tabla (md+) ── */}
-        <div className="hidden md:block rounded-2xl border border-line bg-surface overflow-hidden">
+        <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
