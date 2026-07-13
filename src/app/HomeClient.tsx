@@ -2213,7 +2213,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       }
     }
     const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
-    const hours = elapsedMins / 60
+    const hours = Math.max(1, Math.ceil(elapsedMins / 60)) // por hora o fracción (mín. 1h)
     let titular = 0, ninos = 0
     if (visit.visit_type === 'custodia') {
       ninos = visit.children_count * rateCustodia * hours
@@ -3079,7 +3079,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const imp = calcImporte(visit)
         const mt = visit.memberships?.membership_types
         const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
-        const hours = elapsedMins / 60
+        const hours = Math.max(1, Math.ceil(elapsedMins / 60)) // por hora o fracción (mín. 1h)
         const hourRate = visit.visit_type === 'custodia' ? rateCustodia : rateAdult
         const childRate = visit.visit_type === 'custodia' ? rateCustodia : rateChild
         const fmtH = (mins: number) => {
@@ -3548,7 +3548,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const visit = activeVisits.find(v => v.id === importeVisitId)
         if (!visit) return null
         const elapsedMins = (Date.now() - new Date(visit.checked_in_at).getTime()) / 60000
-        const hours = elapsedMins / 60
+        const hours = Math.max(1, Math.ceil(elapsedMins / 60)) // por hora o fracción (mín. 1h)
         const imp = calcImporte(visit)
         const mt = visit.memberships?.membership_types
         const fmtH = (mins: number) => {
