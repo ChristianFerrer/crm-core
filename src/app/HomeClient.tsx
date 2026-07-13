@@ -2545,15 +2545,28 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <table className="w-full min-w-[820px] text-left border-collapse">
                 <thead>
                   <tr className="border-b border-line">
-                    {(['Titular', 'Acomp.', 'Total', 'Tipo', 'Bono', 'Sesiones', 'Entrada', 'Tiempo', 'Importe', 'Consumos', 'Total a pagar', 'Salida'] as const).map(col => {
+                    {([
+                      { key: 'Titular', label: 'Titular' },
+                      { key: 'Acomp.', label: 'Acompañantes' },
+                      { key: 'Total', label: 'Personas en sala' },
+                      { key: 'Tipo', label: 'Tipo de visita' },
+                      { key: 'Bono', label: 'Bono' },
+                      { key: 'Sesiones', label: 'Sesiones restantes' },
+                      { key: 'Entrada', label: 'Hora de entrada' },
+                      { key: 'Tiempo', label: 'Tiempo en sala' },
+                      { key: 'Importe', label: 'Importe por tiempo' },
+                      { key: 'Consumos', label: 'Consumos' },
+                      { key: 'Total a pagar', label: 'Total a pagar' },
+                      { key: 'Salida', label: 'Salida' },
+                    ] as const).map(col => {
                       const isFiltered =
-                        (col === 'Tipo' && filterTipo !== 'all') ||
-                        (col === 'Bono' && filterBono !== 'all') ||
-                        (col === 'Sesiones' && filterSesiones !== 'all')
+                        (col.key === 'Tipo' && filterTipo !== 'all') ||
+                        (col.key === 'Bono' && filterBono !== 'all') ||
+                        (col.key === 'Sesiones' && filterSesiones !== 'all')
                       return (
-                        <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
+                        <th key={col.key} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                           <span className={`flex items-center gap-1 ${isFiltered ? 'text-iris' : 'text-mist'}`}>
-                            {col}
+                            {col.label}
                             {isFiltered && <span className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />}
                           </span>
                         </th>
