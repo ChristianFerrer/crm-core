@@ -5,10 +5,11 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 type Size = 'sm' | 'md'
 
+// Estilo unificado: borde sólido, fondo transparente, texto del color del borde.
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-lime text-ink hover:bg-lime/90',
-  secondary: 'bg-surface2 text-fog border border-line hover:text-snow',
-  danger: 'bg-rose/20 text-rose border border-rose/30 hover:bg-rose/30',
+  primary: 'border border-lime bg-transparent text-lime hover:bg-lime/10',
+  secondary: 'border border-line bg-transparent text-fog hover:text-snow hover:bg-surface2',
+  danger: 'border border-rose bg-transparent text-rose hover:bg-rose/10',
   ghost: 'text-fog hover:text-snow',
 }
 const SIZES: Record<Size, string> = {

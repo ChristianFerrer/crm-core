@@ -559,7 +559,7 @@ function CheckinConfirmModal({
 
               {/* Botón registrar — #4 se cierra solo tras registro */}
               <button onClick={handleCheckIn} disabled={registering || !custodiaValid}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-transparent text-lime font-semibold text-sm hover:bg-lime/10 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <LogIn size={17} strokeWidth={2.2} />
                 {registering ? 'Registrando...' : 'Registrar entrada'}
@@ -801,7 +801,7 @@ function CheckinNewMemberModal({
           {error && <p className="text-sm text-rose text-center">{error}</p>}
 
           <button type="submit" disabled={saving || !firstName.trim() || !consentAccepted}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-3.5 font-semibold text-lime transition hover:bg-lime/10 active:scale-[0.99] disabled:opacity-60"
             style={{ boxShadow: 'var(--shadow-lime)' }}>
             <Save size={17} strokeWidth={2.2} />
             {saving ? 'Guardando...' : 'Guardar y registrar entrada'}
@@ -1487,7 +1487,7 @@ export function BookingFormModal({
               )}
 
               <button onClick={() => handleSave()} disabled={!isValid || saving || (!!startTime && !!endTime && endTime <= startTime)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-transparent text-lime font-semibold text-sm hover:bg-lime/10 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <CalendarClock size={17} strokeWidth={2.2} />
                 {saving ? 'Guardando...' : editId ? 'Guardar cambios' : 'Guardar reserva'}
@@ -2398,7 +2398,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             {isToday && (
               <button
                 onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
-                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-lime rounded-lg px-2.5 py-1.5 hover:brightness-105 active:scale-95 transition-all"
+                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-lime border border-lime bg-transparent rounded-lg px-2.5 py-1.5 hover:bg-lime/10 active:scale-95 transition-all"
               >
                 <LogIn size={12} className="shrink-0" /> Registrar entrada
               </button>
@@ -2533,7 +2533,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <button
                               onClick={() => setConfirmCheckout(visit.id)}
                               aria-label="Registrar salida"
-                              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg bg-rose text-ink hover:brightness-110 active:scale-[0.98] transition-all"
+                              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-rose bg-transparent text-rose hover:brightness-110 active:scale-[0.98] transition-all"
                             >
                               <LogOut size={14} strokeWidth={2.2} />
                             </button>
@@ -2761,7 +2761,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               <button
                                 onClick={() => setConfirmCheckout(visit.id)}
                                 aria-label="Registrar salida"
-                                className="flex items-center justify-center text-ink bg-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
+                                className="flex items-center justify-center text-rose bg-transparent border border-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
                               >
                                 <LogOut size={12} />
                               </button>
@@ -2789,7 +2789,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
           <button
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
-            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-ink bg-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-transparent border border-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
           >
             <CalendarPlus size={13} /> Nueva reserva
           </button>
@@ -2850,7 +2850,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       <button
                         onClick={e => { e.stopPropagation(); handleExecuteBooking(b) }}
                         disabled={executingBooking === b.id}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-ink bg-lime rounded-lg px-2 py-1 shrink-0 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
+                        className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime bg-transparent rounded-lg px-2 py-1 shrink-0 hover:bg-lime/10 active:scale-95 transition-all disabled:opacity-50"
                       >
                         <Play size={9} fill="currentColor" />
                         {executingBooking === b.id ? '...' : 'Ejecutar'}
@@ -3031,7 +3031,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </div>
                       <button
                         onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
-                        className="flex items-center gap-1 text-[10px] font-medium text-ink bg-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
+                        className="flex items-center gap-1 text-[10px] font-medium text-rose bg-transparent border border-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
                       >
                         <LogOut size={10} /> Salida
                       </button>
@@ -3376,7 +3376,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <button
                     onClick={() => handleCheckout(visit.id)}
                     disabled={checkingOut === visit.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-ink bg-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-rose bg-transparent border border-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
                   >
                     <LogOut size={14} />
                     {checkingOut === visit.id ? 'Registrando...' : 'Confirmar salida'}
@@ -3828,7 +3828,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {isToday && (
                   <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-rose text-ink font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 border border-rose bg-transparent text-rose font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
                     <LogOut size={16} strokeWidth={2.2} />
                     Registrar salida
                   </button>
@@ -4027,7 +4027,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <button
                     onClick={() => { handleExecuteBooking(b); setSelectedBooking(null) }}
                     disabled={executingBooking === b.id}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 bg-lime text-ink font-semibold text-sm hover:brightness-105 transition active:scale-[0.99] disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 border border-lime bg-transparent text-lime font-semibold text-sm hover:bg-lime/10 transition active:scale-[0.99] disabled:opacity-60"
                     style={{ boxShadow: 'var(--shadow-lime)' }}
                   >
                     <Play size={15} fill="currentColor" />

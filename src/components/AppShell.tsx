@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={handleAcceptTerms}
             disabled={!termsChecked || termsAccepting}
-            className="w-full rounded-xl bg-lime py-3 text-sm font-semibold text-ink transition hover:bg-lime/90 disabled:opacity-50"
+            className="w-full rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime transition hover:bg-lime/10 disabled:opacity-50"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
             {termsAccepting ? 'Registrando aceptación...' : 'Acepto y continúo'}

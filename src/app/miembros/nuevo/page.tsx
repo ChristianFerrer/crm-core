@@ -305,7 +305,7 @@ export default function NuevoMiembroPage() {
         {error && <p className="text-sm text-rose text-center">{error}</p>}
 
         <button type="submit" disabled={saving || !firstName.trim() || !consentAccepted}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink transition hover:bg-lime-deep active:scale-[0.99] disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-3.5 font-semibold text-lime transition hover:bg-lime/10 active:scale-[0.99] disabled:opacity-60"
           style={{ boxShadow: 'var(--shadow-lime)' }}>
           <Save size={17} strokeWidth={2.2} />
           {saving ? 'Guardando...' : 'Guardar miembro'}

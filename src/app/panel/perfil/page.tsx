@@ -182,7 +182,7 @@ export default function PerfilPage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-1 rounded-lg bg-lime px-3 py-1.5 text-xs font-semibold text-ink hover:bg-lime/90 transition-colors disabled:opacity-60"
+                    className="flex items-center gap-1 rounded-lg border border-lime bg-transparent px-3 py-1.5 text-xs font-semibold text-lime hover:bg-lime/10 transition-colors disabled:opacity-60"
                   >
                     <Check size={11} /> {saving ? 'Guardando...' : 'Guardar'}
                   </button>

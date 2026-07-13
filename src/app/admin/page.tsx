@@ -315,7 +315,7 @@ function TenantModal({
           </div>
 
           <button type="submit" disabled={saving}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-lime py-3.5 font-semibold text-ink text-sm transition hover:bg-lime/90 disabled:opacity-60">
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-3.5 font-semibold text-lime text-sm transition hover:bg-lime/10 disabled:opacity-60">
             {saving ? 'Guardando...' : mode === 'create' ? 'Crear establecimiento' : 'Guardar cambios'}
           </button>
         </form>
@@ -363,7 +363,7 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
           <p className="text-sm text-fog mt-0.5">{tenants.length} registrados</p>
         </div>
         <button onClick={openCreate}
-          className="flex items-center gap-2 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-lime/90 transition-colors">
+          className="flex items-center gap-2 border border-lime bg-transparent text-lime font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-lime/10 transition-colors">
           <Plus size={15} /> Nuevo
         </button>
       </div>

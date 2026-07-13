@@ -100,7 +100,7 @@ export default function MiembrosPage() {
         {view === 'miembros' && (
           <Link
             href="/miembros/nuevo"
-            className="flex items-center gap-2 bg-lime text-ink font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform shrink-0"
+            className="flex items-center gap-2 border border-lime bg-transparent text-lime font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform shrink-0"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
             <Plus size={16} strokeWidth={2.5} /> Nuevo

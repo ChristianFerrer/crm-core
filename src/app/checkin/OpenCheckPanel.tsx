@@ -276,7 +276,7 @@ export function OpenCheckPanel({
               <span className="text-base font-bold text-lime">{(pickProduct.price * pickQty).toFixed(2)} €</span>
             </div>
 
-            <button onClick={confirmAdd} className="w-full rounded-xl bg-lime py-3 text-sm font-semibold text-ink hover:bg-lime/90 transition-colors flex items-center justify-center gap-2">
+            <button onClick={confirmAdd} className="w-full rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime hover:bg-lime/10 transition-colors flex items-center justify-center gap-2">
               <Plus size={15} /> Añadir a la cuenta
             </button>
           </div>

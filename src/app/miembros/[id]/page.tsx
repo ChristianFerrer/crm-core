@@ -105,7 +105,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </Link>
         <Link
           href={`/?checkin=${id}`}
-          className="flex items-center gap-1.5 rounded-xl bg-lime px-3 py-2 text-xs font-semibold text-ink hover:bg-lime/90 transition-colors shrink-0"
+          className="flex items-center gap-1.5 rounded-xl border border-lime bg-transparent px-3 py-2 text-xs font-semibold text-lime hover:bg-lime/10 transition-colors shrink-0"
           style={{ boxShadow: 'var(--shadow-lime)' }}
         >
           <LogIn size={13} /> Entrada
