@@ -248,7 +248,7 @@ export default function RegistroPage() {
           <button
             type="submit"
             disabled={saving || !name.trim() || !phone.trim() || !consentAccepted}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-4 font-semibold text-lime text-sm disabled:opacity-50 hover:bg-lime/10 transition-colors active:scale-[0.99]"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-4 font-semibold text-lime text-sm disabled:opacity-50 hover:bg-lime/20 transition-colors active:scale-[0.99]"
             style={{ boxShadow: '0 10px 40px -12px rgba(198,242,78,0.4)' }}
           >
             {saving ? 'Registrando...' : 'Completar registro'}

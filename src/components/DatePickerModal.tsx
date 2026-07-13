@@ -60,7 +60,7 @@ export function DatePickerModal({ value, onChange, placeholder = 'Seleccionar fe
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="w-full rounded-xl border border-lime bg-transparent py-3.5 text-sm font-semibold text-lime hover:bg-lime/10 transition-colors active:scale-[0.99]"
+                className="w-full rounded-xl border border-lime bg-lime/10 py-3.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors active:scale-[0.99]"
                 style={{ boxShadow: 'var(--shadow-lime)' }}
               >
                 Confirmar

@@ -18,7 +18,7 @@ export default function LoginPage() {
   const inputClass =
     'w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
   const limeBtn =
-    'w-full flex items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-3.5 font-semibold text-lime text-sm transition hover:bg-lime/10 active:scale-[0.99] disabled:opacity-60'
+    'w-full flex items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-3.5 font-semibold text-lime text-sm transition hover:bg-lime/20 active:scale-[0.99] disabled:opacity-60'
 
   async function handleGoogle() {
     await supabase.auth.signInWithOAuth({

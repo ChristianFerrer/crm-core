@@ -84,7 +84,7 @@ export function AssignMembership({ memberId }: { memberId: string }) {
       <button
         onClick={handleAssign}
         disabled={!selectedType || saving}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-2.5 text-sm font-semibold text-lime disabled:opacity-50 hover:bg-lime/10 transition-colors"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-2.5 text-sm font-semibold text-lime disabled:opacity-50 hover:bg-lime/20 transition-colors"
       >
         {saving ? 'Asignando...' : 'Confirmar bono'}
       </button>

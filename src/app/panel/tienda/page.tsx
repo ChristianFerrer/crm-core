@@ -199,7 +199,7 @@ export default function TiendaPage() {
         </button>
         <button
           onClick={openNew}
-          className="flex items-center gap-1.5 rounded-xl border border-lime bg-transparent px-4 py-2.5 text-sm font-semibold text-lime hover:bg-lime/10 transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-4 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors"
         >
           <Plus size={15} /> Añadir producto
         </button>
@@ -449,7 +449,7 @@ export default function TiendaPage() {
               </div>
             </div>
 
-            <button onClick={handleSave} disabled={saving || !name.trim() || !price} className="w-full rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime hover:bg-lime/10 disabled:opacity-50 transition-colors">
+            <button onClick={handleSave} disabled={saving || !name.trim() || !price} className="w-full rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 disabled:opacity-50 transition-colors">
               {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Añadir producto'}
             </button>
           </div>
@@ -489,7 +489,7 @@ export default function TiendaPage() {
             </div>
 
             <button onClick={handleStockEntry} disabled={savingStock || !(parseInt(stockEntry) > 0)}
-              className="w-full rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime hover:bg-lime/10 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+              className="w-full rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
               <Check size={15} /> {savingStock ? 'Guardando...' : `Añadir ${stockEntry} unidades`}
             </button>
           </div>

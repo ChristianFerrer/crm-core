@@ -42,7 +42,7 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
     <>
       <button
         onClick={() => setStep('confirm')}
-        className="flex items-center gap-1.5 rounded-xl border border-rose/30 px-3 py-2 text-xs font-semibold text-rose hover:bg-rose/10 transition-colors shrink-0"
+        className="flex items-center gap-1.5 rounded-xl border border-rose/30 px-3 py-2 text-xs font-semibold text-rose hover:bg-rose/20 transition-colors shrink-0"
       >
         <Trash2 size={13} /> Eliminar
       </button>

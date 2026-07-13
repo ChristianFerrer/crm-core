@@ -315,7 +315,7 @@ function TenantModal({
           </div>
 
           <button type="submit" disabled={saving}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-3.5 font-semibold text-lime text-sm transition hover:bg-lime/10 disabled:opacity-60">
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-3.5 font-semibold text-lime text-sm transition hover:bg-lime/20 disabled:opacity-60">
             {saving ? 'Guardando...' : mode === 'create' ? 'Crear establecimiento' : 'Guardar cambios'}
           </button>
         </form>
@@ -363,7 +363,7 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
           <p className="text-sm text-fog mt-0.5">{tenants.length} registrados</p>
         </div>
         <button onClick={openCreate}
-          className="flex items-center gap-2 border border-lime bg-transparent text-lime font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-lime/10 transition-colors">
+          className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold rounded-xl px-4 py-2.5 text-sm hover:bg-lime/20 transition-colors">
           <Plus size={15} /> Nuevo
         </button>
       </div>
@@ -425,14 +425,14 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 <Pencil size={12} /> Editar
               </button>
               <button onClick={() => enterAsTenant(t)}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-iris/30 text-iris hover:bg-iris/10 transition-colors">
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-iris/30 text-iris hover:bg-iris/20 transition-colors">
                 <Eye size={12} /> Ver cliente
               </button>
               <button onClick={() => toggleStatus(t)}
                 className={`ml-auto flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
                   t.status === 'active'
-                    ? 'border-rose/30 text-rose hover:bg-rose/10'
-                    : 'border-lime/30 text-lime hover:bg-lime/10'
+                    ? 'border-rose/30 text-rose hover:bg-rose/20'
+                    : 'border-lime/30 text-lime hover:bg-lime/20'
                 }`}>
                 {t.status === 'active' ? 'Suspender' : 'Activar'}
               </button>
@@ -845,7 +845,7 @@ export default function AdminPage() {
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors"
           >
             <LogOut size={14} /> Cerrar sesión
           </button>
@@ -881,7 +881,7 @@ export default function AdminPage() {
             )}
             <button
               onClick={() => { setMobileMenuOpen(false); handleLogout() }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors border border-line"
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors border border-line"
             >
               <LogOut size={14} /> Cerrar sesión
             </button>

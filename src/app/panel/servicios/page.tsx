@@ -431,7 +431,7 @@ export default function ServiciosPage() {
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-1">
                           <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
-                          <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
+                          <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/20 transition-colors"><Trash2 size={13} /></button>
                         </div>
                       </td>
                     </tr>
@@ -461,7 +461,7 @@ export default function ServiciosPage() {
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEditBono(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
-                        <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
+                        <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/20 transition-colors"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -501,7 +501,7 @@ export default function ServiciosPage() {
                       <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors">
                         <Pencil size={13} />
                       </button>
-                      <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors">
+                      <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/20 transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>

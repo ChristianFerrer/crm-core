@@ -162,7 +162,7 @@ function EditPanel({ item, onSave, saving }: {
         />
       </div>
       <button onClick={() => onSave(item, status, notes)} disabled={saving}
-        className="w-full py-2 rounded-xl border border-lime bg-transparent text-lime text-sm font-semibold hover:bg-lime/10 transition-colors disabled:opacity-50"
+        className="w-full py-2 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50"
       >
         {saving ? 'Guardando...' : 'Guardar'}
       </button>

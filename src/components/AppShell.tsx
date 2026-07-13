@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={handleAcceptTerms}
             disabled={!termsChecked || termsAccepting}
-            className="w-full rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime transition hover:bg-lime/10 disabled:opacity-50"
+            className="w-full rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime transition hover:bg-lime/20 disabled:opacity-50"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
             {termsAccepting ? 'Registrando aceptación...' : 'Acepto y continúo'}
@@ -231,7 +231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={handleLogout}
             title={collapsed ? 'Cerrar sesión' : undefined}
-            className={`w-full flex items-center rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors ${collapsed ? 'justify-center py-2' : 'gap-2 px-3 py-2'}`}
+            className={`w-full flex items-center rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors ${collapsed ? 'justify-center py-2' : 'gap-2 px-3 py-2'}`}
           >
             <LogOut size={14} /> {!collapsed && 'Cerrar sesión'}
           </button>

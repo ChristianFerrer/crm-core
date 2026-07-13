@@ -559,7 +559,7 @@ function CheckinConfirmModal({
 
               {/* Botón registrar — #4 se cierra solo tras registro */}
               <button onClick={handleCheckIn} disabled={registering || !custodiaValid}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-transparent text-lime font-semibold text-sm hover:bg-lime/10 transition active:scale-[0.99] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-lime/10 text-lime font-semibold text-sm hover:bg-lime/20 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <LogIn size={17} strokeWidth={2.2} />
                 {registering ? 'Registrando...' : 'Registrar entrada'}
@@ -801,7 +801,7 @@ function CheckinNewMemberModal({
           {error && <p className="text-sm text-rose text-center">{error}</p>}
 
           <button type="submit" disabled={saving || !firstName.trim() || !consentAccepted}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-transparent py-3.5 font-semibold text-lime transition hover:bg-lime/10 active:scale-[0.99] disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-3.5 font-semibold text-lime transition hover:bg-lime/20 active:scale-[0.99] disabled:opacity-60"
             style={{ boxShadow: 'var(--shadow-lime)' }}>
             <Save size={17} strokeWidth={2.2} />
             {saving ? 'Guardando...' : 'Guardar y registrar entrada'}
@@ -1487,7 +1487,7 @@ export function BookingFormModal({
               )}
 
               <button onClick={() => handleSave()} disabled={!isValid || saving || (!!startTime && !!endTime && endTime <= startTime)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-transparent text-lime font-semibold text-sm hover:bg-lime/10 transition active:scale-[0.99] disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-lime/10 text-lime font-semibold text-sm hover:bg-lime/20 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <CalendarClock size={17} strokeWidth={2.2} />
                 {saving ? 'Guardando...' : editId ? 'Guardar cambios' : 'Guardar reserva'}
@@ -1495,7 +1495,7 @@ export function BookingFormModal({
 
               {editId && onCancelBooking && (
                 <button onClick={onCancelBooking}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-rose/30 text-rose font-semibold text-sm hover:bg-rose/10 transition-colors">
+                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-rose/30 text-rose font-semibold text-sm hover:bg-rose/20 transition-colors">
                   <Trash2 size={15} /> Cancelar reserva
                 </button>
               )}
@@ -2247,7 +2247,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     return pricingReady === false && !imp.isPackage && !v.membership_id
   }
   const ConfigTarifasChip = () => (
-    <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber bg-transparent px-1.5 py-0.5 text-[10px] font-semibold text-amber hover:bg-amber/10 transition-colors whitespace-nowrap">
+    <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
       <AlertTriangle size={10} /> Configura tarifas
     </Link>
   )
@@ -2398,7 +2398,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             {isToday && (
               <button
                 onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
-                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-lime border border-lime bg-transparent rounded-lg px-2.5 py-1.5 hover:bg-lime/10 active:scale-95 transition-all"
+                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all"
               >
                 <LogIn size={12} className="shrink-0" /> Registrar entrada
               </button>
@@ -2533,7 +2533,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <button
                               onClick={() => setConfirmCheckout(visit.id)}
                               aria-label="Registrar salida"
-                              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-rose bg-transparent text-rose hover:brightness-110 active:scale-[0.98] transition-all"
+                              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-rose bg-rose/10 text-rose hover:brightness-110 active:scale-[0.98] transition-all"
                             >
                               <LogOut size={14} strokeWidth={2.2} />
                             </button>
@@ -2761,7 +2761,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               <button
                                 onClick={() => setConfirmCheckout(visit.id)}
                                 aria-label="Registrar salida"
-                                className="flex items-center justify-center text-rose bg-transparent border border-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
+                                className="flex items-center justify-center text-rose bg-rose/10 border border-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
                               >
                                 <LogOut size={12} />
                               </button>
@@ -2789,7 +2789,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
           <button
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
-            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-transparent border border-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
           >
             <CalendarPlus size={13} /> Nueva reserva
           </button>
@@ -2850,7 +2850,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       <button
                         onClick={e => { e.stopPropagation(); handleExecuteBooking(b) }}
                         disabled={executingBooking === b.id}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime bg-transparent rounded-lg px-2 py-1 shrink-0 hover:bg-lime/10 active:scale-95 transition-all disabled:opacity-50"
+                        className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                       >
                         <Play size={9} fill="currentColor" />
                         {executingBooking === b.id ? '...' : 'Ejecutar'}
@@ -3031,7 +3031,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </div>
                       <button
                         onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
-                        className="flex items-center gap-1 text-[10px] font-medium text-rose bg-transparent border border-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
+                        className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
                       >
                         <LogOut size={10} /> Salida
                       </button>
@@ -3289,7 +3289,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </div>
                 {pricingMissing(visit, imp) ? (
                   <Link href="/panel/servicios" onClick={() => setTotalVisitId(null)}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-amber bg-transparent py-3 text-sm font-semibold text-amber hover:bg-amber/10 transition-colors">
+                    className="flex items-center justify-center gap-2 rounded-xl border border-amber bg-amber/10 py-3 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
                     <AlertTriangle size={15} /> Configura tus tarifas para cobrar
                   </Link>
                 ) : visit.paid_at ? (
@@ -3303,14 +3303,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <button
                       onClick={() => handlePayVisit(totalVisitId, grandTotal, 'efectivo')}
                       disabled={payingVisit === totalVisitId}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime hover:bg-lime/10 transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
                     >
                       <Euro size={15} /> Efectivo
                     </button>
                     <button
                       onClick={() => handlePayVisit(totalVisitId, grandTotal, 'tarjeta')}
                       disabled={payingVisit === totalVisitId}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime hover:bg-lime/10 transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
                     >
                       <CreditCard size={15} /> Tarjeta
                     </button>
@@ -3376,7 +3376,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <button
                     onClick={() => handleCheckout(visit.id)}
                     disabled={checkingOut === visit.id}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-rose bg-transparent border border-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-rose bg-rose/10 border border-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
                   >
                     <LogOut size={14} />
                     {checkingOut === visit.id ? 'Registrando...' : 'Confirmar salida'}
@@ -3812,12 +3812,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Total + checkout */}
                 {pricingMissing(visit, imp) ? (
                   <Link href="/panel/servicios" onClick={() => setDetailVisitId(null)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber bg-transparent text-sm font-semibold text-amber hover:bg-amber/10 transition-colors">
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber bg-amber/10 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
                     <AlertTriangle size={14} /> Configura tus tarifas para cobrar
                   </Link>
                 ) : (
                   <button onClick={() => { setDetailVisitId(null); setTotalVisitId(detailVisitId) }}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/10 transition-colors">
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/20 transition-colors">
                     <span className="text-sm font-semibold text-fog">Total a pagar</span>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
@@ -3828,7 +3828,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {isToday && (
                   <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 border border-rose bg-transparent text-rose font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 border border-rose bg-rose/10 text-rose font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
                     <LogOut size={16} strokeWidth={2.2} />
                     Registrar salida
                   </button>
@@ -4027,7 +4027,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <button
                     onClick={() => { handleExecuteBooking(b); setSelectedBooking(null) }}
                     disabled={executingBooking === b.id}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 border border-lime bg-transparent text-lime font-semibold text-sm hover:bg-lime/10 transition active:scale-[0.99] disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 border border-lime bg-lime/10 text-lime font-semibold text-sm hover:bg-lime/20 transition active:scale-[0.99] disabled:opacity-60"
                     style={{ boxShadow: 'var(--shadow-lime)' }}
                   >
                     <Play size={15} fill="currentColor" />

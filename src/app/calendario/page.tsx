@@ -254,7 +254,7 @@ export default function CalendarioPage() {
             <p className="text-sm text-mist mt-0.5">Reservas y custodia</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={openNewFlow} className="flex items-center gap-2 border border-lime bg-transparent text-lime font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/10 transition-colors">
+            <button onClick={openNewFlow} className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/20 transition-colors">
               <Plus size={16} /> Nueva reserva
             </button>
           </div>
@@ -360,7 +360,7 @@ export default function CalendarioPage() {
                           type="button"
                           onClick={() => handleExecute(b)}
                           disabled={executingId === b.id}
-                          className="flex items-center gap-1 self-center text-[10px] font-semibold text-lime border border-lime bg-transparent rounded-lg px-2 py-1 mr-4 shrink-0 hover:bg-lime/10 active:scale-95 transition-all disabled:opacity-50"
+                          className="flex items-center gap-1 self-center text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 mr-4 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                         >
                           <LogIn size={11} /> {executingId === b.id ? '...' : 'Ejecutar'}
                         </button>
@@ -431,7 +431,7 @@ export default function CalendarioPage() {
               <button
                 type="submit"
                 disabled={savingMember || !newMemberConsent}
-                className="w-full border border-iris bg-transparent text-iris font-semibold py-2.5 rounded-xl text-sm hover:bg-iris/80 transition-colors disabled:opacity-50"
+                className="w-full border border-iris bg-iris/10 text-iris font-semibold py-2.5 rounded-xl text-sm hover:bg-iris/80 transition-colors disabled:opacity-50"
               >
                 {savingMember ? 'Guardando...' : 'Crear titular'}
               </button>
