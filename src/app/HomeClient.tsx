@@ -1762,6 +1762,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
   const [rateCustodia, setRateCustodia] = useState(8)
+  // ¿El tenant tiene tarifas de entrada/custodia configuradas? Si no, no se
+  // inventa un precio: se pide configurar servicios. null = cargando.
+  const [pricingReady, setPricingReady] = useState<boolean | null>(null)
   const [checkinModal, setCheckinModal] = useState<null | 'search' | 'confirm' | 'new-member'>(null)
   const [checkinSelectedMember, setCheckinSelectedMember] = useState<FullMember | null>(null)
   const [checkinQuery, setCheckinQuery] = useState('')
@@ -1907,9 +1910,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       .then(({ data }) => { if (data) setProducts(data as Product[]) })
     supabase.from('services').select('name, price, price_unit, tipo, flujo').eq('active', true)
       .then(({ data }) => {
-        if (!data) return
-        const r = resolveRates(data)
-        setRateAdult(r.adult); setRateChild(r.child); setRateCustodia(r.custodia)
+        // Configurado = hay al menos un servicio de entrada o de custodia con precio
+        const rows = data ?? []
+        const hasPricing = rows.some(s => s.tipo === 'entrada' || s.flujo === 'custodia')
+        setPricingReady(hasPricing)
+        if (hasPricing) {
+          const r = resolveRates(rows)
+          setRateAdult(r.adult); setRateChild(r.child); setRateCustodia(r.custodia)
+        }
       })
     supabase.from('services')
       .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')
@@ -2233,6 +2241,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     return { titular, ninos, regular, bonoPrecioSesion, ahorro, total, isPackage: false, deposit: 0, toPay: total }
   }
 
+  // ¿Falta configurar tarifas para poder cobrar esta visita?
+  // (visitas por tiempo sin bono ni paquete requieren tarifas de entrada/custodia)
+  function pricingMissing(v: TodayVisit, imp: ReturnType<typeof calcImporte>): boolean {
+    return pricingReady === false && !imp.isPackage && !v.membership_id
+  }
+  const ConfigTarifasChip = () => (
+    <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber/40 bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
+      <AlertTriangle size={10} /> Configura tarifas
+    </Link>
+  )
+
   // Chart data
   const planByBirthday = Array(24).fill(0)
   const planByCustodia = Array(24).fill(0)
@@ -2530,7 +2549,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <span className={`font-semibold ${isLong ? 'text-amber' : 'text-snow'}`}>{fmtElapsed(visit.checked_in_at)}</span>
                             {isLong && <AlertTriangle size={11} className="text-amber" />}
                             <span className="text-line2">·</span>
-                            <span className="font-semibold text-lime">{grandTotal.toFixed(2)}€</span>
+                            {pricingMissing(visit, imp)
+                              ? <span className="font-semibold text-amber">Configura tarifas</span>
+                              : <span className="font-semibold text-lime">{grandTotal.toFixed(2)}€</span>}
                           </div>
                         </button>
                       </div>
@@ -2680,15 +2701,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </td>
                           {/* Importe por tiempo */}
                           <td className="px-3 py-3 align-middle">
-                            <div className="flex items-center gap-1.5 whitespace-nowrap">
-                              <span className="text-xs font-bold text-lime">{imp.total.toFixed(2)}€</span>
-                              <button
-                                onClick={() => setImporteVisitId(visit.id)}
-                                className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
-                              >
-                                <Receipt size={11} />
-                              </button>
-                            </div>
+                            {pricingMissing(visit, imp) ? (
+                              <ConfigTarifasChip />
+                            ) : (
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="text-xs font-bold text-lime">{imp.total.toFixed(2)}€</span>
+                                <button
+                                  onClick={() => setImporteVisitId(visit.id)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-md border border-line text-fog hover:text-lime hover:border-lime/40 transition-colors"
+                                >
+                                  <Receipt size={11} />
+                                </button>
+                              </div>
+                            )}
                           </td>
                           {/* Consumos */}
                           <td className="px-3 py-3 align-middle">
@@ -2712,7 +2737,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </td>
                           {/* Total a pagar */}
                           <td className="px-3 py-3 align-middle">
-                            {(() => {
+                            {pricingMissing(visit, imp) ? (
+                              <ConfigTarifasChip />
+                            ) : (() => {
                               const consumosTotal = (openChecks.get(visit.id)?.items ?? []).reduce((s, i) => s + i.unit_price * i.quantity, 0)
                               const grandTotal = imp.toPay + consumosTotal
                               return (
@@ -3256,9 +3283,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="px-5 py-4 border-t border-line shrink-0 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-snow">Total a pagar</span>
-                  <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                  {pricingMissing(visit, imp)
+                    ? <span className="text-sm font-semibold text-amber">Sin tarifas</span>
+                    : <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                 </div>
-                {visit.paid_at ? (
+                {pricingMissing(visit, imp) ? (
+                  <Link href="/panel/servicios" onClick={() => setTotalVisitId(null)}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-amber/40 bg-amber/10 py-3 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
+                    <AlertTriangle size={15} /> Configura tus tarifas para cobrar
+                  </Link>
+                ) : visit.paid_at ? (
                   <div className="flex items-center justify-center gap-2 rounded-xl bg-mint/10 border border-mint/20 py-2.5 text-sm font-semibold text-mint">
                     <Check size={15} /> Cobrado
                     {visit.paid_amount != null && <span className="text-mint/80">· {visit.paid_amount.toFixed(2)}€</span>}
@@ -3776,14 +3810,21 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </div>
 
                 {/* Total + checkout */}
-                <button onClick={() => { setDetailVisitId(null); setTotalVisitId(detailVisitId) }}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/10 transition-colors">
-                  <span className="text-sm font-semibold text-fog">Total a pagar</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
-                    <Receipt size={13} className="text-lime/60" />
-                  </div>
-                </button>
+                {pricingMissing(visit, imp) ? (
+                  <Link href="/panel/servicios" onClick={() => setDetailVisitId(null)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber/40 bg-amber/10 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
+                    <AlertTriangle size={14} /> Configura tus tarifas para cobrar
+                  </Link>
+                ) : (
+                  <button onClick={() => { setDetailVisitId(null); setTotalVisitId(detailVisitId) }}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/10 transition-colors">
+                    <span className="text-sm font-semibold text-fog">Total a pagar</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
+                      <Receipt size={13} className="text-lime/60" />
+                    </div>
+                  </button>
+                )}
 
                 {isToday && (
                   <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
