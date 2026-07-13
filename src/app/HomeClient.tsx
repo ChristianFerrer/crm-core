@@ -2247,7 +2247,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     return pricingReady === false && !imp.isPackage && !v.membership_id
   }
   const ConfigTarifasChip = () => (
-    <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber/40 bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
+    <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber bg-transparent px-1.5 py-0.5 text-[10px] font-semibold text-amber hover:bg-amber/10 transition-colors whitespace-nowrap">
       <AlertTriangle size={10} /> Configura tarifas
     </Link>
   )
@@ -3289,7 +3289,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </div>
                 {pricingMissing(visit, imp) ? (
                   <Link href="/panel/servicios" onClick={() => setTotalVisitId(null)}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-amber/40 bg-amber/10 py-3 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
+                    className="flex items-center justify-center gap-2 rounded-xl border border-amber bg-transparent py-3 text-sm font-semibold text-amber hover:bg-amber/10 transition-colors">
                     <AlertTriangle size={15} /> Configura tus tarifas para cobrar
                   </Link>
                 ) : visit.paid_at ? (
@@ -3303,14 +3303,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <button
                       onClick={() => handlePayVisit(totalVisitId, grandTotal, 'efectivo')}
                       disabled={payingVisit === totalVisitId}
-                      className="flex items-center justify-center gap-1.5 rounded-xl bg-lime py-3 text-sm font-semibold text-ink hover:bg-lime-deep transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime hover:bg-lime/10 transition-colors disabled:opacity-50"
                     >
                       <Euro size={15} /> Efectivo
                     </button>
                     <button
                       onClick={() => handlePayVisit(totalVisitId, grandTotal, 'tarjeta')}
                       disabled={payingVisit === totalVisitId}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime/40 bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-transparent py-3 text-sm font-semibold text-lime hover:bg-lime/10 transition-colors disabled:opacity-50"
                     >
                       <CreditCard size={15} /> Tarjeta
                     </button>
@@ -3812,7 +3812,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Total + checkout */}
                 {pricingMissing(visit, imp) ? (
                   <Link href="/panel/servicios" onClick={() => setDetailVisitId(null)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber/40 bg-amber/10 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber bg-transparent text-sm font-semibold text-amber hover:bg-amber/10 transition-colors">
                     <AlertTriangle size={14} /> Configura tus tarifas para cobrar
                   </Link>
                 ) : (
