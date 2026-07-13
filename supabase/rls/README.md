@@ -21,6 +21,16 @@ pantallas cargan. Si alguna sale en blanco → avisar para rollback inmediato.
 Nota de config Auth recomendada (no crítica): activar "Leaked Password Protection"
 en Supabase Auth.
 
+## Alta de un cliente nuevo (multi-tenant)
+`auth_tenant_id()` resuelve el tenant por `tenant_users` o, en su defecto, por
+`admin_email`. Flujo para dar de alta un cliente:
+1. En `/admin` (como superadmin) crear el tenant con su `admin_email`.
+2. El cliente entra en `/login` y **se registra con ese mismo email**.
+3. Al entrar, RLS le muestra **solo su tenant** (empieza vacío; configura sus
+   servicios/bonos/miembros). Aislado del resto.
+Para varios usuarios por ludoteca (staff además del owner), añadir filas en
+`tenant_users (user_id → tenant_id)`.
+
 ## Infraestructura aplicada
 - **Puente auth→tenant**: tablas `tenant_users`, `app_super_admins`; funciones
   `auth_tenant_id()` e `is_super_admin()`.
