@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check } from 'lucide-react'
+import { Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
@@ -23,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [tenantName, setTenantName] = useState<string | null>(null)
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [termsChecked, setTermsChecked] = useState(false)
   const [termsAccepting, setTermsAccepting] = useState(false)
@@ -56,6 +57,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem('wm_sidebar_collapsed') === '1') } catch {}
+  }, [])
+
+  function toggleCollapsed() {
+    setCollapsed(c => {
+      const next = !c
+      try { localStorage.setItem('wm_sidebar_collapsed', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
 
   async function handleAcceptTerms() {
     if (!termsChecked || !tenantId) return
@@ -140,23 +153,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="lg:flex lg:min-h-screen">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-56 lg:shrink-0 border-r border-line bg-surface sticky top-0 h-screen">
+      <aside className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-line bg-surface sticky top-0 h-screen transition-[width] duration-200 ${collapsed ? 'lg:w-16' : 'lg:w-56'}`}>
 
-        {/* Brand — always Watermelon */}
-        <div className="px-5 py-5 border-b border-line">
-          <div className="flex items-center gap-3">
+        {/* Brand + collapse toggle */}
+        <div className={`py-5 border-b border-line ${collapsed ? 'px-2' : 'px-5'}`}>
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
             <div className="w-8 h-8 rounded-xl bg-lime flex items-center justify-center shrink-0" style={{ boxShadow: 'var(--shadow-lime)' }}>
               <span className="text-ink font-bold text-sm">W</span>
             </div>
-            <div>
-              <p className="font-display font-semibold text-snow text-sm leading-tight">Watermelon</p>
-              <p className="text-[10px] text-mist">CRM</p>
-            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="font-display font-semibold text-snow text-sm leading-tight">Watermelon</p>
+                <p className="text-[10px] text-mist">CRM</p>
+              </div>
+            )}
+            {!collapsed && (
+              <button onClick={toggleCollapsed} aria-label="Contraer menú"
+                className="text-mist hover:text-snow transition-colors shrink-0">
+                <PanelLeftClose size={16} />
+              </button>
+            )}
           </div>
+          {collapsed && (
+            <button onClick={toggleCollapsed} aria-label="Expandir menú"
+              className="w-full mt-3 flex items-center justify-center text-mist hover:text-snow transition-colors">
+              <PanelLeftOpen size={16} />
+            </button>
+          )}
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className={`flex-1 py-4 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
           {[
             { href: '/',           label: 'Inicio',   icon: Home,        badge: 0 },
             { href: '/miembros',   label: 'Miembros', icon: Users,       badge: 0 },
@@ -168,23 +195,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                title={collapsed ? label : undefined}
+                className={`flex items-center rounded-xl text-sm font-semibold transition-colors relative ${collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'} ${
                   isActive
                     ? 'bg-lime/15 text-lime'
                     : 'text-fog hover:text-snow hover:bg-surface2'
                 }`}
               >
-                <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} />
-                {label}
-                <Badge count={badge} />
+                <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className="shrink-0" />
+                {!collapsed && label}
+                {collapsed
+                  ? (badge > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-lime" />)
+                  : <Badge count={badge} />}
               </Link>
             )
           })}
         </nav>
 
         {/* Bottom: establishment name + user + logout */}
-        <div className="px-3 py-4 border-t border-line space-y-2">
-          {tenantName && (
+        <div className={`py-4 border-t border-line space-y-2 ${collapsed ? 'px-2' : 'px-3'}`}>
+          {!collapsed && tenantName && (
             <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-surface2">
               <div className="w-6 h-6 rounded-full bg-lime/20 flex items-center justify-center shrink-0">
                 <Building2 size={11} className="text-lime" />
@@ -192,7 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="text-xs font-semibold text-snow truncate">{tenantName}</p>
             </div>
           )}
-          {userEmail && (
+          {!collapsed && userEmail && (
             <div className="flex items-center gap-2 px-2">
               <User size={11} className="text-mist shrink-0" />
               <p className="text-[11px] text-mist truncate">{userEmail}</p>
@@ -200,9 +230,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors"
+            title={collapsed ? 'Cerrar sesión' : undefined}
+            className={`w-full flex items-center rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/10 transition-colors ${collapsed ? 'justify-center py-2' : 'gap-2 px-3 py-2'}`}
           >
-            <LogOut size={14} /> Cerrar sesión
+            <LogOut size={14} /> {!collapsed && 'Cerrar sesión'}
           </button>
         </div>
       </aside>
