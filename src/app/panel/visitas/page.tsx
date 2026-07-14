@@ -185,44 +185,82 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
           {query.trim().length > 0 ? 'Sin resultados para la búsqueda' : 'Sin visitas en este período'}
         </div>
       ) : (
-        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-line">
-                  {['Fecha', 'Titular', 'Teléfono', 'Tipo', 'Adultos', 'Niños', 'Entrada', 'Salida', 'Duración', 'Bono', 'Importe', 'Método', 'Estado'].map(col => (
-                    <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {filteredVisits.map(v => {
-                  const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
-                  const estadoCls = estado === 'Cobrado' ? 'text-lime' : estado === 'Bono' ? 'text-iris' : estado === 'En curso' ? 'text-amber' : 'text-rose'
-                  return (
-                    <tr key={v.id} className="hover:bg-surface2/40 transition-colors">
-                      <td className="pl-4 pr-3 py-2.5 text-xs text-mist whitespace-nowrap">{dateStr}</td>
-                      <td className="px-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{v.members?.name ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-mist whitespace-nowrap">{v.members?.phone ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre'}</td>
-                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.adults_count ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.children_count ?? v.children_present?.length ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{entryTime}</td>
-                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{exitTime ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{dmin != null ? fmtDuration(dmin) : '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-iris whitespace-nowrap">{bonoName ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-xs font-bold text-snow whitespace-nowrap">{cost != null ? fmtCost(cost) : '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap capitalize">{v.payment_method ?? '—'}</td>
-                      <td className={`px-3 pr-4 py-2.5 text-xs font-semibold whitespace-nowrap ${estadoCls}`}>{estado}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+        <>
+          {/* ── MÓVIL/TABLET: tarjetas (< lg) ── */}
+          <div className="lg:hidden space-y-2">
+            {filteredVisits.map(v => {
+              const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
+              const estadoCls = estado === 'Cobrado' ? 'text-lime' : estado === 'Bono' ? 'text-iris' : estado === 'En curso' ? 'text-amber' : 'text-rose'
+              const numChildren = v.children_count ?? v.children_present?.length ?? 0
+              return (
+                <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-[10px] text-mist">{dateStr} ·</span>
+                        <span className="text-xs text-fog">{entryTime}{exitTime ? ` → ${exitTime}` : ' → en curso'}</span>
+                        {dmin != null && <span className="text-xs text-mist">· {fmtDuration(dmin)}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {cost != null && <p className="text-sm font-bold text-snow">{fmtCost(cost)}</p>}
+                      <p className={`text-xs font-semibold ${estadoCls}`}>{estado}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap text-[11px] text-mist">
+                    <span>{v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre'}</span>
+                    <span className="text-line2">·</span>
+                    <span>{v.adults_count ?? 0} adulto{v.adults_count !== 1 ? 's' : ''}, {numChildren} niño{numChildren !== 1 ? 's' : ''}</span>
+                    {v.members?.phone && <><span className="text-line2">·</span><span>{v.members.phone}</span></>}
+                    {bonoName && <><span className="text-line2">·</span><span className="text-iris">{bonoName}</span></>}
+                    {v.payment_method && <><span className="text-line2">·</span><span className="capitalize">{v.payment_method}</span></>}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        </div>
+
+          {/* ── ESCRITORIO: tabla (lg+) ── */}
+          <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-line">
+                    {['Fecha', 'Titular', 'Teléfono', 'Tipo', 'Adultos', 'Niños', 'Entrada', 'Salida', 'Duración', 'Bono', 'Importe', 'Método', 'Estado'].map(col => (
+                      <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {filteredVisits.map(v => {
+                    const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
+                    const estadoCls = estado === 'Cobrado' ? 'text-lime' : estado === 'Bono' ? 'text-iris' : estado === 'En curso' ? 'text-amber' : 'text-rose'
+                    return (
+                      <tr key={v.id} className="hover:bg-surface2/40 transition-colors">
+                        <td className="pl-4 pr-3 py-2.5 text-xs text-mist whitespace-nowrap">{dateStr}</td>
+                        <td className="px-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{v.members?.name ?? '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-mist whitespace-nowrap">{v.members?.phone ?? '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre'}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.adults_count ?? '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.children_count ?? v.children_present?.length ?? '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{entryTime}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{exitTime ?? '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{dmin != null ? fmtDuration(dmin) : '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-iris whitespace-nowrap">{bonoName ?? '—'}</td>
+                        <td className="px-3 py-2.5 text-xs font-bold text-snow whitespace-nowrap">{cost != null ? fmtCost(cost) : '—'}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap capitalize">{v.payment_method ?? '—'}</td>
+                        <td className={`px-3 pr-4 py-2.5 text-xs font-semibold whitespace-nowrap ${estadoCls}`}>{estado}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
