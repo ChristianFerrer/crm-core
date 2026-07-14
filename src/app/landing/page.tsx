@@ -295,18 +295,6 @@ const stats = [
   { value: '1 pantalla', label: 'para ver todo el estado' },
 ]
 
-const planFeatures = [
-  'Check-in con bono, QR y detección de aforo',
-  'Miembros, hijos, familias y cumpleaños',
-  'Bonos por sesiones o ilimitados con tarifas propias',
-  'Agenda: cumpleaños, custodias y eventos',
-  'Panel con gráficas y oportunidades de negocio',
-  'Alertas automáticas de bonos y cumpleaños',
-  'Seguimiento de clientes con estado de contacto',
-  'Acceso desde móvil, tablet y ordenador',
-  'Soporte en español',
-]
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -324,7 +312,7 @@ export default function LandingPage() {
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-fog">
             <a href="#features" className="hover:text-snow transition-colors">Funciones</a>
-            <a href="#pricing" className="hover:text-snow transition-colors">Precios</a>
+            <a href="#how-it-works" className="hover:text-snow transition-colors">Cómo funciona</a>
           </nav>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm font-semibold text-fog hover:text-snow transition-colors">
@@ -484,7 +472,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="border-y border-line bg-surface py-24">
+      <section id="how-it-works" className="border-y border-line bg-surface py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="text-center mb-14">
             <h2 className="font-display text-4xl md:text-5xl font-semibold text-snow mb-4">
@@ -506,40 +494,6 @@ export default function LandingPage() {
                 <p className="text-fog text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-24">
-        <div className="text-center mb-14">
-          <h2 className="font-display text-4xl md:text-5xl font-semibold text-snow mb-4">
-            Precio claro, sin sorpresas
-          </h2>
-          <p className="text-fog text-lg">14 días de prueba gratis. Todo incluido desde el primer día.</p>
-        </div>
-        <div className="max-w-md mx-auto">
-          <div className="rounded-2xl border border-lime/50 bg-surface p-8 flex flex-col items-center text-center">
-            <div className="mb-1">
-              <span className="font-display text-6xl font-semibold text-snow">199,99€</span>
-              <span className="text-fog text-base ml-1">/mes</span>
-            </div>
-            <p className="text-mist text-sm mb-8">Todo incluido · Sin permanencia</p>
-            <ul className="space-y-3 w-full mb-8 text-left">
-              {planFeatures.map(f => (
-                <li key={f} className="flex items-start gap-3 text-sm text-fog">
-                  <CheckCircle size={15} className="text-lime shrink-0 mt-0.5" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/login"
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-lime py-3.5 text-sm font-semibold text-ink hover:bg-lime/90 transition-colors"
-              style={{ boxShadow: 'var(--shadow-lime)' }}
-            >
-              Empezar 14 días gratis
-            </Link>
           </div>
         </div>
       </section>
