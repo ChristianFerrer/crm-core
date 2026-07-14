@@ -1448,10 +1448,10 @@ export function BookingFormModal({
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-mist">Estado</span>
-                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${
-                            paymentStatus === 'paid'    ? 'bg-mint/10 text-mint border-mint/30' :
-                            paymentStatus === 'partial' ? 'bg-amber/10 text-amber border-amber/30' :
-                                                          'bg-surface2 text-fog border-line'
+                          <span className={`text-[10px] font-semibold ${
+                            paymentStatus === 'paid'    ? 'text-mint' :
+                            paymentStatus === 'partial' ? 'text-amber' :
+                                                          'text-fog'
                           }`}>
                             {paymentStatus === 'paid' ? 'Pagado' : paymentStatus === 'partial' ? 'Adelanto' : 'Pendiente'}
                           </span>
@@ -2321,9 +2321,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   })
 
   const bookingTypeStyle = {
-    birthday: { bar: 'bg-iris', badge: 'bg-iris/10 text-iris border-iris/30', label: 'Cumpleaños' },
-    custodia: { bar: 'bg-cyan-300', badge: 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30', label: 'Custodia' },
-    other:    { bar: 'bg-lime', badge: 'bg-lime/10 text-lime border-lime/30', label: 'Otro' },
+    birthday: { bar: 'bg-iris', badge: 'text-iris', label: 'Cumpleaños' },
+    custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', label: 'Custodia' },
+    other:    { bar: 'bg-lime', badge: 'text-lime', label: 'Otro' },
   }
 
   // Group products by category for the picker
@@ -2666,12 +2666,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {(() => {
                               const tipo = fmtVisitType(visit)
                               const cls = tipo === 'Cumpleaños'
-                                ? 'bg-iris/10 text-iris border-iris/30'
+                                ? 'text-iris'
                                 : tipo === 'Custodia'
-                                ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30'
-                                : 'bg-surface2 text-fog border-line'
+                                ? 'text-cyan-300'
+                                : 'text-fog'
                               return (
-                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border whitespace-nowrap ${cls}`}>
+                                <span className={`text-[10px] font-semibold whitespace-nowrap ${cls}`}>
                                   {tipo}
                                 </span>
                               )
@@ -2824,14 +2824,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-0.5">
                         <p className="text-xs font-semibold text-snow">{b.title}</p>
-                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${style.badge}`}>{style.label}</span>
+                        <span className={`text-[10px] font-semibold ${style.badge}`}>{style.label}</span>
                         {status === 'ejecutado' && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-mint/10 text-mint border-mint/30 flex items-center gap-0.5">
+                          <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5">
                             <Check size={9} />Ejecutado
                           </span>
                         )}
                         {status === 'en_curso' && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-lime/10 text-lime border-lime/30 flex items-center gap-0.5">
+                          <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5">
                             <Clock size={9} />En curso
                           </span>
                         )}
@@ -3748,7 +3748,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-base font-bold text-snow truncate">{titularName}</p>
-                    <span className={`text-[10px] font-semibold shrink-0 px-1.5 py-0.5 rounded-md border ${tipo === 'Cumpleaños' ? 'bg-iris/10 text-iris border-iris/30' : tipo === 'Custodia' ? 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30' : 'bg-surface2 text-fog border-line'}`}>{tipo}</span>
+                    <span className={`text-[10px] font-semibold shrink-0 ${tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-fog'}`}>{tipo}</span>
                     {isLong && <span className="text-[10px] font-semibold text-amber shrink-0">⚠ Larga</span>}
                   </div>
                   <p className="text-xs text-fog mt-0.5">Entrada {fmtTime(visit.checked_in_at)} · <span className={isLong ? 'text-amber font-semibold' : 'text-snow'}>{fmtElapsed(visit.checked_in_at)}</span></p>
@@ -3861,10 +3861,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const canExecute = isToday && (status === 'pendiente' || status === 'en_curso')
         const linkedVisit = activeVisits.find(v => v.booking_id === b.id)
         const statusLabels: Record<string, { label: string; cls: string }> = {
-          ejecutado: { label: 'Ejecutado', cls: 'bg-mint/10 text-mint border-mint/30' },
-          en_curso:  { label: 'En curso',  cls: 'bg-lime/10 text-lime border-lime/30' },
-          pendiente: { label: 'Pendiente', cls: 'bg-surface2 text-fog border-line' },
-          pasado:    { label: 'Pasado',    cls: 'bg-surface2 text-mist border-line' },
+          ejecutado: { label: 'Ejecutado', cls: 'text-mint' },
+          en_curso:  { label: 'En curso',  cls: 'text-lime' },
+          pendiente: { label: 'Pendiente', cls: 'text-fog' },
+          pasado:    { label: 'Pasado',    cls: 'text-mist' },
         }
         const st = statusLabels[status]
         return (
@@ -3880,8 +3880,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                   <FitText className="font-bold text-snow leading-tight" min={13} max={18}>{b.title}</FitText>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${style.badge}`}>{style.label}</span>
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${st.cls}`}>{st.label}</span>
+                    <span className={`text-[10px] font-semibold ${style.badge}`}>{style.label}</span>
+                    <span className={`text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
                   </div>
                 </div>
                 <button onClick={() => setSelectedBooking(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2">
@@ -3977,14 +3977,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   const dep   = Number(b.deposit_amount) || 0
                   const pend  = Math.max(0, Math.round((total - dep) * 100) / 100)
                   const ps = b.payment_status
-                  const badge = ps === 'paid'    ? { label: 'Pagado',    cls: 'bg-mint/10 text-mint border-mint/30' }
-                              : ps === 'partial' ? { label: 'Adelanto',  cls: 'bg-amber/10 text-amber border-amber/30' }
-                              :                    { label: 'Pendiente', cls: 'bg-surface2 text-fog border-line' }
+                  const badge = ps === 'paid'    ? { label: 'Pagado',    cls: 'text-mint' }
+                              : ps === 'partial' ? { label: 'Adelanto',  cls: 'text-amber' }
+                              :                    { label: 'Pendiente', cls: 'text-fog' }
                   return (
                     <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> Pagos</p>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${badge.cls}`}>{badge.label}</span>
+                        <span className={`text-[10px] font-semibold ${badge.cls}`}>{badge.label}</span>
                       </div>
                       {b.services?.name && (
                         <div className="flex items-center justify-between pb-1.5 border-b border-line/60">

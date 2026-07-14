@@ -59,15 +59,15 @@ function calcAge(birth_date: string) {
 
 // Custodia = cian en toda la app (coherente con Inicio y el detalle del día)
 function bookingColor(t: BookingType) { return t === 'birthday' ? 'bg-iris' : t === 'custodia' ? 'bg-cyan-300' : 'bg-lime' }
-function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'bg-lime/20 text-lime border border-lime/30' : s === 'cancelled' ? 'bg-rose/20 text-rose border border-rose/30' : 'bg-fog/20 text-fog border border-fog/30' }
-function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'bg-mint/20 text-mint border border-mint/30' : p === 'partial' ? 'bg-cyan-300/20 text-cyan-300 border border-cyan-300/30' : 'bg-amber/20 text-amber border border-amber/30' }
+function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'text-lime' : s === 'cancelled' ? 'text-rose' : 'text-fog' }
+function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'text-mint' : p === 'partial' ? 'text-cyan-300' : 'text-amber' }
 function paymentLabel(p: PaymentStatus) { return p === 'paid' ? 'Pagado' : p === 'partial' ? 'Señal' : 'Pendiente' }
 
 // Estilo por tipo alineado con la "Agenda de hoy" del inicio
 const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; label: string }> = {
-  birthday: { bar: 'bg-iris',     badge: 'bg-iris/10 text-iris border-iris/30',           label: 'Cumpleaños' },
-  custodia: { bar: 'bg-cyan-300', badge: 'bg-cyan-300/10 text-cyan-300 border-cyan-300/30', label: 'Custodia' },
-  other:    { bar: 'bg-lime',     badge: 'bg-lime/10 text-lime border-lime/30',            label: 'Otro' },
+  birthday: { bar: 'bg-iris',     badge: 'text-iris',     label: 'Cumpleaños' },
+  custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', label: 'Custodia' },
+  other:    { bar: 'bg-lime',     badge: 'text-lime',     label: 'Otro' },
 }
 
 function bookingLiveStatus(b: Booking, todayStr: string): 'ejecutado' | 'en_curso' | 'pendiente' | 'pasado' {
@@ -337,12 +337,12 @@ export default function CalendarioPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-0.5">
                             <p className="text-xs font-semibold text-snow">{b.title}</p>
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${ts.badge}`}>{ts.label}</span>
-                            {st === 'ejecutado' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-mint/10 text-mint border-mint/30 flex items-center gap-0.5"><CheckCircle size={9} />Ejecutado</span>}
-                            {st === 'en_curso' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-lime/10 text-lime border-lime/30 flex items-center gap-0.5"><Clock size={9} />En curso</span>}
-                            {b.status === 'cancelled' && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md border bg-rose/10 text-rose border-rose/30">Cancelada</span>}
+                            <span className={`text-[10px] font-semibold ${ts.badge}`}>{ts.label}</span>
+                            {st === 'ejecutado' && <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={9} />Ejecutado</span>}
+                            {st === 'en_curso' && <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5"><Clock size={9} />En curso</span>}
+                            {b.status === 'cancelled' && <span className="text-[10px] font-semibold text-rose">Cancelada</span>}
                             {showPago && (
-                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border ${paymentBadge(b.payment_status)}`}>
+                              <span className={`text-[10px] font-semibold ${paymentBadge(b.payment_status)}`}>
                                 {paymentLabel(b.payment_status)}{b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
                               </span>
                             )}
