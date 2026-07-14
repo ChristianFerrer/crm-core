@@ -87,8 +87,8 @@ export function FollowUpSection({
           <p className="text-sm font-semibold text-snow">{title}</p>
         </div>
         <div className="flex gap-2">
-          {converted > 0 && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-lime/15 text-lime">{converted} convertidos</span>}
-          {pending > 0 && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber/15 text-amber">{pending} sin contactar</span>}
+          {converted > 0 && <span className="text-xs font-bold text-lime">{converted} convertidos</span>}
+          {pending > 0 && <span className="text-xs font-bold text-amber">{pending} sin contactar</span>}
         </div>
       </div>
       <p className="text-xs text-mist mb-4">{description}</p>
@@ -112,7 +112,7 @@ export function FollowUpSection({
                     <p className={`text-xs truncate ${item.metaColor ?? 'text-mist'}`}>{item.meta}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
+                    <span className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</span>
                     {isOpen ? <ChevronUp size={14} className="text-fog" /> : <ChevronDown size={14} className="text-fog" />}
                   </div>
                 </button>

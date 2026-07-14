@@ -118,10 +118,10 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
                   )}
 
                   {/* Bono */}
-                  <div className={`mt-2 inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-xs font-medium ${
-                    isExhausted ? 'bg-rose/10 text-rose' :
-                    isLow || isExpiringSoon ? 'bg-amber/10 text-amber' :
-                    bono ? 'bg-lime/10 text-lime' : 'bg-surface2 text-mist'
+                  <div className={`mt-2 inline-flex items-center gap-2 text-xs font-medium ${
+                    isExhausted ? 'text-rose' :
+                    isLow || isExpiringSoon ? 'text-amber' :
+                    bono ? 'text-lime' : 'text-mist'
                   }`}>
                     <CreditCard size={11} />
                     {bono ? (

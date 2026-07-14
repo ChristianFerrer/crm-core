@@ -392,7 +392,7 @@ export default function MiembrosPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {lowBono > 0 && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber/20 text-amber">{lowBono} bono bajo</span>
+                            <span className="text-[10px] font-bold text-amber">{lowBono} bono bajo</span>
                           )}
                           <ChevronRight size={14} className="text-mist" />
                         </div>
@@ -402,11 +402,11 @@ export default function MiembrosPage() {
                           const s = m.memberships?.[0]?.sessions_remaining
                           const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
                           return (
-                            <span key={m.id} className={`text-xs px-2 py-1 rounded-lg border flex items-center gap-1 ${
-                              s === 0 ? 'border-rose/30 bg-rose/10 text-rose' :
-                              isUnlimited ? 'border-iris/30 bg-iris/10 text-iris' :
-                              s != null && s <= 2 ? 'border-amber/30 bg-amber/10 text-amber' :
-                              'border-line bg-surface2 text-fog'
+                            <span key={m.id} className={`text-xs font-medium flex items-center gap-1 ${
+                              s === 0 ? 'text-rose' :
+                              isUnlimited ? 'text-iris' :
+                              s != null && s <= 2 ? 'text-amber' :
+                              'text-fog'
                             }`}>
                               {m.name}{m.birth_date ? ` · ${getAge(m.birth_date)}a` : ''}
                               {isUnlimited ? ' ∞' : s != null ? ` · ${s}` : ''}
@@ -455,7 +455,7 @@ export default function MiembrosPage() {
                             </td>
                             <td className="px-3 pr-4 py-2.5 whitespace-nowrap">
                               {lowBono > 0
-                                ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber/20 text-amber">{lowBono}</span>
+                                ? <span className="text-[10px] font-bold text-amber">{lowBono}</span>
                                 : <span className="text-xs text-mist">—</span>}
                             </td>
                           </tr>

@@ -86,7 +86,7 @@ export default function FamiliasPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {lowBono > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber/20 text-amber">{lowBono} bono bajo</span>
+                      <span className="text-[10px] font-bold text-amber">{lowBono} bono bajo</span>
                     )}
                     <ChevronRight size={14} className="text-mist" />
                   </div>

@@ -37,17 +37,17 @@ type Tenant = {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  trial: 'bg-fog/20 text-fog border-fog/30',
-  starter: 'bg-mint/20 text-mint border-mint/30',
-  pro: 'bg-iris/20 text-iris border-iris/30',
-  enterprise: 'bg-lime/20 text-lime border-lime/30',
+  trial: 'text-fog',
+  starter: 'text-mint',
+  pro: 'text-iris',
+  enterprise: 'text-lime',
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-lime/20 text-lime border-lime/30',
-  trial: 'bg-amber/20 text-amber border-amber/30',
-  suspended: 'bg-rose/20 text-rose border-rose/30',
-  cancelled: 'bg-fog/20 text-fog border-fog/30',
+  active: 'text-lime',
+  trial: 'text-amber',
+  suspended: 'text-rose',
+  cancelled: 'text-fog',
 }
 
 const STATUS_ICONS: Record<string, typeof CheckCircle> = {
@@ -132,8 +132,8 @@ function DashboardSection({ tenants }: { tenants: Tenant[] }) {
                   <p className="text-sm font-semibold text-snow truncate">{t.name}</p>
                   <p className="text-xs text-mist">{t.city ?? '—'} · {t.owner_email ?? '—'}</p>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border hidden sm:inline ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <span className={`text-[10px] font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
+                <span className={`text-[10px] font-bold hidden sm:inline ${STATUS_COLORS[t.status]}`}>{t.status}</span>
                 <span className="text-xs text-mist shrink-0">{new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
             )
@@ -385,8 +385,8 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <span className={`text-[10px] font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
+                <span className={`text-[10px] font-bold ${STATUS_COLORS[t.status]}`}>{t.status}</span>
               </div>
             </div>
 
@@ -625,11 +625,11 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
   }, [tenants])
 
   function activityStatus(last: string | null) {
-    if (!last) return { label: 'Sin accesos', cls: 'bg-fog/20 text-fog border-fog/30', icon: WifiOff }
+    if (!last) return { label: 'Sin accesos', cls: 'text-fog', icon: WifiOff }
     const days = Math.floor((Date.now() - new Date(last).getTime()) / 86400000)
-    if (days <= 3) return { label: 'Activo', cls: 'bg-lime/20 text-lime border-lime/30', icon: Wifi }
-    if (days <= 14) return { label: `Hace ${days}d`, cls: 'bg-amber/20 text-amber border-amber/30', icon: Wifi }
-    return { label: `Hace ${days}d`, cls: 'bg-rose/20 text-rose border-rose/30', icon: WifiOff }
+    if (days <= 3) return { label: 'Activo', cls: 'text-lime', icon: Wifi }
+    if (days <= 14) return { label: `Hace ${days}d`, cls: 'text-amber', icon: Wifi }
+    return { label: `Hace ${days}d`, cls: 'text-rose', icon: WifiOff }
   }
 
   return (
@@ -671,7 +671,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs font-semibold text-fog">{t.sessions_30d} sesiones</span>
-                    <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}`}>
+                    <span className={`flex items-center gap-1 text-[10px] font-bold ${cls}`}>
                       <StatusIcon size={9} /> {label}
                     </span>
                     <ChevronDown size={13} className={`text-mist transition-transform ${isOpen ? 'rotate-180' : ''}`} />

@@ -77,10 +77,10 @@ export function BirthdayLeads({ leads: initialLeads, tenantId }: { leads: Lead[]
         </div>
         <div className="flex gap-2">
           {reserved > 0 && (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-lime/15 text-lime">{reserved} reservados</span>
+            <span className="text-xs font-bold text-lime">{reserved} reservados</span>
           )}
           {pending > 0 && (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber/15 text-amber">{pending} sin contactar</span>
+            <span className="text-xs font-bold text-amber">{pending} sin contactar</span>
           )}
         </div>
       </div>
@@ -113,7 +113,7 @@ export function BirthdayLeads({ leads: initialLeads, tenantId }: { leads: Lead[]
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
+                    <span className={`text-xs font-semibold ${cfg.color}`}>{cfg.label}</span>
                     {isOpen ? <ChevronUp size={14} className="text-fog" /> : <ChevronDown size={14} className="text-fog" />}
                   </div>
                 </button>
