@@ -1729,6 +1729,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [filterSesiones, setFilterSesiones] = useState('all')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
   const [confirmCheckout, setConfirmCheckout] = useState<string | null>(null)
+  // Si se pasó a cobro desde la ventana de salida, volver a mostrarla tras cobrar
+  const [returnToCheckoutAfterPay, setReturnToCheckoutAfterPay] = useState<string | null>(null)
   const [executingBooking, setExecutingBooking] = useState<string | null>(null)
   const [chartsOpen, setChartsOpen] = useState(false)
   const [tenantName, setTenantName] = useState<string | null>(null)
@@ -2093,6 +2095,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       .eq('id', visitId)
     setPayingVisit(null)
     setTotalVisitId(null)
+    if (returnToCheckoutAfterPay === visitId) {
+      setReturnToCheckoutAfterPay(null)
+      setConfirmCheckout(visitId)
+    }
     router.refresh()
   }
 
@@ -3125,8 +3131,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         )
         const consumosTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0)
         const grandTotal = imp.toPay + consumosTotal
+        const closeTotalModal = () => {
+          setTotalVisitId(null)
+          if (returnToCheckoutAfterPay === visit.id) {
+            setReturnToCheckoutAfterPay(null)
+            setConfirmCheckout(visit.id)
+          }
+        }
         return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setTotalVisitId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closeTotalModal}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
@@ -3138,7 +3151,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <p className="text-[11px] text-fog">Total a pagar</p>
                   </div>
                 </div>
-                <button onClick={() => setTotalVisitId(null)} className="text-fog hover:text-snow transition-colors p-1">
+                <button onClick={closeTotalModal} className="text-fog hover:text-snow transition-colors p-1">
                   <X size={16} />
                 </button>
               </div>
@@ -3357,7 +3370,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 )}
                 {!visit.paid_at && (
                   <button
-                    onClick={() => { setConfirmCheckout(null); setTotalVisitId(visit.id) }}
+                    onClick={() => { setConfirmCheckout(null); setReturnToCheckoutAfterPay(visit.id); setTotalVisitId(visit.id) }}
                     className="flex w-full items-center justify-between gap-2 rounded-xl bg-amber/10 border border-amber/30 px-3 py-2.5 hover:bg-amber/15 transition-colors"
                   >
                     <span className="flex items-center gap-2 text-xs text-amber">
