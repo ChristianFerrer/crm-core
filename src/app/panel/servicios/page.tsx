@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag } from 'lucide-react'
+import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag, Search } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 
@@ -152,7 +152,8 @@ export default function ServiciosPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [view, setView] = useState<'tabla' | 'tarjetas'>('tabla')
+  const [search, setSearch] = useState('')
+  const [filterTipo, setFilterTipo] = useState<'todos' | 'entrada' | 'bono' | 'reservable' | 'subservicio'>('todos')
 
   // Bonos (membership_types) — fuente única para venta y check-in; se crean en el mismo asistente
   const [bonos, setBonos] = useState<MembershipType[]>([])
@@ -332,14 +333,22 @@ export default function ServiciosPage() {
     setDeleteCat(null)
   }
 
-  const grouped = categories.map(cat => ({
-    ...cat,
-    items: services.filter(s => s.category === cat.value),
-  })).filter(g => g.items.length > 0)
-
-  // Uncategorized services (category not in list)
-  const knownValues = new Set(categories.map(c => c.value))
-  const uncategorized = services.filter(s => !knownValues.has(s.category))
+  const q = search.trim().toLowerCase()
+  function matchesSearch(name: string, tipoLabel: string) {
+    if (!q) return true
+    return name.toLowerCase().includes(q) || tipoLabel.toLowerCase().includes(q)
+  }
+  const filteredServices = services.filter(s => {
+    if (filterTipo === 'bono') return false
+    if (filterTipo !== 'todos' && s.tipo !== filterTipo) return false
+    const tipoLabel = TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? ''
+    return matchesSearch(s.name, tipoLabel)
+  })
+  const filteredBonos = bonos.filter(b => {
+    if (filterTipo !== 'todos' && filterTipo !== 'bono') return false
+    return matchesSearch(b.name, 'Bono')
+  })
+  const totalFiltered = filteredServices.length + filteredBonos.length
 
   return (
     <div className="space-y-6">
@@ -354,21 +363,40 @@ export default function ServiciosPage() {
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-fog">{services.length} servicio{services.length !== 1 ? 's' : ''} · {services.filter(s => s.active).length} activo{services.filter(s => s.active).length !== 1 ? 's' : ''}</p>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 bg-surface rounded-xl p-1 border border-line">
-            {(['tabla', 'tarjetas'] as const).map(v => (
-              <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${view === v ? 'bg-lime text-ink' : 'text-fog hover:text-snow'}`}>
-                {v}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-1.5 bg-lime text-carbon text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/90 transition-colors"
-          >
-            <Plus size={13} /> Nuevo servicio
-          </button>
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-1.5 border border-lime bg-lime/10 text-lime text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/20 transition-colors"
+        >
+          <Plus size={13} /> Nuevo servicio
+        </button>
+      </div>
+
+      {/* Búsqueda + filtro por tipo */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o tipo..."
+            className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
+          />
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:pb-0">
+          {([
+            { key: 'todos', label: 'Todos' },
+            ...TIPOS.map(t => ({ key: t.value, label: t.label })),
+          ] as { key: typeof filterTipo; label: string }[]).map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFilterTipo(f.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-colors shrink-0 ${
+                filterTipo === f.key ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface text-fog hover:text-snow'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -376,11 +404,67 @@ export default function ServiciosPage() {
         <div className="text-center py-16 text-mist text-sm">Cargando...</div>
       ) : services.length === 0 ? (
         <div className="text-center py-16 text-mist text-sm">No hay servicios. Crea el primero.</div>
-      ) : view === 'tabla' ? (
-        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-          <div className="overflow-x-auto">
+      ) : totalFiltered === 0 ? (
+        <div className="text-center py-16 text-mist text-sm">Sin resultados para esta búsqueda.</div>
+      ) : (
+        <>
+          {/* ── MÓVIL/TABLET: tarjetas (< lg) ── */}
+          <div className="lg:hidden space-y-2">
+            {filteredServices.map(s => (
+              <div key={s.id} className={`rounded-2xl border border-line bg-surface px-4 py-3 ${s.active ? '' : 'opacity-50'}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-snow truncate">{s.name}</p>
+                    <p className="text-xs text-mist mt-0.5">
+                      {TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? '—'}
+                      {s.flujo ? ` · ${FLUJOS.find(f => f.value === s.flujo)?.label ?? s.flujo}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-snow">{s.price}€</p>
+                    <p className="text-[10px] text-mist">/ {s.price_unit}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-2.5">
+                  <button onClick={() => toggleActive(s)}
+                    className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${s.active ? 'bg-lime' : 'bg-line'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${s.active ? 'translate-x-4' : ''}`} />
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {filteredBonos.map(b => (
+              <div key={`bono-${b.id}`} className={`rounded-2xl border border-line bg-surface px-4 py-3 ${b.active ? '' : 'opacity-50'}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-snow truncate">{b.name}</p>
+                    <p className="text-xs text-mist mt-0.5">Bono · {b.sessions == null ? 'ilimitado' : `${b.sessions} ses.`}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-snow shrink-0">{b.price != null ? `${b.price}€` : '—'}</p>
+                </div>
+                <div className="flex items-center justify-between mt-2.5">
+                  <button onClick={() => toggleBonoActive(b)}
+                    className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${b.active ? 'bg-lime' : 'bg-line'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${b.active ? 'translate-x-4' : ''}`} />
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openEditBono(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── ESCRITORIO: tabla con scroll interno (lg+) ── */}
+          <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
+          <div className="overflow-auto max-h-[60vh]">
             <table className="w-full text-sm whitespace-nowrap">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-surface">
                 <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
                   <th className="px-4 py-3">Servicio</th>
                   <th className="px-3 py-3">Tipo</th>
@@ -399,7 +483,7 @@ export default function ServiciosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
-                {services.map(s => {
+                {filteredServices.map(s => {
                   const cat = categories.find(c => c.value === s.category)
                   const applies = (s.applies_to ?? []).map(v => RESERVABLE_TYPES.find(t => t.value === v)?.label ?? v).join(', ')
                   const dash = <span className="text-mist">—</span>
@@ -438,7 +522,7 @@ export default function ServiciosPage() {
                   )
                 })}
                 {/* Bonos (membership_types) en la misma tabla */}
-                {bonos.map(b => (
+                {filteredBonos.map(b => (
                   <tr key={`bono-${b.id}`} className={`${b.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
                     <td className="px-4 py-2.5 font-semibold text-snow">{b.name}</td>
                     <td className="px-3 py-2.5"><span className="text-xs font-medium text-snow">Bono</span></td>
@@ -469,48 +553,8 @@ export default function ServiciosPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {grouped.map(cat => (
-            <div key={cat.value}>
-              <div className={`inline-flex items-center gap-1.5 text-xs font-semibold ${cat.color} ${cat.bg} px-3 py-1 rounded-full mb-3`}>
-                {cat.label}
-              </div>
-              <div className="space-y-2">
-                {cat.items.map(s => (
-                  <div key={s.id} className={`flex items-center gap-3 rounded-2xl border ${s.active ? 'border-line bg-surface' : 'border-line/50 bg-surface/50'} px-4 py-3`}>
-                    <button
-                      onClick={() => toggleActive(s)}
-                      className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${s.active ? 'bg-lime' : 'bg-line'}`}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${s.active ? 'translate-x-4' : ''}`} />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate ${s.active ? 'text-snow' : 'text-fog'}`}>{s.name}</p>
-                      {s.description && <p className="text-xs text-mist truncate">{s.description}</p>}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-snow">{s.price}€</p>
-                      <p className="text-xs text-mist">/ {s.price_unit}</p>
-                    </div>
-                    {s.duration_min != null && (
-                      <div className="text-xs text-fog shrink-0">{s.duration_min} min</div>
-                    )}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors">
-                        <Pencil size={13} />
-                      </button>
-                      <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/20 transition-colors">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Add / Edit Service Modal */}
@@ -670,7 +714,7 @@ export default function ServiciosPage() {
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={saveForm} disabled={saving || !form.name.trim() || !form.price} className="flex-1 py-2.5 rounded-xl bg-lime text-carbon text-sm font-semibold hover:bg-lime/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
+              <button onClick={saveForm} disabled={saving || !form.name.trim() || !form.price} className="flex-1 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
                 <Check size={14} /> {saving ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
@@ -710,7 +754,7 @@ export default function ServiciosPage() {
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowCatModal(false)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={saveCat} disabled={!catForm.label.trim()} className="flex-1 py-2.5 rounded-xl bg-lime text-carbon text-sm font-semibold hover:bg-lime/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+              <button onClick={saveCat} disabled={!catForm.label.trim()} className="flex-1 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                 <Check size={14} /> {editCat ? 'Guardar' : 'Crear categoría'}
               </button>
             </div>
@@ -727,7 +771,7 @@ export default function ServiciosPage() {
             <p className="text-sm text-fog mb-6">Esta acción no elimina los servicios.</p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteCat(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={doDeleteCat} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
+              <button onClick={doDeleteCat} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Eliminar</button>
             </div>
           </div>
         </div>
@@ -741,7 +785,7 @@ export default function ServiciosPage() {
             <p className="text-sm text-fog mb-6">Esta acción no se puede deshacer.</p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={() => deleteService(deleteId)} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
+              <button onClick={() => deleteService(deleteId)} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Eliminar</button>
             </div>
           </div>
         </div>
@@ -755,7 +799,7 @@ export default function ServiciosPage() {
             <p className="text-sm text-fog mb-6">Los bonos ya vendidos a miembros no se eliminan; solo se quita este tipo del catálogo.</p>
             <div className="flex gap-2">
               <button onClick={() => setBonoDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={() => deleteBono(bonoDeleteId)} className="flex-1 py-2.5 rounded-xl bg-rose text-white text-sm font-semibold hover:bg-rose/90 transition-colors">Eliminar</button>
+              <button onClick={() => deleteBono(bonoDeleteId)} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Eliminar</button>
             </div>
           </div>
         </div>
