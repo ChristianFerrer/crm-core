@@ -93,7 +93,8 @@ export default function CalendarioPage() {
   const [month, setMonth] = useState(today.getMonth())
   const [bookings, setBookings] = useState<Booking[]>([])
   const [members, setMembers] = useState<Member[]>([])
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  // Por defecto la agenda muestra las reservas del día actual
+  const [selectedDate, setSelectedDate] = useState<string | null>(toDateStr(today.getFullYear(), today.getMonth(), today.getDate()))
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
   const [executingId, setExecutingId] = useState<string | null>(null)
   // Add-member popup
