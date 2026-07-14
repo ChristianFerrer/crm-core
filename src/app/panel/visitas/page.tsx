@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates, calcHourlyCost, FALLBACK_RATE, type Rates } from '@/lib/pricing'
-import { Search, History } from 'lucide-react'
+import { Search, History, Download } from 'lucide-react'
 
 type VisitType = 'entrada' | 'custodia'
 
@@ -17,9 +17,13 @@ type HistoryVisit = {
   checked_out_at: string | null
   membership_id: string | null
   visit_type: VisitType
+  adults_count: number | null
+  children_count: number | null
   children_present: { name: string }[] | null
   paid_amount: number | null
+  payment_method: string | null
   members: { id: string; name: string; phone: string | null } | null
+  memberships: { membership_types: { name: string } | null } | null
 }
 
 function fmtDuration(minutes: number) {
@@ -54,6 +58,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
   const [query, setQuery] = useState('')
   const [visits, setVisits] = useState<HistoryVisit[]>([])
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     fetchVisits()
@@ -67,7 +72,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
 
     const { data } = await supabase
       .from('visits')
-      .select('id, checked_in_at, checked_out_at, membership_id, visit_type, children_present, paid_amount, members(id, name, phone)')
+      .select('id, checked_in_at, checked_out_at, membership_id, visit_type, adults_count, children_count, children_present, paid_amount, payment_method, members(id, name, phone), memberships(membership_types(name))')
       .gte('checked_in_at', `${lo}T00:00:00`)
       .lte('checked_in_at', `${hi}T23:59:59`)
       .order('checked_in_at', { ascending: false })
@@ -79,6 +84,55 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
   const filteredVisits = query.trim().length > 0
     ? visits.filter(v => memberMatchesQuery(query, v.members ?? {}))
     : visits
+
+  function rowData(v: HistoryVisit) {
+    const dmin = v.checked_out_at ? calcDurationMin(v.checked_in_at, v.checked_out_at) : null
+    const numChildren = Math.max(1, v.children_present?.length ?? v.children_count ?? 0)
+    const estimated = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin), numChildren, v.visit_type, rates) : null
+    const cost = v.paid_amount != null ? v.paid_amount : estimated
+    const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    const exitTime = v.checked_out_at ? new Date(v.checked_out_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null
+    const dateStr = new Date(v.checked_in_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const bonoName = v.membership_id ? (v.memberships?.membership_types?.name ?? 'Bono') : null
+    const estado = v.paid_amount != null ? 'Cobrado' : bonoName ? 'Bono' : v.checked_out_at ? 'Pendiente' : 'En curso'
+    return { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost }
+  }
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const XLSX = await import('xlsx')
+      const rows = filteredVisits.map(v => {
+        const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
+        return {
+          'Fecha': dateStr,
+          'Titular': v.members?.name ?? '—',
+          'Teléfono': v.members?.phone ?? '',
+          'Tipo': v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre',
+          'Adultos': v.adults_count ?? '',
+          'Niños': v.children_count ?? (v.children_present?.length ?? ''),
+          'Hora entrada': entryTime,
+          'Hora salida': exitTime ?? 'En curso',
+          'Duración': dmin != null ? fmtDuration(dmin) : '',
+          'Bono': bonoName ?? '',
+          'Importe': cost != null ? cost : '',
+          'Método de pago': v.payment_method ?? '',
+          'Estado': estado,
+        }
+      })
+      const ws = XLSX.utils.json_to_sheet(rows)
+      ws['!cols'] = [
+        { wch: 11 }, { wch: 22 }, { wch: 14 }, { wch: 13 }, { wch: 8 }, { wch: 8 },
+        { wch: 12 }, { wch: 12 }, { wch: 11 }, { wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 11 },
+      ]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Visitas')
+      const suffix = dateFrom === dateTo ? dateFrom : `${dateFrom}_a_${dateTo}`
+      XLSX.writeFile(wb, `historico-visitas_${suffix}.xlsx`)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -98,12 +152,21 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
         </div>
       </div>
 
-      {/* Búsqueda por nombre o teléfono */}
-      <div className="relative">
-        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-        <input value={query} onChange={e => setQuery(e.target.value)}
-          placeholder="Buscar por nombre o teléfono..."
-          className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors" />
+      {/* Búsqueda + exportar */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+          <input value={query} onChange={e => setQuery(e.target.value)}
+            placeholder="Buscar por nombre o teléfono..."
+            className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors" />
+        </div>
+        <button
+          onClick={handleExport}
+          disabled={exporting || filteredVisits.length === 0}
+          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-3 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50 shrink-0"
+        >
+          <Download size={15} /> <span className="hidden sm:inline">Exportar a Excel</span>
+        </button>
       </div>
 
       {/* Visit count */}
@@ -112,7 +175,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
         {loading ? 'Cargando...' : `${filteredVisits.length} visitas`}
       </div>
 
-      {/* List */}
+      {/* Table */}
       {loading ? (
         <div className="space-y-2">
           {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl bg-surface border border-line animate-pulse" />)}
@@ -122,45 +185,43 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
           {query.trim().length > 0 ? 'Sin resultados para la búsqueda' : 'Sin visitas en este período'}
         </div>
       ) : (
-        <div className="space-y-1.5">
-          {filteredVisits.map(v => {
-            const dmin = v.checked_out_at ? calcDurationMin(v.checked_in_at, v.checked_out_at) : null
-            // Muestra el importe realmente cobrado si existe; si no, estima (solo visitas cerradas sin bono)
-            const numChildren = Math.max(1, v.children_present?.length ?? 0)
-            const estimated = (!v.membership_id && dmin != null) ? calcCost(Math.max(30, dmin), numChildren, v.visit_type, rates) : null
-            const cost = v.paid_amount != null ? v.paid_amount : estimated
-            const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-            const exitTime = v.checked_out_at ? new Date(v.checked_out_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null
-            const dateStr = new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
-
-            return (
-              <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="text-[10px] text-mist capitalize">{dateStr} ·</span>
-                    <span className="text-xs text-fog">{entryTime}{exitTime ? ` → ${exitTime}` : ' → en curso'}</span>
-                    {dmin != null && <span className="text-xs text-mist">· {fmtDuration(dmin)}</span>}
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  {v.paid_amount == null && v.membership_id ? (
-                    <div>
-                      <span className="text-xs text-iris font-medium">Bono</span>
-                      {v.visit_type === 'custodia' && <p className="text-[10px] text-mint">Custodia</p>}
-                    </div>
-                  ) : cost != null ? (
-                    <div>
-                      <span className="text-xs font-bold text-lime">{fmtCost(cost)}</span>
-                      {v.visit_type === 'custodia' && <p className="text-[10px] text-mint">Custodia</p>}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-amber">En curso</span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+        <div className="rounded-2xl border border-line bg-surface overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-line">
+                  {['Fecha', 'Titular', 'Teléfono', 'Tipo', 'Adultos', 'Niños', 'Entrada', 'Salida', 'Duración', 'Bono', 'Importe', 'Método', 'Estado'].map(col => (
+                    <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {filteredVisits.map(v => {
+                  const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
+                  const estadoCls = estado === 'Cobrado' ? 'text-lime' : estado === 'Bono' ? 'text-iris' : estado === 'En curso' ? 'text-amber' : 'text-rose'
+                  return (
+                    <tr key={v.id} className="hover:bg-surface2/40 transition-colors">
+                      <td className="pl-4 pr-3 py-2.5 text-xs text-mist whitespace-nowrap">{dateStr}</td>
+                      <td className="px-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{v.members?.name ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-mist whitespace-nowrap">{v.members?.phone ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre'}</td>
+                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.adults_count ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.children_count ?? v.children_present?.length ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{entryTime}</td>
+                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{exitTime ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{dmin != null ? fmtDuration(dmin) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-iris whitespace-nowrap">{bonoName ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-xs font-bold text-snow whitespace-nowrap">{cost != null ? fmtCost(cost) : '—'}</td>
+                      <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap capitalize">{v.payment_method ?? '—'}</td>
+                      <td className={`px-3 pr-4 py-2.5 text-xs font-semibold whitespace-nowrap ${estadoCls}`}>{estado}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
