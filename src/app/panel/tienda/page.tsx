@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
+import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2, Search, Download } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { Modal } from '@/components/Modal'
@@ -60,6 +60,12 @@ export default function TiendaPage() {
   const [stockEntry, setStockEntry] = useState('1')
   const [savingStock, setSavingStock] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<Product | null>(null)
+  const [exporting, setExporting] = useState(false)
+
+  // Búsqueda + filtros por columna
+  const [search, setSearch] = useState('')
+  const [filterCategory, setFilterCategory] = useState<'todas' | string>('todas')
+  const [filterEstado, setFilterEstado] = useState<'todos' | 'activo' | 'inactivo'>('todos')
 
   const load = useCallback(async () => {
     const tenant = getStoredTenant()
@@ -179,6 +185,39 @@ export default function TiendaPage() {
     setSavingStock(false)
   }
 
+  const q = search.trim().toLowerCase()
+  const filteredProducts = products.filter(p => {
+    if (filterCategory !== 'todas' && p.category !== filterCategory) return false
+    if (filterEstado === 'activo' && !p.active) return false
+    if (filterEstado === 'inactivo' && p.active) return false
+    if (!q) return true
+    const catLabel = CATEGORIES.find(c => c.value === p.category)?.label ?? p.category
+    return p.name.toLowerCase().includes(q) || catLabel.toLowerCase().includes(q)
+  })
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const XLSX = await import('xlsx')
+      const rows = filteredProducts.map(p => ({
+        'Producto': p.name,
+        'Categoría': CATEGORIES.find(c => c.value === p.category)?.label ?? p.category,
+        'Peso': p.weight ?? '',
+        'Código de barras': p.barcode ?? '',
+        'Stock': p.stock,
+        'Precio': p.price,
+        'Estado': p.active ? 'Activo' : 'Inactivo',
+      }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      ws['!cols'] = [{ wch: 24 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 8 }, { wch: 10 }, { wch: 10 }]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Productos')
+      XLSX.writeFile(wb, 'tienda.xlsx')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -193,9 +232,16 @@ export default function TiendaPage() {
         <button
           onClick={() => setShowScanner(true)}
           className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
-          title="Escanear — añade stock si existe, crea producto si es nuevo"
+          title="Escanear — añade stock si el código ya existe, o crea un producto nuevo rellenando nombre/categoría/peso automáticamente"
         >
           <ScanBarcode size={15} />
+        </button>
+        <button
+          onClick={handleExport}
+          disabled={exporting || filteredProducts.length === 0}
+          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-3 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
+        >
+          <Download size={15} /> <span className="hidden sm:inline">Exportar</span>
         </button>
         <button
           onClick={openNew}
@@ -203,6 +249,30 @@ export default function TiendaPage() {
         >
           <Plus size={15} /> Añadir producto
         </button>
+      </div>
+
+      {/* Búsqueda + filtros por columna */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o categoría..."
+            className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
+          />
+        </div>
+        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
+          className="rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
+          <option value="todas">Todas las categorías</option>
+          {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
+        <select value={filterEstado} onChange={e => setFilterEstado(e.target.value as typeof filterEstado)}
+          className="rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
+          <option value="todos">Todos los estados</option>
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
       </div>
 
       {loading ? (
@@ -213,11 +283,15 @@ export default function TiendaPage() {
           <p className="text-sm text-fog font-medium">Sin productos aún</p>
           <p className="text-xs text-mist mt-1">Añade agua, snacks u otros artículos para vender durante las visitas</p>
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-line p-10 text-center text-sm text-mist">
+          Sin resultados para esta búsqueda o filtro.
+        </div>
       ) : (
         <>
         {/* ── MÓVIL: tarjetas (< md) ── */}
         <div className="lg:hidden space-y-2.5">
-          {products.map((p, idx) => (
+          {filteredProducts.map((p, idx) => (
             <div key={p.id} className={`rounded-2xl border border-line bg-surface p-4 ${!p.active ? 'opacity-50' : ''}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -281,7 +355,7 @@ export default function TiendaPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/50">
-                {products.map((p, idx) => (
+                {filteredProducts.map((p, idx) => (
                   <tr key={p.id} className={`hover:bg-surface2/40 transition-colors ${!p.active ? 'opacity-50' : ''}`}>
                     <td className="px-3 py-3 text-center">
                       <span className="text-xs text-mist font-mono">{idx + 1}</span>
