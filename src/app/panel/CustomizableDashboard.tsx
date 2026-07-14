@@ -144,7 +144,7 @@ export function CustomizableDashboard({ data }: { data: DashboardData }) {
         <button
           onClick={() => { setEditing(e => !e); setAddOpen(false) }}
           className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
-            editing ? 'bg-lime text-ink border-lime' : 'bg-surface text-fog border-line hover:text-snow'
+            editing ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface text-fog hover:text-snow'
           }`}
         >
           {editing ? <><Check size={13} /> Listo</> : <><Settings2 size={13} /> Personalizar</>}

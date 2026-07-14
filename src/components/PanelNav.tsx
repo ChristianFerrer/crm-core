@@ -31,7 +31,7 @@ export function PanelNav() {
               key={it.href}
               href={it.href}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                active ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
+                active ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
               }`}
             >
               <Icon size={13} /> {it.label}

@@ -214,7 +214,7 @@ export default function MiembrosPage() {
         <button
           onClick={() => changeView('miembros')}
           className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            view === 'miembros' ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
+            view === 'miembros' ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
           }`}
         >
           <User size={14} /> Miembros
@@ -222,7 +222,7 @@ export default function MiembrosPage() {
         <button
           onClick={() => changeView('familias')}
           className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            view === 'familias' ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
+            view === 'familias' ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
           }`}
         >
           <Users size={14} /> Familias
