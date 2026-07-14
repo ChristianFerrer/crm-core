@@ -15,7 +15,7 @@ export default function FamiliaActions({ id }: { id: string }) {
     setLoading(true)
     await supabase.from('members').update({ family_id: null }).eq('family_id', id)
     await supabase.from('families').delete().eq('id', id)
-    router.push('/miembros')
+    router.push('/miembros?view=familias')
   }
 
   return (

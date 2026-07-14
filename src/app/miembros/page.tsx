@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { memberMatchesQuery, normalizeSearch } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
@@ -23,6 +24,8 @@ type MemberRow = {
   }[]
 }
 
+type Child = { name: string }
+
 type FamilyRow = {
   id: string
   name: string
@@ -32,8 +35,20 @@ type FamilyRow = {
     name: string
     phone: string | null
     birth_date: string | null
+    children: Child[] | null
     memberships: { sessions_remaining: number | null; membership_types: { name: string } | null }[]
   }[]
+}
+
+function familyChildrenCount(family: FamilyRow): number {
+  const seen = new Set<string>()
+  for (const m of family.members ?? []) {
+    for (const c of m.children ?? []) {
+      const key = c.name?.trim().toLowerCase()
+      if (key) seen.add(key)
+    }
+  }
+  return seen.size
 }
 
 function getAge(d: string) {
@@ -46,13 +61,21 @@ function statusDot(m: MemberRow) {
 }
 
 export default function MiembrosPage() {
-  const [view, setView] = useState<'miembros' | 'familias'>('miembros')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [view, setView] = useState<'miembros' | 'familias'>(searchParams.get('view') === 'familias' ? 'familias' : 'miembros')
   const [members, setMembers] = useState<MemberRow[]>([])
   const [families, setFamilies] = useState<FamilyRow[]>([])
+  const [visitCounts, setVisitCounts] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'todos' | 'sin_bono' | 'bono_bajo'>('todos')
   const [exporting, setExporting] = useState(false)
+
+  function changeView(v: 'miembros' | 'familias') {
+    setView(v); setSearch('')
+    router.replace(v === 'familias' ? '/miembros?view=familias' : '/miembros')
+  }
 
   useEffect(() => {
     Promise.all([
@@ -62,12 +85,30 @@ export default function MiembrosPage() {
         .order('name'),
       supabase
         .from('families')
-        .select('id, name, notes, members(id, name, phone, birth_date, memberships(sessions_remaining, membership_types(name)))')
+        .select('id, name, notes, members(id, name, phone, birth_date, children, memberships(sessions_remaining, membership_types(name)))')
         .order('name'),
     ]).then(([{ data: m }, { data: f }]) => {
       setMembers((m as unknown as MemberRow[]) ?? [])
-      setFamilies((f as unknown as FamilyRow[]) ?? [])
+      const familyRows = (f as unknown as FamilyRow[]) ?? []
+      setFamilies(familyRows)
       setLoading(false)
+
+      // Total de visitas por familia (suma de visitas de todos sus titulares)
+      const allMemberIds = familyRows.flatMap(fam => fam.members?.map(m => m.id) ?? [])
+      if (allMemberIds.length > 0) {
+        supabase.from('visits').select('member_id').in('member_id', allMemberIds)
+          .then(({ data: visits }) => {
+            const byMember: Record<string, number> = {}
+            for (const v of (visits as { member_id: string }[]) ?? []) {
+              byMember[v.member_id] = (byMember[v.member_id] ?? 0) + 1
+            }
+            const byFamily: Record<string, number> = {}
+            for (const fam of familyRows) {
+              byFamily[fam.id] = (fam.members ?? []).reduce((s, m) => s + (byMember[m.id] ?? 0), 0)
+            }
+            setVisitCounts(byFamily)
+          })
+      }
     })
   }, [])
 
@@ -171,7 +212,7 @@ export default function MiembrosPage() {
       {/* Tab switcher */}
       <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line shrink-0">
         <button
-          onClick={() => { setView('miembros'); setSearch('') }}
+          onClick={() => changeView('miembros')}
           className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             view === 'miembros' ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
           }`}
@@ -179,7 +220,7 @@ export default function MiembrosPage() {
           <User size={14} /> Miembros
         </button>
         <button
-          onClick={() => { setView('familias'); setSearch('') }}
+          onClick={() => changeView('familias')}
           className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             view === 'familias' ? 'bg-lime text-ink' : 'text-fog hover:text-snow'
           }`}
@@ -329,6 +370,8 @@ export default function MiembrosPage() {
                   const lowBono = family.members?.filter(m =>
                     m.memberships?.[0]?.sessions_remaining != null && m.memberships[0].sessions_remaining <= 2
                   ).length ?? 0
+                  const hijos = familyChildrenCount(family)
+                  const visitas = visitCounts[family.id] ?? 0
                   return (
                     <Link
                       key={family.id}
@@ -342,7 +385,9 @@ export default function MiembrosPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-sm text-snow">{family.name}</p>
-                            <p className="text-xs text-mist">{family.members?.length ?? 0} titulares</p>
+                            <p className="text-xs text-mist">
+                              {family.members?.length ?? 0} titulares · {hijos} hijo{hijos !== 1 ? 's' : ''} · {visitas} visita{visitas !== 1 ? 's' : ''}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -380,7 +425,7 @@ export default function MiembrosPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-line">
-                        {['Familia', 'Titulares', 'Miembros', 'Bono bajo'].map(col => (
+                        {['Familia', 'Titulares', 'Hijos', 'Visitas', 'Miembros', 'Bono bajo'].map(col => (
                           <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
                             {col}
                           </th>
@@ -392,11 +437,15 @@ export default function MiembrosPage() {
                         const lowBono = family.members?.filter(m =>
                           m.memberships?.[0]?.sessions_remaining != null && m.memberships[0].sessions_remaining <= 2
                         ).length ?? 0
+                        const hijos = familyChildrenCount(family)
+                        const visitas = visitCounts[family.id] ?? 0
                         return (
                           <tr key={family.id} onClick={() => window.location.assign(`/familias/${family.id}`)}
                             className="hover:bg-surface2/40 transition-colors cursor-pointer">
                             <td className="pl-4 pr-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{family.name}</td>
                             <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{family.members?.length ?? 0}</td>
+                            <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{hijos}</td>
+                            <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{visitas}</td>
                             <td className="px-3 py-2.5 text-xs text-fog">
                               <div className="flex flex-wrap gap-1">
                                 {family.members?.map(m => (
