@@ -2796,7 +2796,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
           <button
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
-            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris rounded-lg px-2.5 py-1.5 hover:brightness-110 transition-all"
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-lime bg-lime/10 border border-lime rounded-lg px-2.5 py-1.5 hover:bg-lime/20 transition-all"
           >
             <CalendarPlus size={13} /> Nueva reserva
           </button>

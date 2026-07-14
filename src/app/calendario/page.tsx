@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Plus, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, LogIn, CheckCircle, UserPlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
@@ -256,7 +256,7 @@ export default function CalendarioPage() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={openNewFlow} className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/20 transition-colors">
-              <Plus size={16} /> Nueva reserva
+              <CalendarPlus size={16} /> Nueva reserva
             </button>
           </div>
         </div>
@@ -363,7 +363,7 @@ export default function CalendarioPage() {
                           disabled={executingId === b.id}
                           className="flex items-center gap-1 self-center text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 mr-4 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                         >
-                          <LogIn size={11} /> {executingId === b.id ? '...' : 'Ejecutar'}
+                          <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : 'Ejecutar'}
                         </button>
                       )}
                     </div>
