@@ -1014,9 +1014,10 @@ export function BookingFormModal({
   const [selectedAddons, setSelectedAddons] = useState<BookingAddon[]>(initial?.addons ?? [])
   const skipRecompute = useRef<boolean>(!!editId)
   const selectedService = catServices.find(s => s.id === serviceId) || null
+  // Un sub-servicio solo aparece si tiene explícitamente configurada la relación
+  // con este tipo de reserva ("Aplica a"); sin relación, no se ofrece.
   const subServices = services.filter(s =>
-    s.tipo === 'subservicio' &&
-    (!s.applies_to || s.applies_to.length === 0 || s.applies_to.includes(serviceCat))
+    s.tipo === 'subservicio' && !!s.applies_to?.includes(serviceCat)
   )
   const round2 = (n: number) => Math.round(n * 100) / 100
   const addonsTotal = round2(selectedAddons.reduce((s, a) => s + (Number(a.price) || 0), 0))
