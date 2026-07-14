@@ -189,24 +189,15 @@ export default function MiembrosPage() {
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Miembros</h1>
           <p className="text-sm text-fog mt-0.5">{countLabel}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleExport}
-            disabled={exporting || count === 0}
-            className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 text-lime font-semibold px-3 py-2.5 text-sm hover:bg-lime/20 transition-colors disabled:opacity-50"
+        {view === 'miembros' && (
+          <Link
+            href="/miembros/nuevo"
+            className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform shrink-0"
+            style={{ boxShadow: 'var(--shadow-lime)' }}
           >
-            <Download size={15} /> <span className="hidden sm:inline">Exportar</span>
-          </button>
-          {view === 'miembros' && (
-            <Link
-              href="/miembros/nuevo"
-              className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform"
-              style={{ boxShadow: 'var(--shadow-lime)' }}
-            >
-              <Plus size={16} strokeWidth={2.5} /> Nuevo
-            </Link>
-          )}
-        </div>
+            <Plus size={16} strokeWidth={2.5} /> Nuevo
+          </Link>
+        )}
       </div>
 
       {/* Tab switcher */}
@@ -266,6 +257,16 @@ export default function MiembrosPage() {
           ))}
         </div>
       )}
+
+      <div className="flex justify-end shrink-0">
+        <button
+          onClick={handleExport}
+          disabled={exporting || count === 0}
+          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 text-lime font-semibold px-3 py-2 text-sm hover:bg-lime/20 transition-colors disabled:opacity-50"
+        >
+          <Download size={15} /> Exportar
+        </button>
+      </div>
 
       {loading ? (
         <div className="space-y-2 overflow-y-auto">

@@ -237,13 +237,6 @@ export default function TiendaPage() {
           <ScanBarcode size={15} />
         </button>
         <button
-          onClick={handleExport}
-          disabled={exporting || filteredProducts.length === 0}
-          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-3 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
-        >
-          <Download size={15} /> <span className="hidden sm:inline">Exportar</span>
-        </button>
-        <button
           onClick={openNew}
           className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-4 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors"
         >
@@ -273,6 +266,16 @@ export default function TiendaPage() {
           <option value="activo">Activo</option>
           <option value="inactivo">Inactivo</option>
         </select>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleExport}
+          disabled={exporting || filteredProducts.length === 0}
+          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-3 py-2 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
+        >
+          <Download size={15} /> Exportar
+        </button>
       </div>
 
       {loading ? (
@@ -337,11 +340,11 @@ export default function TiendaPage() {
           ))}
         </div>
 
-        {/* ── ESCRITORIO: tabla (md+) ── */}
+        {/* ── ESCRITORIO: tabla con scroll interno (lg+) ── */}
         <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[60vh]">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-surface">
                 <tr className="border-b border-line">
                   <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide w-8">#</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Producto</th>

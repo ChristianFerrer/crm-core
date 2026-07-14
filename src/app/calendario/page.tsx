@@ -255,7 +255,7 @@ export default function CalendarioPage() {
             <p className="text-sm text-mist mt-0.5">Reservas y custodia</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={openNewFlow} className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-lime/20 transition-colors">
+            <button onClick={openNewFlow} className="flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors">
               <CalendarPlus size={16} /> Nueva reserva
             </button>
           </div>
