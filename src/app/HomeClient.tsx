@@ -1732,7 +1732,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   // Si se pasó a cobro desde la ventana de salida, volver a mostrarla tras cobrar
   const [returnToCheckoutAfterPay, setReturnToCheckoutAfterPay] = useState<string | null>(null)
   const [executingBooking, setExecutingBooking] = useState<string | null>(null)
-  const [chartsOpen, setChartsOpen] = useState(false)
+  const [chartsOpen, setChartsOpen] = useState(true)
   const [tenantName, setTenantName] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [bookingServices, setBookingServices] = useState<BookingService[]>([])
