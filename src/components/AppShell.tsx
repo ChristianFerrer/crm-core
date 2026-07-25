@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
@@ -155,7 +155,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-line bg-surface sticky top-0 h-screen transition-[width] duration-200 ${collapsed ? 'lg:w-16' : 'lg:w-56'}`}>
 
-        {/* Brand + collapse toggle */}
+        {/* Brand */}
         <div className={`py-5 border-b border-line ${collapsed ? 'px-2' : 'px-5'}`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
             <div className="w-8 h-8 rounded-xl bg-lime flex items-center justify-center shrink-0" style={{ boxShadow: 'var(--shadow-lime)' }}>
@@ -167,19 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <p className="text-[10px] text-mist">CRM</p>
               </div>
             )}
-            {!collapsed && (
-              <button onClick={toggleCollapsed} aria-label="Contraer menú"
-                className="text-mist hover:text-snow transition-colors shrink-0">
-                <PanelLeftClose size={16} />
-              </button>
-            )}
           </div>
-          {collapsed && (
-            <button onClick={toggleCollapsed} aria-label="Expandir menú"
-              className="w-full mt-3 flex items-center justify-center text-mist hover:text-snow transition-colors">
-              <PanelLeftOpen size={16} />
-            </button>
-          )}
         </div>
 
         {/* Nav */}
@@ -236,6 +224,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <LogOut size={14} /> {!collapsed && 'Cerrar sesión'}
           </button>
         </div>
+
+        {/* Colapsar/expandir menú */}
+        <button
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
+          className={`flex items-center border-t border-line py-2.5 text-mist hover:text-snow transition-colors ${collapsed ? 'justify-center px-2' : 'justify-end px-3'}`}
+        >
+          {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+        </button>
       </aside>
 
       {/* Content */}
