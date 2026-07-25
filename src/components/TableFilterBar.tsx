@@ -12,6 +12,7 @@ export function TableFilterBar({
   onSearchChange,
   searchPlaceholder = 'Buscar...',
   filters,
+  showFilter = true,
   activeFilterCount = 0,
   onExport,
   exporting = false,
@@ -21,7 +22,9 @@ export function TableFilterBar({
   onSearchChange: (value: string) => void
   searchPlaceholder?: string
   /** Contenido del desplegable de filtros (selects, pills, etc.) */
-  filters: ReactNode
+  filters?: ReactNode
+  /** Oculta el botón de embudo cuando esta vista no tiene filtros que ofrecer */
+  showFilter?: boolean
   /** Nº de filtros activos, para el indicador sobre el botón de embudo */
   activeFilterCount?: number
   onExport: () => void
@@ -50,34 +53,36 @@ export function TableFilterBar({
         />
       </div>
 
-      <div className="relative shrink-0" ref={popoverRef}>
-        <button
-          onClick={() => setFilterOpen(o => !o)}
-          title="Filtros"
-          aria-label="Filtros"
-          className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ${
-            activeFilterCount > 0 || filterOpen
-              ? 'border-lime bg-lime/10 text-lime'
-              : 'border-line bg-surface2 text-fog hover:text-snow'
-          }`}
-        >
-          <Filter size={16} />
-          {activeFilterCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-rose text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+      {showFilter && (
+        <div className="relative shrink-0" ref={popoverRef}>
+          <button
+            onClick={() => setFilterOpen(o => !o)}
+            title="Filtros"
+            aria-label="Filtros"
+            className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ${
+              activeFilterCount > 0 || filterOpen
+                ? 'border-lime bg-lime/10 text-lime'
+                : 'border-line bg-surface2 text-fog hover:text-snow'
+            }`}
+          >
+            <Filter size={16} />
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-rose text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
 
-        {filterOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
-            <div className="absolute right-0 z-50 mt-2 w-72 max-w-[85vw] rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4">
-              {filters}
-            </div>
-          </>
-        )}
-      </div>
+          {filterOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
+              <div className="absolute right-0 z-50 mt-2 w-72 max-w-[85vw] rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4">
+                {filters}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <button
         onClick={onExport}

@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { memberMatchesQuery, normalizeSearch } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
-import { Search, Plus, User, Users, ChevronRight, Download } from 'lucide-react'
+import { Plus, User, Users, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { TableFilterBar } from '@/components/TableFilterBar'
 
 type MemberRow = {
   id: string
@@ -220,52 +221,37 @@ export default function MiembrosPage() {
         </button>
       </div>
 
-      <div className="relative shrink-0">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={view === 'miembros' ? 'Buscar por nombre o teléfono...' : 'Buscar por familia o miembro...'}
-          className="w-full bg-surface border border-line rounded-xl pl-9 pr-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2"
+      <div className="shrink-0">
+        <TableFilterBar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder={view === 'miembros' ? 'Buscar por nombre o teléfono...' : 'Buscar por familia o miembro...'}
+          showFilter={view === 'miembros'}
+          activeFilterCount={view === 'miembros' && filter !== 'todos' ? 1 : 0}
+          onExport={handleExport}
+          exporting={exporting}
+          exportDisabled={count === 0}
+          filters={
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Estado del bono</p>
+              {([
+                { key: 'todos', label: 'Todos' },
+                { key: 'sin_bono', label: 'Sin bono' },
+                { key: 'bono_bajo', label: 'Bono bajo' },
+              ] as { key: typeof filter; label: string }[]).map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                    filter === f.key ? 'bg-lime/10 text-lime' : 'text-fog hover:bg-surface2 hover:text-snow'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          }
         />
-      </div>
-
-      {view === 'miembros' && (
-        <div className="flex gap-2 shrink-0 overflow-x-auto pb-0.5">
-          {([
-            { key: 'todos', label: 'Todos' },
-            { key: 'sin_bono', label: 'Sin bono' },
-            { key: 'bono_bajo', label: 'Bono bajo' },
-          ] as { key: typeof filter; label: string }[]).map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-colors ${
-                filter === f.key
-                  ? f.key === 'sin_bono' ? 'bg-rose/20 text-rose border-rose/30'
-                  : f.key === 'bono_bajo' ? 'bg-amber/20 text-amber border-amber/30'
-                  : 'bg-lime/20 text-lime border-lime/30'
-                  : 'bg-surface border-line text-fog hover:text-snow'
-              }`}
-            >
-              {f.label}
-              {filter === f.key && f.key !== 'todos' && (
-                <span className="ml-1 opacity-70">({filteredMembers.length})</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="flex justify-end shrink-0">
-        <button
-          onClick={handleExport}
-          disabled={exporting || count === 0}
-          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 text-lime font-semibold px-3 py-2 text-sm hover:bg-lime/20 transition-colors disabled:opacity-50"
-        >
-          <Download size={15} /> Exportar
-        </button>
       </div>
 
       {loading ? (
