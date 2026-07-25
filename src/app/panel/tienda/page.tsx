@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2, Search, Download } from 'lucide-react'
+import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { Modal } from '@/components/Modal'
+import { TableFilterBar } from '@/components/TableFilterBar'
 import { getStoredTenant } from '@/lib/tenant'
 import { BarcodeScanner } from '@/components/BarcodeScanner'
 
@@ -238,45 +239,44 @@ export default function TiendaPage() {
         </button>
         <button
           onClick={openNew}
+          title="Añadir un producto nuevo"
           className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-4 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors"
         >
           <Plus size={15} /> Añadir producto
         </button>
       </div>
 
-      {/* Búsqueda + filtros por columna */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o categoría..."
-            className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
-          />
-        </div>
-        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
-          className="rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
-          <option value="todas">Todas las categorías</option>
-          {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
-        <select value={filterEstado} onChange={e => setFilterEstado(e.target.value as typeof filterEstado)}
-          className="rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
-          <option value="todos">Todos los estados</option>
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-        </select>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={handleExport}
-          disabled={exporting || filteredProducts.length === 0}
-          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-3 py-2 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
-        >
-          <Download size={15} /> Exportar
-        </button>
-      </div>
+      {/* Búsqueda + filtros + exportar */}
+      <TableFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por nombre o categoría..."
+        activeFilterCount={(filterCategory !== 'todas' ? 1 : 0) + (filterEstado !== 'todos' ? 1 : 0)}
+        onExport={handleExport}
+        exporting={exporting}
+        exportDisabled={filteredProducts.length === 0}
+        filters={
+          <>
+            <div>
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Categoría</p>
+              <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
+                className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
+                <option value="todas">Todas las categorías</option>
+                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Estado</p>
+              <select value={filterEstado} onChange={e => setFilterEstado(e.target.value as typeof filterEstado)}
+                className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
+                <option value="todos">Todos los estados</option>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+          </>
+        }
+      />
 
       {loading ? (
         <div className="text-sm text-mist text-center py-8">Cargando...</div>

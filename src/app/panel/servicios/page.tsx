@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag, Search } from 'lucide-react'
+import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
+import { TableFilterBar } from '@/components/TableFilterBar'
 
 type Service = {
   id: string
@@ -154,6 +155,7 @@ export default function ServiciosPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterTipo, setFilterTipo] = useState<'todos' | 'entrada' | 'bono' | 'reservable' | 'subservicio'>('todos')
+  const [exporting, setExporting] = useState(false)
 
   // Bonos (membership_types) — fuente única para venta y check-in; se crean en el mismo asistente
   const [bonos, setBonos] = useState<MembershipType[]>([])
@@ -350,6 +352,53 @@ export default function ServiciosPage() {
   })
   const totalFiltered = filteredServices.length + filteredBonos.length
 
+  async function handleExport() {
+    setExporting(true)
+    try {
+      const XLSX = await import('xlsx')
+      const dash = ''
+      const rows = [
+        ...filteredServices.map(s => ({
+          'Servicio': s.name,
+          'Tipo': TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? dash,
+          'Flujo': s.flujo ? (FLUJOS.find(f => f.value === s.flujo)?.label ?? s.flujo) : dash,
+          'Reservable': s.reservable ? 'Sí' : 'No',
+          'Precio': s.price ?? dash,
+          'Unidad': s.price_unit ?? dash,
+          'Duración (min)': s.duration_min ?? dash,
+          'Capacidad': s.included_guests ?? dash,
+          'Adelanto (%)': s.deposit_pct ?? dash,
+          '€/adulto': s.price_per_guest_adult ?? dash,
+          '€/niño': s.price_per_guest_child ?? dash,
+          'Aplica a': (s.applies_to ?? []).map(v => RESERVABLE_TYPES.find(t => t.value === v)?.label ?? v).join(', '),
+          'Activo': s.active ? 'Sí' : 'No',
+        })),
+        ...filteredBonos.map(b => ({
+          'Servicio': b.name,
+          'Tipo': 'Bono',
+          'Flujo': dash,
+          'Reservable': dash,
+          'Precio': b.price ?? dash,
+          'Unidad': dash,
+          'Duración (min)': dash,
+          'Capacidad': b.sessions == null ? 'Ilimitado' : `${b.sessions} ses.`,
+          'Adelanto (%)': dash,
+          '€/adulto': dash,
+          '€/niño': dash,
+          'Aplica a': dash,
+          'Activo': b.active ? 'Sí' : 'No',
+        })),
+      ]
+      const ws = XLSX.utils.json_to_sheet(rows)
+      ws['!cols'] = [{ wch: 24 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 9 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 11 }, { wch: 9 }, { wch: 9 }, { wch: 20 }, { wch: 8 }]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Servicios')
+      XLSX.writeFile(wb, 'servicios.xlsx')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -365,40 +414,44 @@ export default function ServiciosPage() {
         <p className="text-sm text-fog">{services.length} servicio{services.length !== 1 ? 's' : ''} · {services.filter(s => s.active).length} activo{services.filter(s => s.active).length !== 1 ? 's' : ''}</p>
         <button
           onClick={openAdd}
+          title="Crear un servicio o bono nuevo"
           className="flex items-center gap-1.5 border border-lime bg-lime/10 text-lime text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/20 transition-colors"
         >
           <Plus size={13} /> Nuevo servicio
         </button>
       </div>
 
-      {/* Búsqueda + filtro por tipo */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o tipo..."
-            className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
-          />
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:pb-0">
-          {([
-            { key: 'todos', label: 'Todos' },
-            ...TIPOS.map(t => ({ key: t.value, label: t.label })),
-          ] as { key: typeof filterTipo; label: string }[]).map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilterTipo(f.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-colors shrink-0 ${
-                filterTipo === f.key ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface text-fog hover:text-snow'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Búsqueda + filtros + exportar */}
+      <TableFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por nombre o tipo..."
+        activeFilterCount={filterTipo !== 'todos' ? 1 : 0}
+        onExport={handleExport}
+        exporting={exporting}
+        exportDisabled={totalFiltered === 0}
+        filters={
+          <div>
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Tipo</p>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { key: 'todos', label: 'Todos' },
+                ...TIPOS.map(t => ({ key: t.value, label: t.label })),
+              ] as { key: typeof filterTipo; label: string }[]).map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilterTipo(f.key)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-colors ${
+                    filterTipo === f.key ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface text-fog hover:text-snow'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+      />
 
       {loading ? (
         <div className="text-center py-16 text-mist text-sm">Cargando...</div>

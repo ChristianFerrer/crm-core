@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates, calcHourlyCost, FALLBACK_RATE, type Rates } from '@/lib/pricing'
-import { Search, History, Download } from 'lucide-react'
+import { History } from 'lucide-react'
+import { TableFilterBar } from '@/components/TableFilterBar'
 
 type VisitType = 'entrada' | 'custodia'
 
@@ -134,40 +135,39 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
     }
   }
 
+  const isDefaultRange = dateFrom === todayStr && dateTo === todayStr
+
   return (
     <div className="space-y-4">
-      {/* Filtro de rango de fechas */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Desde</label>
-          <input type="date" value={dateFrom} max={todayStr} onChange={e => setDateFrom(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-            className="w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow outline-none focus:border-line2" />
-        </div>
-        <div>
-          <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Hasta</label>
-          <input type="date" value={dateTo} max={todayStr} onChange={e => setDateTo(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-            className="w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow outline-none focus:border-line2" />
-        </div>
-      </div>
-
-      {/* Búsqueda + exportar */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
-          <input value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar por nombre o teléfono..."
-            className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors" />
-        </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting || filteredVisits.length === 0}
-          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-3 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50 shrink-0"
-        >
-          <Download size={15} /> <span className="hidden sm:inline">Exportar a Excel</span>
-        </button>
-      </div>
+      {/* Búsqueda + filtros (rango de fechas) + exportar */}
+      <TableFilterBar
+        search={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Buscar por nombre o teléfono..."
+        activeFilterCount={isDefaultRange ? 0 : 1}
+        onExport={handleExport}
+        exporting={exporting}
+        exportDisabled={filteredVisits.length === 0}
+        filters={
+          <div>
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Rango de fechas</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] text-mist mb-1">Desde</label>
+                <input type="date" value={dateFrom} max={todayStr} onChange={e => setDateFrom(e.target.value)}
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-mist mb-1">Hasta</label>
+                <input type="date" value={dateTo} max={todayStr} onChange={e => setDateTo(e.target.value)}
+                  style={{ colorScheme: 'dark' }}
+                  className="w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+              </div>
+            </div>
+          </div>
+        }
+      />
 
       {/* Visit count */}
       <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide">
