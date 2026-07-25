@@ -394,8 +394,9 @@ export default function TiendaPage() {
                       <span className="font-bold text-lime">{p.price.toFixed(2)} €</span>
                     </td>
                     <td className="px-3 py-3 text-center hidden sm:table-cell">
-                      <button onClick={() => handleToggle(p)} className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border transition-colors ${p.active ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog'}`}>
-                        {p.active ? 'Activo' : 'Inactivo'}
+                      <button onClick={() => handleToggle(p)}
+                        className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${p.active ? 'bg-lime' : 'bg-line'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${p.active ? 'translate-x-4' : ''}`} />
                       </button>
                     </td>
                     <td className="px-4 py-3">
