@@ -2188,15 +2188,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <Users size={13} className="shrink-0" />
                 {isToday ? 'En sala ahora' : 'Visitas del día'}
               </h2>
-              {isToday && (
-                <span className="mt-1 inline-flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded">
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white animate-pulse" />
-                  </span>
-                  En vivo
-                </span>
-              )}
             </div>
             {isToday && (
               <button
