@@ -9,6 +9,7 @@ import { executeBooking } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates } from '@/lib/pricing'
 import { BookingSearchAndTypeModal, BookingFormModal, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
+import { MemberForm, type CreatedMember } from '@/components/MemberForm'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
@@ -41,7 +42,6 @@ interface Booking {
 interface MemberChild { name: string; birth_date?: string }
 interface Member { id: string; name: string; children?: MemberChild[] }
 
-const inputClass = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -84,7 +84,6 @@ function bookingLiveStatus(b: Booking, todayStr: string): 'ejecutado' | 'en_curs
   return 'pendiente'
 }
 
-const EMPTY_NEW_MEMBER = { name: '', phone: '', birth_date: '' }
 
 export default function CalendarioPage() {
   const router = useRouter()
@@ -99,9 +98,6 @@ export default function CalendarioPage() {
   const [executingId, setExecutingId] = useState<string | null>(null)
   // Add-member popup
   const [showAddMember, setShowAddMember] = useState(false)
-  const [newMemberForm, setNewMemberForm] = useState(EMPTY_NEW_MEMBER)
-  const [savingMember, setSavingMember] = useState(false)
-  const [newMemberConsent, setNewMemberConsent] = useState(false)
   const newMemberForFlow = useRef(false)
 
   // ── Flujo compartido de reserva (mismo componente que Inicio) ──
@@ -214,29 +210,13 @@ export default function CalendarioPage() {
     fetchBookings()
   }
 
-  async function handleAddMember(e: React.FormEvent) {
-    e.preventDefault()
-    if (!newMemberConsent) return
-    setSavingMember(true)
-    const { data } = await supabase.from('members').insert({
-      name: newMemberForm.name,
-      phone: newMemberForm.phone || null,
-      birth_date: newMemberForm.birth_date || null,
-      consent_accepted_at: new Date().toISOString(),
-      consent_version: 'v1.0',
-    }).select('id, name, phone, children').single()
-    setSavingMember(false)
-    if (data) {
-      fetchMembers()
-      const member = data as Member
-      // Volver al flujo compartido con el titular recién creado preseleccionado
-      newMemberForFlow.current = false
-      setFlowMember({ id: member.id, name: member.name, phone: (member as any).phone ?? null, family_id: null, memberships: [], children: (member.children ?? []).map(c => ({ name: c.name, birth_date: c.birth_date ?? '' })) })
-      setFlowStep('pick')
-    }
+  function handleMemberCreated(member: CreatedMember) {
+    fetchMembers()
+    // Volver al flujo compartido con el titular recién creado preseleccionado
+    newMemberForFlow.current = false
+    setFlowMember({ id: member.id, name: member.name, phone: member.phone, family_id: member.family_id, memberships: [], children: member.children })
+    setFlowStep('pick')
     setShowAddMember(false)
-    setNewMemberForm(EMPTY_NEW_MEMBER)
-    setNewMemberConsent(false)
   }
 
   const cells: (number | null)[] = [...Array(getFirstDayOfWeek(year, month)).fill(null), ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1)]
@@ -377,66 +357,18 @@ export default function CalendarioPage() {
 
       {/* ── New booking modal ── */}
 
-      {/* ── Add member popup (on top of booking modal) ── */}
+      {/* ── Nuevo titular (mismos campos que /miembros/nuevo) ── */}
       {showAddMember && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowAddMember(false)} />
-          <div className="relative w-full max-w-sm bg-surface border border-line rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setShowAddMember(false)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
               <h3 className="text-sm font-semibold text-snow">Nuevo titular</h3>
               <button onClick={() => setShowAddMember(false)} aria-label="Cerrar" className="text-mist hover:text-fog"><X size={16} /></button>
             </div>
-            <form onSubmit={handleAddMember} className="p-5 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Nombre completo *</label>
-                <input
-                  required
-                  value={newMemberForm.name}
-                  onChange={e => setNewMemberForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Ej: Ana García"
-                  className={inputClass}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Teléfono</label>
-                <input
-                  type="tel"
-                  value={newMemberForm.phone}
-                  onChange={e => setNewMemberForm(f => ({ ...f, phone: e.target.value }))}
-                  placeholder="Ej: 612 345 678"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Fecha de nacimiento</label>
-                <input
-                  type="date"
-                  value={newMemberForm.birth_date}
-                  onChange={e => setNewMemberForm(f => ({ ...f, birth_date: e.target.value }))}
-                  className={inputClass}
-                />
-              </div>
-              <label className="flex items-start gap-2.5 cursor-pointer pt-1">
-                <input
-                  type="checkbox"
-                  checked={newMemberConsent}
-                  onChange={e => setNewMemberConsent(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-lime"
-                />
-                <span className="text-[11px] text-fog leading-relaxed">
-                  El titular consiente el tratamiento de sus datos y los de sus hijos (
-                  <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="text-lime underline">política de privacidad</a>). *
-                </span>
-              </label>
-              <button
-                type="submit"
-                disabled={savingMember || !newMemberConsent}
-                className="w-full border border-iris bg-iris/10 text-iris font-semibold py-2.5 rounded-xl text-sm hover:bg-iris/80 transition-colors disabled:opacity-50"
-              >
-                {savingMember ? 'Guardando...' : 'Crear titular'}
-              </button>
-            </form>
+            <div className="overflow-y-auto flex-1 px-5 py-4">
+              <MemberForm onCreated={handleMemberCreated} submitLabel="Guardar y continuar con la reserva" />
+            </div>
           </div>
         </div>
       )}

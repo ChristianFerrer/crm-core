@@ -17,6 +17,7 @@ import { memberMatchesQuery } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { resolveRates } from '@/lib/pricing'
 import { DatePickerModal } from '@/components/DatePickerModal'
+import { MemberForm } from '@/components/MemberForm'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LabelList,
@@ -577,85 +578,13 @@ function CheckinNewMemberModal({
   onBack,
   onClose,
   onCreated,
+  submitLabel,
 }: {
   onBack: () => void
   onClose: () => void
   onCreated: (member: FullMember) => void
+  submitLabel?: string
 }) {
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [birthDate, setBirthDate] = useState('')
-  const [children, setChildren] = useState<{ name: string; sex: string; birth_date: string }[]>([])
-  const [consentAccepted, setConsentAccepted] = useState(false)
-  const [showPartner, setShowPartner] = useState(false)
-  const [partnerPhone, setPartnerPhone] = useState('')
-  const [partnerSearching, setPartnerSearching] = useState(false)
-  const [partnerFound, setPartnerFound] = useState<{ id: string; name: string; phone: string } | null | undefined>(undefined)
-  const [partnerConfirmed, setPartnerConfirmed] = useState(false)
-  const [partnerName, setPartnerName] = useState('')
-  const partnerTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  function handlePartnerPhone(val: string) {
-    setPartnerPhone(val); setPartnerFound(undefined); setPartnerConfirmed(false); setPartnerName('')
-    clearTimeout(partnerTimer.current)
-    if (val.replace(/\s/g, '').length < 8) return
-    setPartnerSearching(true)
-    partnerTimer.current = setTimeout(async () => {
-      const { data } = await supabase.from('members').select('id, name, phone')
-        .eq('phone', val.trim()).limit(1).maybeSingle()
-      setPartnerSearching(false); setPartnerFound(data ?? null)
-    }, 400)
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!firstName.trim() || !consentAccepted) return
-    const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
-    setSaving(true); setError(null)
-    try {
-      const cleanChildren = children.filter(c => c.name.trim())
-      const hasPartner = showPartner && partnerPhone.trim() && (partnerConfirmed || partnerName.trim())
-      let familyId: string | null = null
-      if (hasPartner) {
-        const { data: fam, error: fe } = await supabase
-          .from('families').insert({ name: `Familia ${lastName.trim() || firstName.trim()}` }).select('id').single()
-        if (fe) throw fe
-        familyId = fam.id
-      }
-      const { data: newMember, error: me } = await supabase.from('members').insert({
-        name: fullName, phone: phone.trim() || null, email: email.trim() || null,
-        birth_date: birthDate || null, family_id: familyId,
-        children: cleanChildren, children_count: cleanChildren.length,
-        consent_accepted_at: new Date().toISOString(), consent_version: 'v1.0',
-      }).select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children').single()
-      if (me) throw me
-      if (hasPartner && familyId) {
-        if (partnerFound && partnerConfirmed) {
-          await supabase.from('members').update({
-            family_id: familyId,
-            ...(cleanChildren.length > 0 ? { children: cleanChildren, children_count: cleanChildren.length } : {}),
-          }).eq('id', partnerFound.id)
-        } else if (partnerName.trim()) {
-          await supabase.from('members').insert({
-            name: partnerName.trim(), phone: partnerPhone.trim(), family_id: familyId,
-            children: cleanChildren, children_count: cleanChildren.length,
-            consent_accepted_at: new Date().toISOString(), consent_version: 'v1.0',
-          })
-        }
-      }
-      onCreated(newMember as unknown as FullMember)
-    } catch (err: any) {
-      setError(err.message ?? 'Error al guardar'); setSaving(false)
-    }
-  }
-
-  const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
-  const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5'
-
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -667,146 +596,13 @@ function CheckinNewMemberModal({
           </button>
           <div className="flex-1">
             <p className="text-sm font-semibold text-snow">Nuevo miembro</p>
-            <p className="text-[11px] text-fog">Registro de entrada</p>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-          {/* Titular */}
-          <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
-            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Titular</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Nombre *</label>
-                <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" required className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Apellido</label>
-                <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido" className={inputCls} />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>Teléfono</label>
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Fecha de nacimiento</label>
-              <DatePickerModal value={birthDate} onChange={setBirthDate} />
-            </div>
-          </div>
-
-          {/* Hijos */}
-          <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Hijos <span className="normal-case font-normal text-mist ml-1">opcional</span></p>
-              <button type="button" onClick={() => setChildren(cs => [...cs, { name: '', sex: '', birth_date: '' }])}
-                className="flex items-center gap-1 text-xs font-semibold text-lime hover:opacity-80 transition-opacity">
-                <Plus size={13} /> Añadir
-              </button>
-            </div>
-            {children.length === 0 && <p className="text-xs text-mist">Añade los niños que vienen con este miembro.</p>}
-            {children.map((c, i) => (
-              <div key={i} className="border-t border-line pt-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-fog">Hijo/a {i + 1}</p>
-                  <button type="button" onClick={() => setChildren(cs => cs.filter((_, idx) => idx !== i))} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
-                </div>
-                <input value={c.name} onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, name: e.target.value } : ch))} placeholder="Nombre" className={inputCls} />
-                <select value={c.sex} onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, sex: e.target.value } : ch))} className={inputCls}>
-                  <option value="">Sin especificar</option>
-                  <option value="M">Niño</option>
-                  <option value="F">Niña</option>
-                </select>
-                <div>
-                  <label className={labelCls}>Fecha de nacimiento</label>
-                  <DatePickerModal value={c.birth_date} onChange={v => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, birth_date: v } : ch))} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pareja */}
-          {!showPartner ? (
-            <button type="button" onClick={() => setShowPartner(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
-              <UserPlus size={14} /> Agregar pareja / otro titular
-            </button>
-          ) : (
-            <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Pareja / otro titular</p>
-                <button type="button" onClick={() => { setShowPartner(false); setPartnerPhone(''); setPartnerFound(undefined); setPartnerConfirmed(false); setPartnerName('') }}
-                  className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
-              </div>
-              <div className="relative">
-                <input type="tel" value={partnerPhone} onChange={e => handlePartnerPhone(e.target.value)} placeholder="Teléfono de la pareja" className={inputCls} />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {partnerSearching && <Loader2 size={14} className="text-mist animate-spin" />}
-                  {partnerConfirmed && <Check size={14} className="text-lime" />}
-                </div>
-              </div>
-              {partnerFound && !partnerConfirmed && (
-                <div className="rounded-xl border border-lime/20 bg-lime/5 p-3 space-y-2">
-                  <p className="text-xs text-fog">Miembro encontrado: <span className="text-snow font-medium">{partnerFound.name}</span></p>
-                  <button type="button" onClick={() => setPartnerConfirmed(true)}
-                    className="w-full rounded-xl bg-lime/10 border border-lime/30 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">Confirmar como pareja</button>
-                </div>
-              )}
-              {partnerConfirmed && partnerFound && (
-                <div className="flex items-center gap-2 rounded-xl border border-lime/20 bg-lime/5 px-3 py-2.5">
-                  <Check size={13} className="text-lime shrink-0" />
-                  <p className="text-sm text-snow flex-1">{partnerFound.name}</p>
-                  <button type="button" onClick={() => { setPartnerConfirmed(false); setPartnerFound(undefined); setPartnerPhone('') }}
-                    className="text-mist hover:text-rose"><X size={13} /></button>
-                </div>
-              )}
-              {partnerFound === null && (
-                <div className="space-y-2">
-                  <div className="rounded-xl border border-amber/20 bg-amber/5 px-3 py-2">
-                    <p className="text-xs text-amber font-medium">Número no registrado — se creará un nuevo miembro</p>
-                  </div>
-                  <input value={partnerName} onChange={e => setPartnerName(e.target.value)} placeholder="Nombre de la pareja" className={inputCls} />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Consentimiento RGPD */}
-          <div className="rounded-2xl border border-line bg-surface2/40 p-4 space-y-3">
-            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Protección de datos</p>
-            <label className="flex items-start gap-3 cursor-pointer group">
-              <div className="relative mt-0.5 shrink-0">
-                <input type="checkbox" checked={consentAccepted} onChange={e => setConsentAccepted(e.target.checked)} className="sr-only" />
-                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${consentAccepted ? 'bg-lime border-lime' : 'bg-surface2 border-line group-hover:border-line2'}`}>
-                  {consentAccepted && <Check size={12} className="text-ink" strokeWidth={3} />}
-                </div>
-              </div>
-              <p className="text-xs text-fog leading-relaxed">
-                El tutor legal ha sido informado y acepta el tratamiento de sus datos según la{' '}
-                <a href="/privacidad" target="_blank" className="text-iris underline">política de privacidad</a>.
-              </p>
-            </label>
-            {!consentAccepted && (
-              <p className="text-[11px] text-amber flex items-center gap-1">
-                <AlertTriangle size={11} /> Obligatorio para registrar al miembro
-              </p>
-            )}
-          </div>
-
-          {error && <p className="text-sm text-rose text-center">{error}</p>}
-
-          <button type="submit" disabled={saving || !firstName.trim() || !consentAccepted}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-3.5 font-semibold text-lime transition hover:bg-lime/20 active:scale-[0.99] disabled:opacity-60"
-            style={{ boxShadow: 'var(--shadow-lime)' }}>
-            <Save size={17} strokeWidth={2.2} />
-            {saving ? 'Guardando...' : 'Guardar y registrar entrada'}
-          </button>
-        </form>
+        <div className="overflow-y-auto flex-1 px-5 py-4">
+          <MemberForm onCreated={onCreated} submitLabel={submitLabel} />
+        </div>
       </div>
     </div>
   )
@@ -4136,6 +3932,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Modal 3: nuevo miembro */}
       {checkinModal === 'new-member' && (
         <CheckinNewMemberModal
+          submitLabel={newMemberReturnTo.current === 'booking' ? 'Guardar y continuar con la reserva' : 'Guardar y registrar entrada'}
           onBack={() => {
             // Vuelve al flujo del que vino: búsqueda de check-in, o directamente
             // a la ventana de reserva (que sigue montada debajo, ya abierta en 'pick')
