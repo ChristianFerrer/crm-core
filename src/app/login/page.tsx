@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isSuperAdmin } from '@/lib/roles'
 import { loadAndStoreTenant } from '@/lib/tenant'
+import { PasswordInput } from '@/components/PasswordInput'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -103,8 +104,8 @@ export default function LoginPage() {
             <input type="email" placeholder="Correo electrónico" value={email}
               onChange={e => setEmail(e.target.value)} required className={inputClass} />
             {mode !== 'forgot' && (
-              <input type="password" placeholder="Contraseña" value={password}
-                onChange={e => setPassword(e.target.value)} required className={inputClass} />
+              <PasswordInput value={password} onChange={setPassword} placeholder="Contraseña" required
+                className={inputClass.replace('px-4', 'pl-4 pr-11')} />
             )}
             {mode === 'login' && (
               <div className="text-right -mt-1">

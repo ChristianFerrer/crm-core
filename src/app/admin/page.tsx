@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isSuperAdmin } from '@/lib/roles'
 import { toast } from 'sonner'
+import { PasswordInput } from '@/components/PasswordInput'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, Pencil,
@@ -359,12 +360,10 @@ function ChangePasswordModal({ tenant, onClose }: { tenant: Tenant; onClose: () 
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
         </div>
         <p className="text-xs text-fog mb-4">{tenant.admin_email}</p>
-        <input
-          type="password"
+        <PasswordInput
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={setPassword}
           placeholder="Nueva contraseña (mín. 6 caracteres)"
-          className="w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
           autoFocus
         />
         {error && <p className="text-xs text-rose mt-2">{error}</p>}
