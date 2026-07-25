@@ -443,7 +443,8 @@ export default function CalendarioPage() {
 
 
       {/* ── Flujo compartido: crear/editar reserva (mismo componente que Inicio) ── */}
-      {flowStep === 'pick' && (
+      {/* Se oculta mientras está abierto 'Nuevo titular' para que ese modal quede al frente */}
+      {flowStep === 'pick' && !showAddMember && (
         <BookingSearchAndTypeModal
           filtered={flowFiltered}
           query={flowQuery}

@@ -4136,7 +4136,11 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Modal 3: nuevo miembro */}
       {checkinModal === 'new-member' && (
         <CheckinNewMemberModal
-          onBack={() => setCheckinModal('search')}
+          onBack={() => {
+            // Vuelve al flujo del que vino: búsqueda de check-in, o directamente
+            // a la ventana de reserva (que sigue montada debajo, ya abierta en 'pick')
+            setCheckinModal(newMemberReturnTo.current === 'booking' ? null : 'search')
+          }}
           onClose={() => { setCheckinModal(null); setCheckinSelectedMember(null); setCheckinQuery(''); setCheckinMembers([]) }}
           onCreated={(newMember) => {
             setCheckinMembers([])
