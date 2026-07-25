@@ -8,7 +8,7 @@ import { loadAndStoreTenant } from '@/lib/tenant'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -32,6 +32,16 @@ export default function LoginPage() {
     setError('')
     setMessage('')
     setLoading(true)
+
+    if (mode === 'forgot') {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/auth/reset-password',
+      })
+      if (error) setError(error.message)
+      else setMessage('Si el correo existe, te hemos enviado un enlace para restablecer tu contraseña.')
+      setLoading(false)
+      return
+    }
 
     if (mode === 'login') {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -92,26 +102,39 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <input type="email" placeholder="Correo electrónico" value={email}
               onChange={e => setEmail(e.target.value)} required className={inputClass} />
-            <input type="password" placeholder="Contraseña" value={password}
-              onChange={e => setPassword(e.target.value)} required className={inputClass} />
+            {mode !== 'forgot' && (
+              <input type="password" placeholder="Contraseña" value={password}
+                onChange={e => setPassword(e.target.value)} required className={inputClass} />
+            )}
+            {mode === 'login' && (
+              <div className="text-right -mt-1">
+                <button type="button" onClick={() => { setMode('forgot'); setError(''); setMessage('') }}
+                  className="text-xs text-mist hover:text-lime transition-colors">¿Olvidaste tu contraseña?</button>
+              </div>
+            )}
 
             {error && <p className="text-xs text-rose">{error}</p>}
             {message && <p className="text-xs text-lime">{message}</p>}
 
             <button type="submit" disabled={loading} className={limeBtn}>
-              {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
+              {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Enviar enlace'}
             </button>
           </form>
 
           <p className="text-center text-xs text-mist">
-            {mode === 'login' ? (
+            {mode === 'login' && (
               <>¿Primera vez?{' '}
                 <button onClick={() => { setMode('register'); setError(''); setMessage('') }}
                   className="text-snow underline hover:text-lime transition-colors">Crear cuenta</button></>
-            ) : (
+            )}
+            {mode === 'register' && (
               <>¿Ya tienes cuenta?{' '}
                 <button onClick={() => { setMode('login'); setError(''); setMessage('') }}
                   className="text-snow underline hover:text-lime transition-colors">Iniciar sesión</button></>
+            )}
+            {mode === 'forgot' && (
+              <button onClick={() => { setMode('login'); setError(''); setMessage('') }}
+                className="text-snow underline hover:text-lime transition-colors">← Volver a iniciar sesión</button>
             )}
           </p>
         </div>

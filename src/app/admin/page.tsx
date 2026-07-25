@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { isSuperAdmin } from '@/lib/roles'
+import { toast } from 'sonner'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, Pencil,
   CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle, LogOut, ChevronDown,
-  Smartphone, Monitor, Tablet, Globe, Wifi, WifiOff
+  Smartphone, Monitor, Tablet, Globe, Wifi, WifiOff, KeyRound, Mail, Check,
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -324,9 +325,77 @@ function TenantModal({
   )
 }
 
+// Modal para fijar directamente una nueva contraseña (requiere SUPABASE_SERVICE_ROLE_KEY en el servidor)
+function ChangePasswordModal({ tenant, onClose }: { tenant: Tenant; onClose: () => void }) {
+  const [password, setPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    if (password.length < 6) { setError('Mínimo 6 caracteres'); return }
+    setSaving(true); setError('')
+    try {
+      const res = await fetch('/api/admin/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: tenant.id, newPassword: password }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Error al cambiar la contraseña')
+      toast.success(`Contraseña actualizada para ${tenant.name}`)
+      onClose()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-snow">Cambiar contraseña</h2>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
+        </div>
+        <p className="text-xs text-fog mb-4">{tenant.admin_email}</p>
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Nueva contraseña (mín. 6 caracteres)"
+          className="w-full bg-surface2 border border-line rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
+          autoFocus
+        />
+        {error && <p className="text-xs text-rose mt-2">{error}</p>}
+        <div className="flex gap-2 mt-5">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+          <button onClick={handleSave} disabled={saving || password.length < 6}
+            className="flex-1 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            <Check size={14} /> {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: () => void }) {
   const router = useRouter()
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; initial: TenantForm & { id?: string } } | null>(null)
+  const [passwordTenant, setPasswordTenant] = useState<Tenant | null>(null)
+  const [sendingReset, setSendingReset] = useState<string | null>(null)
+
+  async function sendResetEmail(t: Tenant) {
+    if (!t.admin_email) { toast.error('Este establecimiento no tiene admin_email configurado'); return }
+    setSendingReset(t.id)
+    const { error } = await supabase.auth.resetPasswordForEmail(t.admin_email, {
+      redirectTo: window.location.origin + '/auth/reset-password',
+    })
+    setSendingReset(null)
+    if (error) toast.error(error.message)
+    else toast.success(`Enlace de restablecimiento enviado a ${t.admin_email}`)
+  }
 
   function openCreate() {
     setModal({ mode: 'create', initial: { ...emptyForm } })
@@ -428,6 +497,14 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-iris/30 text-iris hover:bg-iris/20 transition-colors">
                 <Eye size={12} /> Ver cliente
               </button>
+              <button onClick={() => sendResetEmail(t)} disabled={sendingReset === t.id}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors disabled:opacity-50">
+                <Mail size={12} /> {sendingReset === t.id ? 'Enviando...' : 'Restablecer contraseña'}
+              </button>
+              <button onClick={() => setPasswordTenant(t)}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
+                <KeyRound size={12} /> Cambiar contraseña
+              </button>
               <button onClick={() => toggleStatus(t)}
                 className={`ml-auto flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
                   t.status === 'active'
@@ -448,6 +525,10 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
           onClose={() => setModal(null)}
           onSaved={onReload}
         />
+      )}
+
+      {passwordTenant && (
+        <ChangePasswordModal tenant={passwordTenant} onClose={() => setPasswordTenant(null)} />
       )}
     </div>
   )
