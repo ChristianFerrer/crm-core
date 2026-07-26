@@ -9,6 +9,7 @@ import {
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
   Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2, CalendarPlus,
   Euro, CreditCard,
+  CupSoda, Coffee, Droplet, Citrus, Cookie, Candy, Croissant, Popcorn, Package,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
@@ -1529,6 +1530,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [bookingServices, setBookingServices] = useState<BookingService[]>([])
   const [openChecks, setOpenChecks] = useState<Map<string, OpenCheck>>(new Map())
   const [consumosVisitId, setConsumosVisitId] = useState<string | null>(null)
+  const [productSearch, setProductSearch] = useState('')
   const [addingProduct, setAddingProduct] = useState<string | null>(null)
   const [importeVisitId, setImporteVisitId] = useState<string | null>(null)
   const [totalVisitId, setTotalVisitId] = useState<string | null>(null)
@@ -2123,6 +2125,21 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     return acc
   }, {})
 
+  function getProductIcon(p: Product) {
+    const n = p.name.toLowerCase()
+    if (n.includes('café') || n.includes('cafe')) return Coffee
+    if (n.includes('agua') || n.includes('mineral')) return Droplet
+    if (n.includes('zumo') || n.includes('naranja') || n.includes('fanta')) return Citrus
+    if (n.includes('galleta')) return Cookie
+    if (n.includes('gomino') || n.includes('caramel') || n.includes('haribo') || n.includes('kinder')) return Candy
+    if (n.includes('bollycao') || n.includes('croissant')) return Croissant
+    if (n.includes('patata') || n.includes('chips') || n.includes('lay')) return Popcorn
+    const c = p.category.toLowerCase()
+    if (c.includes('bebida')) return CupSoda
+    if (c.includes('snack')) return Cookie
+    return Package
+  }
+
   const consumosVisit = consumosVisitId ? activeVisits.find(v => v.id === consumosVisitId) : null
 
   // Grid del calendario mensual (Ir a fecha)
@@ -2578,7 +2595,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                                   : '—'}
                               </span>
                               <button
-                                onClick={() => setConsumosVisitId(isShowingConsumos ? null : visit.id)}
+                                onClick={() => { setProductSearch(''); setConsumosVisitId(isShowingConsumos ? null : visit.id) }}
                                 className={`flex items-center justify-center w-6 h-6 rounded-md border transition-colors ${
                                   isShowingConsumos
                                     ? 'bg-iris/20 text-iris border-iris/40'
@@ -3652,7 +3669,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <span className="text-xs font-semibold text-lime">{imp.total.toFixed(2)}€</span>
                     <span className="text-[10px] text-mist">Importe</span>
                   </button>
-                  <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); setConsumosVisitId(detailVisitId) }}
+                  <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); setProductSearch(''); setConsumosVisitId(detailVisitId) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
                     <Plus size={15} className="text-fog" />
                     <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
@@ -4106,25 +4123,53 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               {/* Selector de productos */}
               <div>
                 <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-3">Añadir producto</p>
-                {Object.entries(productsByCategory).map(([cat, prods]) => (
-                  <div key={cat} className="mb-4 last:mb-0">
-                    <p className="text-[10px] font-semibold text-fog capitalize mb-2">{cat}</p>
-                    <div className="flex flex-col gap-2">
-                      {[...prods].sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => (
-                        <button
-                          key={p.id}
-                          onClick={() => handleAddProduct(consumosVisitId, p)}
-                          disabled={addingProduct === p.id + consumosVisitId}
-                          className="flex items-center gap-3 text-sm font-medium text-snow bg-surface2 border border-line rounded-xl px-3.5 py-3 hover:border-iris/50 hover:bg-iris/5 transition-colors disabled:opacity-50 text-left"
-                        >
-                          <span className="text-lg shrink-0">{p.emoji}</span>
-                          <span className="flex-1 min-w-0">{p.name}</span>
-                          <span className="text-mist shrink-0">{Number(p.price).toFixed(2)}€</span>
-                        </button>
-                      ))}
+
+                {/* Buscador */}
+                <div className="relative mb-3">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-mist" />
+                  <input
+                    type="text"
+                    value={productSearch}
+                    onChange={e => setProductSearch(e.target.value)}
+                    placeholder="Buscar producto..."
+                    className="w-full bg-surface2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-sm text-snow placeholder:text-mist focus:outline-none focus:border-iris/50 transition-colors"
+                  />
+                </div>
+
+                {Object.entries(productsByCategory).map(([cat, prods]) => {
+                  const filtered = [...prods]
+                    .filter(p => p.name.toLowerCase().includes(productSearch.trim().toLowerCase()))
+                    .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+                  if (filtered.length === 0) return null
+                  return (
+                    <div key={cat} className="mb-4 last:mb-0">
+                      <p className="text-[10px] font-semibold text-fog capitalize mb-2">{cat}</p>
+                      <div className="flex flex-col gap-2">
+                        {filtered.map(p => {
+                          const Icon = getProductIcon(p)
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => handleAddProduct(consumosVisitId, p)}
+                              disabled={addingProduct === p.id + consumosVisitId}
+                              className="flex items-center gap-3 text-sm font-medium text-snow bg-surface2 border border-line rounded-xl px-3.5 py-3 hover:border-iris/50 hover:bg-iris/5 transition-colors disabled:opacity-50 text-left"
+                            >
+                              <Icon size={18} className="text-iris shrink-0" />
+                              <span className="flex-1 min-w-0">{p.name}</span>
+                              <span className="text-mist shrink-0">{Number(p.price).toFixed(2)}€</span>
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
+
+                {Object.values(productsByCategory).every(prods =>
+                  prods.every(p => !p.name.toLowerCase().includes(productSearch.trim().toLowerCase()))
+                ) && (
+                  <p className="text-xs text-mist text-center py-4">Sin resultados</p>
+                )}
               </div>
             </div>
           </div>
