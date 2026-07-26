@@ -650,13 +650,13 @@ export default function ServiciosPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-snow">{modal === 'add' ? 'Nuevo servicio' : 'Editar servicio'}</h2>
+              <h2 className="text-base font-semibold text-snow">{modal === 'add' ? t('panelcfg_nuevo_servicio_modal') : t('panelcfg_editar_servicio')}</h2>
               <button onClick={closeModal} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               {/* Paso 1 — Tipo de servicio (define el comportamiento y los campos) */}
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Tipo de servicio *</label>
+                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_tipo_servicio_req')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {TIPOS.map(opt => {
                     const sel = form.tipo === opt.value
@@ -673,12 +673,12 @@ export default function ServiciosPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Nombre *</label>
-                <input className={INPUT_CLASS} placeholder="Ej. Entrada diaria" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_nombre_req')}</label>
+                <input className={INPUT_CLASS} placeholder={t('panelcfg_placeholder_nombre_servicio')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Descripción (opcional)</label>
-                <input className={INPUT_CLASS} placeholder="Breve descripción" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_descripcion_opcional')}</label>
+                <input className={INPUT_CLASS} placeholder={t('panelcfg_placeholder_descripcion_breve')} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               {/* BONO — campos propios (se guardan en membership_types) */}
               {form.tipo === 'bono' && (
@@ -689,25 +689,25 @@ export default function ServiciosPage() {
                       <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.ilimitado ? 'translate-x-4' : ''}`} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-snow">Ilimitado</p>
-                      <p className="text-[11px] text-mist">Sin límite de sesiones (ej. mensual)</p>
+                      <p className="text-sm font-medium text-snow">{t('panelcfg_ilimitado_label')}</p>
+                      <p className="text-[11px] text-mist">{t('panelcfg_ilimitado_desc')}</p>
                     </div>
                   </button>
                   <div className="grid grid-cols-2 gap-3">
                     {!form.ilimitado && (
                       <div>
-                        <label className="block text-xs font-semibold text-fog mb-1.5">Nº sesiones *</label>
-                        <input className={INPUT_CLASS} type="number" min="1" placeholder="Ej. 10" value={form.sessions} onChange={e => setForm(f => ({ ...f, sessions: e.target.value }))} />
+                        <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_num_sesiones_req')}</label>
+                        <input className={INPUT_CLASS} type="number" min="1" placeholder={t('panelcfg_placeholder_ej10')} value={form.sessions} onChange={e => setForm(f => ({ ...f, sessions: e.target.value }))} />
                       </div>
                     )}
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_precio_eur_req')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="60.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5">Vigencia en días (opcional)</label>
-                    <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 90" value={form.validity_days} onChange={e => setForm(f => ({ ...f, validity_days: e.target.value }))} />
+                    <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_vigencia_dias_opcional')}</label>
+                    <input className={INPUT_CLASS} type="number" min="0" placeholder={t('panelcfg_placeholder_ej90')} value={form.validity_days} onChange={e => setForm(f => ({ ...f, validity_days: e.target.value }))} />
                   </div>
                 </>
               )}
@@ -715,30 +715,30 @@ export default function ServiciosPage() {
               {/* Flujo de reserva — solo para paquetes reservables (define la UX de la reserva) */}
               {form.tipo === 'reservable' && (
                 <div>
-                  <label className="block text-xs font-semibold text-fog mb-1.5">Flujo de reserva *</label>
+                  <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_flujo_reserva_req')}</label>
                   <select className={INPUT_CLASS} value={form.flujo} onChange={e => setForm(f => ({ ...f, flujo: e.target.value }))}>
                     {FLUJOS.map(fl => <option key={fl.value} value={fl.value}>{t(fl.labelKey)}</option>)}
                   </select>
-                  <p className="text-[11px] text-mist mt-1">Cumpleaños y Custodia tienen pantallas propias; Genérico sirve para cualquier evento.</p>
+                  <p className="text-[11px] text-mist mt-1">{t('panelcfg_flujo_reserva_hint')}</p>
                 </div>
               )}
               {form.tipo !== 'bono' && (
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">Precio (€) *</label>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_precio_eur_req')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">Unidad de precio</label>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_unidad_precio')}</label>
                       <select className={INPUT_CLASS} value={form.price_unit} onChange={e => setForm(f => ({ ...f, price_unit: e.target.value }))}>
                         {PRICE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5">Duración en minutos (opcional)</label>
-                    <input className={INPUT_CLASS} type="number" min="0" placeholder="Ej. 60" value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
+                    <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_duracion_min_opcional')}</label>
+                    <input className={INPUT_CLASS} type="number" min="0" placeholder={t('panelcfg_placeholder_ej60')} value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
                   </div>
                 </>
               )}
@@ -746,33 +746,33 @@ export default function ServiciosPage() {
               {/* Config de reservas — solo para paquetes reservables */}
               {form.tipo === 'reservable' && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
-                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Configuración de reservas</p>
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('panelcfg_config_reservas')}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">Adelanto sugerido (%)</label>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_adelanto_sugerido')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" max="100" step="1" placeholder="50"
                         value={form.deposit_pct} onChange={e => setForm(f => ({ ...f, deposit_pct: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">Personas incluidas</label>
+                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_personas_incluidas')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="1" placeholder="0"
                         value={form.included_guests} onChange={e => setForm(f => ({ ...f, included_guests: e.target.value }))} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">Adulto extra (€)</label>
-                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="Entrada libre"
+                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_adulto_extra')}</label>
+                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder={t('panelcfg_placeholder_entrada_libre')}
                         value={form.price_per_guest_adult} onChange={e => setForm(f => ({ ...f, price_per_guest_adult: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">Niño extra (€)</label>
-                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="Entrada libre"
+                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_nino_extra')}</label>
+                      <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder={t('panelcfg_placeholder_entrada_libre')}
                         value={form.price_per_guest_child} onChange={e => setForm(f => ({ ...f, price_per_guest_child: e.target.value }))} />
                     </div>
                   </div>
                   <p className="text-[11px] text-mist leading-relaxed">
-                    El precio cubre las <span className="text-fog font-medium">personas incluidas</span> (niños + adultos). Solo se cobran los invitados que excedan ese número. Si dejas en blanco el precio por invitado extra, se usa la tarifa de <span className="text-fog font-medium">entrada libre</span>.
+                    {t('panelcfg_config_reservas_hint', { personas: t('panelcfg_personas_incluidas_inline'), entrada: t('panelcfg_entrada_libre_inline') })}
                   </p>
                 </div>
               )}
@@ -780,7 +780,7 @@ export default function ServiciosPage() {
               {/* Sub-servicio: a qué tipos de reserva puede agregarse */}
               {form.tipo === 'subservicio' && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-2.5">
-                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Se puede agregar a</p>
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('panelcfg_se_puede_agregar_a')}</p>
                   <div className="space-y-1.5">
                     {RESERVABLE_TYPES.map(opt => {
                       const sel = form.applies_to.includes(opt.value)
@@ -796,14 +796,14 @@ export default function ServiciosPage() {
                       )
                     })}
                   </div>
-                  <p className="text-[11px] text-mist">Si no marcas ninguno, el sub-servicio estará disponible en todas las reservas.</p>
+                  <p className="text-[11px] text-mist">{t('panelcfg_agregar_a_hint')}</p>
                 </div>
               )}
             </div>
             <div className="flex gap-2 mt-6">
-              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={closeModal} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">{t('panelcfg_cancelar')}</button>
               <button onClick={saveForm} disabled={saving || !form.name.trim() || !form.price} className="flex-1 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
-                <Check size={14} /> {saving ? 'Guardando...' : 'Guardar'}
+                <Check size={14} /> {saving ? t('panelcfg_guardando') : t('panelcfg_guardar')}
               </button>
             </div>
           </div>
@@ -815,35 +815,35 @@ export default function ServiciosPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-snow">{editCat ? 'Editar categoría' : 'Nueva categoría'}</h2>
+              <h2 className="text-base font-semibold text-snow">{editCat ? t('panelcfg_editar_categoria') : t('panelcfg_nueva_categoria')}</h2>
               <button onClick={() => setShowCatModal(false)} className="text-fog hover:text-snow transition-colors"><X size={18} /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Nombre de la categoría *</label>
+                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_nombre_categoria_req')}</label>
                 <input
                   className={INPUT_CLASS}
-                  placeholder="Ej. Taller, Evento especial..."
+                  placeholder={t('panelcfg_placeholder_categoria')}
                   value={catForm.label}
                   onChange={e => setCatForm(f => ({ ...f, label: e.target.value }))}
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">Identificador (opcional)</label>
+                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_identificador_opcional')}</label>
                 <input
                   className={INPUT_CLASS}
-                  placeholder="Se genera automáticamente"
+                  placeholder={t('panelcfg_placeholder_autogenerado')}
                   value={catForm.value}
                   onChange={e => setCatForm(f => ({ ...f, value: e.target.value }))}
                 />
-                <p className="text-xs text-mist mt-1">Solo letras minúsculas y guión bajo. Déjalo vacío para generarlo automáticamente.</p>
+                <p className="text-xs text-mist mt-1">{t('panelcfg_identificador_hint')}</p>
               </div>
             </div>
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setShowCatModal(false)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => setShowCatModal(false)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">{t('panelcfg_cancelar')}</button>
               <button onClick={saveCat} disabled={!catForm.label.trim()} className="flex-1 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
-                <Check size={14} /> {editCat ? 'Guardar' : 'Crear categoría'}
+                <Check size={14} /> {editCat ? t('panelcfg_guardar') : t('panelcfg_crear_categoria')}
               </button>
             </div>
           </div>
@@ -854,12 +854,12 @@ export default function ServiciosPage() {
       {deleteCat && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar categoría?</h2>
-            <p className="text-sm text-fog mb-1">Los servicios con esta categoría quedarán sin categorizar.</p>
-            <p className="text-sm text-fog mb-6">Esta acción no elimina los servicios.</p>
+            <h2 className="text-base font-semibold text-snow mb-2">{t('panelcfg_eliminar_categoria_titulo')}</h2>
+            <p className="text-sm text-fog mb-1">{t('panelcfg_eliminar_categoria_msg1')}</p>
+            <p className="text-sm text-fog mb-6">{t('panelcfg_eliminar_categoria_msg2')}</p>
             <div className="flex gap-2">
-              <button onClick={() => setDeleteCat(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={doDeleteCat} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Eliminar</button>
+              <button onClick={() => setDeleteCat(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">{t('panelcfg_cancelar')}</button>
+              <button onClick={doDeleteCat} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">{t('panelcfg_eliminar')}</button>
             </div>
           </div>
         </div>
@@ -869,11 +869,11 @@ export default function ServiciosPage() {
       {deleteId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar servicio?</h2>
-            <p className="text-sm text-fog mb-6">Esta acción no se puede deshacer.</p>
+            <h2 className="text-base font-semibold text-snow mb-2">{t('panelcfg_eliminar_servicio_titulo')}</h2>
+            <p className="text-sm text-fog mb-6">{t('panelcfg_eliminar_servicio_msg')}</p>
             <div className="flex gap-2">
-              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={() => deleteService(deleteId)} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Eliminar</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">{t('panelcfg_cancelar')}</button>
+              <button onClick={() => deleteService(deleteId)} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">{t('panelcfg_eliminar')}</button>
             </div>
           </div>
         </div>
@@ -883,11 +883,11 @@ export default function ServiciosPage() {
       {bonoDeleteId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-surface border border-line rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-base font-semibold text-snow mb-2">¿Eliminar bono?</h2>
-            <p className="text-sm text-fog mb-6">Los bonos ya vendidos a miembros no se eliminan; solo se quita este tipo del catálogo.</p>
+            <h2 className="text-base font-semibold text-snow mb-2">{t('panelcfg_eliminar_bono_titulo')}</h2>
+            <p className="text-sm text-fog mb-6">{t('panelcfg_eliminar_bono_msg')}</p>
             <div className="flex gap-2">
-              <button onClick={() => setBonoDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">Cancelar</button>
-              <button onClick={() => deleteBono(bonoDeleteId)} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Eliminar</button>
+              <button onClick={() => setBonoDeleteId(null)} className="flex-1 py-2.5 rounded-xl border border-line text-sm text-fog hover:text-snow transition-colors">{t('panelcfg_cancelar')}</button>
+              <button onClick={() => deleteBono(bonoDeleteId)} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">{t('panelcfg_eliminar')}</button>
             </div>
           </div>
         </div>
