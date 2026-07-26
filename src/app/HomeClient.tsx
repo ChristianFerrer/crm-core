@@ -17,7 +17,6 @@ import { memberMatchesQuery } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { resolveRates } from '@/lib/pricing'
 import { DatePickerModal } from '@/components/DatePickerModal'
-import { ScrollDatePicker } from '@/components/ScrollDatePicker'
 import { MemberForm } from '@/components/MemberForm'
 import { TableFilterBar } from '@/components/TableFilterBar'
 import {
@@ -1502,19 +1501,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const searchParams = useSearchParams()
   const isToday = selectedDate === todayStr
 
-  function navigateDate(delta: number) {
-    const d = new Date(selectedDate + 'T12:00:00')
-    d.setDate(d.getDate() + delta)
-    const newDate = d.toISOString().split('T')[0]
-    router.push(newDate === todayStr ? '/' : `/?date=${newDate}`)
-  }
-
   const selectedDateObj = new Date(selectedDate + 'T12:00:00')
   const dayNum = selectedDateObj.getDate()
   const monthAbbrev = selectedDateObj.toLocaleDateString('es-ES', { month: 'short' }).replace(/\.$/, '')
 
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [calendarDraft, setCalendarDraft] = useState(selectedDate)
+  const [calendarViewDate, setCalendarViewDate] = useState(selectedDate)
 
   function goToDate(newDate: string) {
     router.push(newDate === todayStr ? '/' : `/?date=${newDate}`)
@@ -2133,6 +2125,23 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   const consumosVisit = consumosVisitId ? activeVisits.find(v => v.id === consumosVisitId) : null
 
+  // Grid del calendario mensual (Ir a fecha)
+  const calViewD = new Date(calendarViewDate + 'T12:00:00')
+  const calYear = calViewD.getFullYear()
+  const calMonth = calViewD.getMonth()
+  const calMonthLabel = calViewD.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  const calFirstWeekday = (new Date(calYear, calMonth, 1).getDay() + 6) % 7
+  const calDaysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+  const calCells: (string | null)[] = []
+  for (let i = 0; i < calFirstWeekday; i++) calCells.push(null)
+  for (let d = 1; d <= calDaysInMonth; d++) calCells.push(`${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
+  while (calCells.length % 7 !== 0) calCells.push(null)
+
+  function shiftCalendarMonth(delta: number) {
+    const d = new Date(calYear, calMonth + delta, 1)
+    setCalendarViewDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`)
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -2143,13 +2152,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <div className="flex items-center gap-1 shrink-0">
           {/* Date navigation — esquina superior derecha, junto al nombre */}
           <button
-            onClick={() => navigateDate(-1)}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            onClick={() => { setCalendarDraft(selectedDate); setCalendarOpen(true) }}
+            onClick={() => { setCalendarViewDate(selectedDate); setCalendarOpen(true) }}
             className="w-10 h-10 rounded-xl overflow-hidden border border-line flex flex-col shrink-0 hover:border-line2 transition-colors"
           >
             <span className="w-full flex-none h-[40%] bg-rose flex items-center justify-center text-[8px] font-bold text-white uppercase leading-none">
@@ -2158,12 +2161,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <span className="w-full flex-1 bg-surface2 flex items-center justify-center text-sm font-bold text-snow leading-none">
               {dayNum}
             </span>
-          </button>
-          <button
-            onClick={() => navigateDate(1)}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-          >
-            <ChevronRight size={16} />
           </button>
           {!isToday && (
             <button
@@ -2202,18 +2199,48 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <X size={16} />
               </button>
             </div>
-            <div className="flex-none px-5">
-              <ScrollDatePicker value={calendarDraft} onChange={setCalendarDraft} />
-            </div>
-            <div className="flex-none px-5 pt-3 pb-5">
-              <button
-                type="button"
-                onClick={() => { goToDate(calendarDraft); setCalendarOpen(false) }}
-                className="w-full rounded-xl border border-lime bg-lime/10 py-3.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors active:scale-[0.99]"
-                style={{ boxShadow: 'var(--shadow-lime)' }}
-              >
-                Confirmar
-              </button>
+            <div className="flex-none px-5 pb-5">
+              {/* Navegación de mes */}
+              <div className="flex items-center justify-between mb-3">
+                <button type="button" onClick={() => shiftCalendarMonth(-1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors">
+                  <ChevronLeft size={16} />
+                </button>
+                <p className="text-sm font-semibold text-snow capitalize">{calMonthLabel}</p>
+                <button type="button" onClick={() => shiftCalendarMonth(1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* Días de la semana */}
+              <div className="grid grid-cols-7 mb-1">
+                {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(w => (
+                  <div key={w} className="h-7 flex items-center justify-center text-[10px] font-semibold text-mist">{w}</div>
+                ))}
+              </div>
+
+              {/* Días del mes */}
+              <div className="grid grid-cols-7 gap-y-1">
+                {calCells.map((d, i) => {
+                  if (!d) return <div key={i} className="h-9" />
+                  const isSelected = d === selectedDate
+                  const isCellToday = d === todayStr
+                  return (
+                    <div key={i} className="h-9 flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => { goToDate(d); setCalendarOpen(false) }}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                          isSelected ? 'bg-lime text-carbon font-bold' :
+                          isCellToday ? 'text-lime border border-lime/50' :
+                          'text-snow hover:bg-surface2'
+                        }`}
+                      >
+                        {parseInt(d.split('-')[2], 10)}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
