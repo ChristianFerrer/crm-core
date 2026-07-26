@@ -8,11 +8,12 @@ function fmt(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function DatePickerModal({ value, onChange, placeholder = 'Seleccionar fecha', className }: {
+export function DatePickerModal({ value, onChange, placeholder = 'Seleccionar fecha', className, title = 'Fecha de nacimiento' }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
   className?: string
+  title?: string
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(value)
@@ -43,7 +44,7 @@ export function DatePickerModal({ value, onChange, placeholder = 'Seleccionar fe
             <div className="flex-none px-5 pt-4 pb-3">
               <div className="mx-auto w-10 h-1 rounded-full bg-line2 mb-3" />
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-snow">Fecha de nacimiento</p>
+                <p className="text-sm font-semibold text-snow">{title}</p>
                 <button type="button" onClick={() => setOpen(false)} className="text-mist hover:text-fog p-1">
                   <X size={16} />
                 </button>

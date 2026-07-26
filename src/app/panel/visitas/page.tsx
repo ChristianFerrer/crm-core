@@ -7,6 +7,7 @@ import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates, calcHourlyCost, FALLBACK_RATE, type Rates } from '@/lib/pricing'
 import { History } from 'lucide-react'
 import { TableFilterBar } from '@/components/TableFilterBar'
+import { DatePickerModal } from '@/components/DatePickerModal'
 
 type VisitType = 'entrada' | 'custodia'
 
@@ -154,15 +155,19 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
             <div className="space-y-2.5">
               <div>
                 <label className="block text-[10px] text-mist mb-1">Desde</label>
-                <input type="date" value={dateFrom} max={todayStr} onChange={e => setDateFrom(e.target.value)}
-                  style={{ colorScheme: 'dark' }}
-                  className="w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+                <DatePickerModal
+                  title="Desde"
+                  value={dateFrom}
+                  onChange={v => setDateFrom(v > todayStr ? todayStr : v)}
+                />
               </div>
               <div>
                 <label className="block text-[10px] text-mist mb-1">Hasta</label>
-                <input type="date" value={dateTo} max={todayStr} onChange={e => setDateTo(e.target.value)}
-                  style={{ colorScheme: 'dark' }}
-                  className="w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+                <DatePickerModal
+                  title="Hasta"
+                  value={dateTo}
+                  onChange={v => setDateTo(v > todayStr ? todayStr : v)}
+                />
               </div>
             </div>
           </div>
