@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
 import { useNavBadges } from '@/lib/useNavBadges'
+import { useLanguage } from '@/lib/i18n'
 
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
@@ -28,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [termsChecked, setTermsChecked] = useState(false)
   const [termsAccepting, setTermsAccepting] = useState(false)
   const badges = useNavBadges()
+  const { t } = useLanguage()
 
   useEffect(() => {
     async function load(email: string) {
@@ -173,10 +175,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <nav className={`flex-1 py-4 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
           {[
-            { href: '/',           label: 'Inicio',   icon: Home,        badge: 0 },
-            { href: '/miembros',   label: 'Miembros', icon: Users,       badge: 0 },
-            { href: '/calendario', label: 'Agenda',   icon: CalendarDays,badge: badges.agenda },
-            { href: '/panel',      label: 'Panel',    icon: BarChart2,   badge: badges.panel },
+            { href: '/',           label: t('nav_inicio'),   icon: Home,        badge: 0 },
+            { href: '/miembros',   label: t('nav_miembros'), icon: Users,       badge: 0 },
+            { href: '/calendario', label: t('nav_agenda'),   icon: CalendarDays,badge: badges.agenda },
+            { href: '/panel',      label: t('nav_panel'),    icon: BarChart2,   badge: badges.panel },
           ].map(({ href, label, icon: Icon, badge }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
             return (
@@ -218,17 +220,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
           <button
             onClick={handleLogout}
-            title={collapsed ? 'Cerrar sesión' : undefined}
+            title={collapsed ? t('cerrar_sesion') : undefined}
             className={`w-full flex items-center rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors ${collapsed ? 'justify-center py-2' : 'gap-2 px-3 py-2'}`}
           >
-            <LogOut size={14} /> {!collapsed && 'Cerrar sesión'}
+            <LogOut size={14} /> {!collapsed && t('cerrar_sesion')}
           </button>
         </div>
 
         {/* Colapsar/expandir menú */}
         <button
           onClick={toggleCollapsed}
-          aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
+          aria-label={collapsed ? t('expandir_menu') : t('contraer_menu')}
           className={`flex items-center border-t border-line py-2.5 text-mist hover:text-snow transition-colors ${collapsed ? 'justify-center px-2' : 'justify-end px-3'}`}
         >
           {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}

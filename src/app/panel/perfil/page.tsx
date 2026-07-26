@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag, LogOut } from 'lucide-react'
+import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag, LogOut, Languages } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
+import { useLanguage, LANGUAGES } from '@/lib/i18n'
 
 type TenantProfile = {
   id: string
@@ -47,6 +48,7 @@ const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-3 py-2 tex
 
 export default function PerfilPage() {
   const router = useRouter()
+  const { lang, isAuto, setLang, t } = useLanguage()
   const [profile, setProfile] = useState<TenantProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -223,6 +225,34 @@ export default function PerfilPage() {
                 <InfoRow icon={Users} label="Aforo máximo" value={profile.capacity?.toString() ?? null} />
               </>
             )}
+          </div>
+
+          {/* Idioma */}
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <Languages size={12} /> {t('idioma')}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setLang('auto')}
+                className={`col-span-2 rounded-xl border px-3 py-2.5 text-xs font-semibold text-left transition-colors ${
+                  isAuto ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface2 text-fog hover:text-snow'
+                }`}
+              >
+                {t('idioma_auto')}
+              </button>
+              {LANGUAGES.map(l => (
+                <button
+                  key={l.code}
+                  onClick={() => setLang(l.code)}
+                  className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${
+                    !isAuto && lang === l.code ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface2 text-fog hover:text-snow'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Acceso — read only */}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Users, BarChart2, CalendarDays } from 'lucide-react'
 import { useNavBadges } from '@/lib/useNavBadges'
+import { useLanguage } from '@/lib/i18n'
 
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
@@ -17,12 +18,13 @@ function Badge({ count }: { count: number }) {
 export function BottomNav() {
   const pathname = usePathname()
   const badges = useNavBadges()
+  const { t } = useLanguage()
 
   const navItems = [
-    { href: '/',          label: 'Inicio',   icon: Home,       badge: 0 },
-    { href: '/miembros',  label: 'Miembros', icon: Users,      badge: 0 },
-    { href: '/calendario',label: 'Agenda',   icon: CalendarDays, badge: badges.agenda },
-    { href: '/panel',     label: 'Panel',    icon: BarChart2,  badge: badges.panel },
+    { href: '/',          label: t('nav_inicio'),   icon: Home,       badge: 0 },
+    { href: '/miembros',  label: t('nav_miembros'), icon: Users,      badge: 0 },
+    { href: '/calendario',label: t('nav_agenda'),   icon: CalendarDays, badge: badges.agenda },
+    { href: '/panel',     label: t('nav_panel'),    icon: BarChart2,  badge: badges.panel },
   ]
 
   return (
