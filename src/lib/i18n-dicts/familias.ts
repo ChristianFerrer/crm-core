@@ -1,1 +1,22 @@
-export const dictFamilias = {} as const
+export const dictFamilias = {
+  familia_titulares: { es: 'Titulares', en: 'Account holders', ca: 'Titulars' },
+  familia_sin_titulares: { es: 'Sin titulares en esta familia.', en: 'No account holders in this family.', ca: 'Sense titulars en aquesta família.' },
+  familia_ver: { es: 'Ver →', en: 'View →', ca: 'Veure →' },
+  familia_sin_bono: { es: 'Sin bono', en: 'No pass', ca: 'Sense bo' },
+  familia_sesiones_abbr: { es: 'ses.', en: 'sess.', ca: 'sess.' },
+  familia_agotado: { es: 'agotado', en: 'used up', ca: 'esgotat' },
+  familia_vence_en: { es: 'vence en {n}d', en: 'expires in {n}d', ca: 'venç en {n}d' },
+  familia_hijos: { es: 'Hijos · {n}', en: 'Children · {n}', ca: 'Fills · {n}' },
+  familia_anios: { es: '{n} años', en: '{n} years', ca: '{n} anys' },
+  familia_nino: { es: 'Niño', en: 'Boy', ca: 'Nen' },
+  familia_nina: { es: 'Niña', en: 'Girl', ca: 'Nena' },
+  familia_historial_visitas: { es: 'Historial de visitas', en: 'Visit history', ca: 'Historial de visites' },
+  familia_sin_visitas: { es: 'Sin visitas registradas', en: 'No visits registered', ca: 'Sense visites registrades' },
+  familia_prefijo: { es: 'Familia ', en: 'Family ', ca: 'Família ' },
+
+  familia_eliminar_titulo: { es: '¿Eliminar familia?', en: 'Delete family?', ca: 'Vols eliminar la família?' },
+  familia_eliminar_desc: { es: 'Se desvinculará a los titulares. Los hijos permanecerán con cada titular.', en: 'Account holders will be unlinked. Children will remain with each account holder.', ca: 'Es desvincularan els titulars. Els fills es mantindran amb cada titular.' },
+  familia_cancelar: { es: 'Cancelar', en: 'Cancel', ca: 'Cancel·la' },
+  familia_eliminando: { es: 'Eliminando…', en: 'Deleting…', ca: 'Eliminant…' },
+  familia_eliminar: { es: 'Eliminar', en: 'Delete', ca: 'Elimina' },
+} as const

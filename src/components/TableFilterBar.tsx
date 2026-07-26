@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Search, Filter, Download } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n'
 
 /**
  * Barra estándar de las tablas del Panel: búsqueda a la izquierda, botón de
@@ -11,7 +12,7 @@ import { Search, Filter, Download } from 'lucide-react'
 export function TableFilterBar({
   search,
   onSearchChange,
-  searchPlaceholder = 'Buscar...',
+  searchPlaceholder,
   filters,
   showFilter = true,
   activeFilterCount = 0,
@@ -33,6 +34,7 @@ export function TableFilterBar({
   exporting?: boolean
   exportDisabled?: boolean
 }) {
+  const { t } = useLanguage()
   const [filterOpen, setFilterOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -67,7 +69,7 @@ export function TableFilterBar({
         <input
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder ?? t('accion_buscar')}
           className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
         />
       </div>
@@ -77,8 +79,8 @@ export function TableFilterBar({
           <button
             ref={btnRef}
             onClick={openFilters}
-            title="Filtros"
-            aria-label="Filtros"
+            title={t('accion_filtros')}
+            aria-label={t('accion_filtros')}
             className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ${
               activeFilterCount > 0 || filterOpen
                 ? 'border-lime bg-lime/10 text-lime'
@@ -112,8 +114,8 @@ export function TableFilterBar({
         <button
           onClick={onExport}
           disabled={exporting || exportDisabled}
-          title="Exportar a Excel"
-          aria-label="Exportar a Excel"
+          title={t('accion_exportar')}
+          aria-label={t('accion_exportar')}
           className="flex items-center justify-center w-10 h-10 rounded-xl border border-lime bg-lime/10 text-lime hover:bg-lime/20 transition-colors disabled:opacity-50 shrink-0"
         >
           <Download size={16} />

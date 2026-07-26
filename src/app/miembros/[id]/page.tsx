@@ -5,6 +5,7 @@ import { ArrowLeft, Phone, Mail, FileText, CreditCard, Clock, Users, Calendar, A
 import { MemberQr } from '@/components/MemberQr'
 import { AssignMembership } from '@/components/AssignMembership'
 import { DeleteMemberButton } from './DeleteMemberButton'
+import { getT } from '@/lib/i18n-server'
 
 export const revalidate = 0
 
@@ -18,6 +19,7 @@ function calcAge(d: string) {
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createServerSupabase()
   const { id } = await params
+  const t = await getT()
 
   const startOfMonth = new Date()
   startOfMonth.setDate(1)
@@ -99,16 +101,16 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <DeleteMemberButton memberId={id} />
         <Link
           href={`/miembros/${id}/editar`}
-          title="Editar"
-          aria-label="Editar miembro"
+          title={t('miembros_editar')}
+          aria-label={t('miembros_editar_aria')}
           className="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface text-fog hover:text-snow hover:border-line2 transition-colors shrink-0"
         >
           <Pencil size={14} />
         </Link>
         <Link
           href={`/?checkin=${id}`}
-          title="Registrar entrada"
-          aria-label="Registrar entrada"
+          title={t('miembros_registrar_entrada')}
+          aria-label={t('miembros_registrar_entrada')}
           className="w-9 h-9 flex items-center justify-center rounded-xl border border-lime bg-lime/10 text-lime hover:bg-lime/20 transition-colors shrink-0"
           style={{ boxShadow: 'var(--shadow-lime)' }}
         >
@@ -126,7 +128,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             </div>
             <div>
               <p className="text-base font-semibold text-lime group-hover:underline">{m.phone}</p>
-              <p className="text-[10px] text-mist">Teléfono de contacto</p>
+              <p className="text-[10px] text-mist">{t('miembros_telefono_contacto')}</p>
             </div>
           </a>
         ) : (
@@ -134,7 +136,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             <div className="w-8 h-8 rounded-lg bg-surface2 flex items-center justify-center shrink-0">
               <Phone size={14} className="text-mist" />
             </div>
-            <span className="text-sm text-mist">Sin teléfono registrado</span>
+            <span className="text-sm text-mist">{t('miembros_sin_telefono')}</span>
           </div>
         )}
 
@@ -144,7 +146,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <div className="flex items-center gap-3">
           <Calendar size={14} className="text-mist shrink-0" />
           <span className="text-sm text-fog">
-            Miembro desde {new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {t('miembros_miembro_desde', { fecha: new Date(m.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) })}
           </span>
         </div>
 
@@ -166,11 +168,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <ShieldCheck size={13} className={m.consent_accepted_at ? 'text-lime' : 'text-amber'} />
           {m.consent_accepted_at ? (
             <span className="text-xs text-fog">
-              Consentimiento RGPD registrado el{' '}
-              {new Date(m.consent_accepted_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {t('miembros_consentimiento_registrado', { fecha: new Date(m.consent_accepted_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) })}
             </span>
           ) : (
-            <span className="text-xs text-amber font-medium">Consentimiento RGPD pendiente</span>
+            <span className="text-xs text-amber font-medium">{t('miembros_consentimiento_pendiente')}</span>
           )}
         </div>
       </div>
@@ -182,7 +183,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             <>
               <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
                 <Users size={12} className="text-iris" />
-                Familia · {m.families.name.replace(/^Familia(s)?\s*/i, '')}
+                {t('miembros_familia_label', { nombre: m.families.name.replace(/^Familia(s)?\s*/i, '') })}
               </p>
               {familyAdults.length > 0 ? (
                 <div className="space-y-1">
@@ -192,12 +193,12 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                         <div className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />
                         <span className="text-sm text-snow">{a.name}</span>
                       </div>
-                      <span className="text-xs text-lime">Ver →</span>
+                      <span className="text-xs text-lime">{t('miembros_ver')}</span>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-mist">Único titular de la familia</p>
+                <p className="text-xs text-mist">{t('miembros_unico_titular')}</p>
               )}
             </>
           )}
@@ -205,7 +206,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           {childrenCount > 0 && (
             <>
               {m.families && <div className="border-t border-line" />}
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos · {childrenCount}</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_hijos_label', { n: childrenCount })}</p>
               {childrenList.length > 0 ? (
                 <div className="space-y-2">
                   {childrenList.map((child, i) => {
@@ -216,8 +217,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                           {child.sex === 'F' ? '♀' : child.sex === 'M' ? '♂' : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm text-snow">{child.name || `Hijo/a ${i + 1}`}</span>
-                          {age !== null && <span className="text-xs text-mist ml-2">{age} años</span>}
+                          <span className="text-sm text-snow">{child.name || t('miembros_hijo_default', { n: i + 1 })}</span>
+                          {age !== null && <span className="text-xs text-mist ml-2">{t('miembros_anios', { n: age })}</span>}
                           {child.birth_date && (
                             <span className="text-xs text-fog ml-2">
                               · {new Date(child.birth_date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -229,7 +230,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-mist">{childrenCount} hijo{childrenCount !== 1 ? 's' : ''} registrado{childrenCount !== 1 ? 's' : ''}</p>
+                <p className="text-xs text-mist">{t('miembros_hijos_registrados', { n: childrenCount })}</p>
               )}
             </>
           )}
@@ -243,18 +244,18 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <div className="rounded-2xl border border-line bg-surface p-4 grid grid-cols-2 gap-4">
             <div className="text-center">
               <p className="font-display text-3xl font-semibold text-lime">{monthVisitsCount ?? 0}</p>
-              <p className="text-xs text-mist mt-1">Visitas este mes</p>
+              <p className="text-xs text-mist mt-1">{t('miembros_visitas_mes')}</p>
             </div>
             <div className="text-center">
               <p className="font-display text-3xl font-semibold text-fog">{(visits as any[])?.length ?? 0}</p>
-              <p className="text-xs text-mist mt-1">Total visitas</p>
+              <p className="text-xs text-mist mt-1">{t('miembros_total_visitas')}</p>
             </div>
           </div>
 
           {/* Membership */}
           <div className={`rounded-2xl border p-4 ${isDepleted ? 'border-rose/30 bg-rose-soft' : (isLow || isExpiringSoon) ? 'border-amber/30 bg-amber/5' : 'border-line bg-surface'}`}>
             <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
-              <CreditCard size={13} className="text-lime" /> Bono activo
+              <CreditCard size={13} className="text-lime" /> {t('miembros_bono_activo')}
             </div>
             {bono ? (
               <>
@@ -263,7 +264,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                     <p className="text-sm font-semibold text-snow">{bono.membership_types?.name}</p>
                     {expiresAt && daysLeft !== null && (
                       <p className={`text-xs mt-0.5 font-medium ${daysLeft <= 0 ? 'text-rose' : daysLeft <= 7 ? 'text-amber' : 'text-mist'}`}>
-                        {daysLeft <= 0 ? 'Vencido' : daysLeft === 1 ? 'Vence mañana' : `Vence en ${daysLeft} días`}
+                        {daysLeft <= 0 ? t('miembros_vencido') : daysLeft === 1 ? t('miembros_vence_manana') : t('miembros_vence_en_dias', { n: daysLeft })}
                         {' · '}{expiresAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                       </p>
                     )}
@@ -274,17 +275,17 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                     <span className={`text-2xl font-bold ${isDepleted ? 'text-rose' : isLow ? 'text-amber' : 'text-lime'}`}>{s}</span>
                   ) : null}
                 </div>
-                {isExpired && <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Bono caducado — necesita renovar</p>}
-                {isLow && s !== 0 && !isExpired && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Quedan pocas sesiones</p>}
-                {s === 0 && <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Bono agotado — necesita renovar</p>}
-                {isExpiringSoon && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> Vence en {daysLeft} día{daysLeft === 1 ? '' : 's'}</p>}
+                {isExpired && <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> {t('miembros_bono_caducado')}</p>}
+                {isLow && s !== 0 && !isExpired && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> {t('miembros_pocas_sesiones')}</p>}
+                {s === 0 && <p className="text-xs text-rose font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> {t('miembros_bono_agotado')}</p>}
+                {isExpiringSoon && <p className="text-xs text-amber font-medium mt-3 flex items-center gap-1"><AlertTriangle size={11} /> {t('miembros_vence_en_dia_n', { n: daysLeft })}</p>}
                 <div className="mt-3 pt-3 border-t border-line">
                   <AssignMembership memberId={m.id} />
                 </div>
               </>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-mist">Sin bono asignado</p>
+                <p className="text-sm text-mist">{t('miembros_sin_bono_asignado')}</p>
                 <AssignMembership memberId={m.id} />
               </div>
             )}
@@ -295,13 +296,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <div className="space-y-3">
           {/* QR code */}
           <div className="rounded-2xl border border-line bg-surface p-4 flex flex-col items-center gap-3">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Código QR de acceso</p>
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_qr_titulo')}</p>
             <MemberQr qrCode={m.qr_code} />
           </div>
 
           {(visits as any[])?.[0] && (
             <div className="rounded-2xl border border-line bg-surface px-4 py-3">
-              <p className="text-xs text-mist">Última visita</p>
+              <p className="text-xs text-mist">{t('miembros_ultima_visita')}</p>
               <p className="text-sm font-semibold text-snow mt-0.5">
                 {new Date((visits as any[])[0].checked_in_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
@@ -313,11 +314,11 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       {/* Visit history */}
       <div>
         <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
-          <Clock size={13} className="text-lime" /> Historial de visitas
+          <Clock size={13} className="text-lime" /> {t('miembros_historial_visitas')}
         </div>
         {!(visits as any[])?.length ? (
           <div className="rounded-2xl border border-line bg-surface p-4 text-center text-sm text-mist">
-            Sin visitas registradas
+            {t('miembros_sin_visitas')}
           </div>
         ) : (
           <div className="space-y-1">

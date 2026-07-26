@@ -8,6 +8,7 @@ import { Modal } from '@/components/Modal'
 import { TableFilterBar } from '@/components/TableFilterBar'
 import { getStoredTenant } from '@/lib/tenant'
 import { BarcodeScanner } from '@/components/BarcodeScanner'
+import { useLanguage } from '@/lib/i18n'
 
 type Product = {
   id: string
@@ -22,12 +23,17 @@ type Product = {
 }
 
 const CATEGORIES = [
-  { value: 'bebida', label: 'Bebida' },
-  { value: 'snack', label: 'Snack' },
-  { value: 'otro', label: 'Otro' },
-]
+  { value: 'bebida', label: 'Bebida', labelKey: 'panelcfg_prodcat_bebida' },
+  { value: 'snack', label: 'Snack', labelKey: 'panelcfg_prodcat_snack' },
+  { value: 'otro', label: 'Otro', labelKey: 'panelcfg_prodcat_otro' },
+] as const
 
 const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
+
+function categoryLabel(t: (key: any) => string, value: string): string {
+  const c = CATEGORIES.find(c => c.value === value)
+  return c ? t(c.labelKey) : value
+}
 
 function categoryFromTags(tags: string[]): string {
   const s = tags.join(' ').toLowerCase()
@@ -37,6 +43,7 @@ function categoryFromTags(tags: string[]): string {
 }
 
 export default function TiendaPage() {
+  const { t } = useLanguage()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -112,12 +119,12 @@ export default function TiendaPage() {
         if (pname) setName(pname)
         setCategory(categoryFromTags(tags))
         setLookupWeight(p.quantity || p.product_quantity || null)
-        setLookupMsg(pname ? `✓ ${pname}` : '✓ Producto encontrado')
+        setLookupMsg(pname ? `✓ ${pname}` : t('panelcfg_producto_encontrado'))
       } else {
-        setLookupMsg('No encontrado. Rellena los datos manualmente.')
+        setLookupMsg(t('panelcfg_no_encontrado_manual'))
       }
     } catch {
-      setLookupMsg('Error al consultar. Rellena los datos manualmente.')
+      setLookupMsg(t('panelcfg_error_consulta_manual'))
     }
     setLookingUp(false)
   }
@@ -192,8 +199,8 @@ export default function TiendaPage() {
     if (filterEstado === 'activo' && !p.active) return false
     if (filterEstado === 'inactivo' && p.active) return false
     if (!q) return true
-    const catLabel = CATEGORIES.find(c => c.value === p.category)?.label ?? p.category
-    return p.name.toLowerCase().includes(q) || catLabel.toLowerCase().includes(q)
+    const cLabel = categoryLabel(t, p.category)
+    return p.name.toLowerCase().includes(q) || cLabel.toLowerCase().includes(q)
   })
 
   async function handleExport() {
@@ -201,13 +208,13 @@ export default function TiendaPage() {
     try {
       const XLSX = await import('xlsx')
       const rows = filteredProducts.map(p => ({
-        'Producto': p.name,
-        'Categoría': CATEGORIES.find(c => c.value === p.category)?.label ?? p.category,
-        'Peso': p.weight ?? '',
-        'Código de barras': p.barcode ?? '',
-        'Stock': p.stock,
+        [t('panelcfg_th_producto')]: p.name,
+        [t('panelcfg_categoria_label')]: categoryLabel(t, p.category),
+        [t('panelcfg_th_peso')]: p.weight ?? '',
+        [t('panelcfg_codigo_barras')]: p.barcode ?? '',
+        [t('panelcfg_th_stock')]: p.stock,
         'Precio': p.price,
-        'Estado': p.active ? 'Activo' : 'Inactivo',
+        [t('panelcfg_th_estado')]: p.active ? t('panelcfg_activo') : t('panelcfg_inactivo'),
       }))
       const ws = XLSX.utils.json_to_sheet(rows)
       ws['!cols'] = [{ wch: 24 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 8 }, { wch: 10 }, { wch: 10 }]
@@ -222,8 +229,8 @@ export default function TiendaPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Tienda</h1>
-        <p className="text-sm text-fog mt-0.5">Productos de venta durante la visita</p>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_tienda_titulo')}</h1>
+        <p className="text-sm text-fog mt-0.5">{t('panelcfg_tienda_subtitulo')}</p>
       </div>
 
       {/* Sub-nav panel */}
@@ -233,16 +240,16 @@ export default function TiendaPage() {
         <button
           onClick={() => setShowScanner(true)}
           className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
-          title="Escanear — añade stock si el código ya existe, o crea un producto nuevo rellenando nombre/categoría/peso automáticamente"
+          title={t('panelcfg_escanear_titulo')}
         >
           <ScanBarcode size={15} />
         </button>
         <button
           onClick={openNew}
-          title="Añadir un producto nuevo"
+          title={t('panelcfg_anadir_producto_titulo')}
           className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-4 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors"
         >
-          <Plus size={15} /> Añadir producto
+          <Plus size={15} /> {t('panelcfg_anadir_producto')}
         </button>
       </div>
 
@@ -250,7 +257,7 @@ export default function TiendaPage() {
       <TableFilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Buscar por nombre o categoría..."
+        searchPlaceholder={t('panelcfg_buscar_nombre_categoria')}
         activeFilterCount={(filterCategory !== 'todas' ? 1 : 0) + (filterEstado !== 'todos' ? 1 : 0)}
         onExport={handleExport}
         exporting={exporting}
@@ -258,20 +265,20 @@ export default function TiendaPage() {
         filters={
           <>
             <div>
-              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Categoría</p>
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_categoria_label')}</p>
               <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
                 className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
-                <option value="todas">Todas las categorías</option>
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                <option value="todas">{t('panelcfg_todas_categorias')}</option>
+                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{t(c.labelKey)}</option>)}
               </select>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Estado</p>
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_estado_label')}</p>
               <select value={filterEstado} onChange={e => setFilterEstado(e.target.value as typeof filterEstado)}
                 className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
-                <option value="todos">Todos los estados</option>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
+                <option value="todos">{t('panelcfg_todos_estados')}</option>
+                <option value="activo">{t('panelcfg_activo')}</option>
+                <option value="inactivo">{t('panelcfg_inactivo')}</option>
               </select>
             </div>
           </>
@@ -279,16 +286,16 @@ export default function TiendaPage() {
       />
 
       {loading ? (
-        <div className="text-sm text-mist text-center py-8">Cargando...</div>
+        <div className="text-sm text-mist text-center py-8">{t('panelcfg_cargando')}</div>
       ) : products.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-line p-10 text-center">
           <ShoppingBag size={28} className="mx-auto text-mist mb-3" />
-          <p className="text-sm text-fog font-medium">Sin productos aún</p>
-          <p className="text-xs text-mist mt-1">Añade agua, snacks u otros artículos para vender durante las visitas</p>
+          <p className="text-sm text-fog font-medium">{t('panelcfg_sin_productos')}</p>
+          <p className="text-xs text-mist mt-1">{t('panelcfg_sin_productos_hint')}</p>
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-line p-10 text-center text-sm text-mist">
-          Sin resultados para esta búsqueda o filtro.
+          {t('panelcfg_sin_resultados_filtro')}
         </div>
       ) : (
         <>
@@ -303,7 +310,7 @@ export default function TiendaPage() {
                     <p className="font-semibold text-snow truncate">{p.name}</p>
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</span>
+                    <span className="text-xs text-mist capitalize">{categoryLabel(t, p.category)}</span>
                     {p.weight && <><span className="text-line2 text-[10px]">·</span><span className="text-xs text-mist">{p.weight}</span></>}
                     {p.barcode && <><span className="text-line2 text-[10px]">·</span><span className="text-[10px] font-mono text-mist">{p.barcode}</span></>}
                   </div>
@@ -319,11 +326,11 @@ export default function TiendaPage() {
                       p.stock <= 3 ? 'bg-amber/10 border-amber/30 text-amber' :
                       'bg-surface2 border-line text-fog'
                     }`}
-                    title="Añadir unidades"
+                    title={t('panelcfg_anadir_unidades')}
                   >
-                    <PackagePlus size={12} />{p.stock} ud.
+                    <PackagePlus size={12} />{p.stock} {t('panelcfg_unidades_abrev')}
                   </button>
-                  <button onClick={() => handleToggle(p)} title={p.active ? 'Activo' : 'Inactivo'} aria-label={p.active ? 'Desactivar' : 'Activar'}
+                  <button onClick={() => handleToggle(p)} title={p.active ? t('panelcfg_activo') : t('panelcfg_inactivo')} aria-label={p.active ? t('panelcfg_desactivar') : t('panelcfg_activar')}
                     className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${p.active ? 'bg-lime' : 'bg-line'}`}>
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${p.active ? 'translate-x-4' : ''}`} />
                   </button>
@@ -348,14 +355,14 @@ export default function TiendaPage() {
               <thead className="sticky top-0 z-10 bg-surface">
                 <tr className="border-b border-line">
                   <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide w-8">#</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Producto</th>
-                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden lg:table-cell">Peso</th>
-                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">Categoría</th>
-                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden md:table-cell">Código</th>
-                  <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Stock</th>
-                  <th className="text-right px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Precio</th>
-                  <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">Estado</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">Acciones</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_th_producto')}</th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden lg:table-cell">{t('panelcfg_th_peso')}</th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">{t('panelcfg_categoria_label')}</th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden md:table-cell">{t('panelcfg_th_codigo')}</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_th_stock')}</th>
+                  <th className="text-right px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_th_precio')}</th>
+                  <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide hidden sm:table-cell">{t('panelcfg_th_estado')}</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_th_acciones')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/50">
@@ -371,7 +378,7 @@ export default function TiendaPage() {
                       <span className="text-xs text-mist">{p.weight ?? '—'}</span>
                     </td>
                     <td className="px-3 py-3 hidden sm:table-cell">
-                      <span className="text-xs text-mist capitalize">{CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</span>
+                      <span className="text-xs text-mist capitalize">{categoryLabel(t, p.category)}</span>
                     </td>
                     <td className="px-3 py-3 hidden md:table-cell">
                       {p.barcode
@@ -386,7 +393,7 @@ export default function TiendaPage() {
                           p.stock <= 3 ? 'bg-amber/10 border-amber/30 text-amber' :
                           'bg-surface2 border-line text-fog hover:border-line2'
                         }`}
-                        title="Añadir unidades"
+                        title={t('panelcfg_anadir_unidades')}
                       >
                         <PackagePlus size={10} />{p.stock}
                       </button>
@@ -395,7 +402,7 @@ export default function TiendaPage() {
                       <span className="font-bold text-lime">{p.price.toFixed(2)} €</span>
                     </td>
                     <td className="px-3 py-3 text-center hidden sm:table-cell">
-                      <button onClick={() => handleToggle(p)} title={p.active ? 'Activo' : 'Inactivo'} aria-label={p.active ? 'Desactivar' : 'Activar'}
+                      <button onClick={() => handleToggle(p)} title={p.active ? t('panelcfg_activo') : t('panelcfg_inactivo')} aria-label={p.active ? t('panelcfg_desactivar') : t('panelcfg_activar')}
                         className={`relative inline-block shrink-0 w-9 h-5 rounded-full transition-colors ${p.active ? 'bg-lime' : 'bg-line'}`}>
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${p.active ? 'translate-x-4' : ''}`} />
                       </button>
@@ -424,33 +431,33 @@ export default function TiendaPage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
           <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-semibold text-snow">{editing ? 'Editar producto' : 'Nuevo producto'}</h2>
+              <h2 className="font-display text-base font-semibold text-snow">{editing ? t('panelcfg_editar_producto') : t('panelcfg_nuevo_producto')}</h2>
               <button onClick={() => setShowModal(false)} className="text-mist hover:text-snow"><X size={16} /></button>
             </div>
 
             <div className="space-y-3">
               {/* Barcode */}
               <div>
-                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Código de barras</p>
+                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">{t('panelcfg_codigo_barras')}</p>
                 <div className="flex gap-2">
                   <input
                     value={barcode}
                     onChange={e => setBarcode(e.target.value)}
                     onBlur={() => barcode && lookupBarcode(barcode)}
-                    placeholder="Escanea o escribe el código"
+                    placeholder={t('panelcfg_placeholder_codigo_barras')}
                     className={inputCls + ' flex-1'}
                   />
                   <button
                     onClick={() => setShowScanner(true)}
                     className="px-3 rounded-xl border border-line bg-surface2 text-fog hover:text-lime hover:border-lime/40 transition-colors"
-                    title="Abrir cámara"
+                    title={t('panelcfg_abrir_camara')}
                   >
                     <ScanBarcode size={16} />
                   </button>
                 </div>
                 {lookingUp && (
                   <div className="flex items-center gap-1.5 mt-1.5 text-xs text-fog">
-                    <Loader2 size={11} className="animate-spin" /> Consultando base de datos...
+                    <Loader2 size={11} className="animate-spin" /> {t('panelcfg_consultando_bd')}
                   </div>
                 )}
               </div>
@@ -462,31 +469,31 @@ export default function TiendaPage() {
 
               {/* Nombre */}
               <div>
-                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Nombre *</p>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Agua mineral" className={inputCls} />
+                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">{t('panelcfg_nombre_req')}</p>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder={t('panelcfg_placeholder_nombre_producto')} className={inputCls} />
               </div>
 
               {/* Categoría + Precio */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Categoría</p>
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">{t('panelcfg_categoria_label')}</p>
                   <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
-                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{t(c.labelKey)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Precio (€) *</p>
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">{t('panelcfg_precio_eur_req_short')}</p>
                   <input type="number" step="0.10" min="0" value={price} onChange={e => setPrice(e.target.value)} placeholder="1.50" className={inputCls} />
                 </div>
               </div>
 
               {/* Peso / cantidad */}
               <div>
-                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">Peso / cantidad</p>
+                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">{t('panelcfg_peso_cantidad')}</p>
                 <input
                   value={lookupWeight ?? ''}
                   onChange={e => setLookupWeight(e.target.value || null)}
-                  placeholder="Ej: 330 ml, 100 g"
+                  placeholder={t('panelcfg_placeholder_peso')}
                   className={inputCls}
                 />
               </div>
@@ -494,7 +501,7 @@ export default function TiendaPage() {
               {/* Stock */}
               <div>
                 <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">
-                  {editing ? 'Unidades (stock actual)' : 'Unidades iniciales en stock'}
+                  {editing ? t('panelcfg_unidades_stock_actual') : t('panelcfg_unidades_iniciales_stock')}
                 </p>
                 <div className="flex items-center gap-3">
                   <button
@@ -529,7 +536,7 @@ export default function TiendaPage() {
             </div>
 
             <button onClick={handleSave} disabled={saving || !name.trim() || !price} className="w-full rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 disabled:opacity-50 transition-colors">
-              {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Añadir producto'}
+              {saving ? t('panelcfg_guardando') : editing ? t('panelcfg_guardar_cambios') : t('panelcfg_anadir_producto')}
             </button>
           </div>
         </div>
@@ -542,13 +549,13 @@ export default function TiendaPage() {
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-snow truncate">{stockProduct.name}</p>
-                <p className="text-xs text-fog mt-0.5">Stock actual: <span className="font-semibold text-snow">{stockProduct.stock} ud.</span></p>
+                <p className="text-xs text-fog mt-0.5">{t('panelcfg_stock_actual_label')} <span className="font-semibold text-snow">{stockProduct.stock} {t('panelcfg_unidades_abrev')}</span></p>
               </div>
               <button onClick={() => setStockProduct(null)} className="text-mist hover:text-snow shrink-0"><X size={16} /></button>
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">Unidades a añadir</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_anadir_unidades')}</p>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setStockEntry(s => String(Math.max(1, (parseInt(s) || 1) - 1)))}
                   className="w-12 h-12 rounded-xl border border-line bg-surface2 text-xl font-bold text-fog hover:text-snow flex items-center justify-center transition-colors">−</button>
@@ -569,28 +576,28 @@ export default function TiendaPage() {
 
             <button onClick={handleStockEntry} disabled={savingStock || !(parseInt(stockEntry) > 0)}
               className="w-full rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-              <Check size={15} /> {savingStock ? 'Guardando...' : `Añadir ${stockEntry} unidades`}
+              <Check size={15} /> {savingStock ? t('panelcfg_guardando') : t('panelcfg_anadir_n_unidades', { n: stockEntry })}
             </button>
           </div>
         </div>
       )}
 
       {/* Confirmar borrado */}
-      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} maxWidth="max-w-xs" z="z-[70]" label="Eliminar producto">
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} maxWidth="max-w-xs" z="z-[70]" label={t('panelcfg_eliminar_producto_titulo')}>
         {confirmDelete && (
           <div className="p-5 space-y-4">
             <div>
-              <p className="text-sm font-semibold text-snow">¿Eliminar producto?</p>
-              <p className="text-xs text-fog mt-1">Se eliminará <span className="font-semibold text-snow">{confirmDelete.name}</span> de forma permanente.</p>
+              <p className="text-sm font-semibold text-snow">{t('panelcfg_eliminar_producto_titulo')}</p>
+              <p className="text-xs text-fog mt-1">{t('panelcfg_eliminar_producto_msg', { name: confirmDelete.name })}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => setConfirmDelete(null)}
                 className="flex-1 rounded-xl border border-line py-2.5 text-xs font-semibold text-fog hover:text-snow transition-colors">
-                Cancelar
+                {t('panelcfg_cancelar')}
               </button>
               <button onClick={() => handleDelete(confirmDelete.id)}
                 className="flex-1 rounded-xl bg-rose/20 border border-rose/30 py-2.5 text-xs font-semibold text-rose hover:bg-rose/30 transition-colors">
-                Sí, eliminar
+                {t('panelcfg_si_eliminar')}
               </button>
             </div>
           </div>

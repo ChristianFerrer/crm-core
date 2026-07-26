@@ -6,6 +6,7 @@ import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag 
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { TableFilterBar } from '@/components/TableFilterBar'
+import { useLanguage } from '@/lib/i18n'
 
 type Service = {
   id: string
@@ -32,25 +33,40 @@ type MembershipType = { id: string; name: string; sessions: number | null; price
 // Tipo de servicio — define el comportamiento y los campos que se muestran.
 // El BONO se crea en el mismo asistente pero se guarda en membership_types (fuente única para venta y check-in).
 const TIPOS = [
-  { value: 'entrada',     label: 'Entrada',            desc: 'Tarifa por persona o tiempo' },
-  { value: 'bono',        label: 'Bono',               desc: 'Paquete de sesiones (venta y check-in)' },
-  { value: 'reservable',  label: 'Paquete reservable', desc: 'Cumpleaños, custodia o evento' },
-  { value: 'subservicio', label: 'Sub-servicio',       desc: 'Extra que se añade a una reserva' },
+  { value: 'entrada',     labelKey: 'panelcfg_tipo_entrada',     descKey: 'panelcfg_tipo_entrada_desc' },
+  { value: 'bono',        labelKey: 'panelcfg_tipo_bono',        descKey: 'panelcfg_tipo_bono_desc' },
+  { value: 'reservable',  labelKey: 'panelcfg_tipo_reservable',  descKey: 'panelcfg_tipo_reservable_desc' },
+  { value: 'subservicio', labelKey: 'panelcfg_tipo_subservicio', descKey: 'panelcfg_tipo_subservicio_desc' },
 ] as const
 
 // Flujo de reserva (solo para paquetes reservables) — define la UX de la reserva
 const FLUJOS = [
-  { value: 'cumpleanos', label: 'Cumpleaños' },
-  { value: 'custodia',   label: 'Custodia' },
-  { value: 'generico',   label: 'Genérico (evento)' },
-]
+  { value: 'cumpleanos', labelKey: 'panelcfg_flujo_cumpleanos' },
+  { value: 'custodia',   labelKey: 'panelcfg_flujo_custodia' },
+  { value: 'generico',   labelKey: 'panelcfg_flujo_generico' },
+] as const
 
 // Flujos a los que puede asociarse un sub-servicio
 const RESERVABLE_TYPES = [
-  { value: 'cumpleanos', label: 'Cumpleaños' },
-  { value: 'custodia',   label: 'Custodia' },
-  { value: 'generico',   label: 'Genérico' },
-]
+  { value: 'cumpleanos', labelKey: 'panelcfg_appliesto_cumpleanos' },
+  { value: 'custodia',   labelKey: 'panelcfg_appliesto_custodia' },
+  { value: 'generico',   labelKey: 'panelcfg_appliesto_generico' },
+] as const
+
+function tipoLabel(t: (key: any, vars?: Record<string, string | number>) => string, value: string | null): string {
+  const found = TIPOS.find(x => x.value === value)
+  return found ? t(found.labelKey) : (value ?? '')
+}
+
+function flujoLabel(t: (key: any, vars?: Record<string, string | number>) => string, value: string | null): string {
+  const found = FLUJOS.find(x => x.value === value)
+  return found ? t(found.labelKey) : (value ?? '')
+}
+
+function appliesToLabel(t: (key: any, vars?: Record<string, string | number>) => string, value: string): string {
+  const found = RESERVABLE_TYPES.find(x => x.value === value)
+  return found ? t(found.labelKey) : value
+}
 
 type Category = {
   value: string
@@ -81,6 +97,18 @@ type FormData = {
   ilimitado: boolean
 }
 
+// Categorías por defecto que no ha creado el tenant: su label se traduce vía panelcfg_cat_<value>.
+const DEFAULT_CATEGORY_KEYS: Record<string, string> = {
+  entrada: 'panelcfg_cat_entrada',
+  bono: 'panelcfg_cat_bono',
+  cumpleanos: 'panelcfg_cat_cumpleanos',
+  sala: 'panelcfg_cat_sala',
+  custodia: 'panelcfg_cat_custodia',
+  otros: 'panelcfg_cat_otros',
+  subservicios: 'panelcfg_cat_subservicios',
+  general: 'panelcfg_cat_general',
+}
+
 const DEFAULT_CATEGORIES: Category[] = [
   { value: 'entrada',   label: 'Entrada',      color: 'text-lime',      bg: 'bg-lime/10',      border: 'border-lime/30' },
   { value: 'bono',      label: 'Bono',         color: 'text-iris',      bg: 'bg-iris/10',      border: 'border-iris/30' },
@@ -91,6 +119,12 @@ const DEFAULT_CATEGORIES: Category[] = [
   { value: 'subservicios',label: 'Sub-servicios',color: 'text-rose',      bg: 'bg-rose/10',      border: 'border-rose/30' },
   { value: 'general',     label: 'General',      color: 'text-fog',       bg: 'bg-fog/10',       border: 'border-fog/30' },
 ]
+
+// Traduce el label de una categoría si es una de las categorías por defecto; las creadas por el tenant se muestran tal cual.
+function catLabel(t: (key: any) => string, cat: { value: string; label: string }): string {
+  const key = DEFAULT_CATEGORY_KEYS[cat.value]
+  return key ? t(key) : cat.label
+}
 
 const CAT_COLORS = [
   { color: 'text-lime',     bg: 'bg-lime/10',     border: 'border-lime/30' },
@@ -145,6 +179,7 @@ function saveCategories(cats: Category[]) {
 }
 
 export default function ServiciosPage() {
+  const { t } = useLanguage()
   const [services, setServices] = useState<Service[]>([])
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES)
   const [loading, setLoading] = useState(true)
@@ -343,12 +378,12 @@ export default function ServiciosPage() {
   const filteredServices = services.filter(s => {
     if (filterTipo === 'bono') return false
     if (filterTipo !== 'todos' && s.tipo !== filterTipo) return false
-    const tipoLabel = TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? ''
-    return matchesSearch(s.name, tipoLabel)
+    const tLabel = tipoLabel(t, s.tipo)
+    return matchesSearch(s.name, tLabel)
   })
   const filteredBonos = bonos.filter(b => {
     if (filterTipo !== 'todos' && filterTipo !== 'bono') return false
-    return matchesSearch(b.name, 'Bono')
+    return matchesSearch(b.name, t('panelcfg_bono_label'))
   })
   const totalFiltered = filteredServices.length + filteredBonos.length
 
@@ -359,34 +394,34 @@ export default function ServiciosPage() {
       const dash = ''
       const rows = [
         ...filteredServices.map(s => ({
-          'Servicio': s.name,
-          'Tipo': TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? dash,
-          'Flujo': s.flujo ? (FLUJOS.find(f => f.value === s.flujo)?.label ?? s.flujo) : dash,
-          'Reservable': s.reservable ? 'Sí' : 'No',
-          'Precio': s.price ?? dash,
-          'Unidad': s.price_unit ?? dash,
+          [t('panelcfg_th_servicio')]: s.name,
+          [t('panelcfg_tipo_label')]: tipoLabel(t, s.tipo) || dash,
+          [t('panelcfg_th_flujo')]: s.flujo ? flujoLabel(t, s.flujo) : dash,
+          [t('panelcfg_th_reservable')]: s.reservable ? 'Sí' : 'No',
+          [t('panelcfg_th_precio')]: s.price ?? dash,
+          [t('panelcfg_th_unidad')]: s.price_unit ?? dash,
           'Duración (min)': s.duration_min ?? dash,
-          'Capacidad': s.included_guests ?? dash,
+          [t('panelcfg_th_capacidad')]: s.included_guests ?? dash,
           'Adelanto (%)': s.deposit_pct ?? dash,
-          '€/adulto': s.price_per_guest_adult ?? dash,
-          '€/niño': s.price_per_guest_child ?? dash,
-          'Aplica a': (s.applies_to ?? []).map(v => RESERVABLE_TYPES.find(t => t.value === v)?.label ?? v).join(', '),
-          'Activo': s.active ? 'Sí' : 'No',
+          [t('panelcfg_th_adulto_precio')]: s.price_per_guest_adult ?? dash,
+          [t('panelcfg_th_nino_precio')]: s.price_per_guest_child ?? dash,
+          [t('panelcfg_th_aplica_a')]: (s.applies_to ?? []).map(v => appliesToLabel(t, v)).join(', '),
+          [t('panelcfg_th_activo')]: s.active ? 'Sí' : 'No',
         })),
         ...filteredBonos.map(b => ({
-          'Servicio': b.name,
-          'Tipo': 'Bono',
-          'Flujo': dash,
-          'Reservable': dash,
-          'Precio': b.price ?? dash,
-          'Unidad': dash,
+          [t('panelcfg_th_servicio')]: b.name,
+          [t('panelcfg_tipo_label')]: t('panelcfg_bono_label'),
+          [t('panelcfg_th_flujo')]: dash,
+          [t('panelcfg_th_reservable')]: dash,
+          [t('panelcfg_th_precio')]: b.price ?? dash,
+          [t('panelcfg_th_unidad')]: dash,
           'Duración (min)': dash,
-          'Capacidad': b.sessions == null ? 'Ilimitado' : `${b.sessions} ses.`,
+          [t('panelcfg_th_capacidad')]: b.sessions == null ? t('panelcfg_ilimitado') : `${b.sessions} ${t('panelcfg_sesiones_abrev')}`,
           'Adelanto (%)': dash,
-          '€/adulto': dash,
-          '€/niño': dash,
-          'Aplica a': dash,
-          'Activo': b.active ? 'Sí' : 'No',
+          [t('panelcfg_th_adulto_precio')]: dash,
+          [t('panelcfg_th_nino_precio')]: dash,
+          [t('panelcfg_th_aplica_a')]: dash,
+          [t('panelcfg_th_activo')]: b.active ? 'Sí' : 'No',
         })),
       ]
       const ws = XLSX.utils.json_to_sheet(rows)
@@ -402,8 +437,8 @@ export default function ServiciosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Servicios</h1>
-        <p className="text-sm text-fog mt-0.5">Gestión de servicios y bonos</p>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_servicios_titulo')}</h1>
+        <p className="text-sm text-fog mt-0.5">{t('panelcfg_servicios_subtitulo')}</p>
       </div>
 
       {/* Tab nav */}
@@ -411,13 +446,13 @@ export default function ServiciosPage() {
 
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-fog">{services.length} servicio{services.length !== 1 ? 's' : ''} · {services.filter(s => s.active).length} activo{services.filter(s => s.active).length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-fog">{t('panelcfg_servicios_count', { n: services.length, s: services.length !== 1 ? 's' : '', a: services.filter(s => s.active).length, as: services.filter(s => s.active).length !== 1 ? 's' : '' })}</p>
         <button
           onClick={openAdd}
-          title="Crear un servicio o bono nuevo"
+          title={t('panelcfg_nuevo_servicio_titulo_btn')}
           className="flex items-center gap-1.5 border border-lime bg-lime/10 text-lime text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/20 transition-colors"
         >
-          <Plus size={13} /> Nuevo servicio
+          <Plus size={13} /> {t('panelcfg_nuevo_servicio')}
         </button>
       </div>
 
@@ -425,18 +460,18 @@ export default function ServiciosPage() {
       <TableFilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Buscar por nombre o tipo..."
+        searchPlaceholder={t('panelcfg_buscar_nombre_tipo')}
         activeFilterCount={filterTipo !== 'todos' ? 1 : 0}
         onExport={handleExport}
         exporting={exporting}
         exportDisabled={totalFiltered === 0}
         filters={
           <div>
-            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Tipo</p>
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_tipo_label')}</p>
             <div className="flex flex-wrap gap-1.5">
               {([
-                { key: 'todos', label: 'Todos' },
-                ...TIPOS.map(t => ({ key: t.value, label: t.label })),
+                { key: 'todos', label: t('panelcfg_todos') },
+                ...TIPOS.map(x => ({ key: x.value, label: t(x.labelKey) })),
               ] as { key: typeof filterTipo; label: string }[]).map(f => (
                 <button
                   key={f.key}
@@ -454,11 +489,11 @@ export default function ServiciosPage() {
       />
 
       {loading ? (
-        <div className="text-center py-16 text-mist text-sm">Cargando...</div>
+        <div className="text-center py-16 text-mist text-sm">{t('panelcfg_cargando')}</div>
       ) : services.length === 0 ? (
-        <div className="text-center py-16 text-mist text-sm">No hay servicios. Crea el primero.</div>
+        <div className="text-center py-16 text-mist text-sm">{t('panelcfg_sin_servicios')}</div>
       ) : totalFiltered === 0 ? (
-        <div className="text-center py-16 text-mist text-sm">Sin resultados para esta búsqueda.</div>
+        <div className="text-center py-16 text-mist text-sm">{t('panelcfg_sin_resultados_busqueda')}</div>
       ) : (
         <>
           {/* ── MÓVIL/TABLET: tarjetas (< lg) ── */}
@@ -469,8 +504,8 @@ export default function ServiciosPage() {
                   <div className="min-w-0">
                     <p className="font-semibold text-sm text-snow truncate">{s.name}</p>
                     <p className="text-xs text-mist mt-0.5">
-                      {TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? '—'}
-                      {s.flujo ? ` · ${FLUJOS.find(f => f.value === s.flujo)?.label ?? s.flujo}` : ''}
+                      {tipoLabel(t, s.tipo) || '—'}
+                      {s.flujo ? ` · ${flujoLabel(t, s.flujo)}` : ''}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -495,7 +530,7 @@ export default function ServiciosPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-sm text-snow truncate">{b.name}</p>
-                    <p className="text-xs text-mist mt-0.5">Bono · {b.sessions == null ? 'ilimitado' : `${b.sessions} ses.`}</p>
+                    <p className="text-xs text-mist mt-0.5">{t('panelcfg_bono_label')} · {b.sessions == null ? t('panelcfg_ilimitado') : `${b.sessions} ${t('panelcfg_sesiones_abrev')}`}</p>
                   </div>
                   <p className="text-sm font-semibold text-snow shrink-0">{b.price != null ? `${b.price}€` : '—'}</p>
                 </div>
@@ -519,26 +554,26 @@ export default function ServiciosPage() {
             <table className="w-full text-sm whitespace-nowrap">
               <thead className="sticky top-0 z-10 bg-surface">
                 <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
-                  <th className="px-4 py-3">Servicio</th>
-                  <th className="px-3 py-3">Tipo</th>
-                  <th className="px-3 py-3">Flujo</th>
-                  <th className="px-3 py-3 text-center">Reservable</th>
-                  <th className="px-3 py-3 text-right">Precio</th>
-                  <th className="px-3 py-3">Unidad</th>
-                  <th className="px-3 py-3 text-right">Duración</th>
-                  <th className="px-3 py-3 text-right">Capacidad</th>
-                  <th className="px-3 py-3 text-right">Adelanto</th>
-                  <th className="px-3 py-3 text-right">€/adulto</th>
-                  <th className="px-3 py-3 text-right">€/niño</th>
-                  <th className="px-3 py-3">Aplica a</th>
-                  <th className="px-3 py-3 text-center">Activo</th>
+                  <th className="px-4 py-3">{t('panelcfg_th_servicio')}</th>
+                  <th className="px-3 py-3">{t('panelcfg_tipo_label')}</th>
+                  <th className="px-3 py-3">{t('panelcfg_th_flujo')}</th>
+                  <th className="px-3 py-3 text-center">{t('panelcfg_th_reservable')}</th>
+                  <th className="px-3 py-3 text-right">{t('panelcfg_th_precio')}</th>
+                  <th className="px-3 py-3">{t('panelcfg_th_unidad')}</th>
+                  <th className="px-3 py-3 text-right">{t('panelcfg_th_duracion')}</th>
+                  <th className="px-3 py-3 text-right">{t('panelcfg_th_capacidad')}</th>
+                  <th className="px-3 py-3 text-right">{t('panelcfg_th_adelanto')}</th>
+                  <th className="px-3 py-3 text-right">{t('panelcfg_th_adulto_precio')}</th>
+                  <th className="px-3 py-3 text-right">{t('panelcfg_th_nino_precio')}</th>
+                  <th className="px-3 py-3">{t('panelcfg_th_aplica_a')}</th>
+                  <th className="px-3 py-3 text-center">{t('panelcfg_th_activo')}</th>
                   <th className="px-3 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
                 {filteredServices.map(s => {
                   const cat = categories.find(c => c.value === s.category)
-                  const applies = (s.applies_to ?? []).map(v => RESERVABLE_TYPES.find(t => t.value === v)?.label ?? v).join(', ')
+                  const applies = (s.applies_to ?? []).map(v => appliesToLabel(t, v)).join(', ')
                   const dash = <span className="text-mist">—</span>
                   return (
                     <tr key={s.id} className={`${s.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
@@ -547,9 +582,9 @@ export default function ServiciosPage() {
                         {s.description && <p className="text-xs text-mist truncate">{s.description}</p>}
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="text-xs font-medium text-snow">{TIPOS.find(t => t.value === s.tipo)?.label ?? s.tipo ?? dash}</span>
+                        <span className="text-xs font-medium text-snow">{tipoLabel(t, s.tipo) || dash}</span>
                       </td>
-                      <td className="px-3 py-2.5 text-fog">{s.flujo ? (FLUJOS.find(f => f.value === s.flujo)?.label ?? s.flujo) : dash}</td>
+                      <td className="px-3 py-2.5 text-fog">{s.flujo ? flujoLabel(t, s.flujo) : dash}</td>
                       <td className="px-3 py-2.5 text-center">{s.reservable ? <Check size={14} className="inline text-lime" /> : dash}</td>
                       <td className="px-3 py-2.5 text-right font-semibold text-snow">{s.price != null ? `${s.price}€` : dash}</td>
                       <td className="px-3 py-2.5 text-fog">{s.price_unit || dash}</td>
@@ -578,13 +613,13 @@ export default function ServiciosPage() {
                 {filteredBonos.map(b => (
                   <tr key={`bono-${b.id}`} className={`${b.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
                     <td className="px-4 py-2.5 font-semibold text-snow">{b.name}</td>
-                    <td className="px-3 py-2.5"><span className="text-xs font-medium text-snow">Bono</span></td>
+                    <td className="px-3 py-2.5"><span className="text-xs font-medium text-snow">{t('panelcfg_bono_label')}</span></td>
                     <td className="px-3 py-2.5"><span className="text-mist">—</span></td>
                     <td className="px-3 py-2.5 text-center"><span className="text-mist">—</span></td>
                     <td className="px-3 py-2.5 text-right font-semibold text-snow">{b.price != null ? `${b.price}€` : '—'}</td>
                     <td className="px-3 py-2.5 text-fog"><span className="text-mist">—</span></td>
-                    <td className="px-3 py-2.5 text-right text-fog">{b.validity_days != null ? `${b.validity_days} días` : '—'}</td>
-                    <td className="px-3 py-2.5 text-right text-fog">{b.sessions == null ? <span className="text-iris">ilimitado</span> : `${b.sessions} ses.`}</td>
+                    <td className="px-3 py-2.5 text-right text-fog">{b.validity_days != null ? `${b.validity_days} ${t('panelcfg_dias')}` : '—'}</td>
+                    <td className="px-3 py-2.5 text-right text-fog">{b.sessions == null ? <span className="text-iris">{t('panelcfg_ilimitado')}</span> : `${b.sessions} ${t('panelcfg_sesiones_abrev')}`}</td>
                     <td className="px-3 py-2.5 text-right"><span className="text-mist">—</span></td>
                     <td className="px-3 py-2.5 text-right"><span className="text-mist">—</span></td>
                     <td className="px-3 py-2.5 text-right"><span className="text-mist">—</span></td>
@@ -623,14 +658,14 @@ export default function ServiciosPage() {
               <div>
                 <label className="block text-xs font-semibold text-fog mb-1.5">Tipo de servicio *</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {TIPOS.map(t => {
-                    const sel = form.tipo === t.value
+                  {TIPOS.map(opt => {
+                    const sel = form.tipo === opt.value
                     return (
-                      <button key={t.value} type="button"
-                        onClick={() => setForm(f => ({ ...f, tipo: t.value, flujo: f.flujo || 'cumpleanos' }))}
+                      <button key={opt.value} type="button"
+                        onClick={() => setForm(f => ({ ...f, tipo: opt.value, flujo: f.flujo || 'cumpleanos' }))}
                         className={`px-3 py-2.5 rounded-xl border text-left transition-colors ${sel ? 'border-lime/40 bg-lime/10' : 'border-line bg-surface2 hover:border-line2'}`}>
-                        <p className={`text-sm font-semibold ${sel ? 'text-snow' : 'text-fog'}`}>{t.label}</p>
-                        <p className="text-[10px] text-mist leading-tight">{t.desc}</p>
+                        <p className={`text-sm font-semibold ${sel ? 'text-snow' : 'text-fog'}`}>{t(opt.labelKey)}</p>
+                        <p className="text-[10px] text-mist leading-tight">{t(opt.descKey)}</p>
                       </button>
                     )
                   })}
@@ -682,7 +717,7 @@ export default function ServiciosPage() {
                 <div>
                   <label className="block text-xs font-semibold text-fog mb-1.5">Flujo de reserva *</label>
                   <select className={INPUT_CLASS} value={form.flujo} onChange={e => setForm(f => ({ ...f, flujo: e.target.value }))}>
-                    {FLUJOS.map(fl => <option key={fl.value} value={fl.value}>{fl.label}</option>)}
+                    {FLUJOS.map(fl => <option key={fl.value} value={fl.value}>{t(fl.labelKey)}</option>)}
                   </select>
                   <p className="text-[11px] text-mist mt-1">Cumpleaños y Custodia tienen pantallas propias; Genérico sirve para cualquier evento.</p>
                 </div>
@@ -747,16 +782,16 @@ export default function ServiciosPage() {
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-2.5">
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Se puede agregar a</p>
                   <div className="space-y-1.5">
-                    {RESERVABLE_TYPES.map(t => {
-                      const sel = form.applies_to.includes(t.value)
+                    {RESERVABLE_TYPES.map(opt => {
+                      const sel = form.applies_to.includes(opt.value)
                       return (
-                        <button key={t.value} type="button"
-                          onClick={() => setForm(f => ({ ...f, applies_to: sel ? f.applies_to.filter(v => v !== t.value) : [...f.applies_to, t.value] }))}
+                        <button key={opt.value} type="button"
+                          onClick={() => setForm(f => ({ ...f, applies_to: sel ? f.applies_to.filter(v => v !== opt.value) : [...f.applies_to, opt.value] }))}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${sel ? 'border-iris/30 bg-iris/5' : 'border-line bg-surface2 hover:border-line2'}`}>
                           <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
                             {sel && <Check size={11} className="text-white" strokeWidth={3} />}
                           </div>
-                          <span className={`text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{t.label}</span>
+                          <span className={`text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{t(opt.labelKey)}</span>
                         </button>
                       )
                     })}

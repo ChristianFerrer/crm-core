@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/lib/i18n'
 
 export default function FamiliaActions({ id }: { id: string }) {
+  const { t } = useLanguage()
   const router = useRouter()
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -37,9 +39,9 @@ export default function FamiliaActions({ id }: { id: string }) {
       {showModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-carbon/80 backdrop-blur-sm px-4">
           <div className="rounded-2xl border border-line bg-surface p-6 w-full max-w-sm space-y-4">
-            <h2 className="text-base font-semibold text-snow">¿Eliminar familia?</h2>
+            <h2 className="text-base font-semibold text-snow">{t('familia_eliminar_titulo')}</h2>
             <p className="text-sm text-fog">
-              Se desvinculará a los titulares. Los hijos permanecerán con cada titular.
+              {t('familia_eliminar_desc')}
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -47,14 +49,14 @@ export default function FamiliaActions({ id }: { id: string }) {
                 disabled={loading}
                 className="px-4 py-2 rounded-xl border border-line bg-surface2 text-sm text-fog hover:text-snow transition-colors disabled:opacity-50"
               >
-                Cancelar
+                {t('familia_cancelar')}
               </button>
               <button
                 onClick={handleDelete}
                 disabled={loading}
                 className="px-4 py-2 rounded-xl bg-rose/15 text-rose text-sm font-medium hover:bg-rose/25 transition-colors disabled:opacity-50"
               >
-                {loading ? 'Eliminando…' : 'Eliminar'}
+                {loading ? t('familia_eliminando') : t('familia_eliminar')}
               </button>
             </div>
           </div>

@@ -4,16 +4,18 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { BarChart2, Tag, ShoppingBag, Building2, CalendarDays, ChevronDown, Check } from 'lucide-react'
+import { useLanguage, type TranslationKey } from '@/lib/i18n'
 
 const ITEMS = [
-  { href: '/panel', label: 'Resumen', icon: BarChart2 },
-  { href: '/panel/servicios', label: 'Servicios', icon: Tag },
-  { href: '/panel/tienda', label: 'Tienda', icon: ShoppingBag },
-  { href: '/panel/perfil', label: 'Perfil', icon: Building2 },
-  { href: '/panel/visitas', label: 'Histórico de visitas', icon: CalendarDays },
+  { href: '/panel', labelKey: 'shared_nav_resumen' as TranslationKey, icon: BarChart2 },
+  { href: '/panel/servicios', labelKey: 'shared_nav_servicios' as TranslationKey, icon: Tag },
+  { href: '/panel/tienda', labelKey: 'shared_nav_tienda' as TranslationKey, icon: ShoppingBag },
+  { href: '/panel/perfil', labelKey: 'shared_nav_perfil' as TranslationKey, icon: Building2 },
+  { href: '/panel/visitas', labelKey: 'shared_nav_historico_visitas' as TranslationKey, icon: CalendarDays },
 ]
 
 export function PanelNav() {
+  const { t } = useLanguage()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const current = ITEMS.find(i => i.href === pathname) ?? ITEMS[0]
@@ -34,7 +36,7 @@ export function PanelNav() {
                 active ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
               }`}
             >
-              <Icon size={13} /> {it.label}
+              <Icon size={13} /> {t(it.labelKey)}
             </Link>
           )
         })}
@@ -47,7 +49,7 @@ export function PanelNav() {
           className="flex w-full items-center gap-2.5 bg-surface border border-line rounded-xl px-4 py-2.5 text-sm font-semibold text-snow"
         >
           <Cur size={14} className="text-lime shrink-0" />
-          <span className="flex-1 text-left">{current.label}</span>
+          <span className="flex-1 text-left">{t(current.labelKey)}</span>
           <ChevronDown size={14} className={`text-fog shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
 
@@ -68,7 +70,7 @@ export function PanelNav() {
                     }`}
                   >
                     <Icon size={14} className="shrink-0" />
-                    <span className="flex-1">{it.label}</span>
+                    <span className="flex-1">{t(it.labelKey)}</span>
                     {active && <Check size={14} className="shrink-0" />}
                   </Link>
                 )

@@ -7,12 +7,14 @@ import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
 import { PanelNav } from '@/components/PanelNav'
 import { CustomizableDashboard } from './CustomizableDashboard'
+import { getT } from '@/lib/i18n-server'
 
 export const revalidate = 0
 
 
 
 export default async function PanelPage() {
+  const t = await getT()
   const supabase = await createServerSupabase()
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]
@@ -256,14 +258,16 @@ export default async function PanelPage() {
   }).forEach(i => urgentAlerts.push({
     id: `bono-1-${i.member_id}`,
     type: 'bono',
-    message: `${i.member_name} — le queda solo 1 sesión de bono`,
+    message: t('panelres_alerta_bono_1', { name: i.member_name }),
   }))
   ;(expiredBonos as any[] ?? []).forEach((b: any) => {
     if (b.expires_at === todayStr || b.expires_at === tomorrowStr) {
       urgentAlerts.push({
         id: `caducado-${b.member_id}`,
         type: 'bono',
-        message: `${(b.members as any)?.name} — el bono caduca ${b.expires_at === todayStr ? 'hoy' : 'mañana'}`,
+        message: b.expires_at === todayStr
+          ? t('panelres_alerta_bono_caduca_hoy', { name: (b.members as any)?.name })
+          : t('panelres_alerta_bono_caduca_manana', { name: (b.members as any)?.name }),
       })
     }
   })
@@ -273,14 +277,14 @@ export default async function PanelPage() {
   }).forEach(l => urgentAlerts.push({
     id: `bday-${l.member_id}-${l.child_name}`,
     type: 'birthday',
-    message: `${l.child_name} cumple ${l.age + 1} años el día ${l.birthday_day} — miembro: ${l.member_name}`,
+    message: t('panelres_alerta_cumple', { child: l.child_name, age: l.age + 1, day: l.birthday_day, member: l.member_name }),
   }))
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Resumen</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelres_titulo')}</h1>
           <p className="text-sm text-fog mt-0.5 capitalize">
             {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>

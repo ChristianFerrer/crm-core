@@ -7,12 +7,14 @@ import Link from 'next/link'
 import { ArrowLeft, Save, Plus, X, UserPlus, Check, Loader2, UserX } from 'lucide-react'
 import { use } from 'react'
 import { DatePickerModal } from '@/components/DatePickerModal'
+import { useLanguage } from '@/lib/i18n'
 
 type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
 type PartnerResult = { id: string; name: string; phone: string }
 
 export default function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const { t } = useLanguage()
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -133,7 +135,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
       router.push(`/miembros/${id}`)
     } catch (err: any) {
-      setError(err.message ?? 'Error al guardar')
+      setError(err.message ?? t('miembros_error_guardar'))
       setSaving(false)
     }
   }
@@ -157,34 +159,34 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         <Link href={`/miembros/${id}`} className="w-9 h-9 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0">
           <ArrowLeft size={15} className="text-fog" />
         </Link>
-        <h1 className="font-display text-xl font-semibold text-snow truncate">Editar miembro</h1>
+        <h1 className="font-display text-xl font-semibold text-snow truncate">{t('miembros_editar_titulo')}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Datos personales */}
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-          <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular</p>
+          <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_titular')}</p>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Nombre *</label>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" required className={inputCls} />
+              <label className={labelCls}>{t('miembros_nombre')}</label>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder={t('miembros_placeholder_nombre')} required className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Apellido</label>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido" className={inputCls} />
+              <label className={labelCls}>{t('miembros_apellido')}</label>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder={t('miembros_placeholder_apellido')} className={inputCls} />
             </div>
           </div>
           <div>
-            <label className={labelCls}>Teléfono</label>
-            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
+            <label className={labelCls}>{t('miembros_telefono')}</label>
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder={t('miembros_placeholder_telefono')} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className={inputCls} />
+            <label className={labelCls}>{t('miembros_email')}</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('miembros_placeholder_email')} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Fecha de nacimiento</label>
+            <label className={labelCls}>{t('miembros_fecha_nacimiento')}</label>
             <DatePickerModal value={birthDate} onChange={setBirthDate} />
           </div>
         </div>
@@ -193,32 +195,32 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos</p>
-              <p className="text-xs text-mist mt-0.5">Opcional</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_hijos')}</p>
+              <p className="text-xs text-mist mt-0.5">{t('miembros_opcional')}</p>
             </div>
             <button type="button" onClick={addChild}
               className="flex items-center gap-1 text-xs font-semibold text-lime hover:text-lime-deep transition-colors">
-              <Plus size={13} /> Añadir hijo/a
+              <Plus size={13} /> {t('miembros_anadir_hijo')}
             </button>
           </div>
-          {children.length === 0 && <p className="text-xs text-mist">Añade los niños que vienen con este miembro.</p>}
+          {children.length === 0 && <p className="text-xs text-mist">{t('miembros_anadir_hijos_desc')}</p>}
           {children.map((c, i) => (
             <div key={i} className="border-t border-line pt-4 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-fog">Hijo/a {i + 1}</p>
+                <p className="text-xs font-semibold text-fog">{t('miembros_hijo_n', { n: i + 1 })}</p>
                 <button type="button" onClick={() => removeChild(i)} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
               </div>
-              <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder="Nombre" className={inputCls} />
+              <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder={t('miembros_placeholder_nombre')} className={inputCls} />
               <div>
-                <label className={labelCls}>Sexo</label>
+                <label className={labelCls}>{t('miembros_sexo')}</label>
                 <select value={c.sex} onChange={e => updateChild(i, 'sex', e.target.value)} className={inputCls}>
-                  <option value="">Sin especificar</option>
-                  <option value="M">Niño</option>
-                  <option value="F">Niña</option>
+                  <option value="">{t('miembros_sin_especificar')}</option>
+                  <option value="M">{t('miembros_nino')}</option>
+                  <option value="F">{t('miembros_nina')}</option>
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Fecha de nacimiento</label>
+                <label className={labelCls}>{t('miembros_fecha_nacimiento')}</label>
                 <DatePickerModal value={c.birth_date} onChange={v => updateChild(i, 'birth_date', v)} />
               </div>
             </div>
@@ -228,7 +230,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         {/* Pareja / titular vinculado */}
         {hasPartner && (
           <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular vinculado</p>
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_titular_vinculado')}</p>
             {activePartners.map(p => (
               <div key={p.id} className="flex items-center gap-3 rounded-xl border border-line/60 bg-surface2 px-4 py-3">
                 <div className="w-7 h-7 rounded-full bg-iris/20 flex items-center justify-center shrink-0">
@@ -239,9 +241,9 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
                   type="button"
                   onClick={() => unlinkPartner(p.id)}
                   className="flex items-center gap-1 text-xs text-mist hover:text-rose transition-colors shrink-0"
-                  title="Desvincular"
+                  title={t('miembros_desvincular')}
                 >
-                  <UserX size={14} /> Desvincular
+                  <UserX size={14} /> {t('miembros_desvincular')}
                 </button>
               </div>
             ))}
@@ -252,23 +254,23 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         {!hasPartner && !showPartner && (
           <button type="button" onClick={() => setShowPartner(true)}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
-            <UserPlus size={14} /> Vincular otro titular
+            <UserPlus size={14} /> {t('miembros_vincular_otro_titular')}
           </button>
         )}
 
         {!hasPartner && showPartner && (
           <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Vincular titular</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_vincular_titular')}</p>
               <button type="button" onClick={resetPartner} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
             </div>
-            <p className="text-xs text-mist">Introduce el teléfono. Si ya está registrado lo vinculamos automáticamente.</p>
+            <p className="text-xs text-mist">{t('miembros_intro_telefono_vinculo')}</p>
 
             <div>
-              <label className={labelCls}>Teléfono</label>
+              <label className={labelCls}>{t('miembros_telefono')}</label>
               <div className="relative">
                 <input type="tel" value={partnerPhone} onChange={e => handlePartnerPhone(e.target.value)}
-                  placeholder="612 345 678" className={inputCls} />
+                  placeholder={t('miembros_placeholder_telefono')} className={inputCls} />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   {partnerSearching && <Loader2 size={14} className="text-mist animate-spin" />}
                   {partnerConfirmed && <Check size={14} className="text-lime" />}
@@ -278,7 +280,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
 
             {partnerFound && !partnerConfirmed && (
               <div className="rounded-xl border border-lime/20 bg-lime/5 p-4 space-y-3">
-                <p className="text-xs text-fog">Miembro encontrado</p>
+                <p className="text-xs text-fog">{t('miembros_miembro_encontrado')}</p>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-lime/20 flex items-center justify-center shrink-0">
                     <span className="text-xs font-bold text-lime">{partnerFound.name[0]}</span>
@@ -290,7 +292,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
                 </div>
                 <button type="button" onClick={() => setPartnerConfirmed(true)}
                   className="w-full rounded-xl bg-lime/10 border border-lime/30 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">
-                  Confirmar como titular
+                  {t('miembros_confirmar_titular')}
                 </button>
               </div>
             )}
@@ -298,7 +300,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
             {partnerConfirmed && partnerFound && (
               <div className="flex items-center gap-3 rounded-xl border border-lime/20 bg-lime/5 px-4 py-3">
                 <Check size={14} className="text-lime shrink-0" />
-                <p className="text-sm text-snow">{partnerFound.name} <span className="text-mist text-xs">— se vinculará al guardar</span></p>
+                <p className="text-sm text-snow">{partnerFound.name} <span className="text-mist text-xs">{t('miembros_se_vinculara')}</span></p>
                 <button type="button" onClick={() => { setPartnerConfirmed(false); setPartnerFound(undefined); setPartnerPhone('') }}
                   className="ml-auto text-mist hover:text-rose"><X size={13} /></button>
               </div>
@@ -307,17 +309,17 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
             {partnerFound === null && (
               <div className="space-y-3">
                 <div className="rounded-xl border border-amber/20 bg-amber/5 px-4 py-3">
-                  <p className="text-xs text-amber font-medium">Número no registrado — se creará un nuevo miembro</p>
+                  <p className="text-xs text-amber font-medium">{t('miembros_numero_no_registrado')}</p>
                 </div>
                 <div>
-                  <label className={labelCls}>Nombre *</label>
+                  <label className={labelCls}>{t('miembros_nombre')}</label>
                   <input value={partnerName} onChange={e => setPartnerName(e.target.value)}
-                    placeholder="Nombre completo" className={inputCls} />
+                    placeholder={t('miembros_nombre_completo_placeholder')} className={inputCls} />
                 </div>
               </div>
             )}
 
-            <p className="text-[11px] text-mist">Los hijos se asignarán a ambos titulares.</p>
+            <p className="text-[11px] text-mist">{t('miembros_hijos_asignaran')}</p>
           </div>
         )}
 
@@ -327,7 +329,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-3.5 font-semibold text-lime transition hover:bg-lime/20 active:scale-[0.99] disabled:opacity-60"
           style={{ boxShadow: 'var(--shadow-lime)' }}>
           <Save size={17} strokeWidth={2.2} />
-          {saving ? 'Guardando...' : 'Guardar cambios'}
+          {saving ? t('miembros_guardando') : t('miembros_guardar_cambios')}
         </button>
       </form>
     </div>

@@ -1,8 +1,13 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useLanguage, type TranslationKey } from '@/lib/i18n'
 
 const ITEM_H = 44
-const MONTHS_ES = ['Enero', 'Feb', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Sep', 'Oct', 'Nov', 'Dic']
+const MONTH_KEYS: TranslationKey[] = [
+  'shared_mes_enero', 'shared_mes_febrero', 'shared_mes_marzo', 'shared_mes_abril',
+  'shared_mes_mayo', 'shared_mes_junio', 'shared_mes_julio', 'shared_mes_agosto',
+  'shared_mes_septiembre', 'shared_mes_octubre', 'shared_mes_noviembre', 'shared_mes_diciembre',
+]
 const CUR_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 80 }, (_, i) => CUR_YEAR - i)
 
@@ -75,6 +80,7 @@ export function ScrollDatePicker({ value, onChange, className }: {
   onChange: (v: string) => void
   className?: string
 }) {
+  const { t } = useLanguage()
   const parsed = value ? new Date(value + 'T12:00:00') : null
   const [day, setDay] = useState(parsed ? parsed.getDate() : 1)
   const [month, setMonth] = useState(parsed ? parsed.getMonth() + 1 : 1)
@@ -90,7 +96,7 @@ export function ScrollDatePicker({ value, onChange, className }: {
 
   const maxDay = daysInMonth(month, year)
   const days = Array.from({ length: maxDay }, (_, i) => String(i + 1).padStart(2, '0'))
-  const months = MONTHS_ES
+  const months = MONTH_KEYS.map(k => t(k))
   const years = YEARS.map(String)
 
   const dayIdx = Math.min(day - 1, maxDay - 1)

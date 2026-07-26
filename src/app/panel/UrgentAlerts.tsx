@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AlertTriangle, Gift, X, Bell } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n'
 
 type Alert = {
   id: string
@@ -10,6 +11,7 @@ type Alert = {
 }
 
 export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const visible = initial.filter(a => !dismissed.has(a.id))
@@ -39,7 +41,7 @@ export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-line shrink-0">
               <div className="flex items-center gap-2">
                 <Bell size={14} className="text-amber" />
-                <span className="text-sm font-semibold text-snow">Alertas activas</span>
+                <span className="text-sm font-semibold text-snow">{t('panelres_alertas_activas')}</span>
                 <span className="text-[10px] font-bold bg-rose text-white px-1.5 py-0.5 rounded-full">{visible.length}</span>
               </div>
               <button onClick={() => setOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
@@ -72,7 +74,7 @@ export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
                 </div>
               ))}
               {visible.length === 0 && (
-                <p className="text-xs text-mist text-center py-4">Todas las alertas cerradas</p>
+                <p className="text-xs text-mist text-center py-4">{t('panelres_todas_cerradas')}</p>
               )}
             </div>
           </div>

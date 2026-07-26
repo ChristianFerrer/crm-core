@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Plus, X, UserPlus, Check, Loader2, AlertTriangle, Save } from 'lucide-react'
 import { DatePickerModal } from '@/components/DatePickerModal'
+import { useLanguage } from '@/lib/i18n'
 
 type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
 type PartnerResult = { id: string; name: string; phone: string }
@@ -26,10 +27,12 @@ const labelCls = 'block text-xs font-semibold text-fog uppercase tracking-wide m
  * popup de creación rápida desde check-in / nueva reserva, para que nunca
  * diverjan.
  */
-export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
+export function MemberForm({ onCreated, submitLabel }: {
   onCreated: (member: CreatedMember) => void
   submitLabel?: string
 }) {
+  const { t } = useLanguage()
+  const resolvedSubmitLabel = submitLabel ?? t('miembros_guardar_miembro')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -133,7 +136,7 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
 
       onCreated(member as unknown as CreatedMember)
     } catch (err: any) {
-      setError(err.message ?? 'Error al guardar')
+      setError(err.message ?? t('miembros_error_guardar'))
       setSaving(false)
     }
   }
@@ -142,31 +145,31 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Datos personales */}
       <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
-        <p className="text-xs font-semibold text-fog uppercase tracking-wide">Titular</p>
+        <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_titular')}</p>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Nombre *</label>
-            <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" required className={inputCls} />
+            <label className={labelCls}>{t('miembros_nombre')}</label>
+            <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder={t('miembros_placeholder_nombre')} required className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Apellido</label>
-            <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Apellido" className={inputCls} />
+            <label className={labelCls}>{t('miembros_apellido')}</label>
+            <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder={t('miembros_placeholder_apellido')} className={inputCls} />
           </div>
         </div>
 
         <div>
-          <label className={labelCls}>Teléfono</label>
-          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="612 345 678" className={inputCls} />
+          <label className={labelCls}>{t('miembros_telefono')}</label>
+          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder={t('miembros_placeholder_telefono')} className={inputCls} />
         </div>
 
         <div>
-          <label className={labelCls}>Email</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className={inputCls} />
+          <label className={labelCls}>{t('miembros_email')}</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('miembros_placeholder_email')} className={inputCls} />
         </div>
 
         <div>
-          <label className={labelCls}>Fecha de nacimiento</label>
+          <label className={labelCls}>{t('miembros_fecha_nacimiento')}</label>
           <DatePickerModal value={birthDate} onChange={setBirthDate} />
         </div>
       </div>
@@ -175,32 +178,32 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
       <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Hijos</p>
-            <p className="text-xs text-mist mt-0.5">Opcional</p>
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_hijos')}</p>
+            <p className="text-xs text-mist mt-0.5">{t('miembros_opcional')}</p>
           </div>
           <button type="button" onClick={addChild}
             className="flex items-center gap-1 text-xs font-semibold text-lime hover:text-lime-deep transition-colors">
-            <Plus size={13} /> Añadir hijo/a
+            <Plus size={13} /> {t('miembros_anadir_hijo')}
           </button>
         </div>
-        {children.length === 0 && <p className="text-xs text-mist">Añade los niños que vienen con este miembro.</p>}
+        {children.length === 0 && <p className="text-xs text-mist">{t('miembros_anadir_hijos_desc')}</p>}
         {children.map((c, i) => (
           <div key={i} className="border-t border-line pt-4 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-fog">Hijo/a {i + 1}</p>
+              <p className="text-xs font-semibold text-fog">{t('miembros_hijo_n', { n: i + 1 })}</p>
               <button type="button" onClick={() => removeChild(i)} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
             </div>
-            <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder="Nombre" className={inputCls} />
+            <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder={t('miembros_placeholder_nombre')} className={inputCls} />
             <div>
-              <label className={labelCls}>Sexo</label>
+              <label className={labelCls}>{t('miembros_sexo')}</label>
               <select value={c.sex} onChange={e => updateChild(i, 'sex', e.target.value)} className={inputCls}>
-                <option value="">Sin especificar</option>
-                <option value="M">Niño</option>
-                <option value="F">Niña</option>
+                <option value="">{t('miembros_sin_especificar')}</option>
+                <option value="M">{t('miembros_nino')}</option>
+                <option value="F">{t('miembros_nina')}</option>
               </select>
             </div>
             <div>
-              <label className={labelCls}>Fecha de nacimiento</label>
+              <label className={labelCls}>{t('miembros_fecha_nacimiento')}</label>
               <DatePickerModal value={c.birth_date} onChange={v => updateChild(i, 'birth_date', v)} />
             </div>
           </div>
@@ -211,21 +214,21 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
       {!showPartner ? (
         <button type="button" onClick={() => setShowPartner(true)}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
-          <UserPlus size={14} /> Agregar pareja / otro titular
+          <UserPlus size={14} /> {t('miembros_agregar_pareja')}
         </button>
       ) : (
         <div className="rounded-2xl border border-line bg-surface p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide">Pareja / otro titular</p>
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_pareja_titular')}</p>
             <button type="button" onClick={resetPartner} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
           </div>
-          <p className="text-xs text-mist">Introduce el teléfono. Si ya está registrado lo vinculamos automáticamente.</p>
+          <p className="text-xs text-mist">{t('miembros_intro_telefono_vinculo')}</p>
 
           <div>
-            <label className={labelCls}>Teléfono de la pareja</label>
+            <label className={labelCls}>{t('miembros_telefono_pareja')}</label>
             <div className="relative">
               <input type="tel" value={partnerPhone} onChange={e => handlePartnerPhone(e.target.value)}
-                placeholder="612 345 678" className={inputCls} />
+                placeholder={t('miembros_placeholder_telefono')} className={inputCls} />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {partnerSearching && <Loader2 size={14} className="text-mist animate-spin" />}
                 {partnerConfirmed && <Check size={14} className="text-lime" />}
@@ -236,7 +239,7 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
           {/* Encontrado */}
           {partnerFound && !partnerConfirmed && (
             <div className="rounded-xl border border-lime/20 bg-lime/5 p-4 space-y-3">
-              <p className="text-xs text-fog">Miembro encontrado</p>
+              <p className="text-xs text-fog">{t('miembros_miembro_encontrado')}</p>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-lime/20 flex items-center justify-center shrink-0">
                   <span className="text-xs font-bold text-lime">{partnerFound.name[0]}</span>
@@ -248,7 +251,7 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
               </div>
               <button type="button" onClick={() => setPartnerConfirmed(true)}
                 className="w-full rounded-xl bg-lime/10 border border-lime/30 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">
-                Confirmar como pareja
+                {t('miembros_confirmar_pareja')}
               </button>
             </div>
           )}
@@ -257,7 +260,7 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
           {partnerConfirmed && partnerFound && (
             <div className="flex items-center gap-3 rounded-xl border border-lime/20 bg-lime/5 px-4 py-3">
               <Check size={14} className="text-lime shrink-0" />
-              <p className="text-sm text-snow">{partnerFound.name} <span className="text-mist text-xs">— vinculado</span></p>
+              <p className="text-sm text-snow">{partnerFound.name} <span className="text-mist text-xs">{t('miembros_vinculado')}</span></p>
               <button type="button" onClick={() => { setPartnerConfirmed(false); setPartnerFound(undefined); setPartnerPhone('') }}
                 className="ml-auto text-mist hover:text-rose"><X size={13} /></button>
             </div>
@@ -267,23 +270,23 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
           {partnerFound === null && (
             <div className="space-y-3">
               <div className="rounded-xl border border-amber/20 bg-amber/5 px-4 py-3">
-                <p className="text-xs text-amber font-medium">Número no registrado — se creará un nuevo miembro</p>
+                <p className="text-xs text-amber font-medium">{t('miembros_numero_no_registrado')}</p>
               </div>
               <div>
-                <label className={labelCls}>Nombre de la pareja *</label>
+                <label className={labelCls}>{t('miembros_nombre_pareja')}</label>
                 <input value={partnerName} onChange={e => setPartnerName(e.target.value)}
-                  placeholder="Nombre completo" className={inputCls} />
+                  placeholder={t('miembros_nombre_completo_placeholder')} className={inputCls} />
               </div>
             </div>
           )}
 
-          <p className="text-[11px] text-mist">Se creará una familia compartida y los hijos se asignarán a ambos titulares.</p>
+          <p className="text-[11px] text-mist">{t('miembros_familia_compartida_desc')}</p>
         </div>
       )}
 
       {/* Consentimiento RGPD */}
       <div className="rounded-2xl border border-line bg-surface p-5 space-y-3">
-        <p className="text-xs font-semibold text-fog uppercase tracking-wide">Protección de datos</p>
+        <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_proteccion_datos')}</p>
         <label className="flex items-start gap-3 cursor-pointer group">
           <div className="relative mt-0.5 shrink-0">
             <input
@@ -297,14 +300,14 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
             </div>
           </div>
           <p className="text-xs text-fog leading-relaxed">
-            El tutor legal ha sido informado y acepta el tratamiento de sus datos y los de su hijo/a según la{' '}
-            <a href="/privacidad" target="_blank" className="text-iris underline hover:text-iris/80">política de privacidad</a>.
-            Consentimiento registrado con fecha y hora.
+            {t('miembros_consentimiento_pre')}{' '}
+            <a href="/privacidad" target="_blank" className="text-iris underline hover:text-iris/80">{t('miembros_politica_privacidad')}</a>
+            {t('miembros_consentimiento_post')}
           </p>
         </label>
         {!consentAccepted && (
           <p className="text-[11px] text-amber flex items-center gap-1">
-            <AlertTriangle size={11} /> Obligatorio para registrar al miembro
+            <AlertTriangle size={11} /> {t('miembros_consentimiento_obligatorio')}
           </p>
         )}
       </div>
@@ -315,7 +318,7 @@ export function MemberForm({ onCreated, submitLabel = 'Guardar miembro' }: {
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-lime bg-lime/10 py-3.5 font-semibold text-lime transition hover:bg-lime/20 active:scale-[0.99] disabled:opacity-60"
         style={{ boxShadow: 'var(--shadow-lime)' }}>
         <Save size={17} strokeWidth={2.2} />
-        {saving ? 'Guardando...' : submitLabel}
+        {saving ? t('miembros_guardando') : resolvedSubmitLabel}
       </button>
     </form>
   )

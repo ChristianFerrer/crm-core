@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PasswordInput } from '@/components/PasswordInput'
+import { useLanguage } from '@/lib/i18n'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [status, setStatus] = useState<'checking' | 'ready' | 'invalid'>('checking')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -35,13 +37,13 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(''); setMessage('')
-    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return }
-    if (password !== confirm) { setError('Las contraseñas no coinciden.'); return }
+    if (password.length < 6) { setError(t('login_reset_min_chars')); return }
+    if (password !== confirm) { setError(t('login_reset_no_coinciden')); return }
     setSaving(true)
     const { error } = await supabase.auth.updateUser({ password })
     setSaving(false)
     if (error) { setError(error.message); return }
-    setMessage('Contraseña actualizada. Redirigiendo...')
+    setMessage(t('login_reset_actualizada'))
     setTimeout(() => router.push('/login'), 1500)
   }
 
@@ -53,35 +55,35 @@ export default function ResetPasswordPage() {
             <span className="text-ink font-bold text-2xl">W</span>
           </div>
           <div>
-            <p className="font-display font-bold text-snow text-2xl leading-tight">Nueva contraseña</p>
+            <p className="font-display font-bold text-snow text-2xl leading-tight">{t('login_reset_titulo')}</p>
             <p className="text-sm text-mist mt-0.5">Watermelon CRM</p>
           </div>
         </div>
 
         <div className="bg-surface border border-line rounded-2xl p-6 space-y-4">
           {status === 'checking' && (
-            <p className="text-center text-sm text-fog py-6">Comprobando enlace...</p>
+            <p className="text-center text-sm text-fog py-6">{t('login_reset_comprobando')}</p>
           )}
 
           {status === 'invalid' && (
             <div className="text-center space-y-3 py-4">
-              <p className="text-sm text-rose">Este enlace no es válido o ha caducado.</p>
-              <a href="/login" className="text-xs text-snow underline hover:text-lime transition-colors">Volver a iniciar sesión</a>
+              <p className="text-sm text-rose">{t('login_reset_enlace_invalido')}</p>
+              <a href="/login" className="text-xs text-snow underline hover:text-lime transition-colors">{t('login_reset_volver')}</a>
             </div>
           )}
 
           {status === 'ready' && (
             <form onSubmit={handleSubmit} className="space-y-3">
-              <PasswordInput value={password} onChange={setPassword} placeholder="Nueva contraseña" required minLength={6}
+              <PasswordInput value={password} onChange={setPassword} placeholder={t('login_reset_nueva_placeholder')} required minLength={6}
                 className={inputClass.replace('px-4', 'pl-4 pr-11')} />
-              <PasswordInput value={confirm} onChange={setConfirm} placeholder="Confirma la contraseña" required minLength={6}
+              <PasswordInput value={confirm} onChange={setConfirm} placeholder={t('login_reset_confirma_placeholder')} required minLength={6}
                 className={inputClass.replace('px-4', 'pl-4 pr-11')} />
 
               {error && <p className="text-xs text-rose">{error}</p>}
               {message && <p className="text-xs text-lime">{message}</p>}
 
               <button type="submit" disabled={saving} className={limeBtn}>
-                {saving ? 'Guardando...' : 'Guardar contraseña'}
+                {saving ? t('login_reset_guardando') : t('login_reset_guardar_contrasena')}
               </button>
             </form>
           )}

@@ -8,6 +8,7 @@ import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { UserPlus, User, Users, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { TableFilterBar } from '@/components/TableFilterBar'
+import { useLanguage } from '@/lib/i18n'
 
 type MemberRow = {
   id: string
@@ -62,6 +63,7 @@ function statusDot(m: MemberRow) {
 }
 
 export default function MiembrosPage() {
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [view, setView] = useState<'miembros' | 'familias'>(searchParams.get('view') === 'familias' ? 'familias' : 'miembros')
@@ -133,7 +135,7 @@ export default function MiembrosPage() {
     : families
 
   const count = view === 'miembros' ? filteredMembers.length : filteredFamilies.length
-  const countLabel = view === 'miembros' ? `${count} miembros` : `${count} familias`
+  const countLabel = view === 'miembros' ? t('miembros_count_miembros', { n: count }) : t('miembros_count_familias', { n: count })
 
   async function handleExport() {
     setExporting(true)
@@ -187,7 +189,7 @@ export default function MiembrosPage() {
     <div className="flex flex-col h-[calc(100svh-5rem)] gap-4">
       <div className="flex items-center justify-between gap-4 shrink-0">
         <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Miembros</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('miembros_titulo')}</h1>
           <p className="text-sm text-fog mt-0.5">{countLabel}</p>
         </div>
         {view === 'miembros' && (
@@ -196,7 +198,7 @@ export default function MiembrosPage() {
             className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform shrink-0"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
-            <UserPlus size={16} strokeWidth={2.2} /> Nuevo miembro
+            <UserPlus size={16} strokeWidth={2.2} /> {t('miembros_nuevo_miembro')}
           </Link>
         )}
       </div>
@@ -209,7 +211,7 @@ export default function MiembrosPage() {
             view === 'miembros' ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
           }`}
         >
-          <User size={14} /> Miembros
+          <User size={14} /> {t('miembros_tab_miembros')}
         </button>
         <button
           onClick={() => changeView('familias')}
@@ -217,7 +219,7 @@ export default function MiembrosPage() {
             view === 'familias' ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
           }`}
         >
-          <Users size={14} /> Familias
+          <Users size={14} /> {t('miembros_tab_familias')}
         </button>
       </div>
 
@@ -225,7 +227,7 @@ export default function MiembrosPage() {
         <TableFilterBar
           search={search}
           onSearchChange={setSearch}
-          searchPlaceholder={view === 'miembros' ? 'Buscar por nombre o teléfono...' : 'Buscar por familia o miembro...'}
+          searchPlaceholder={view === 'miembros' ? t('miembros_buscar_miembros') : t('miembros_buscar_familias')}
           showFilter={view === 'miembros'}
           activeFilterCount={view === 'miembros' && filter !== 'todos' ? 1 : 0}
           onExport={handleExport}
@@ -233,11 +235,11 @@ export default function MiembrosPage() {
           exportDisabled={count === 0}
           filters={
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Estado del bono</p>
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('miembros_estado_bono')}</p>
               {([
-                { key: 'todos', label: 'Todos' },
-                { key: 'sin_bono', label: 'Sin bono' },
-                { key: 'bono_bajo', label: 'Bono bajo' },
+                { key: 'todos', label: t('miembros_filtro_todos') },
+                { key: 'sin_bono', label: t('miembros_filtro_sin_bono') },
+                { key: 'bono_bajo', label: t('miembros_filtro_bono_bajo') },
               ] as { key: typeof filter; label: string }[]).map(f => (
                 <button
                   key={f.key}
@@ -262,7 +264,7 @@ export default function MiembrosPage() {
         <div className="flex-1 overflow-y-auto min-h-0">
           {filteredMembers.length === 0 ? (
             <div className="py-12 text-center text-sm text-mist">
-              {q ? 'Sin resultados para esta búsqueda' : 'Sin miembros registrados'}
+              {q ? t('miembros_sin_resultados') : t('miembros_sin_miembros_registrados')}
             </div>
           ) : (
             <>
@@ -283,7 +285,7 @@ export default function MiembrosPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm text-snow">{m.name}</p>
                         <p className="text-xs text-mist mt-0.5">
-                          {m.families?.name ?? 'Sin familia'}
+                          {m.families?.name ?? t('miembros_sin_familia')}
                           {m.birth_date ? ` · ${getAge(m.birth_date)}a` : ''}
                           {m.phone ? ` · ${m.phone}` : ''}
                         </p>
@@ -291,7 +293,7 @@ export default function MiembrosPage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="text-right">
                           <p className={`text-xs font-semibold ${isUnlimited ? 'text-iris' : m.memberships?.[0]?.sessions_remaining === 0 ? 'text-rose' : (m.memberships?.[0]?.sessions_remaining ?? 99) <= 2 ? 'text-amber' : 'text-fog'}`}>
-                            {isUnlimited ? '∞ Ilimitado' : label}
+                            {isUnlimited ? t('miembros_ilimitado') : label}
                           </p>
                           {m.memberships?.[0]?.membership_types?.name && !isUnlimited && (
                             <p className="text-[10px] text-mist">{m.memberships[0].membership_types!.name}</p>
@@ -310,7 +312,7 @@ export default function MiembrosPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-line">
-                        {['Nombre', 'Teléfono', 'Familia', 'Edad', 'Bono', 'Estado'].map(col => (
+                        {[t('miembros_col_nombre'), t('miembros_col_telefono'), t('miembros_col_familia'), t('miembros_col_edad'), t('miembros_col_bono'), t('miembros_col_estado')].map(col => (
                           <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
                             {col}
                           </th>
@@ -332,7 +334,7 @@ export default function MiembrosPage() {
                             <td className="px-3 pr-4 py-2.5 whitespace-nowrap">
                               <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${isUnlimited ? 'text-iris' : m.memberships?.[0]?.sessions_remaining === 0 ? 'text-rose' : (m.memberships?.[0]?.sessions_remaining ?? 99) <= 2 ? 'text-amber' : 'text-fog'}`}>
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${cls}`} />
-                                {isUnlimited ? '∞ Ilimitado' : label}
+                                {isUnlimited ? t('miembros_ilimitado') : label}
                               </span>
                             </td>
                           </tr>
@@ -348,7 +350,7 @@ export default function MiembrosPage() {
       ) : (
         <div className="flex-1 overflow-y-auto min-h-0">
           {filteredFamilies.length === 0 ? (
-            <p className="text-center text-sm text-mist py-10">No se encontraron familias</p>
+            <p className="text-center text-sm text-mist py-10">{t('miembros_no_familias_encontradas')}</p>
           ) : (
             <>
               {/* ── MÓVIL/TABLET: tarjetas (< lg) ── */}
@@ -373,13 +375,13 @@ export default function MiembrosPage() {
                           <div>
                             <p className="font-semibold text-sm text-snow">{family.name}</p>
                             <p className="text-xs text-mist">
-                              {family.members?.length ?? 0} titulares · {hijos} hijo{hijos !== 1 ? 's' : ''} · {visitas} visita{visitas !== 1 ? 's' : ''}
+                              {t('miembros_resumen_titulares', { n: family.members?.length ?? 0 })} · {t('miembros_resumen_hijos', { n: hijos })} · {t('miembros_resumen_visitas', { n: visitas })}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           {lowBono > 0 && (
-                            <span className="text-[10px] font-bold text-amber">{lowBono} bono bajo</span>
+                            <span className="text-[10px] font-bold text-amber">{t('miembros_bono_bajo_badge', { n: lowBono })}</span>
                           )}
                           <ChevronRight size={14} className="text-mist" />
                         </div>
@@ -412,7 +414,7 @@ export default function MiembrosPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-line">
-                        {['Familia', 'Titulares', 'Hijos', 'Visitas', 'Miembros', 'Bono bajo'].map(col => (
+                        {[t('miembros_col_familia'), t('miembros_col_titulares'), t('miembros_col_hijos'), t('miembros_col_visitas'), t('miembros_col_miembros'), t('miembros_col_bono_bajo')].map(col => (
                           <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
                             {col}
                           </th>

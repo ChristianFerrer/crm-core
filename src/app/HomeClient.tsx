@@ -11,6 +11,7 @@ import {
   Euro, CreditCard,
   CupSoda, Coffee, Droplet, Citrus, Cookie, Candy, Croissant, Popcorn, Package,
 } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
@@ -154,6 +155,7 @@ function CheckinSearchModal({
   onNewMember: () => void
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   const [mode, setMode] = useState<'manual' | 'qr'>('manual')
   const [scanning, setScanning] = useState(true)
   const [camError, setCamError] = useState<string | null>(null)
@@ -173,11 +175,11 @@ function CheckinSearchModal({
           const { data } = await supabase.from('members')
             .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
             .eq('qr_code', decoded).single()
-          if (!data) { setCamError('Código QR no reconocido'); return }
+          if (!data) { setCamError(t('home_codigo_qr_no_reconocido')); return }
           onSelect(data as unknown as FullMember)
         },
         () => {}
-      ).catch(() => setCamError('No se puede acceder a la cámara'))
+      ).catch(() => setCamError(t('home_no_camara')))
     })
     return () => { stopped = true; html5Qr?.stop().catch(() => {}) }
   }, [mode, scanning])
@@ -191,22 +193,22 @@ function CheckinSearchModal({
           <div className="flex items-center gap-2">
             <LogIn size={15} className="text-lime shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-snow">Registrar entrada</p>
-              <p className="text-[11px] text-fog">Registro de entrada de visitantes</p>
+              <p className="text-sm font-semibold text-snow">{t('home_registrar_entrada')}</p>
+              <p className="text-[11px] text-fog">{t('home_registro_entrada_visitantes')}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
         </div>
 
         {/* Tabs manual / QR */}
         <div className="flex border-b border-line shrink-0">
           <button onClick={() => setMode('manual')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${mode === 'manual' ? 'text-lime border-b-2 border-lime' : 'text-mist hover:text-fog'}`}>
-            <Search size={13} /> Manual
+            <Search size={13} /> {t('home_manual')}
           </button>
           <button onClick={() => { setMode('qr'); setScanning(true); setCamError(null) }}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${mode === 'qr' ? 'text-lime border-b-2 border-lime' : 'text-mist hover:text-fog'}`}>
-            <QrCode size={13} /> Escanear QR
+            <QrCode size={13} /> {t('home_escanear_qr')}
           </button>
         </div>
 
@@ -219,7 +221,7 @@ function CheckinSearchModal({
                 {camError && <p className="text-sm text-rose text-center">{camError}</p>}
                 <button onClick={() => { setScanning(true); setCamError(null) }}
                   className="flex items-center gap-2 rounded-xl border border-line px-4 py-2.5 text-sm text-fog hover:text-snow hover:border-line2 transition-colors">
-                  <RotateCcw size={14} /> Volver a escanear
+                  <RotateCcw size={14} /> {t('home_volver_a_escanear')}
                 </button>
               </div>
             )}
@@ -231,7 +233,7 @@ function CheckinSearchModal({
               <div className="relative">
                 <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
                 <input value={query} onChange={e => onQueryChange(e.target.value)}
-                  placeholder="Buscar por nombre o teléfono..." autoFocus
+                  placeholder={t('home_buscar_nombre_telefono')} autoFocus
                   className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2" />
               </div>
             </div>
@@ -246,25 +248,25 @@ function CheckinSearchModal({
                     <span className={`h-2 w-2 shrink-0 rounded-full ${inside ? 'bg-iris' : !b ? 'bg-rose' : !b.ok ? 'bg-amber' : b.unlimited ? 'bg-iris' : (b.sessions ?? 99) <= 2 ? 'bg-amber' : 'bg-mint'}`} />
                     <span className="flex-1 min-w-0">
                       <span className="block truncate text-sm font-medium text-snow">{m.name}</span>
-                      {inside && <span className="block text-xs text-iris">Dentro ahora</span>}
+                      {inside && <span className="block text-xs text-iris">{t('home_dentro_ahora')}</span>}
                     </span>
                     {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
                       : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
-                      : <span className="text-xs text-rose shrink-0">sin bono</span>}
+                      : <span className="text-xs text-rose shrink-0">{t('home_sin_bono_corto')}</span>}
                   </button>
                 )
               })}
               {query.trim().length > 0 && filtered.length === 0 && (
                 <div className="flex flex-col items-center gap-4 py-8 px-5">
-                  <p className="text-sm text-fog text-center">No se encontró ningún miembro con ese nombre o teléfono.</p>
+                  <p className="text-sm text-fog text-center">{t('home_no_se_encontro_miembro')}</p>
                   <button onClick={onNewMember}
                     className="flex items-center gap-2 rounded-xl bg-lime/10 border border-lime/30 px-5 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors">
-                    <UserPlus size={15} /> Crear nuevo miembro
+                    <UserPlus size={15} /> {t('home_crear_nuevo_miembro')}
                   </button>
                 </div>
               )}
               {query.trim().length === 0 && (
-                <p className="py-8 text-center text-sm text-mist">Escribe un nombre o teléfono para buscar</p>
+                <p className="py-8 text-center text-sm text-mist">{t('home_escribe_nombre_telefono')}</p>
               )}
             </div>
           </>
@@ -292,6 +294,7 @@ function CheckinConfirmModal({
   onClose: () => void
   onCheckedIn: () => void
 }) {
+  const { t } = useLanguage()
   const [registering, setRegistering] = useState(false)
   const [registered, setRegistered] = useState(false)
   const [checkedOut, setCheckedOut] = useState(false)
@@ -378,9 +381,9 @@ function CheckinConfirmModal({
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-lg font-bold text-snow truncate">{currentMember.name}</p>
-            <p className="text-xs text-fog">Registro de entrada</p>
+            <p className="text-xs text-fog">{t('home_registro_de_entrada')}</p>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -391,27 +394,27 @@ function CheckinConfirmModal({
               <div className="w-16 h-16 rounded-full bg-lime/15 border border-lime/30 flex items-center justify-center">
                 <Check size={30} className="text-lime" strokeWidth={2.5} />
               </div>
-              <p className="text-lg font-bold text-snow">¡Entrada registrada!</p>
-              <p className="text-sm text-fog text-center">La visita de <span className="text-snow font-medium">{currentMember.name}</span> ha sido registrada correctamente.</p>
-              <p className="text-xs text-mist mt-1">Cerrando automáticamente...</p>
+              <p className="text-lg font-bold text-snow">{t('home_entrada_registrada_excl')}</p>
+              <p className="text-sm text-fog text-center">{t('home_la_visita_de')} <span className="text-snow font-medium">{currentMember.name}</span> {t('home_ha_sido_registrada')}</p>
+              <p className="text-xs text-mist mt-1">{t('home_cerrando_automaticamente')}</p>
             </div>
           ) : alreadyInside ? (
             <div className="space-y-3">
               {checkedOut ? (
                 <div className="rounded-xl bg-lime/10 border border-lime/20 px-4 py-4 flex flex-col items-center gap-2">
                   <Check size={22} className="text-lime" strokeWidth={2.5} />
-                  <p className="text-sm font-semibold text-lime">Salida registrada</p>
-                  <p className="text-xs text-fog">Cerrando...</p>
+                  <p className="text-sm font-semibold text-lime">{t('home_salida_registrada')}</p>
+                  <p className="text-xs text-fog">{t('home_cerrando')}</p>
                 </div>
               ) : (
                 <>
                   <div className="rounded-xl bg-iris/10 border border-iris/20 px-4 py-3 text-sm text-iris font-medium text-center">
-                    Este miembro ya está dentro
+                    {t('home_ya_esta_dentro')}
                   </div>
                   <button onClick={handleCheckOut}
                     className="flex w-full items-center justify-center gap-2 rounded-xl py-4 bg-iris/15 border border-iris/30 text-iris font-semibold text-sm hover:bg-iris/25 transition active:scale-[0.99]">
                     <LogOut size={17} strokeWidth={2.2} />
-                    Registrar salida
+                    {t('home_registrar_salida')}
                   </button>
                 </>
               )}
@@ -420,28 +423,28 @@ function CheckinConfirmModal({
             <>
               {/* Tipo de entrada */}
               <div>
-                <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Tipo de entrada</p>
+                <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_tipo_de_entrada')}</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setVisitType('entrada')}
                     className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
                       visitType === 'entrada' ? 'bg-lime/15 border-lime/30 text-lime' : 'bg-surface2 border-line text-fog hover:text-snow'
-                    }`}>Libre</button>
+                    }`}>{t('home_libre')}</button>
                   <button type="button" onClick={() => setVisitType('custodia')}
                     className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
                       visitType === 'custodia' ? 'bg-cyan-300/15 border-cyan-300/30 text-cyan-300' : 'bg-surface2 border-line text-fog hover:text-snow'
-                    }`}>Custodia</button>
+                    }`}>{t('home_custodia')}</button>
                 </div>
                 {visitType === 'custodia' && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
-                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">Entrada <span className="text-rose">*</span></p>
+                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_entrada')} <span className="text-rose">*</span></p>
                       <div className="flex items-center px-3 py-2.5 rounded-xl border border-cyan-300/30 bg-surface2">
                         <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
                           className="w-full bg-transparent text-sm text-snow outline-none" />
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">Salida <span className="text-rose">*</span></p>
+                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_salida')} <span className="text-rose">*</span></p>
                       <div className="flex items-center px-3 py-2.5 rounded-xl border border-cyan-300/30 bg-surface2">
                         <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
                           className="w-full bg-transparent text-sm text-snow outline-none" />
@@ -454,7 +457,7 @@ function CheckinConfirmModal({
               {/* Co-titulares — solo en entrada libre */}
               {visitType === 'entrada' && coTitulares.length > 0 && (
                 <div>
-                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Co-titulares</p>
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_co_titulares')}</p>
                   <div className="space-y-2">
                     {coTitulares.map((co, i) => (
                       <button key={co.id} type="button"
@@ -466,7 +469,7 @@ function CheckinConfirmModal({
                           {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
                         </div>
                         <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
-                        <span className="text-[10px] text-iris font-medium shrink-0">Co-titular</span>
+                        <span className="text-[10px] text-iris font-medium shrink-0">{t('home_co_titular')}</span>
                       </button>
                     ))}
                   </div>
@@ -476,7 +479,7 @@ function CheckinConfirmModal({
               {/* Menores — #1 sin pre-seleccionar */}
               {currentMember.children && currentMember.children.length > 0 && (
                 <div>
-                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">Menores</p>
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_menores')}</p>
                   <div className="space-y-2">
                     {currentMember.children.map((child, i) => {
                       const sel = childrenPresent.some(c => c.name === child.name)
@@ -513,19 +516,19 @@ function CheckinConfirmModal({
               {!showGuests ? (
                 <button type="button" onClick={() => setShowGuests(true)}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
-                  <Plus size={13} /> Añadir invitados adicionales
+                  <Plus size={13} /> {t('home_anadir_invitados_adicionales')}
                 </button>
               ) : (
                 <div>
                   <div className="flex items-center justify-between px-1 pb-1.5">
-                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Invitados adicionales</p>
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_invitados_adicionales')}</p>
                     <button type="button" onClick={() => { setShowGuests(false); setExtraAdultsCount(0); setExtraChildrenCount(0) }}
                       className="text-mist hover:text-fog transition-colors"><X size={13} /></button>
                   </div>
                   <div className="space-y-2">
                     {visitType === 'entrada' && (
                       <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line">
-                        <span className="text-sm text-fog">Adultos</span>
+                        <span className="text-sm text-fog">{t('home_adultos')}</span>
                         <div className="flex items-center gap-3">
                           <button type="button" onClick={() => setExtraAdultsCount(n => Math.max(0, n - 1))} disabled={extraAdultsCount === 0}
                             className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
@@ -536,7 +539,7 @@ function CheckinConfirmModal({
                       </div>
                     )}
                     <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-line">
-                      <span className="text-sm text-fog">Niños</span>
+                      <span className="text-sm text-fog">{t('home_ninos')}</span>
                       <div className="flex items-center gap-3">
                         <button type="button" onClick={() => setExtraChildrenCount(n => Math.max(0, n - 1))} disabled={extraChildrenCount === 0}
                           className="w-8 h-8 rounded-lg border border-line bg-surface2 text-fog hover:text-snow flex items-center justify-center text-lg font-bold transition-colors disabled:opacity-30">−</button>
@@ -554,7 +557,7 @@ function CheckinConfirmModal({
                 <div className="flex items-start gap-2 rounded-xl bg-amber/10 border border-amber/20 px-3 py-2.5">
                   <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
                   <p className="text-xs text-amber/90">
-                    {bono ? 'Bono agotado.' : 'Sin bono.'}{' '}
+                    {bono ? t('home_bono_agotado_punto') : t('home_sin_bono_punto')}{' '}
                     {visitType === 'custodia' ? `${rates.custodia} €/h × niños` : `${rates.adult} €/h adulto · ${rates.child} €/h niño`}
                   </p>
                 </div>
@@ -565,7 +568,7 @@ function CheckinConfirmModal({
                 className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-lime/10 text-lime font-semibold text-sm hover:bg-lime/20 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <LogIn size={17} strokeWidth={2.2} />
-                {registering ? 'Registrando...' : 'Registrar entrada'}
+                {registering ? t('home_registrando') : t('home_registrar_entrada')}
               </button>
             </>
           )}
@@ -587,6 +590,7 @@ function CheckinNewMemberModal({
   onCreated: (member: FullMember) => void
   submitLabel?: string
 }) {
+  const { t } = useLanguage()
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -597,9 +601,9 @@ function CheckinNewMemberModal({
             <ChevronLeft size={16} />
           </button>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-snow">Nuevo miembro</p>
+            <p className="text-sm font-semibold text-snow">{t('home_nuevo_miembro')}</p>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4">
@@ -625,12 +629,13 @@ export function BookingSearchAndTypeModal({
   onNewMember: () => void
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   const [member, setMember] = useState<FullMember | null>(preselectedMember)
 
   const flowMeta = {
-    birthday: { Icon: Cake,     colorCls: 'text-iris',     activeCls: 'border-iris/40 bg-iris/10 hover:bg-iris/15',           desc: 'Celebración con sala reservada' },
-    custodia: { Icon: Clock,    colorCls: 'text-cyan-300', activeCls: 'border-cyan-300/40 bg-cyan-300/10 hover:bg-cyan-300/15', desc: 'Servicio de cuidado con horario' },
-    other:    { Icon: Calendar, colorCls: 'text-lime',     activeCls: 'border-lime/40 bg-lime/10 hover:bg-lime/15',            desc: 'Reserva con paquete de servicio' },
+    birthday: { Icon: Cake,     colorCls: 'text-iris',     activeCls: 'border-iris/40 bg-iris/10 hover:bg-iris/15',           desc: t('home_desc_cumpleanos') },
+    custodia: { Icon: Clock,    colorCls: 'text-cyan-300', activeCls: 'border-cyan-300/40 bg-cyan-300/10 hover:bg-cyan-300/15', desc: t('home_desc_custodia') },
+    other:    { Icon: Calendar, colorCls: 'text-lime',     activeCls: 'border-lime/40 bg-lime/10 hover:bg-lime/15',            desc: t('home_desc_otro') },
   } as const
   const types = reservableTypes.map(t => { const m = flowMeta[t.flow]; return { ...m, flow: t.flow, flujo: t.flujo, label: t.label, serviceId: t.serviceId, desc: t.desc ?? m.desc } })
 
@@ -643,18 +648,18 @@ export function BookingSearchAndTypeModal({
           <div className="flex items-center gap-2">
             <CalendarClock size={15} className="text-iris shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-snow">Nueva reserva</p>
-              <p className="text-[11px] text-fog">Paso 1 de 2 — Titular y tipo</p>
+              <p className="text-sm font-semibold text-snow">{t('home_nueva_reserva')}</p>
+              <p className="text-[11px] text-fog">{t('home_paso1_titular_tipo')}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label="Cerrar"><X size={16} /></button>
+          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
           {/* Titular */}
           <div>
             <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
-              Titular <span className="text-rose">*</span>
+              {t('home_titular')} <span className="text-rose">*</span>
             </p>
             {member ? (
               <div className="flex items-center gap-3 rounded-xl border border-lime/30 bg-lime/5 px-4 py-3">
@@ -670,7 +675,7 @@ export function BookingSearchAndTypeModal({
                 <div className="relative mb-1.5">
                   <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-mist pointer-events-none" />
                   <input value={query} onChange={e => onQueryChange(e.target.value)}
-                    placeholder="Buscar por nombre o teléfono..." autoFocus
+                    placeholder={t('home_buscar_nombre_telefono')} autoFocus
                     className="w-full rounded-xl border border-line bg-surface2 py-2.5 pl-10 pr-4 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors" />
                 </div>
                 {query.trim().length > 0 ? (
@@ -687,16 +692,16 @@ export function BookingSearchAndTypeModal({
                     ))}
                     {filtered.length === 0 && (
                       <div className="flex flex-col items-center gap-3 py-5 px-4">
-                        <p className="text-xs text-fog text-center">No se encontró ningún miembro.</p>
+                        <p className="text-xs text-fog text-center">{t('home_no_se_encontro_miembro_punto')}</p>
                         <button onClick={onNewMember}
                           className="flex items-center gap-2 rounded-xl bg-lime/10 border border-lime/30 px-4 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors">
-                          <UserPlus size={13} /> Crear nuevo miembro
+                          <UserPlus size={13} /> {t('home_crear_nuevo_miembro')}
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-mist text-center py-1">Escribe para buscar</p>
+                  <p className="text-xs text-mist text-center py-1">{t('home_escribe_para_buscar')}</p>
                 )}
               </div>
             )}
@@ -705,7 +710,7 @@ export function BookingSearchAndTypeModal({
           {/* Tipo de reserva */}
           <div>
             <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
-              Tipo de reserva <span className="text-rose">*</span>
+              {t('home_tipo_de_reserva')} <span className="text-rose">*</span>
             </p>
             <div className="space-y-2">
               {types.map((t, i) => (
@@ -725,12 +730,12 @@ export function BookingSearchAndTypeModal({
               ))}
               {types.length === 0 && (
                 <p className="text-xs text-mist text-center py-4">
-                  No hay servicios reservables. Marca un servicio como «Reservable» en Panel → Servicios.
+                  {t('home_no_hay_servicios_reservables')}
                 </p>
               )}
             </div>
             {!member && types.length > 0 && (
-              <p className="text-xs text-mist text-center pt-1">Selecciona un titular para continuar</p>
+              <p className="text-xs text-mist text-center pt-1">{t('home_selecciona_titular_continuar')}</p>
             )}
           </div>
         </div>
@@ -777,6 +782,7 @@ export function BookingFormModal({
   onCancelBooking?: () => void
   preselectServiceId?: string | null
 }) {
+  const { t } = useLanguage()
   const firstChild = bookingType === 'birthday' && member.children?.length > 0 ? member.children[0].name : ''
 
   const [birthdayChild, setBirthdayChild] = useState(
@@ -867,7 +873,7 @@ export function BookingFormModal({
   const [overlap, setOverlap]     = useState<string | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const typeLabels  = { birthday: 'Reserva de Cumpleaños', custodia: 'Reserva de Custodia', other: 'Otra Reserva' }
+  const typeLabels  = { birthday: t('home_reserva_de_cumpleanos'), custodia: t('home_reserva_de_custodia'), other: t('home_otra_reserva') }
   const typeIcons   = { birthday: Cake, custodia: Clock, other: Calendar }
   const typeColors  = { birthday: 'text-iris', custodia: 'text-cyan-300', other: 'text-lime' }
   const TypeIcon    = typeIcons[bookingType]
@@ -896,14 +902,14 @@ export function BookingFormModal({
         b.start_time < endTime && startTime < b.end_time
       )
       if (clash) {
-        setOverlap(clash.title ?? 'otra reserva')
+        setOverlap(clash.title ?? t('home_otra_reserva_lc'))
         setSaving(false)
         return
       }
     }
     const finalTitle = title.trim() || (
       bookingType === 'birthday' ? `Cumple de ${birthdayChild || member.name}` :
-      bookingType === 'custodia' ? `Custodia — ${member.name}` : 'Reserva'
+      bookingType === 'custodia' ? `Custodia — ${member.name}` : t('home_reserva')
     )
     const payload: Record<string, unknown> = {
       member_id: member.id || null,
@@ -984,7 +990,7 @@ export function BookingFormModal({
                     <FitText className="font-bold text-snow leading-tight" min={15} max={20}>{typeLabels[bookingType]}</FitText>
                   </div>
                 </div>
-                <p className="text-[11px] text-fog mt-1">{editId ? 'Editar reserva' : 'Paso 2 de 2'}</p>
+                <p className="text-[11px] text-fog mt-1">{editId ? t('home_editar_reserva') : t('home_paso2_de_2')}</p>
               </div>
             </div>
             <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5 shrink-0"><X size={16} /></button>
@@ -997,21 +1003,21 @@ export function BookingFormModal({
               <div className="w-16 h-16 rounded-full bg-lime/15 border border-lime/30 flex items-center justify-center">
                 <Check size={30} className="text-lime" strokeWidth={2.5} />
               </div>
-              <p className="text-lg font-bold text-snow">{editId ? '¡Reserva actualizada!' : '¡Reserva guardada!'}</p>
-              <p className="text-sm text-fog text-center">La reserva de <span className="text-snow font-medium">{member.name}</span> ha sido {editId ? 'actualizada' : 'registrada'}.</p>
-              <p className="text-xs text-mist mt-1">Cerrando automáticamente...</p>
+              <p className="text-lg font-bold text-snow">{editId ? t('home_reserva_actualizada_excl') : t('home_reserva_guardada_excl')}</p>
+              <p className="text-sm text-fog text-center">{t('home_la_reserva_de')} <span className="text-snow font-medium">{member.name}</span> {t('home_ha_sido')} {editId ? t('home_actualizada') : t('home_registrada')}.</p>
+              <p className="text-xs text-mist mt-1">{t('home_cerrando_automaticamente')}</p>
             </div>
           ) : (
             <>
               {/* Titular — no editable */}
               <div>
-                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Titular</p>
+                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('home_titular')}</p>
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40">
                   <div className="w-5 h-5 rounded-md border-2 border-line2 bg-line2 flex items-center justify-center shrink-0">
                     <Check size={11} className="text-fog" strokeWidth={3} />
                   </div>
                   <span className="flex-1 text-sm font-medium text-snow">{member.name}</span>
-                  <span className="text-[10px] text-snow font-medium">Titular</span>
+                  <span className="text-[10px] text-snow font-medium">{t('home_titular')}</span>
                 </div>
               </div>
 
@@ -1019,7 +1025,7 @@ export function BookingFormModal({
               {member.children && member.children.length > 0 && (bookingType === 'birthday' || bookingType === 'custodia') && (
                 <div>
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
-                    {bookingType === 'birthday' ? 'Niño/a que cumple' : 'Menores'}
+                    {bookingType === 'birthday' ? t('home_nino_que_cumple') : t('home_menores')}
                     {' '}<span className="text-rose">*</span>
                   </p>
                   <div className="space-y-1.5">
@@ -1072,17 +1078,17 @@ export function BookingFormModal({
               {/* Título */}
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
-                  Título {needsTitle && <span className="text-rose">*</span>}
+                  {t('home_titulo')} {needsTitle && <span className="text-rose">*</span>}
                 </label>
                 <input value={title} onChange={e => setTitle(e.target.value)}
-                  placeholder={needsTitle ? 'Nombre del evento o reserva' : ''}
+                  placeholder={needsTitle ? t('home_nombre_evento_reserva') : ''}
                   className={inputCls} />
               </div>
 
               {/* Fecha */}
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
-                  Fecha <span className="text-rose">*</span>
+                  {t('home_fecha')} <span className="text-rose">*</span>
                 </label>
                 <div className="flex items-center px-3 py-2.5 rounded-xl border border-line bg-surface2">
                   <input type="date" value={date} onChange={e => setDate(e.target.value)}
@@ -1094,20 +1100,20 @@ export function BookingFormModal({
               {/* Horario */}
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
-                  Horario <span className="text-rose">*</span>
+                  {t('home_horario')} <span className="text-rose">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <p className="text-[10px] text-mist px-1">Inicio</p>
+                    <p className="text-[10px] text-mist px-1">{t('home_inicio')}</p>
                     <TimePicker value={startTime} onChange={setStart} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] text-mist px-1">Fin</p>
+                    <p className="text-[10px] text-mist px-1">{t('home_fin')}</p>
                     <TimePicker value={endTime} onChange={setEnd} />
                   </div>
                 </div>
                 {startTime && endTime && endTime <= startTime && (
-                  <p className="text-xs text-amber mt-1.5 px-1">La hora de fin debe ser posterior a la de inicio</p>
+                  <p className="text-xs text-amber mt-1.5 px-1">{t('home_hora_fin_posterior')}</p>
                 )}
               </div>
 
@@ -1117,25 +1123,25 @@ export function BookingFormModal({
                   <button type="button" onClick={() => setGuestsOpen(true)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line2 py-3 text-sm font-medium text-fog hover:border-line hover:text-snow transition-colors">
                     <Plus size={14} />
-                    {bookingType === 'custodia' ? 'Añadir niños adicionales' : bookingType === 'birthday' ? 'Asistentes previstos' : 'Añadir invitados adicionales'}
+                    {bookingType === 'custodia' ? t('home_anadir_ninos_adicionales') : bookingType === 'birthday' ? t('home_asistentes_previstos') : t('home_anadir_invitados_adicionales')}
                   </button>
                 ) : (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">
-                        {bookingType === 'custodia' ? 'Niños adicionales' : bookingType === 'birthday' ? 'Asistentes (capacidad)' : 'Invitados'}
+                        {bookingType === 'custodia' ? t('home_ninos_adicionales') : bookingType === 'birthday' ? t('home_asistentes_capacidad') : t('home_invitados')}
                       </p>
                       <button type="button" onClick={() => { setGuestsOpen(false); setGuestAdults(0); setGuestChildren(0) }}
-                        className="text-[10px] text-mist hover:text-rose transition-colors">Quitar</button>
+                        className="text-[10px] text-mist hover:text-rose transition-colors">{t('home_quitar')}</button>
                     </div>
                     <div className="space-y-2">
                       {bookingType !== 'custodia' && (
-                        <Counter value={guestAdults} onChange={setGuestAdults} label="Adultos" />
+                        <Counter value={guestAdults} onChange={setGuestAdults} label={t('home_adultos')} />
                       )}
                       <Counter
                         value={guestChildren}
                         onChange={setGuestChildren}
-                        label={bookingType === 'custodia' ? 'Niños sin registrar' : 'Niños'}
+                        label={bookingType === 'custodia' ? t('home_ninos_sin_registrar') : t('home_ninos')}
                       />
                     </div>
                   </div>
@@ -1148,7 +1154,7 @@ export function BookingFormModal({
                   {!paymentsOpen ? (
                     <button type="button" onClick={() => setPaymentsOpen(true)}
                       className="flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-line2 px-4 py-3 text-sm font-medium text-fog hover:border-line hover:text-snow transition-colors">
-                      <span className="flex items-center gap-2"><Receipt size={14} /> Pagos y paquete</span>
+                      <span className="flex items-center gap-2"><Receipt size={14} /> {t('home_pagos_y_paquete')}</span>
                       {totalNum > 0
                         ? <span className="text-xs font-semibold text-snow">{totalNum.toFixed(2)}€</span>
                         : <Plus size={14} />}
@@ -1157,20 +1163,20 @@ export function BookingFormModal({
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-                          <Receipt size={12} /> Pagos
+                          <Receipt size={12} /> {t('home_pagos')}
                         </p>
                         <button type="button" onClick={() => { setPaymentsOpen(false); setServiceId(''); setTotalStr(''); setDepositStr('') }}
-                          className="text-[10px] text-mist hover:text-rose transition-colors">Quitar</button>
+                          className="text-[10px] text-mist hover:text-rose transition-colors">{t('home_quitar')}</button>
                       </div>
                       <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
                         {/* Paquete */}
                         <div>
-                          <p className="text-[10px] text-mist mb-1.5">Paquete</p>
+                          <p className="text-[10px] text-mist mb-1.5">{t('home_paquete')}</p>
                           <div className="relative">
                             <select value={serviceId} onChange={e => setServiceId(e.target.value)}
                               style={{ colorScheme: 'dark' }}
                               className="w-full appearance-none bg-surface2 border border-line rounded-xl pl-4 pr-9 py-2.5 text-sm text-snow outline-none focus:border-line2 transition-colors cursor-pointer">
-                              <option value="">Selecciona un paquete</option>
+                              <option value="">{t('home_selecciona_un_paquete')}</option>
                               {catServices.map(s => (
                                 <option key={s.id} value={s.id}>{s.name} · {(Number(s.price) || 0).toFixed(2)}€</option>
                               ))}
@@ -1180,15 +1186,15 @@ export function BookingFormModal({
                           {selectedService && Number(selectedService.included_guests) > 0 && (
                             <p className="text-[11px] text-mist mt-1.5">
                               {bookingType === 'birthday'
-                                ? `Precio fijo · capacidad ${Number(selectedService.included_guests)} personas.`
-                                : `Incluye ${Number(selectedService.included_guests)} personas. Los invitados que excedan se cobran aparte.`}
+                                ? `${t('home_precio_fijo_capacidad')} ${Number(selectedService.included_guests)} ${t('home_personas')}.`
+                                : `${t('home_incluye')} ${Number(selectedService.included_guests)} ${t('home_personas_invitados_exceden')}`}
                             </p>
                           )}
                         </div>
                         {/* Sub-servicios / Extras */}
                         {subServices.length > 0 && (
                           <div>
-                            <p className="text-[10px] text-mist mb-1.5">Sub-servicios</p>
+                            <p className="text-[10px] text-mist mb-1.5">{t('home_sub_servicios')}</p>
                             <div className="space-y-1.5">
                               {subServices.map(s => {
                                 const sel = selectedAddons.some(a => a.name === s.name)
@@ -1219,7 +1225,7 @@ export function BookingFormModal({
                         )}
                         {/* Total */}
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm text-fog">Total</span>
+                          <span className="text-sm text-fog">{t('home_total')}</span>
                           <div className="flex items-center gap-1 bg-surface2 border border-line rounded-lg px-3 py-2">
                             <input type="number" min={0} step="0.01" value={totalStr}
                               onChange={e => setTotalStr(e.target.value)}
@@ -1230,7 +1236,7 @@ export function BookingFormModal({
                         </div>
                         {/* Adelanto */}
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm text-fog">Adelanto</span>
+                          <span className="text-sm text-fog">{t('home_adelanto')}</span>
                           <div className="flex items-center gap-1 bg-surface2 border border-line rounded-lg px-3 py-2">
                             <input type="number" min={0} step="0.01" value={depositStr}
                               onChange={e => setDepositStr(e.target.value)}
@@ -1241,17 +1247,17 @@ export function BookingFormModal({
                         </div>
                         {/* Pendiente + estado */}
                         <div className="flex items-center justify-between pt-2 border-t border-line/60">
-                          <span className="text-xs text-mist">Pendiente</span>
+                          <span className="text-xs text-mist">{t('home_pendiente')}</span>
                           <span className="text-sm font-bold text-snow">{pendingNum.toFixed(2)}€</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-mist">Estado</span>
+                          <span className="text-xs text-mist">{t('home_estado')}</span>
                           <span className={`text-[10px] font-semibold ${
                             paymentStatus === 'paid'    ? 'text-mint' :
                             paymentStatus === 'partial' ? 'text-amber' :
                                                           'text-fog'
                           }`}>
-                            {paymentStatus === 'paid' ? 'Pagado' : paymentStatus === 'partial' ? 'Adelanto' : 'Pendiente'}
+                            {paymentStatus === 'paid' ? t('home_pagado') : paymentStatus === 'partial' ? t('home_adelanto') : t('home_pendiente')}
                           </span>
                         </div>
                       </div>
@@ -1263,11 +1269,11 @@ export function BookingFormModal({
               {/* Notas */}
               <div>
                 <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
-                  Notas
+                  {t('home_notas')}
                 </label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)}
                   rows={3}
-                  placeholder="Alergias, decoración, peticiones especiales..."
+                  placeholder={t('home_alergias_decoracion_placeholder')}
                   className={`${inputCls} resize-none`} />
               </div>
 
@@ -1276,11 +1282,11 @@ export function BookingFormModal({
               {overlap && (
                 <div className="rounded-xl bg-amber/10 border border-amber/30 px-3 py-2.5 space-y-2">
                   <p className="flex items-center gap-1.5 text-xs text-amber">
-                    <AlertTriangle size={13} className="shrink-0" /> Ya hay otra reserva en esa franja («{overlap}»).
+                    <AlertTriangle size={13} className="shrink-0" /> {t('home_ya_hay_otra_reserva')} («{overlap}»).
                   </p>
                   <button onClick={() => { setOverlap(null); handleSave(true) }}
                     className="w-full rounded-lg bg-amber/20 border border-amber/30 py-2 text-xs font-semibold text-amber hover:bg-amber/30 transition-colors">
-                    Guardar de todos modos
+                    {t('home_guardar_de_todos_modos')}
                   </button>
                 </div>
               )}
@@ -1289,13 +1295,13 @@ export function BookingFormModal({
                 className="flex w-full items-center justify-center gap-2 rounded-xl py-4 border border-lime bg-lime/10 text-lime font-semibold text-sm hover:bg-lime/20 transition active:scale-[0.99] disabled:opacity-60"
                 style={{ boxShadow: 'var(--shadow-lime)' }}>
                 <CalendarClock size={17} strokeWidth={2.2} />
-                {saving ? 'Guardando...' : editId ? 'Guardar cambios' : 'Guardar reserva'}
+                {saving ? t('home_guardando') : editId ? t('home_guardar_cambios') : t('home_guardar_reserva')}
               </button>
 
               {editId && onCancelBooking && (
                 <button onClick={onCancelBooking}
                   className="flex w-full items-center justify-center gap-2 rounded-xl py-3 border border-rose/30 text-rose font-semibold text-sm hover:bg-rose/20 transition-colors">
-                  <Trash2 size={15} /> Cancelar reserva
+                  <Trash2 size={15} /> {t('home_cancelar_reserva')}
                 </button>
               )}
             </>
@@ -1498,6 +1504,7 @@ function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: st
 }
 
 export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
+  const { t } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const isToday = selectedDate === todayStr
@@ -1915,7 +1922,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     setExecutingBooking(booking.id)
     const { error } = await executeBooking(booking)
     setExecutingBooking(null)
-    if (error) { alert(`No se pudo ejecutar la reserva: ${error}`); return }
+    if (error) { alert(`${t('home_no_se_pudo_ejecutar_reserva')}: ${error}`); return }
     router.refresh()
   }
 
@@ -2047,7 +2054,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   }
   const ConfigTarifasChip = () => (
     <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
-      <AlertTriangle size={10} /> Configura tarifas
+      <AlertTriangle size={10} /> {t('home_configura_tarifas')}
     </Link>
   )
 
@@ -2113,9 +2120,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   })
 
   const bookingTypeStyle = {
-    birthday: { bar: 'bg-iris', badge: 'text-iris', label: 'Cumpleaños' },
-    custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', label: 'Custodia' },
-    other:    { bar: 'bg-lime', badge: 'text-lime', label: 'Otro' },
+    birthday: { bar: 'bg-iris', badge: 'text-iris', label: t('home_cumpleanos') },
+    custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', label: t('home_custodia') },
+    other:    { bar: 'bg-lime', badge: 'text-lime', label: t('home_otro') },
   }
 
   // Group products by category for the picker
@@ -2164,7 +2171,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? 'Mi establecimiento'}</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {/* Date navigation — esquina superior derecha, junto al nombre */}
@@ -2184,7 +2191,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               onClick={() => router.push('/')}
               className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-1 hover:bg-lime/20 transition-colors"
             >
-              Hoy
+              {t('home_hoy')}
             </button>
           )}
           <button
@@ -2213,7 +2220,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             onClick={e => e.stopPropagation()}
           >
             <div className="flex-none px-5 pt-4 pb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold text-snow">Ir a fecha</p>
+              <p className="text-sm font-semibold text-snow">{t('home_ir_a_fecha')}</p>
               <button type="button" onClick={() => setCalendarOpen(false)} className="text-mist hover:text-fog p-1">
                 <X size={16} />
               </button>
@@ -2274,7 +2281,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <div className="min-w-0">
               <h2 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-2">
                 <Users size={13} className="shrink-0" />
-                {isToday ? 'En sala ahora' : 'Visitas del día'}
+                {isToday ? t('home_en_sala_ahora') : t('home_visitas_del_dia')}
               </h2>
             </div>
             {isToday && (
@@ -2282,7 +2289,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
                 className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all"
               >
-                <LogIn size={12} className="shrink-0" /> Registrar entrada
+                <LogIn size={12} className="shrink-0" /> {t('home_registrar_entrada')}
               </button>
             )}
           </div>
@@ -2293,7 +2300,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="flex items-baseline justify-between">
                 <div className="flex items-baseline gap-1.5">
                   <span className={`font-display text-2xl font-bold leading-none ${aforoTextColor}`}>{activeTotal}</span>
-                  <span className="text-xs text-fog">de {capacity} plazas</span>
+                  <span className="text-xs text-fog">{t('home_de')} {capacity} {t('home_plazas')}</span>
                 </div>
                 <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
               </div>
@@ -2304,20 +2311,20 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="flex items-center gap-4 text-xs">
                 <span className="flex items-center gap-1.5 text-lime">
                   <span className="w-2 h-2 rounded-full bg-lime shrink-0" />
-                  <span className="font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}
+                  <span className="font-semibold">{activeAdults}</span> {activeAdults !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}
                 </span>
                 <span className="flex items-center gap-1.5 text-cyan-300">
                   <span className="w-2 h-2 rounded-full bg-cyan-300 shrink-0" />
-                  <span className="font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}
+                  <span className="font-semibold">{activeChildren}</span> {activeChildren !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}
                 </span>
               </div>
             </div>
           )}
           {capacity == null && (
             <div className="flex gap-4 text-xs">
-              <span className="text-fog"><span className="text-snow font-semibold">{activeTotal}</span> en sala</span>
-              <span className="text-fog"><span className="text-lime font-semibold">{activeAdults}</span> adulto{activeAdults !== 1 ? 's' : ''}</span>
-              <span className="text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> niño{activeChildren !== 1 ? 's' : ''}</span>
+              <span className="text-fog"><span className="text-snow font-semibold">{activeTotal}</span> {t('home_en_sala_lc')}</span>
+              <span className="text-fog"><span className="text-lime font-semibold">{activeAdults}</span> {activeAdults !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}</span>
+              <span className="text-fog"><span className="text-cyan-300 font-semibold">{activeChildren}</span> {activeChildren !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>
             </div>
           )}
 
@@ -2325,40 +2332,40 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <TableFilterBar
             search={searchQuery}
             onSearchChange={setSearchQuery}
-            searchPlaceholder="Buscar por nombre o teléfono..."
+            searchPlaceholder={t('home_buscar_nombre_telefono')}
             activeFilterCount={[filterTipo, filterBono, filterSesiones].filter(f => f !== 'all').length}
             filters={
               <>
                 <FilterGroup
-                  title="Tipo"
+                  title={t('home_tipo')}
                   value={filterTipo}
                   onChange={setFilterTipo}
                   options={[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'libre', label: 'Libre' },
-                    { value: 'birthday', label: 'Cumpleaños' },
-                    { value: 'custodia', label: 'Custodia' },
+                    { value: 'all', label: t('home_todos') },
+                    { value: 'libre', label: t('home_libre') },
+                    { value: 'birthday', label: t('home_cumpleanos') },
+                    { value: 'custodia', label: t('home_custodia') },
                   ]}
                 />
                 <FilterGroup
-                  title="Bono"
+                  title={t('home_bono')}
                   value={filterBono}
                   onChange={setFilterBono}
                   options={[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'con_bono', label: 'Con bono' },
-                    { value: 'sin_bono', label: 'Sin bono' },
+                    { value: 'all', label: t('home_todos') },
+                    { value: 'con_bono', label: t('home_con_bono') },
+                    { value: 'sin_bono', label: t('home_sin_bono') },
                   ]}
                 />
                 <FilterGroup
-                  title="Sesiones"
+                  title={t('home_sesiones')}
                   value={filterSesiones}
                   onChange={setFilterSesiones}
                   options={[
-                    { value: 'all', label: 'Todas' },
-                    { value: 'critical', label: 'Críticas (≤2)' },
-                    { value: 'low', label: 'Bajas (3-5)' },
-                    { value: 'ok', label: 'OK (>5)' },
+                    { value: 'all', label: t('home_todas') },
+                    { value: 'critical', label: t('home_criticas') },
+                    { value: 'low', label: t('home_bajas') },
+                    { value: 'ok', label: t('home_ok_sesiones') },
                   ]}
                 />
               </>
@@ -2368,9 +2375,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
         {/* Empty states */}
         {activeVisits.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-mist">Sin personas en sala</div>
+          <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_personas_en_sala')}</div>
         ) : filteredVisits.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-mist">Sin resultados para la búsqueda</div>
+          <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_resultados_busqueda')}</div>
         ) : (
           <>
             {/* ── MOBILE: expandable cards (< md) ──────────────────────── */}
@@ -2403,7 +2410,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           {isToday && (
                             <button
                               onClick={() => setConfirmCheckout(visit.id)}
-                              aria-label="Registrar salida"
+                              aria-label={t('home_registrar_salida')}
                               className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-rose bg-rose/10 text-rose hover:brightness-110 active:scale-[0.98] transition-all"
                             >
                               <LogOut size={14} strokeWidth={2.2} />
@@ -2415,13 +2422,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <button onClick={() => setDetailVisitId(visit.id)} className="w-full text-left px-3 pb-2.5">
                           <div className="flex items-center gap-1.5 text-xs text-mist">
                             <span className="font-semibold text-snow">{visit.adults_count + numChildren}</span>
-                            <span>en sala</span>
+                            <span>{t('home_en_sala_lc')}</span>
                             <span className="text-line2">·</span>
                             <span className={`font-semibold ${isLong ? 'text-amber' : 'text-snow'}`}>{fmtElapsed(visit.checked_in_at)}</span>
                             {isLong && <AlertTriangle size={11} className="text-amber" />}
                             <span className="text-line2">·</span>
                             {pricingMissing(visit, imp)
-                              ? <span className="font-semibold text-amber">Configura tarifas</span>
+                              ? <span className="font-semibold text-amber">{t('home_configura_tarifas')}</span>
                               : <span className="font-semibold text-lime">{grandTotal.toFixed(2)}€</span>}
                           </div>
                         </button>
@@ -2438,18 +2445,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <thead>
                   <tr className="border-b border-line">
                     {([
-                      { key: 'Titular', label: 'Titular' },
-                      { key: 'Acomp.', label: 'Acompañantes' },
-                      { key: 'Total', label: 'Personas en sala' },
-                      { key: 'Tipo', label: 'Tipo de visita' },
-                      { key: 'Bono', label: 'Bono' },
-                      { key: 'Sesiones', label: 'Sesiones restantes' },
-                      { key: 'Entrada', label: 'Hora de entrada' },
-                      { key: 'Tiempo', label: 'Tiempo en sala' },
-                      { key: 'Importe', label: 'Importe por tiempo' },
-                      { key: 'Consumos', label: 'Consumos' },
-                      { key: 'Total a pagar', label: 'Total a pagar' },
-                      { key: 'Salida', label: 'Salida' },
+                      { key: 'Titular', label: t('home_titular') },
+                      { key: 'Acomp.', label: t('home_acompanantes') },
+                      { key: 'Total', label: t('home_personas_en_sala') },
+                      { key: 'Tipo', label: t('home_tipo_de_visita') },
+                      { key: 'Bono', label: t('home_bono') },
+                      { key: 'Sesiones', label: t('home_sesiones_restantes') },
+                      { key: 'Entrada', label: t('home_hora_de_entrada') },
+                      { key: 'Tiempo', label: t('home_tiempo_en_sala') },
+                      { key: 'Importe', label: t('home_importe_por_tiempo') },
+                      { key: 'Consumos', label: t('home_consumos') },
+                      { key: 'Total a pagar', label: t('home_total_a_pagar') },
+                      { key: 'Salida', label: t('home_salida') },
                     ] as const).map(col => {
                       const isFiltered =
                         (col.key === 'Tipo' && filterTipo !== 'all') ||
@@ -2498,7 +2505,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                                   <div className="flex items-center gap-1">
                                     {extraAdults > 0 && (
                                       <span className="text-[11px] font-bold text-lime flex items-center gap-0.5">
-                                        {extraAdults} <span className="text-[10px] font-normal">adulto{extraAdults !== 1 ? 's' : ''}</span>
+                                        {extraAdults} <span className="text-[10px] font-normal">{extraAdults !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}</span>
                                       </span>
                                     )}
                                     {extraAdults > 0 && numChildren > 0 && (
@@ -2506,7 +2513,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                                     )}
                                     {numChildren > 0 && (
                                       <span className="text-[11px] font-bold text-cyan-300 flex items-center gap-0.5">
-                                        {numChildren} <span className="text-[10px] font-normal">niño{numChildren !== 1 ? 's' : ''}</span>
+                                        {numChildren} <span className="text-[10px] font-normal">{numChildren !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>
                                       </span>
                                     )}
                                     {!hasAcomp && <span className="text-xs text-mist">—</span>}
@@ -2544,7 +2551,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           {/* Bono */}
                           <td className="px-3 py-3 align-top">
                             <span className={`text-[10px] font-semibold whitespace-nowrap ${bono ? 'text-iris' : 'text-amber'}`}>
-                              {bono ? (visit.memberships?.membership_types?.name ?? 'Con bono') : 'Sin bono'}
+                              {bono ? (visit.memberships?.membership_types?.name ?? t('home_con_bono')) : t('home_sin_bono')}
                             </span>
                           </td>
                           {/* Sesiones restantes */}
@@ -2631,7 +2638,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {isToday ? (
                               <button
                                 onClick={() => setConfirmCheckout(visit.id)}
-                                aria-label="Registrar salida"
+                                aria-label={t('home_registrar_salida')}
                                 className="flex items-center justify-center text-rose bg-rose/10 border border-rose rounded-lg w-7 h-7 hover:brightness-110 transition-all"
                               >
                                 <LogOut size={12} />
@@ -2656,18 +2663,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       <div className="rounded-2xl border border-line bg-surface overflow-hidden">
         <div className="px-4 pt-4 pb-3 border-b border-line flex items-center gap-2">
           <CalendarClock size={13} className="text-fog" />
-          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide">Agenda de hoy</h2>
-          <span className="text-[11px] text-mist">{todayBookings.length} reserva{todayBookings.length !== 1 ? 's' : ''}</span>
+          <h2 className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_agenda_de_hoy')}</h2>
+          <span className="text-[11px] text-mist">{todayBookings.length} {todayBookings.length !== 1 ? t('home_reservas_lc') : t('home_reserva_lc')}</span>
           <button
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
             className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-all"
           >
-            <CalendarPlus size={13} /> Nueva reserva
+            <CalendarPlus size={13} /> {t('home_nueva_reserva')}
           </button>
         </div>
 
         {timeline.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-mist">Sin reservas hoy</div>
+          <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_reservas_hoy')}</div>
         ) : (
           <div className="divide-y divide-line">
             {timeline.map(b => {
@@ -2691,12 +2698,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <span className={`text-[10px] font-semibold ${style.badge}`}>{style.label}</span>
                         {status === 'ejecutado' && (
                           <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5">
-                            <Check size={9} />Ejecutado
+                            <Check size={9} />{t('home_ejecutado')}
                           </span>
                         )}
                         {status === 'en_curso' && (
                           <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5">
-                            <Clock size={9} />En curso
+                            <Clock size={9} />{t('home_en_curso')}
                           </span>
                         )}
                       </div>
@@ -2707,12 +2714,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         const totalG = b.guests ?? (gA + gC)
                         if (totalG <= 0 && gA === 0 && gC === 0) return null
                         if (b.type === 'custodia') {
-                          return <p className="text-[11px] text-mist">{totalG} niño{totalG !== 1 ? 's' : ''}</p>
+                          return <p className="text-[11px] text-mist">{totalG} {totalG !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</p>
                         }
                         return (
                           <p className="text-[11px] text-mist">
-                            {totalG} invitado{totalG !== 1 ? 's' : ''}
-                            {(gA > 0 || gC > 0) && <span> · {gA} adulto{gA !== 1 ? 's' : ''}, {gC} niño{gC !== 1 ? 's' : ''}</span>}
+                            {totalG} {totalG !== 1 ? t('home_invitados_lc') : t('home_invitado_lc')}
+                            {(gA > 0 || gC > 0) && <span> · {gA} {gA !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}, {gC} {gC !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>}
                           </p>
                         )
                       })()}
@@ -2724,7 +2731,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                       >
                         <Play size={9} fill="currentColor" />
-                        {executingBooking === b.id ? '...' : 'Ejecutar'}
+                        {executingBooking === b.id ? '...' : t('home_ejecutar')}
                       </button>
                     )}
                   </button>
@@ -2743,8 +2750,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         >
           <div className="flex items-center gap-2">
             <BarChart2 size={13} className="text-fog" />
-            <span className="text-xs font-semibold text-fog uppercase tracking-wide">Métricas del día</span>
-            <span className="text-[11px] text-mist">{monthCount} visitas este mes</span>
+            <span className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_metricas_del_dia')}</span>
+            <span className="text-[11px] text-mist">{monthCount} {t('home_visitas_este_mes')}</span>
           </div>
           {chartsOpen ? <ChevronUp size={14} className="text-fog" /> : <ChevronDown size={14} className="text-fog" />}
         </button>
@@ -2756,14 +2763,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="p-4 lg:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-                    <BarChart2 size={13} /> Aforo por hora
+                    <BarChart2 size={13} /> {t('home_aforo_por_hora')}
                   </h3>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0" /> Alcanzado
+                      <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0" /> {t('home_alcanzado')}
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#fb923c] shrink-0" /> Reservado
+                      <span className="w-2 h-2 rounded-full bg-[#fb923c] shrink-0" /> {t('home_reservado')}
                     </span>
                   </div>
                 </div>
@@ -2790,18 +2797,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             <p style={{ color: '#9ca3af', marginBottom: 6 }}>{label}</p>
                             {entry.alcanzado != null ? (
                               <>
-                                <p style={{ color: '#38bdf8', fontWeight: 600 }}>Alcanzado: {entry.alcanzado}</p>
-                                <p style={{ color: '#6b7280', marginTop: 4 }}>{entry.adultos} adultos · {entry.ninos} niños</p>
+                                <p style={{ color: '#38bdf8', fontWeight: 600 }}>{t('home_alcanzado')}: {entry.alcanzado}</p>
+                                <p style={{ color: '#6b7280', marginTop: 4 }}>{entry.adultos} {t('home_adultos_lc')} · {entry.ninos} {t('home_ninos_lc')}</p>
                               </>
                             ) : entry.reservado != null ? (
                               <>
-                                <p style={{ color: '#fb923c', fontWeight: 600 }}>Reservado: {entry.reservado}</p>
-                                {entry.planBirthday ? <p style={{ color: '#6b7280', marginTop: 4 }}>Cumpleaños: {entry.planBirthday}</p> : null}
-                                {entry.planCustodia ? <p style={{ color: '#6b7280', marginTop: 2 }}>Custodias: {entry.planCustodia}</p> : null}
-                                {entry.planOther    ? <p style={{ color: '#6b7280', marginTop: 2 }}>Otros: {entry.planOther}</p> : null}
+                                <p style={{ color: '#fb923c', fontWeight: 600 }}>{t('home_reservado')}: {entry.reservado}</p>
+                                {entry.planBirthday ? <p style={{ color: '#6b7280', marginTop: 4 }}>{t('home_cumpleanos')}: {entry.planBirthday}</p> : null}
+                                {entry.planCustodia ? <p style={{ color: '#6b7280', marginTop: 2 }}>{t('home_custodias')}: {entry.planCustodia}</p> : null}
+                                {entry.planOther    ? <p style={{ color: '#6b7280', marginTop: 2 }}>{t('home_otros')}: {entry.planOther}</p> : null}
                               </>
                             ) : (
-                              <p style={{ color: '#6b7280' }}>Sin datos</p>
+                              <p style={{ color: '#6b7280' }}>{t('home_sin_datos')}</p>
                             )}
                           </div>
                         )
@@ -2829,14 +2836,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="p-4 lg:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-                    <Activity size={13} /> Afluencia por hora
+                    <Activity size={13} /> {t('home_afluencia_por_hora')}
                   </h3>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#8b8bff] shrink-0" /> Con bono
+                      <span className="w-2 h-2 rounded-full bg-[#8b8bff] shrink-0" /> {t('home_con_bono')}
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#f59e0b] shrink-0" /> Sin bono
+                      <span className="w-2 h-2 rounded-full bg-[#f59e0b] shrink-0" /> {t('home_sin_bono')}
                     </span>
                   </div>
                 </div>
@@ -2851,8 +2858,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       itemStyle={{ color: '#f0f4f8', fontSize: 11 }}
                       cursor={{ stroke: '#1e2530' }}
                     />
-                    <Line type="monotone" dataKey="conBono" name="Con bono" stroke="#8b8bff" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="sinBono" name="Sin bono" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="conBono" name={t('home_con_bono')} stroke="#8b8bff" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="sinBono" name={t('home_sin_bono')} stroke="#f59e0b" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -2869,7 +2876,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-line shrink-0">
               <div className="flex items-center gap-2">
                 <Bell size={14} className="text-amber" />
-                <span className="text-sm font-semibold text-snow">Alertas activas</span>
+                <span className="text-sm font-semibold text-snow">{t('home_alertas_activas')}</span>
                 <span className="text-[10px] font-bold bg-rose text-white px-1.5 py-0.5 rounded-full">{totalAlerts - dismissedAlerts.size}</span>
               </div>
               <button onClick={() => setAlertsOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
@@ -2888,7 +2895,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
-                          <p className="text-[11px] text-fog">Lleva {fmtElapsed(v.checked_in_at)} en sala</p>
+                          <p className="text-[11px] text-fog">{t('home_lleva')} {fmtElapsed(v.checked_in_at)} {t('home_en_sala_lc')}</p>
                         </div>
                       </div>
                       <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'long-' + v.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
@@ -2904,7 +2911,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
                         className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
                       >
-                        <LogOut size={10} /> Salida
+                        <LogOut size={10} /> {t('home_salida')}
                       </button>
                     </div>
                   </div>
@@ -2922,7 +2929,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <Cake size={13} className="text-rose shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
-                          <p className="text-[11px] text-fog">Empieza a las {b.start_time?.slice(0, 5)}</p>
+                          <p className="text-[11px] text-fog">{t('home_empieza_a_las')} {b.start_time?.slice(0, 5)}</p>
                         </div>
                       </div>
                       <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'bday-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
@@ -2930,7 +2937,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-iris/10 text-iris border border-iris/30">Cumpleaños</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-iris/10 text-iris border border-iris/30">{t('home_cumpleanos')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
@@ -2948,7 +2955,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <CalendarClock size={13} className="text-amber shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
-                          <p className="text-[11px] text-fog">Custodia termina a las {b.end_time?.slice(0, 5)}</p>
+                          <p className="text-[11px] text-fog">{t('home_custodia_termina_a_las')} {b.end_time?.slice(0, 5)}</p>
                         </div>
                       </div>
                       <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'cust-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
@@ -2956,14 +2963,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-cyan-300/10 text-cyan-300 border border-cyan-300/30">Custodia</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-cyan-300/10 text-cyan-300 border border-cyan-300/30">{t('home_custodia')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
                 )
               })}
               {totalAlerts - dismissedAlerts.size === 0 && (
-                <p className="text-xs text-mist text-center py-4">Todas las alertas cerradas</p>
+                <p className="text-xs text-mist text-center py-4">{t('home_todas_las_alertas_cerradas')}</p>
               )}
             </div>
           </div>
@@ -3013,7 +3020,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <Receipt size={15} className="text-lime shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-[11px] text-fog">Total a pagar</p>
+                    <p className="text-[11px] text-fog">{t('home_total_a_pagar')}</p>
                   </div>
                 </div>
                 <button onClick={closeTotalModal} className="text-fog hover:text-snow transition-colors p-1">
@@ -3024,45 +3031,45 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Sección paquete de reserva (cumpleaños/custodia/otro con importe) */}
                 {imp.isPackage ? (
                   <div>
-                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Reserva</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_reserva')}</p>
                     <div className="space-y-1.5">
                       {imp.pkg?.live && (
                         <>
                           <div className="flex justify-between text-xs">
                             <span className="text-fog">
-                              Paquete base
-                              {imp.pkg.included > 0 && <span className="text-mist"> (incluye {imp.pkg.included})</span>}
+                              {t('home_paquete_base')}
+                              {imp.pkg.included > 0 && <span className="text-mist"> ({t('home_incluye_lc')} {imp.pkg.included})</span>}
                             </span>
                             <span className="text-snow">{imp.pkg.base.toFixed(2)}€</span>
                           </div>
                           <div className="flex justify-between text-xs text-mist">
-                            <span>Presentes: {imp.pkg.presentA + imp.pkg.presentC}
+                            <span>{t('home_presentes')}: {imp.pkg.presentA + imp.pkg.presentC}
                               {(imp.pkg.presentA + imp.pkg.presentC) !== (imp.pkg.contractedA + imp.pkg.contractedC) &&
-                                ` (contratados ${imp.pkg.contractedA + imp.pkg.contractedC})`}
+                                ` (${t('home_contratados_lc')} ${imp.pkg.contractedA + imp.pkg.contractedC})`}
                             </span>
                           </div>
                           {imp.pkg.chargeA > 0 && (
                             <div className="flex justify-between text-xs">
-                              <span className="text-fog">{imp.pkg.chargeA} adulto{imp.pkg.chargeA !== 1 ? 's' : ''} extra × {imp.pkg.rateA.toFixed(2)}€</span>
+                              <span className="text-fog">{imp.pkg.chargeA} {imp.pkg.chargeA !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')} {t('home_extra_lc')} × {imp.pkg.rateA.toFixed(2)}€</span>
                               <span className="text-snow">{(imp.pkg.chargeA * imp.pkg.rateA).toFixed(2)}€</span>
                             </div>
                           )}
                           {imp.pkg.chargeC > 0 && (
                             <div className="flex justify-between text-xs">
-                              <span className="text-fog">{imp.pkg.chargeC} niño{imp.pkg.chargeC !== 1 ? 's' : ''} extra × {imp.pkg.rateC.toFixed(2)}€</span>
+                              <span className="text-fog">{imp.pkg.chargeC} {imp.pkg.chargeC !== 1 ? t('home_ninos_lc') : t('home_nino_lc')} {t('home_extra_lc')} × {imp.pkg.rateC.toFixed(2)}€</span>
                               <span className="text-snow">{(imp.pkg.chargeC * imp.pkg.rateC).toFixed(2)}€</span>
                             </div>
                           )}
                           {imp.pkg.chargeA === 0 && imp.pkg.chargeC === 0 && (
                             <div className="flex justify-between text-xs text-mint">
-                              <span>Sin invitados extra</span>
+                              <span>{t('home_sin_invitados_extra')}</span>
                             </div>
                           )}
                         </>
                       )}
                       {(visit.bookings?.addons ?? []).length > 0 && (
                         <div className="pt-1 border-t border-line/60 space-y-1.5">
-                          <p className="text-[10px] text-mist">Sub-servicios</p>
+                          <p className="text-[10px] text-mist">{t('home_sub_servicios')}</p>
                           {(visit.bookings?.addons ?? []).map((a, i) => (
                             <div key={i} className="flex justify-between text-xs">
                               <span className="text-fog">+ {a.name}</span>
@@ -3072,44 +3079,44 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </div>
                       )}
                       <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
-                        <span className="text-fog">Total del paquete</span>
+                        <span className="text-fog">{t('home_total_del_paquete')}</span>
                         <span className="text-snow">{imp.total.toFixed(2)}€</span>
                       </div>
                       {imp.deposit > 0 && (
                         <div className="flex justify-between text-xs">
-                          <span className="text-fog">Adelanto pagado</span>
+                          <span className="text-fog">{t('home_adelanto_pagado')}</span>
                           <span className="text-mint">−{imp.deposit.toFixed(2)}€</span>
                         </div>
                       )}
                       <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
-                        <span className="text-fog">Pendiente reserva</span>
+                        <span className="text-fog">{t('home_pendiente_reserva')}</span>
                         <span className="text-lime">{imp.toPay.toFixed(2)}€</span>
                       </div>
                     </div>
                   </div>
                 ) : (
                 <div>
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Importe por tiempo</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_importe_por_tiempo')}</p>
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs text-fog">
-                      <span>Tiempo en sala</span><span className="text-snow">{fmtH(elapsedMins)}</span>
+                      <span>{t('home_tiempo_en_sala')}</span><span className="text-snow">{fmtH(elapsedMins)}</span>
                     </div>
                     {visit.adults_count > 0 && imp.titular > 0 && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-fog">{visit.adults_count} adulto{visit.adults_count !== 1 ? 's' : ''} × {hourRate}€/h × {hours.toFixed(2)}h</span>
+                        <span className="text-fog">{visit.adults_count} {visit.adults_count !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')} × {hourRate}€/h × {hours.toFixed(2)}h</span>
                         <span className="text-snow">{imp.titular.toFixed(2)}€</span>
                       </div>
                     )}
                     {visit.children_count > 0 && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-fog">{visit.children_count} niño{visit.children_count !== 1 ? 's' : ''} × {childRate}€/h × {hours.toFixed(2)}h</span>
+                        <span className="text-fog">{visit.children_count} {visit.children_count !== 1 ? t('home_ninos_lc') : t('home_nino_lc')} × {childRate}€/h × {hours.toFixed(2)}h</span>
                         <span className="text-snow">{imp.ninos.toFixed(2)}€</span>
                       </div>
                     )}
                     {imp.bonoPrecioSesion !== null && mt && (
                       <>
                         <div className="flex justify-between text-xs">
-                          <span className="text-fog line-through">Subtotal regular</span>
+                          <span className="text-fog line-through">{t('home_subtotal_regular')}</span>
                           <span className="text-mist line-through">{imp.regular.toFixed(2)}€</span>
                         </div>
                         <div className="flex justify-between text-xs">
@@ -3118,14 +3125,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </div>
                         {imp.ahorro > 0 && (
                           <div className="flex justify-between text-xs">
-                            <span className="text-fog">Ahorro aplicado</span>
+                            <span className="text-fog">{t('home_ahorro_aplicado')}</span>
                             <span className="text-mint">−{imp.ahorro.toFixed(2)}€</span>
                           </div>
                         )}
                       </>
                     )}
                     <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
-                      <span className="text-fog">Subtotal tiempo</span>
+                      <span className="text-fog">{t('home_subtotal_tiempo')}</span>
                       <span className="text-lime">{imp.total.toFixed(2)}€</span>
                     </div>
                   </div>
@@ -3134,9 +3141,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Sección consumos */}
                 <div>
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Consumos</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_consumos')}</p>
                   {grouped.length === 0 ? (
-                    <p className="text-xs text-mist">Sin consumos</p>
+                    <p className="text-xs text-mist">{t('home_sin_consumos')}</p>
                   ) : (
                     <div className="space-y-1.5">
                       {grouped.map(g => {
@@ -3149,7 +3156,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         )
                       })}
                       <div className="flex justify-between text-xs font-semibold pt-1 border-t border-line">
-                        <span className="text-fog">Subtotal consumos</span>
+                        <span className="text-fog">{t('home_subtotal_consumos')}</span>
                         <span className="text-lime">{consumosTotal.toFixed(2)}€</span>
                       </div>
                     </div>
@@ -3160,19 +3167,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               {/* Total + cobro */}
               <div className="px-5 py-4 border-t border-line shrink-0 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-snow">Total a pagar</span>
+                  <span className="text-sm font-bold text-snow">{t('home_total_a_pagar')}</span>
                   {pricingMissing(visit, imp)
-                    ? <span className="text-sm font-semibold text-amber">Sin tarifas</span>
+                    ? <span className="text-sm font-semibold text-amber">{t('home_sin_tarifas')}</span>
                     : <span className="text-2xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                 </div>
                 {pricingMissing(visit, imp) ? (
                   <Link href="/panel/servicios" onClick={() => setTotalVisitId(null)}
                     className="flex items-center justify-center gap-2 rounded-xl border border-amber bg-amber/10 py-3 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
-                    <AlertTriangle size={15} /> Configura tus tarifas para cobrar
+                    <AlertTriangle size={15} /> {t('home_configura_tarifas_para_cobrar')}
                   </Link>
                 ) : visit.paid_at ? (
                   <div className="flex items-center justify-center gap-2 rounded-xl bg-mint/10 border border-mint/20 py-2.5 text-sm font-semibold text-mint">
-                    <Check size={15} /> Cobrado
+                    <Check size={15} /> {t('home_cobrado')}
                     {visit.paid_amount != null && <span className="text-mint/80">· {visit.paid_amount.toFixed(2)}€</span>}
                     {visit.payment_method && <span className="text-mint/60 capitalize">· {visit.payment_method}</span>}
                   </div>
@@ -3183,14 +3190,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       disabled={payingVisit === totalVisitId}
                       className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
                     >
-                      <Euro size={15} /> Efectivo
+                      <Euro size={15} /> {t('home_efectivo')}
                     </button>
                     <button
                       onClick={() => handlePayVisit(totalVisitId, grandTotal, 'tarjeta')}
                       disabled={payingVisit === totalVisitId}
                       className="flex items-center justify-center gap-1.5 rounded-xl border border-lime bg-lime/10 py-3 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50"
                     >
-                      <CreditCard size={15} /> Tarjeta
+                      <CreditCard size={15} /> {t('home_tarjeta')}
                     </button>
                   </div>
                 )}
@@ -3214,7 +3221,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <LogOut size={15} className="text-rose shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-[11px] text-fog">Confirmar salida</p>
+                    <p className="text-[11px] text-fog">{t('home_confirmar_salida')}</p>
                   </div>
                 </div>
                 <button onClick={() => setConfirmCheckout(null)} className="text-fog hover:text-snow transition-colors p-1">
@@ -3223,13 +3230,13 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               </div>
               <div className="px-5 py-4 space-y-3">
                 <p className="text-sm text-fog">
-                  ¿Registrar la salida de <span className="font-semibold text-snow">{visit.members?.name ?? '—'}</span>?
+                  {t('home_registrar_salida_de')} <span className="font-semibold text-snow">{visit.members?.name ?? '—'}</span>?
                 </p>
                 {check && check.items.length > 0 && (
                   <div className="flex items-center gap-2 rounded-xl bg-amber/10 border border-amber/30 px-3 py-2.5">
                     <ShoppingCart size={13} className="text-amber shrink-0" />
                     <p className="text-xs text-amber">
-                      Hay {check.items.length} consumo{check.items.length !== 1 ? 's' : ''} abierto{check.items.length !== 1 ? 's' : ''} por <span className="font-bold text-lime">{check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€</span> — se cerrarán al salir.
+                      {t('home_hay')} {check.items.length} {check.items.length !== 1 ? t('home_consumos_abiertos_lc') : t('home_consumo_abierto_lc')} {t('home_por')} <span className="font-bold text-lime">{check.items.reduce((s, i) => s + i.unit_price * i.quantity, 0).toFixed(2)}€</span> — {t('home_se_cerraran_al_salir')}.
                     </p>
                   </div>
                 )}
@@ -3239,7 +3246,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     className="flex w-full items-center justify-between gap-2 rounded-xl bg-amber/10 border border-amber/30 px-3 py-2.5 hover:bg-amber/15 transition-colors"
                   >
                     <span className="flex items-center gap-2 text-xs text-amber">
-                      <Euro size={13} className="shrink-0" /> Aún sin cobrar — pasar a cobro
+                      <Euro size={13} className="shrink-0" /> {t('home_aun_sin_cobrar')}
                     </span>
                     <ChevronRight size={14} className="text-amber shrink-0" />
                   </button>
@@ -3249,7 +3256,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     onClick={() => setConfirmCheckout(null)}
                     className="flex-1 text-sm font-medium text-fog bg-surface2 border border-line rounded-xl py-2.5 hover:text-snow transition-colors"
                   >
-                    Cancelar
+                    {t('home_cancelar')}
                   </button>
                   <button
                     onClick={() => handleCheckout(visit.id)}
@@ -3257,7 +3264,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold text-rose bg-rose/10 border border-rose rounded-xl py-2.5 hover:brightness-110 transition-all disabled:opacity-50"
                   >
                     <LogOut size={14} />
-                    {checkingOut === visit.id ? 'Registrando...' : 'Confirmar salida'}
+                    {checkingOut === visit.id ? t('home_registrando') : t('home_confirmar_salida')}
                   </button>
                 </div>
               </div>
@@ -3295,7 +3302,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <Users size={15} className="text-iris shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-[11px] text-fog">{totalAcomp} acompañante{totalAcomp !== 1 ? 's' : ''}</p>
+                    <p className="text-[11px] text-fog">{totalAcomp} {totalAcomp !== 1 ? t('home_acompanantes_lc') : t('home_acompanante_lc')}</p>
                   </div>
                 </div>
                 <button onClick={() => closeAndReturn(() => setAcompVisitId(null))} className="text-fog hover:text-snow transition-colors p-1">
@@ -3306,7 +3313,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
                 {/* Titular */}
                 <div>
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Titular</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_titular')}</p>
                   <button
                     onClick={() => setAcompTitularPresent(p => !p)}
                     className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
@@ -3319,14 +3326,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       {acompTitularPresent && <Check size={10} className="text-ink" strokeWidth={3} />}
                     </span>
                     <span className="text-xs font-medium text-snow flex-1">{visit.members?.name ?? '—'}</span>
-                    <span className="text-[11px] text-iris font-medium">Titular</span>
+                    <span className="text-[11px] text-iris font-medium">{t('home_titular')}</span>
                   </button>
                 </div>
 
                 {/* Co-titulares */}
                 {acompCoTitulares.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Co-titulares</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_co_titulares')}</p>
                     <div className="space-y-1.5">
                       {acompCoTitulares.map(cot => (
                         <button key={cot.id}
@@ -3341,7 +3348,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {cot.selected && <Check size={10} className="text-white" strokeWidth={3} />}
                           </span>
                           <span className="text-xs font-medium text-snow flex-1">{cot.name}</span>
-                          <span className="text-[11px] text-iris font-medium">Co-titular</span>
+                          <span className="text-[11px] text-iris font-medium">{t('home_co_titular')}</span>
                         </button>
                       ))}
                     </div>
@@ -3351,7 +3358,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Hijos registrados */}
                 {registeredChildren.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Hijos registrados</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_hijos_registrados')}</p>
                     <div className="space-y-1.5">
                       {registeredChildren.map((child, i) => {
                         const checked = selectedNames.has(child.name)
@@ -3378,11 +3385,11 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Invitados */}
                 <div>
-                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Invitados</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_invitados')}</p>
                   <div className="space-y-2">
                     {/* Adultos invitados */}
                     <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
-                      <span className="text-xs text-snow">Adultos invitados</span>
+                      <span className="text-xs text-snow">{t('home_adultos_invitados')}</span>
                       <div className="flex items-center gap-2">
                         <button onClick={() => setAcompGuestAdults(n => Math.max(0, n - 1))}
                           className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
@@ -3401,7 +3408,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     {acompChildren.filter(c => c.isGuest).map((child, i) => (
                       <div key={i} className="flex items-center gap-2 rounded-xl bg-surface2 border border-line px-3 py-2.5">
                         <span className="text-xs text-snow flex-1">{child.name}</span>
-                        <span className="text-[10px] text-cyan-300 font-medium">Niño invitado</span>
+                        <span className="text-[10px] text-cyan-300 font-medium">{t('home_nino_invitado')}</span>
                         <button
                           onClick={() => setAcompChildren(prev => {
                             const guestIdx = prev.filter(c => c.isGuest).indexOf(child)
@@ -3422,7 +3429,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                     {/* Niños invitados anónimos */}
                     <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
-                      <span className="text-xs text-snow">Niños invitados adicionales</span>
+                      <span className="text-xs text-snow">{t('home_ninos_invitados_adicionales')}</span>
                       <div className="flex items-center gap-2">
                         <button onClick={() => setAcompGuestChildren(n => Math.max(0, n - 1))}
                           className="w-6 h-6 flex items-center justify-center rounded-md bg-surface border border-line text-fog hover:text-rose hover:border-rose/40 transition-colors font-bold">−</button>
@@ -3442,11 +3449,11 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
               {/* Footer */}
               <div className="px-5 py-3 border-t border-line shrink-0 flex items-center justify-between">
-                <span className="text-[11px] text-mist">{totalAcomp} acompañante{totalAcomp !== 1 ? 's' : ''}</span>
+                <span className="text-[11px] text-mist">{totalAcomp} {totalAcomp !== 1 ? t('home_acompanantes_lc') : t('home_acompanante_lc')}</span>
                 <span className={`text-[11px] flex items-center gap-1 transition-opacity ${savingAcomp || savedAcomp ? 'opacity-100' : 'opacity-0'}`}>
                   {savingAcomp
-                    ? <span className="text-fog">Guardando...</span>
-                    : <span className="text-mint flex items-center gap-1"><Check size={11} /> Guardado</span>
+                    ? <span className="text-fog">{t('home_guardando')}</span>
+                    : <span className="text-mint flex items-center gap-1"><Check size={11} /> {t('home_guardado')}</span>
                   }
                 </span>
               </div>
@@ -3479,7 +3486,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <Receipt size={15} className="text-lime shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-[11px] text-fog">Desglose del importe</p>
+                    <p className="text-[11px] text-fog">{t('home_desglose_del_importe')}</p>
                   </div>
                 </div>
                 <button onClick={() => closeAndReturn(() => setImporteVisitId(null))} className="text-fog hover:text-snow transition-colors p-1">
@@ -3490,26 +3497,26 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="px-5 py-4 space-y-3">
                 {/* Meta */}
                 <div className="flex justify-between text-sm text-fog">
-                  <span>Entrada</span><span className="text-snow font-medium">{fmtTime(visit.checked_in_at)}</span>
+                  <span>{t('home_entrada')}</span><span className="text-snow font-medium">{fmtTime(visit.checked_in_at)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-fog">
-                  <span>Tiempo en sala</span><span className="text-snow font-medium">{fmtH(elapsedMins)}</span>
+                  <span>{t('home_tiempo_en_sala')}</span><span className="text-snow font-medium">{fmtH(elapsedMins)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-fog">
-                  <span>Tipo de visita</span><span className="text-snow font-medium">{fmtVisitType(visit)}</span>
+                  <span>{t('home_tipo_de_visita')}</span><span className="text-snow font-medium">{fmtVisitType(visit)}</span>
                 </div>
 
                 {/* Paquete de reserva */}
                 {imp.isPackage && (
                   <div className="border-t border-line pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-mist uppercase tracking-wide">Reserva</p>
+                    <p className="text-xs font-semibold text-mist uppercase tracking-wide">{t('home_reserva')}</p>
                     <div className="flex justify-between text-sm">
-                      <span className="text-fog">Total del paquete</span>
+                      <span className="text-fog">{t('home_total_del_paquete')}</span>
                       <span className="text-snow font-medium">{imp.total.toFixed(2)}€</span>
                     </div>
                     {imp.deposit > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-fog">Adelanto pagado</span>
+                        <span className="text-fog">{t('home_adelanto_pagado')}</span>
                         <span className="text-mint font-medium">−{imp.deposit.toFixed(2)}€</span>
                       </div>
                     )}
@@ -3519,21 +3526,21 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Tarifa sin bono */}
                 {!imp.isPackage && (
                 <div className="border-t border-line pt-3 space-y-2">
-                  <p className="text-xs font-semibold text-mist uppercase tracking-wide">Tarifa regular</p>
+                  <p className="text-xs font-semibold text-mist uppercase tracking-wide">{t('home_tarifa_regular')}</p>
                   {visit.adults_count > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-fog">{visit.adults_count} adulto{visit.adults_count !== 1 ? 's' : ''} × {hourRate}€/h × {hours.toFixed(2)}h</span>
+                      <span className="text-fog">{visit.adults_count} {visit.adults_count !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')} × {hourRate}€/h × {hours.toFixed(2)}h</span>
                       <span className="text-snow font-medium">{imp.titular.toFixed(2)}€</span>
                     </div>
                   )}
                   {visit.children_count > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-fog">{visit.children_count} niño{visit.children_count !== 1 ? 's' : ''} × {childRate}€/h × {hours.toFixed(2)}h</span>
+                      <span className="text-fog">{visit.children_count} {visit.children_count !== 1 ? t('home_ninos_lc') : t('home_nino_lc')} × {childRate}€/h × {hours.toFixed(2)}h</span>
                       <span className="text-snow font-medium">{imp.ninos.toFixed(2)}€</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-fog">Subtotal regular</span>
+                    <span className="text-fog">{t('home_subtotal_regular')}</span>
                     <span className={imp.bonoPrecioSesion !== null ? 'text-mist line-through' : 'text-lime'}>{imp.regular.toFixed(2)}€</span>
                   </div>
                 </div>
@@ -3544,12 +3551,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <div className="border-t border-line pt-3 space-y-2">
                     <p className="text-xs font-semibold text-iris uppercase tracking-wide">{mt.name}</p>
                     <div className="flex justify-between text-sm">
-                      <span className="text-fog">Precio por sesión ({mt.price}€ ÷ {mt.sessions} ses.)</span>
+                      <span className="text-fog">{t('home_precio_por_sesion')} ({mt.price}€ ÷ {mt.sessions} {t('home_ses_abrev')})</span>
                       <span className="text-iris font-medium">{imp.bonoPrecioSesion.toFixed(2)}€</span>
                     </div>
                     {imp.ahorro > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-fog">Ahorro aplicado</span>
+                        <span className="text-fog">{t('home_ahorro_aplicado')}</span>
                         <span className="text-mint font-medium">−{imp.ahorro.toFixed(2)}€</span>
                       </div>
                     )}
@@ -3558,7 +3565,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Total */}
                 <div className="border-t border-line pt-4 flex justify-between items-center">
-                  <span className="text-base font-bold text-snow">{imp.isPackage ? 'Pendiente a cobrar' : 'Total a cobrar'}</span>
+                  <span className="text-base font-bold text-snow">{imp.isPackage ? t('home_pendiente_a_cobrar') : t('home_total_a_cobrar')}</span>
                   <span className="text-2xl font-bold text-lime">{imp.toPay.toFixed(2)}€</span>
                 </div>
               </div>
@@ -3608,16 +3615,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-0.5">
                     <Users size={13} className="text-fog shrink-0" />
-                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Ahora en sala</p>
+                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_ahora_en_sala')}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-base font-bold text-snow truncate">{titularName}</p>
                     <span className={`text-[10px] font-semibold shrink-0 ${tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-fog'}`}>{tipo}</span>
-                    {isLong && <span className="text-[10px] font-semibold text-amber shrink-0">⚠ Larga</span>}
+                    {isLong && <span className="text-[10px] font-semibold text-amber shrink-0">⚠ {t('home_larga')}</span>}
                   </div>
-                  <p className="text-xs text-fog mt-0.5">Entrada {fmtTime(visit.checked_in_at)} · <span className={isLong ? 'text-amber font-semibold' : 'text-snow'}>{fmtElapsed(visit.checked_in_at)}</span></p>
+                  <p className="text-xs text-fog mt-0.5">{t('home_entrada')} {fmtTime(visit.checked_in_at)} · <span className={isLong ? 'text-amber font-semibold' : 'text-snow'}>{fmtElapsed(visit.checked_in_at)}</span></p>
                 </div>
-                <button onClick={() => setDetailVisitId(null)} aria-label="Cerrar" className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
+                <button onClick={() => setDetailVisitId(null)} aria-label={t('home_cerrar')} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2"><X size={16} /></button>
               </div>
 
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
@@ -3625,14 +3632,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2.5">
                   {/* Adultos */}
                   <div className="flex items-baseline gap-3 min-w-0">
-                    <span className="text-xs text-fog shrink-0 w-14">Adultos</span>
+                    <span className="text-xs text-fog shrink-0 w-14">{t('home_adultos')}</span>
                     <span className="text-lg font-bold text-lime leading-none shrink-0">{visit.adults_count}</span>
                     <ScrollingName text={adultNamesStr} suffix={adultSuffix} suffixClass="text-mist" />
                   </div>
                   {/* Niños */}
                   {numChildren > 0 && (
                     <div className="flex items-baseline gap-3 min-w-0">
-                      <span className="text-xs text-fog shrink-0 w-14">Niños</span>
+                      <span className="text-xs text-fog shrink-0 w-14">{t('home_ninos')}</span>
                       <span className="text-lg font-bold text-cyan-300 leading-none shrink-0">{numChildren}</span>
                       <ScrollingName text={childNamesStr} suffix={childSuffix} suffixClass="text-mist" />
                     </div>
@@ -3642,21 +3649,21 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Bono */}
                 <div className={`rounded-xl border px-4 py-3 space-y-1.5 ${bono ? 'border-iris/20 bg-iris/5' : 'border-amber/20 bg-amber/5'}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-fog uppercase tracking-wide">Bono</span>
+                      <span className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_bono')}</span>
                       <span className={`text-sm font-bold ${bono ? 'text-iris' : 'text-amber'}`}>
-                        {bono ? (bonoName ?? 'Con bono') : 'Sin bono'}
+                        {bono ? (bonoName ?? t('home_con_bono')) : t('home_sin_bono')}
                       </span>
                     </div>
                     {bono && !bonoIsUnlimited && bonoSessions != null && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-fog">Sesiones restantes</span>
+                        <span className="text-xs text-fog">{t('home_sesiones_restantes')}</span>
                         <span className={`text-sm font-bold ${bonoSessionColor}`}>{bonoSessions}</span>
                       </div>
                     )}
                     {bono && bonoIsUnlimited && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-fog">Sesiones</span>
-                        <span className="text-sm font-bold text-iris">∞ Ilimitado</span>
+                        <span className="text-xs text-fog">{t('home_sesiones')}</span>
+                        <span className="text-sm font-bold text-iris">∞ {t('home_ilimitado')}</span>
                       </div>
                     )}
                 </div>
@@ -3667,7 +3674,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-lime/40 transition-colors">
                     <Receipt size={15} className="text-lime" />
                     <span className="text-xs font-semibold text-lime">{imp.total.toFixed(2)}€</span>
-                    <span className="text-[10px] text-mist">Importe</span>
+                    <span className="text-[10px] text-mist">{t('home_importe')}</span>
                   </button>
                   <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); setProductSearch(''); setConsumosVisitId(detailVisitId) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
@@ -3675,7 +3682,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
                       {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : '—'}
                     </span>
-                    <span className="text-[10px] text-mist">Consumos</span>
+                    <span className="text-[10px] text-mist">{t('home_consumos')}</span>
                   </button>
                   <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); openAcompPopup(visit) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
@@ -3683,7 +3690,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <span className="text-xs font-semibold text-mist">
                       {Math.max(0, visit.adults_count - 1) + numChildren}
                     </span>
-                    <span className="text-[10px] text-mist">Acomp.</span>
+                    <span className="text-[10px] text-mist">{t('home_acomp_abrev')}</span>
                   </button>
                 </div>
 
@@ -3691,12 +3698,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {pricingMissing(visit, imp) ? (
                   <Link href="/panel/servicios" onClick={() => setDetailVisitId(null)}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber bg-amber/10 text-sm font-semibold text-amber hover:bg-amber/20 transition-colors">
-                    <AlertTriangle size={14} /> Configura tus tarifas para cobrar
+                    <AlertTriangle size={14} /> {t('home_configura_tarifas_para_cobrar')}
                   </Link>
                 ) : (
                   <button onClick={() => { setDetailVisitId(null); setTotalVisitId(detailVisitId) }}
                     className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/20 transition-colors">
-                    <span className="text-sm font-semibold text-fog">Total a pagar</span>
+                    <span className="text-sm font-semibold text-fog">{t('home_total_a_pagar')}</span>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
                       <Receipt size={13} className="text-lime/60" />
@@ -3708,7 +3715,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <button onClick={() => { setDetailVisitId(null); setConfirmCheckout(detailVisitId) }}
                     className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 border border-rose bg-rose/10 text-rose font-semibold text-sm hover:brightness-110 transition active:scale-[0.99]">
                     <LogOut size={16} strokeWidth={2.2} />
-                    Registrar salida
+                    {t('home_registrar_salida')}
                   </button>
                 )}
               </div>
@@ -3725,10 +3732,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const canExecute = isToday && (status === 'pendiente' || status === 'en_curso')
         const linkedVisit = activeVisits.find(v => v.booking_id === b.id)
         const statusLabels: Record<string, { label: string; cls: string }> = {
-          ejecutado: { label: 'Ejecutado', cls: 'text-mint' },
-          en_curso:  { label: 'En curso',  cls: 'text-lime' },
-          pendiente: { label: 'Pendiente', cls: 'text-fog' },
-          pasado:    { label: 'Pasado',    cls: 'text-mist' },
+          ejecutado: { label: t('home_ejecutado'), cls: 'text-mint' },
+          en_curso:  { label: t('home_en_curso'),  cls: 'text-lime' },
+          pendiente: { label: t('home_pendiente'), cls: 'text-fog' },
+          pasado:    { label: t('home_pasado'),    cls: 'text-mist' },
         }
         const st = statusLabels[status]
         return (
@@ -3740,7 +3747,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <CalendarClock size={13} className="text-fog shrink-0" />
-                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">Reserva</p>
+                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_reserva')}</p>
                   </div>
                   <FitText className="font-bold text-snow leading-tight" min={13} max={18}>{b.title}</FitText>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -3757,7 +3764,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Titular */}
                 {b.members?.name && (
                   <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">Titular</span>
+                    <span className="text-xs text-fog">{t('home_titular')}</span>
                     <span className="text-sm font-semibold text-snow">{b.members.name}</span>
                   </div>
                 )}
@@ -3765,7 +3772,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Menor (cumpleaños / custodia) */}
                 {b.child_name && (
                   <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">{b.type === 'birthday' ? 'Cumpleañero/a' : 'Menores'}</span>
+                    <span className="text-xs text-fog">{b.type === 'birthday' ? t('home_cumpleanero') : t('home_menores')}</span>
                     <span className="text-sm font-semibold text-snow">{b.child_name}</span>
                   </div>
                 )}
@@ -3773,7 +3780,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Fecha */}
                 {b.date && (
                   <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">Fecha</span>
+                    <span className="text-xs text-fog">{t('home_fecha')}</span>
                     <span className="text-sm font-semibold text-snow capitalize">
                       {new Date(b.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </span>
@@ -3782,18 +3789,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Horario */}
                 <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
-                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Horario</p>
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_horario')}</p>
                   <div className="flex items-center gap-4">
                     {b.start_time && (
                       <div>
-                        <p className="text-[10px] text-mist mb-0.5">Inicio</p>
+                        <p className="text-[10px] text-mist mb-0.5">{t('home_inicio')}</p>
                         <p className="text-lg font-bold text-snow">{b.start_time.slice(0, 5)}</p>
                       </div>
                     )}
                     {b.start_time && b.end_time && <span className="text-mist">→</span>}
                     {b.end_time && (
                       <div>
-                        <p className="text-[10px] text-mist mb-0.5">Fin</p>
+                        <p className="text-[10px] text-mist mb-0.5">{t('home_fin')}</p>
                         <p className="text-lg font-bold text-snow">{b.end_time.slice(0, 5)}</p>
                       </div>
                     )}
@@ -3802,7 +3809,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       const h = Math.floor(diff / 60), m = diff % 60
                       return (
                         <div className="ml-auto">
-                          <p className="text-[10px] text-mist mb-0.5">Duración</p>
+                          <p className="text-[10px] text-mist mb-0.5">{t('home_duracion')}</p>
                           <p className="text-sm font-semibold text-fog">{h > 0 ? `${h}h ` : ''}{m > 0 ? `${m}min` : ''}</p>
                         </div>
                       )
@@ -3819,16 +3826,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   return (
                     <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-fog">{b.type === 'custodia' ? 'Niños' : 'Invitados'}</span>
+                        <span className="text-xs text-fog">{b.type === 'custodia' ? t('home_ninos') : t('home_invitados')}</span>
                         <span className="text-sm font-semibold text-snow">
-                          {totalG} {b.type === 'custodia' ? `niño${totalG !== 1 ? 's' : ''}` : `invitado${totalG !== 1 ? 's' : ''}`}
+                          {totalG} {b.type === 'custodia' ? (totalG !== 1 ? t('home_ninos_lc') : t('home_nino_lc')) : (totalG !== 1 ? t('home_invitados_lc') : t('home_invitado_lc'))}
                         </span>
                       </div>
                       {b.type !== 'custodia' && (gA > 0 || gC > 0) && (
                         <div className="flex items-center gap-3 mt-1.5 text-[11px] text-mist">
-                          <span>{gA} adulto{gA !== 1 ? 's' : ''}</span>
+                          <span>{gA} {gA !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}</span>
                           <span>·</span>
-                          <span>{gC} niño{gC !== 1 ? 's' : ''}</span>
+                          <span>{gC} {gC !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>
                         </div>
                       )}
                     </div>
@@ -3841,18 +3848,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   const dep   = Number(b.deposit_amount) || 0
                   const pend  = Math.max(0, Math.round((total - dep) * 100) / 100)
                   const ps = b.payment_status
-                  const badge = ps === 'paid'    ? { label: 'Pagado',    cls: 'text-mint' }
-                              : ps === 'partial' ? { label: 'Adelanto',  cls: 'text-amber' }
-                              :                    { label: 'Pendiente', cls: 'text-fog' }
+                  const badge = ps === 'paid'    ? { label: t('home_pagado'),    cls: 'text-mint' }
+                              : ps === 'partial' ? { label: t('home_adelanto'),  cls: 'text-amber' }
+                              :                    { label: t('home_pendiente'), cls: 'text-fog' }
                   return (
                     <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> Pagos</p>
+                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> {t('home_pagos')}</p>
                         <span className={`text-[10px] font-semibold ${badge.cls}`}>{badge.label}</span>
                       </div>
                       {b.services?.name && (
                         <div className="flex items-center justify-between pb-1.5 border-b border-line/60">
-                          <span className="text-xs text-mist">Paquete</span>
+                          <span className="text-xs text-mist">{t('home_paquete')}</span>
                           <span className="text-xs font-medium text-snow">{b.services.name}</span>
                         </div>
                       )}
@@ -3867,17 +3874,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-mist">Total</span>
+                        <span className="text-xs text-mist">{t('home_total')}</span>
                         <span className="text-sm font-semibold text-snow">{total.toFixed(2)}€</span>
                       </div>
                       {dep > 0 && (
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-mist">Adelanto</span>
+                          <span className="text-xs text-mist">{t('home_adelanto')}</span>
                           <span className="text-sm font-semibold text-lime">{dep.toFixed(2)}€</span>
                         </div>
                       )}
                       <div className="flex items-center justify-between pt-1.5 border-t border-line/60">
-                        <span className="text-xs text-mist">Pendiente</span>
+                        <span className="text-xs text-mist">{t('home_pendiente')}</span>
                         <span className="text-sm font-bold text-snow">{pend.toFixed(2)}€</span>
                       </div>
                     </div>
@@ -3887,7 +3894,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Notas */}
                 {b.notes && (
                   <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
-                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">Notas</p>
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{t('home_notas')}</p>
                     <p className="text-xs text-snow whitespace-pre-wrap leading-relaxed">{b.notes}</p>
                   </div>
                 )}
@@ -3895,7 +3902,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Visita vinculada */}
                 {linkedVisit && (
                   <div className="rounded-xl border border-lime/20 bg-lime/5 px-4 py-3 flex items-center justify-between">
-                    <span className="text-xs text-fog">En sala ahora</span>
+                    <span className="text-xs text-fog">{t('home_en_sala_ahora')}</span>
                     <span className="text-sm font-semibold text-lime">{fmtElapsed(linkedVisit.checked_in_at)}</span>
                   </div>
                 )}
@@ -3909,14 +3916,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     style={{ boxShadow: 'var(--shadow-lime)' }}
                   >
                     <Play size={15} fill="currentColor" />
-                    {executingBooking === b.id ? 'Ejecutando...' : 'Ejecutar reserva'}
+                    {executingBooking === b.id ? t('home_ejecutando') : t('home_ejecutar_reserva')}
                   </button>
                 )}
 
                 {status === 'ejecutado' && (
                   <div className="flex items-center justify-center gap-2 rounded-xl py-3 bg-mint/10 border border-mint/20">
                     <Check size={15} className="text-mint" strokeWidth={2.5} />
-                    <span className="text-sm font-semibold text-mint">Reserva ejecutada</span>
+                    <span className="text-sm font-semibold text-mint">{t('home_reserva_ejecutada')}</span>
                   </div>
                 )}
               </div>
@@ -4000,7 +4007,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Modal 3: nuevo miembro */}
       {checkinModal === 'new-member' && (
         <CheckinNewMemberModal
-          submitLabel={newMemberReturnTo.current === 'booking' ? 'Guardar y continuar con la reserva' : 'Guardar y registrar entrada'}
+          submitLabel={newMemberReturnTo.current === 'booking' ? t('home_guardar_y_continuar_reserva') : t('home_guardar_y_registrar_entrada')}
           onBack={() => {
             // Vuelve al flujo del que vino: búsqueda de check-in, o directamente
             // a la ventana de reserva (que sigue montada debajo, ya abierta en 'pick')
@@ -4041,7 +4048,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <ShoppingCart size={15} className="text-iris shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-snow">{consumosVisit.members?.name ?? '—'}</p>
-                  <p className="text-[11px] text-fog">Consumos de la visita</p>
+                  <p className="text-[11px] text-fog">{t('home_consumos_de_la_visita')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -4073,7 +4080,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 return grouped.length > 0 ? (
                   <div>
-                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">Consumido</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_consumido')}</p>
                     <div className="space-y-1.5">
                       {grouped.map(g => {
                         const qty = g.ids.length
@@ -4111,18 +4118,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     </div>
                     <div className="flex justify-end mt-3 pt-3 border-t border-line">
                       <p className="text-xs text-fog">
-                        Total: <span className="text-lime font-bold">{total.toFixed(2)}€</span>
+                        {t('home_total')}: <span className="text-lime font-bold">{total.toFixed(2)}€</span>
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-mist">Sin consumos registrados aún.</p>
+                  <p className="text-xs text-mist">{t('home_sin_consumos_registrados')}</p>
                 )
               })()}
 
               {/* Selector de productos */}
               <div>
-                <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-3">Añadir producto</p>
+                <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-3">{t('home_anadir_producto')}</p>
 
                 {/* Buscador */}
                 <div className="relative mb-3">
@@ -4131,7 +4138,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     type="text"
                     value={productSearch}
                     onChange={e => setProductSearch(e.target.value)}
-                    placeholder="Buscar producto..."
+                    placeholder={t('home_buscar_producto')}
                     className="w-full bg-surface2 border border-line rounded-xl pl-9 pr-3 py-2.5 text-sm text-snow placeholder:text-mist focus:outline-none focus:border-iris/50 transition-colors"
                   />
                 </div>
@@ -4168,7 +4175,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {Object.values(productsByCategory).every(prods =>
                   prods.every(p => !p.name.toLowerCase().includes(productSearch.trim().toLowerCase()))
                 ) && (
-                  <p className="text-xs text-mist text-center py-4">Sin resultados</p>
+                  <p className="text-xs text-mist text-center py-4">{t('home_sin_resultados')}</p>
                 )}
               </div>
             </div>

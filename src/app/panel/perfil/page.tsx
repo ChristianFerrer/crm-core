@@ -141,37 +141,37 @@ export default function PerfilPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Perfil</h1>
-        <p className="text-sm text-fog mt-0.5">Datos del establecimiento y acceso</p>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_perfil_titulo')}</h1>
+        <p className="text-sm text-fog mt-0.5">{t('panelcfg_perfil_subtitulo')}</p>
       </div>
 
       <PanelNav />
 
       {loading ? (
-        <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">Cargando...</div>
+        <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">{t('panelcfg_cargando')}</div>
       ) : !profile ? (
-        <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">No se encontraron datos del establecimiento.</div>
+        <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">{t('panelcfg_no_datos_establecimiento')}</div>
       ) : (
         <div className="space-y-4">
 
           {/* Establecimiento — read only */}
           <div className="rounded-2xl border border-line bg-surface p-5">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1">Establecimiento</p>
-            <InfoRow icon={Building2} label="Nombre" value={profile.name} />
-            <InfoRow icon={Star} label="Plan" value={profile.plan} />
-            <InfoRow icon={MapPin} label="Ciudad" value={profile.city} />
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1">{t('panelcfg_establecimiento')}</p>
+            <InfoRow icon={Building2} label={t('panelcfg_nombre_label')} value={profile.name} />
+            <InfoRow icon={Star} label={t('panelcfg_plan_label')} value={profile.plan} />
+            <InfoRow icon={MapPin} label={t('panelcfg_ciudad_label')} value={profile.city} />
           </div>
 
           {/* Persona de contacto + Capacidad — editable */}
           <div className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">Persona de contacto y capacidad</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_contacto_capacidad')}</p>
               {!editing ? (
                 <button
                   onClick={() => setEditing(true)}
                   className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
                 >
-                  <Pencil size={11} /> Editar
+                  <Pencil size={11} /> {t('panelcfg_editar')}
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
@@ -179,14 +179,14 @@ export default function PerfilPage() {
                     onClick={handleCancel}
                     className="flex items-center gap-1 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs font-semibold text-fog hover:text-snow transition-colors"
                   >
-                    <X size={11} /> Cancelar
+                    <X size={11} /> {t('panelcfg_cancelar')}
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving}
                     className="flex items-center gap-1 rounded-lg border border-lime bg-lime/10 px-3 py-1.5 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-60"
                   >
-                    <Check size={11} /> {saving ? 'Guardando...' : 'Guardar'}
+                    <Check size={11} /> {saving ? t('panelcfg_guardando') : t('panelcfg_guardar')}
                   </button>
                 </div>
               )}
@@ -196,33 +196,33 @@ export default function PerfilPage() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-fog mb-1">Nombre</label>
-                    <input value={form.owner_firstname} onChange={e => setForm(f => ({ ...f, owner_firstname: e.target.value }))} placeholder="Nombre" className={inputCls} />
+                    <label className="block text-xs text-fog mb-1">{t('panelcfg_nombre_label')}</label>
+                    <input value={form.owner_firstname} onChange={e => setForm(f => ({ ...f, owner_firstname: e.target.value }))} placeholder={t('panelcfg_nombre_label')} className={inputCls} />
                   </div>
                   <div>
-                    <label className="block text-xs text-fog mb-1">Apellido</label>
-                    <input value={form.owner_lastname} onChange={e => setForm(f => ({ ...f, owner_lastname: e.target.value }))} placeholder="Apellido" className={inputCls} />
+                    <label className="block text-xs text-fog mb-1">{t('panelcfg_apellido_label')}</label>
+                    <input value={form.owner_lastname} onChange={e => setForm(f => ({ ...f, owner_lastname: e.target.value }))} placeholder={t('panelcfg_placeholder_apellido')} className={inputCls} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-fog mb-1">Email de contacto</label>
-                  <input type="email" value={form.owner_email} onChange={e => setForm(f => ({ ...f, owner_email: e.target.value }))} placeholder="contacto@establecimiento.com" className={inputCls} />
+                  <label className="block text-xs text-fog mb-1">{t('panelcfg_email_contacto_label')}</label>
+                  <input type="email" value={form.owner_email} onChange={e => setForm(f => ({ ...f, owner_email: e.target.value }))} placeholder={t('panelcfg_placeholder_email_contacto')} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs text-fog mb-1">Teléfono</label>
+                  <label className="block text-xs text-fog mb-1">{t('panelcfg_telefono_label')}</label>
                   <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+34 600 000 000" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs text-fog mb-1">Capacidad del local (aforo máximo)</label>
-                  <input type="number" min="1" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Ej: 30" className={inputCls} />
+                  <label className="block text-xs text-fog mb-1">{t('panelcfg_capacidad_local_label')}</label>
+                  <input type="number" min="1" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder={t('panelcfg_placeholder_ej30')} className={inputCls} />
                 </div>
               </div>
             ) : (
               <>
-                <InfoRow icon={User} label="Nombre" value={[profile.owner_firstname, profile.owner_lastname].filter(Boolean).join(' ') || null} />
-                <InfoRow icon={Mail} label="Email de contacto" value={profile.owner_email} />
-                <InfoRow icon={Phone} label="Teléfono" value={profile.phone} />
-                <InfoRow icon={Users} label="Aforo máximo" value={profile.capacity?.toString() ?? null} />
+                <InfoRow icon={User} label={t('panelcfg_nombre_label')} value={[profile.owner_firstname, profile.owner_lastname].filter(Boolean).join(' ') || null} />
+                <InfoRow icon={Mail} label={t('panelcfg_email_contacto_label')} value={profile.owner_email} />
+                <InfoRow icon={Phone} label={t('panelcfg_telefono_label')} value={profile.phone} />
+                <InfoRow icon={Users} label={t('panelcfg_aforo_maximo_label')} value={profile.capacity?.toString() ?? null} />
               </>
             )}
           </div>
@@ -257,8 +257,8 @@ export default function PerfilPage() {
 
           {/* Acceso — read only */}
           <div className="rounded-2xl border border-line bg-surface p-5">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1">Acceso</p>
-            <InfoRow icon={Mail} label="Email de administrador" value={profile.admin_email} />
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1">{t('panelcfg_acceso')}</p>
+            <InfoRow icon={Mail} label={t('panelcfg_email_administrador_label')} value={profile.admin_email} />
           </div>
 
           {/* Cerrar sesión */}
@@ -266,7 +266,7 @@ export default function PerfilPage() {
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-fog hover:text-rose hover:border-rose/40 transition-colors"
           >
-            <LogOut size={15} /> Cerrar sesión
+            <LogOut size={15} /> {t('panelcfg_cerrar_sesion')}
           </button>
 
         </div>

@@ -6,9 +6,11 @@ import { supabase } from '@/lib/supabase'
 import { isSuperAdmin } from '@/lib/roles'
 import { loadAndStoreTenant } from '@/lib/tenant'
 import { PasswordInput } from '@/components/PasswordInput'
+import { useLanguage } from '@/lib/i18n'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -39,7 +41,7 @@ export default function LoginPage() {
         redirectTo: window.location.origin + '/auth/reset-password',
       })
       if (error) setError(error.message)
-      else setMessage('Si el correo existe, te hemos enviado un enlace para restablecer tu contraseña.')
+      else setMessage(t('login_error_recuperacion'))
       setLoading(false)
       return
     }
@@ -58,7 +60,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
-        setMessage('Revisa tu correo para confirmar tu cuenta.')
+        setMessage(t('login_revisa_correo'))
       }
     }
     setLoading(false)
@@ -74,7 +76,7 @@ export default function LoginPage() {
           </div>
           <div>
             <p className="font-display font-bold text-snow text-2xl leading-tight">Watermelon</p>
-            <p className="text-sm text-mist mt-0.5">CRM para Ludotecas</p>
+            <p className="text-sm text-mist mt-0.5">{t('login_tagline')}</p>
           </div>
         </div>
 
@@ -90,27 +92,27 @@ export default function LoginPage() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Continuar con Google
+            {t('login_continuar_google')}
           </button>
 
           {/* Divider */}
           <div className="relative flex items-center">
             <div className="flex-1 border-t border-line" />
-            <span className="absolute left-1/2 -translate-x-1/2 bg-surface text-xs text-mist px-2">o</span>
+            <span className="absolute left-1/2 -translate-x-1/2 bg-surface text-xs text-mist px-2">{t('login_o')}</span>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
-            <input type="email" placeholder="Correo electrónico" value={email}
+            <input type="email" placeholder={t('login_correo_placeholder')} value={email}
               onChange={e => setEmail(e.target.value)} required className={inputClass} />
             {mode !== 'forgot' && (
-              <PasswordInput value={password} onChange={setPassword} placeholder="Contraseña" required
+              <PasswordInput value={password} onChange={setPassword} placeholder={t('login_contrasena_placeholder')} required
                 className={inputClass.replace('px-4', 'pl-4 pr-11')} />
             )}
             {mode === 'login' && (
               <div className="text-right -mt-1">
                 <button type="button" onClick={() => { setMode('forgot'); setError(''); setMessage('') }}
-                  className="text-xs text-mist hover:text-lime transition-colors">¿Olvidaste tu contraseña?</button>
+                  className="text-xs text-mist hover:text-lime transition-colors">{t('login_olvidaste_contrasena')}</button>
               </div>
             )}
 
@@ -118,31 +120,31 @@ export default function LoginPage() {
             {message && <p className="text-xs text-lime">{message}</p>}
 
             <button type="submit" disabled={loading} className={limeBtn}>
-              {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : mode === 'register' ? 'Crear cuenta' : 'Enviar enlace'}
+              {loading ? t('login_cargando') : mode === 'login' ? t('login_iniciar_sesion') : mode === 'register' ? t('login_crear_cuenta') : t('login_enviar_enlace')}
             </button>
           </form>
 
           <p className="text-center text-xs text-mist">
             {mode === 'login' && (
-              <>¿Primera vez?{' '}
+              <>{t('login_primera_vez')}{' '}
                 <button onClick={() => { setMode('register'); setError(''); setMessage('') }}
-                  className="text-snow underline hover:text-lime transition-colors">Crear cuenta</button></>
+                  className="text-snow underline hover:text-lime transition-colors">{t('login_crear_cuenta')}</button></>
             )}
             {mode === 'register' && (
-              <>¿Ya tienes cuenta?{' '}
+              <>{t('login_ya_tienes_cuenta')}{' '}
                 <button onClick={() => { setMode('login'); setError(''); setMessage('') }}
-                  className="text-snow underline hover:text-lime transition-colors">Iniciar sesión</button></>
+                  className="text-snow underline hover:text-lime transition-colors">{t('login_iniciar_sesion')}</button></>
             )}
             {mode === 'forgot' && (
               <button onClick={() => { setMode('login'); setError(''); setMessage('') }}
-                className="text-snow underline hover:text-lime transition-colors">← Volver a iniciar sesión</button>
+                className="text-snow underline hover:text-lime transition-colors">{t('login_volver_iniciar_sesion')}</button>
             )}
           </p>
         </div>
 
         <p className="text-center text-[10px] text-mist">
           Watermelon CRM · v0.1 ·{' '}
-          <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-snow transition-colors">Política de privacidad</a>
+          <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-snow transition-colors">{t('login_footer_privacidad')}</a>
         </p>
       </div>
     </div>

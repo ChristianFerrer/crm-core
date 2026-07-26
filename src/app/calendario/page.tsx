@@ -10,6 +10,7 @@ import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates } from '@/lib/pricing'
 import { BookingSearchAndTypeModal, BookingFormModal, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 import { MemberForm, type CreatedMember } from '@/components/MemberForm'
+import { useLanguage } from '@/lib/i18n'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
@@ -42,8 +43,8 @@ interface Booking {
 interface MemberChild { name: string; birth_date?: string }
 interface Member { id: string; name: string; children?: MemberChild[] }
 
-const DOW_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+const DOW_KEYS = ['calendario_dow_lun', 'calendario_dow_mar', 'calendario_dow_mie', 'calendario_dow_jue', 'calendario_dow_vie', 'calendario_dow_sab', 'calendario_dow_dom'] as const
+const MONTH_KEYS = ['calendario_mes_enero', 'calendario_mes_febrero', 'calendario_mes_marzo', 'calendario_mes_abril', 'calendario_mes_mayo', 'calendario_mes_junio', 'calendario_mes_julio', 'calendario_mes_agosto', 'calendario_mes_septiembre', 'calendario_mes_octubre', 'calendario_mes_noviembre', 'calendario_mes_diciembre'] as const
 
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDayOfWeek(y: number, m: number) { return (new Date(y, m, 1).getDay() + 6) % 7 }
@@ -61,13 +62,15 @@ function calcAge(birth_date: string) {
 function bookingColor(t: BookingType) { return t === 'birthday' ? 'bg-iris' : t === 'custodia' ? 'bg-cyan-300' : 'bg-lime' }
 function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'text-lime' : s === 'cancelled' ? 'text-rose' : 'text-fog' }
 function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'text-mint' : p === 'partial' ? 'text-cyan-300' : 'text-amber' }
-function paymentLabel(p: PaymentStatus) { return p === 'paid' ? 'Pagado' : p === 'partial' ? 'Señal' : 'Pendiente' }
+function paymentLabelKey(p: PaymentStatus): 'calendario_pagado' | 'calendario_senal' | 'calendario_pendiente' {
+  return p === 'paid' ? 'calendario_pagado' : p === 'partial' ? 'calendario_senal' : 'calendario_pendiente'
+}
 
 // Estilo por tipo alineado con la "Agenda de hoy" del inicio
-const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; label: string }> = {
-  birthday: { bar: 'bg-iris',     badge: 'text-iris',     label: 'Cumpleaños' },
-  custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', label: 'Custodia' },
-  other:    { bar: 'bg-lime',     badge: 'text-lime',     label: 'Otro' },
+const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; labelKey: 'calendario_tipo_cumpleanos' | 'calendario_tipo_custodia' | 'calendario_tipo_otro' }> = {
+  birthday: { bar: 'bg-iris',     badge: 'text-iris',     labelKey: 'calendario_tipo_cumpleanos' },
+  custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', labelKey: 'calendario_tipo_custodia' },
+  other:    { bar: 'bg-lime',     badge: 'text-lime',     labelKey: 'calendario_tipo_otro' },
 }
 
 function bookingLiveStatus(b: Booking, todayStr: string): 'ejecutado' | 'en_curso' | 'pendiente' | 'pasado' {
@@ -87,6 +90,7 @@ function bookingLiveStatus(b: Booking, todayStr: string): 'ejecutado' | 'en_curs
 
 export default function CalendarioPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -195,7 +199,7 @@ export default function CalendarioPage() {
     // Fuente única de verdad para el conteo de aforo (compartida con Inicio)
     const { error } = await executeBooking(b)
     setExecutingId(null)
-    if (error) { alert(`Error al ejecutar la reserva: ${error}`); return }
+    if (error) { alert(t('calendario_error_ejecutar', { error })); return }
     fetchBookings()
   }
 
@@ -219,6 +223,9 @@ export default function CalendarioPage() {
     setShowAddMember(false)
   }
 
+  const DOW_LABELS = DOW_KEYS.map(k => t(k))
+  const MONTH_NAMES = MONTH_KEYS.map(k => t(k))
+
   const cells: (number | null)[] = [...Array(getFirstDayOfWeek(year, month)).fill(null), ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1)]
   while (cells.length % 7 !== 0) cells.push(null)
 
@@ -231,12 +238,12 @@ export default function CalendarioPage() {
       <div className="px-4 pt-8 pb-4 lg:px-8">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-display font-bold text-snow">Agenda</h1>
-            <p className="text-sm text-mist mt-0.5">Reservas y custodia</p>
+            <h1 className="text-2xl font-display font-bold text-snow">{t('calendario_titulo')}</h1>
+            <p className="text-sm text-mist mt-0.5">{t('calendario_subtitulo')}</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={openNewFlow} className="flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors">
-              <CalendarPlus size={16} /> Nueva reserva
+              <CalendarPlus size={16} /> {t('calendario_nueva_reserva')}
             </button>
           </div>
         </div>
@@ -253,7 +260,7 @@ export default function CalendarioPage() {
                 onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelectedDate(toDateStr(today.getFullYear(), today.getMonth(), today.getDate())) }}
                 className="text-[11px] font-semibold text-fog hover:text-lime border border-line rounded-lg px-2 py-1 transition-colors"
               >
-                Hoy
+                {t('calendario_hoy')}
               </button>
             </div>
             <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronRight size={18} /></button>
@@ -289,12 +296,12 @@ export default function CalendarioPage() {
             <div className="px-5 py-4 border-b border-line flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-snow">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                <p className="text-xs text-mist mt-0.5">{(() => { const n = allSelectedBookings.filter(b => b.status !== 'cancelled').length; return `${n} reserva${n !== 1 ? 's' : ''}` })()}</p>
+                <p className="text-xs text-mist mt-0.5">{(() => { const n = allSelectedBookings.filter(b => b.status !== 'cancelled').length; return t('calendario_n_reservas', { n, s: n !== 1 ? 's' : '' }) })()}</p>
               </div>
-              <button onClick={() => setSelectedDate(null)} aria-label="Cerrar" className="text-mist hover:text-fog"><X size={16} /></button>
+              <button onClick={() => setSelectedDate(null)} aria-label={t('calendario_cerrar')} className="text-mist hover:text-fog"><X size={16} /></button>
             </div>
             {allSelectedBookings.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-mist">No hay reservas este día</div>
+              <div className="px-5 py-8 text-center text-sm text-mist">{t('calendario_no_hay_reservas')}</div>
             ) : (
               <div className="divide-y divide-line">
                 {allSelectedBookings.map(b => {
@@ -317,21 +324,21 @@ export default function CalendarioPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-0.5">
                             <p className="text-xs font-semibold text-snow">{b.title}</p>
-                            <span className={`text-[10px] font-semibold ${ts.badge}`}>{ts.label}</span>
-                            {st === 'ejecutado' && <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={9} />Ejecutado</span>}
-                            {st === 'en_curso' && <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5"><Clock size={9} />En curso</span>}
-                            {b.status === 'cancelled' && <span className="text-[10px] font-semibold text-rose">Cancelada</span>}
+                            <span className={`text-[10px] font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
+                            {st === 'ejecutado' && <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={9} />{t('calendario_ejecutado')}</span>}
+                            {st === 'en_curso' && <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5"><Clock size={9} />{t('calendario_en_curso')}</span>}
+                            {b.status === 'cancelled' && <span className="text-[10px] font-semibold text-rose">{t('calendario_cancelada')}</span>}
                             {showPago && (
                               <span className={`text-[10px] font-semibold ${paymentBadge(b.payment_status)}`}>
-                                {paymentLabel(b.payment_status)}{b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
+                                {t(paymentLabelKey(b.payment_status))}{b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
                               </span>
                             )}
                           </div>
                           {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
                           {(totalG > 0 || gA > 0 || gC > 0) && (
                             <p className="text-[11px] text-mist">
-                              {totalG} {b.type === 'custodia' ? `niño${totalG !== 1 ? 's' : ''}` : `invitado${totalG !== 1 ? 's' : ''}`}
-                              {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} adulto{gA !== 1 ? 's' : ''}, {gC} niño{gC !== 1 ? 's' : ''}</span>}
+                              {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
+                              {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
                             </p>
                           )}
                         </div>
@@ -343,7 +350,7 @@ export default function CalendarioPage() {
                           disabled={executingId === b.id}
                           className="flex items-center gap-1 self-center text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 mr-4 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                         >
-                          <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : 'Ejecutar'}
+                          <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
                         </button>
                       )}
                     </div>
@@ -363,11 +370,11 @@ export default function CalendarioPage() {
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
           <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
-              <h3 className="text-sm font-semibold text-snow">Nuevo titular</h3>
-              <button onClick={() => setShowAddMember(false)} aria-label="Cerrar" className="text-mist hover:text-fog"><X size={16} /></button>
+              <h3 className="text-sm font-semibold text-snow">{t('calendario_nuevo_titular')}</h3>
+              <button onClick={() => setShowAddMember(false)} aria-label={t('calendario_cerrar')} className="text-mist hover:text-fog"><X size={16} /></button>
             </div>
             <div className="overflow-y-auto flex-1 px-5 py-4">
-              <MemberForm onCreated={handleMemberCreated} submitLabel="Guardar y continuar con la reserva" />
+              <MemberForm onCreated={handleMemberCreated} submitLabel={t('calendario_guardar_continuar')} />
             </div>
           </div>
         </div>

@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Trash2, AlertTriangle } from 'lucide-react'
 import { Modal } from '@/components/Modal'
+import { useLanguage } from '@/lib/i18n'
 
 export function DeleteMemberButton({ memberId }: { memberId: string }) {
+  const { t } = useLanguage()
   const router = useRouter()
   const [step, setStep] = useState<'idle' | 'confirm' | 'deleting'>('idle')
 
@@ -31,7 +33,7 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
 
     if (error) {
       setStep('confirm')
-      alert('Error al eliminar el miembro. Inténtalo de nuevo.')
+      alert(t('miembros_error_eliminar'))
       return
     }
 
@@ -42,21 +44,21 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
     <>
       <button
         onClick={() => setStep('confirm')}
-        title="Eliminar"
-        aria-label="Eliminar miembro"
+        title={t('miembros_eliminar')}
+        aria-label={t('miembros_eliminar_aria')}
         className="w-9 h-9 flex items-center justify-center rounded-xl border border-rose/30 text-rose hover:bg-rose/20 transition-colors shrink-0"
       >
         <Trash2 size={14} />
       </button>
 
-      <Modal open={step !== 'idle'} onClose={() => step === 'confirm' && setStep('idle')} z="z-[70]" label="Eliminar miembro">
+      <Modal open={step !== 'idle'} onClose={() => step === 'confirm' && setStep('idle')} z="z-[70]" label={t('miembros_eliminar_aria')}>
         <div className="p-5 space-y-4">
             <div className="flex items-start gap-2">
               <AlertTriangle size={16} className="text-rose shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-snow">¿Eliminar este miembro?</p>
+                <p className="text-sm font-semibold text-snow">{t('miembros_confirmar_eliminar_titulo')}</p>
                 <p className="text-xs text-fog mt-1 leading-relaxed">
-                  Sus datos personales serán anonimizados de forma permanente (nombre, teléfono, email, hijos) y su QR quedará invalidado. El historial de visitas se conserva por obligación fiscal durante 5 años.
+                  {t('miembros_confirmar_eliminar_desc')}
                 </p>
               </div>
             </div>
@@ -66,14 +68,14 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
                 disabled={step === 'deleting'}
                 className="flex-1 rounded-xl border border-line py-2.5 text-xs font-semibold text-fog hover:text-snow transition-colors disabled:opacity-50"
               >
-                Cancelar
+                {t('miembros_cancelar')}
               </button>
               <button
                 onClick={handleDelete}
                 disabled={step === 'deleting'}
                 className="flex-1 rounded-xl bg-rose/20 border border-rose/30 py-2.5 text-xs font-semibold text-rose hover:bg-rose/30 transition-colors disabled:opacity-50"
               >
-                {step === 'deleting' ? 'Eliminando...' : 'Sí, eliminar'}
+                {step === 'deleting' ? t('miembros_eliminando') : t('miembros_si_eliminar')}
               </button>
             </div>
         </div>

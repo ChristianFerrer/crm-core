@@ -5,9 +5,11 @@ import { dictCommon } from './i18n-dicts/common'
 import { dictHome } from './i18n-dicts/home'
 import { dictMiembros } from './i18n-dicts/miembros'
 import { dictCalendario } from './i18n-dicts/calendario'
-import { dictPanel } from './i18n-dicts/panel'
+import { dictPanelResumen } from './i18n-dicts/panel-resumen'
+import { dictPanelConfig } from './i18n-dicts/panel-config'
 import { dictFamilias } from './i18n-dicts/familias'
 import { dictLogin } from './i18n-dicts/login'
+import { dictShared } from './i18n-dicts/shared'
 
 export type Lang = 'es' | 'en' | 'ca'
 export const LANGUAGES: { code: Lang; label: string }[] = [
@@ -24,9 +26,11 @@ export const dict = {
   ...dictHome,
   ...dictMiembros,
   ...dictCalendario,
-  ...dictPanel,
+  ...dictPanelResumen,
+  ...dictPanelConfig,
   ...dictFamilias,
   ...dictLogin,
+  ...dictShared,
 } as const
 
 export type TranslationKey = keyof typeof dict

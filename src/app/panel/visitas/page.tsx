@@ -8,6 +8,7 @@ import { resolveRates, calcHourlyCost, FALLBACK_RATE, type Rates } from '@/lib/p
 import { History } from 'lucide-react'
 import { TableFilterBar } from '@/components/TableFilterBar'
 import { DatePickerModal } from '@/components/DatePickerModal'
+import { useLanguage } from '@/lib/i18n'
 
 type VisitType = 'entrada' | 'custodia'
 
@@ -46,6 +47,15 @@ function calcDurationMin(from: string, to?: string | null) {
 
 const calcCost = calcHourlyCost
 
+function estadoLabel(t: (key: any, vars?: Record<string, string | number>) => string, estado: string) {
+  switch (estado) {
+    case 'cobrado': return t('panelcfg_estado_cobrado')
+    case 'bono': return t('panelcfg_estado_bono')
+    case 'en_curso': return t('panelcfg_estado_en_curso')
+    default: return t('panelcfg_estado_pendiente')
+  }
+}
+
 // Format a Date as YYYY-MM-DD in local time
 function toLocalDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -54,6 +64,7 @@ function toLocalDate(d: Date) {
 // ─── Tab: Historial ──────────────────────────────────────────────────────────
 
 function HistorialTab({ rates }: { rates: ServiceRates }) {
+  const { t } = useLanguage()
   const todayStr = toLocalDate(new Date())
   const [dateFrom, setDateFrom] = useState(todayStr)
   const [dateTo, setDateTo] = useState(todayStr)
@@ -95,8 +106,8 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
     const entryTime = new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     const exitTime = v.checked_out_at ? new Date(v.checked_out_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : null
     const dateStr = new Date(v.checked_in_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    const bonoName = v.membership_id ? (v.memberships?.membership_types?.name ?? 'Bono') : null
-    const estado = v.paid_amount != null ? 'Cobrado' : bonoName ? 'Bono' : v.checked_out_at ? 'Pendiente' : 'En curso'
+    const bonoName = v.membership_id ? (v.memberships?.membership_types?.name ?? t('panelcfg_bono_label')) : null
+    const estado = v.paid_amount != null ? 'cobrado' : bonoName ? 'bono' : v.checked_out_at ? 'pendiente' : 'en_curso'
     return { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost }
   }
 
@@ -107,19 +118,19 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
       const rows = filteredVisits.map(v => {
         const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
         return {
-          'Fecha': dateStr,
-          'Titular': v.members?.name ?? '—',
-          'Teléfono': v.members?.phone ?? '',
-          'Tipo': v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre',
-          'Adultos': v.adults_count ?? '',
-          'Niños': v.children_count ?? (v.children_present?.length ?? ''),
-          'Hora entrada': entryTime,
-          'Hora salida': exitTime ?? 'En curso',
-          'Duración': dmin != null ? fmtDuration(dmin) : '',
-          'Bono': bonoName ?? '',
+          [t('panelcfg_th_fecha')]: dateStr,
+          [t('panelcfg_th_titular')]: v.members?.name ?? '—',
+          [t('panelcfg_th_telefono')]: v.members?.phone ?? '',
+          [t('panelcfg_tipo_label')]: v.visit_type === 'custodia' ? t('panelcfg_custodia') : t('panelcfg_entrada_libre'),
+          [t('panelcfg_th_adultos')]: v.adults_count ?? '',
+          [t('panelcfg_th_ninos')]: v.children_count ?? (v.children_present?.length ?? ''),
+          [t('panelcfg_th_entrada')]: entryTime,
+          [t('panelcfg_th_salida')]: exitTime ?? t('panelcfg_estado_en_curso'),
+          [t('panelcfg_th_duracion')]: dmin != null ? fmtDuration(dmin) : '',
+          [t('panelcfg_bono_label')]: bonoName ?? '',
           'Importe': cost != null ? cost : '',
-          'Método de pago': v.payment_method ?? '',
-          'Estado': estado,
+          [t('panelcfg_th_metodo')]: v.payment_method ?? '',
+          [t('panelcfg_th_estado')]: estadoLabel(t, estado),
         }
       })
       const ws = XLSX.utils.json_to_sheet(rows)
@@ -144,27 +155,27 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
       <TableFilterBar
         search={query}
         onSearchChange={setQuery}
-        searchPlaceholder="Buscar por nombre o teléfono..."
+        searchPlaceholder={t('panelcfg_buscar_nombre_telefono')}
         activeFilterCount={isDefaultRange ? 0 : 1}
         onExport={handleExport}
         exporting={exporting}
         exportDisabled={filteredVisits.length === 0}
         filters={
           <div>
-            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Rango de fechas</p>
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_rango_fechas')}</p>
             <div className="space-y-2.5">
               <div>
-                <label className="block text-[10px] text-mist mb-1">Desde</label>
+                <label className="block text-[10px] text-mist mb-1">{t('panelcfg_desde')}</label>
                 <DatePickerModal
-                  title="Desde"
+                  title={t('panelcfg_desde')}
                   value={dateFrom}
                   onChange={v => setDateFrom(v > todayStr ? todayStr : v)}
                 />
               </div>
               <div>
-                <label className="block text-[10px] text-mist mb-1">Hasta</label>
+                <label className="block text-[10px] text-mist mb-1">{t('panelcfg_hasta')}</label>
                 <DatePickerModal
-                  title="Hasta"
+                  title={t('panelcfg_hasta')}
                   value={dateTo}
                   onChange={v => setDateTo(v > todayStr ? todayStr : v)}
                 />
@@ -177,7 +188,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
       {/* Visit count */}
       <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide">
         <History size={13} className="text-lime" />
-        {loading ? 'Cargando...' : `${filteredVisits.length} visitas`}
+        {loading ? t('panelcfg_cargando') : t('panelcfg_visitas_count', { n: filteredVisits.length })}
       </div>
 
       {/* Table */}
@@ -187,7 +198,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
         </div>
       ) : filteredVisits.length === 0 ? (
         <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-mist">
-          {query.trim().length > 0 ? 'Sin resultados para la búsqueda' : 'Sin visitas en este período'}
+          {query.trim().length > 0 ? t('panelcfg_sin_resultados_busqueda_simple') : t('panelcfg_sin_visitas_periodo')}
         </div>
       ) : (
         <>
@@ -195,7 +206,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
           <div className="lg:hidden space-y-2">
             {filteredVisits.map(v => {
               const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
-              const estadoCls = estado === 'Cobrado' ? 'text-lime' : estado === 'Bono' ? 'text-iris' : estado === 'En curso' ? 'text-amber' : 'text-rose'
+              const estadoCls = estado === 'cobrado' ? 'text-lime' : estado === 'bono' ? 'text-iris' : estado === 'en_curso' ? 'text-amber' : 'text-rose'
               const numChildren = v.children_count ?? v.children_present?.length ?? 0
               return (
                 <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-3">
@@ -204,19 +215,19 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                       <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <span className="text-[10px] text-mist">{dateStr} ·</span>
-                        <span className="text-xs text-fog">{entryTime}{exitTime ? ` → ${exitTime}` : ' → en curso'}</span>
+                        <span className="text-xs text-fog">{entryTime}{exitTime ? ` → ${exitTime}` : ` → ${t('panelcfg_en_curso')}`}</span>
                         {dmin != null && <span className="text-xs text-mist">· {fmtDuration(dmin)}</span>}
                       </div>
                     </div>
                     <div className="text-right shrink-0">
                       {cost != null && <p className="text-sm font-bold text-snow">{fmtCost(cost)}</p>}
-                      <p className={`text-xs font-semibold ${estadoCls}`}>{estado}</p>
+                      <p className={`text-xs font-semibold ${estadoCls}`}>{estadoLabel(t, estado)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 mt-2 flex-wrap text-[11px] text-mist">
-                    <span>{v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre'}</span>
+                    <span>{v.visit_type === 'custodia' ? t('panelcfg_custodia') : t('panelcfg_entrada_libre')}</span>
                     <span className="text-line2">·</span>
-                    <span>{v.adults_count ?? 0} adulto{v.adults_count !== 1 ? 's' : ''}, {numChildren} niño{numChildren !== 1 ? 's' : ''}</span>
+                    <span>{v.adults_count ?? 0} {v.adults_count !== 1 ? t('panelcfg_adulto_plural') : t('panelcfg_adulto_singular')}, {numChildren} {numChildren !== 1 ? t('panelcfg_nino_plural') : t('panelcfg_nino_singular')}</span>
                     {v.members?.phone && <><span className="text-line2">·</span><span>{v.members.phone}</span></>}
                     {bonoName && <><span className="text-line2">·</span><span className="text-iris">{bonoName}</span></>}
                     {v.payment_method && <><span className="text-line2">·</span><span className="capitalize">{v.payment_method}</span></>}
@@ -232,7 +243,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-line">
-                    {['Fecha', 'Titular', 'Teléfono', 'Tipo', 'Adultos', 'Niños', 'Entrada', 'Salida', 'Duración', 'Bono', 'Importe', 'Método', 'Estado'].map(col => (
+                    {[t('panelcfg_th_fecha'), t('panelcfg_th_titular'), t('panelcfg_th_telefono'), t('panelcfg_tipo_label'), t('panelcfg_th_adultos'), t('panelcfg_th_ninos'), t('panelcfg_th_entrada'), t('panelcfg_th_salida'), t('panelcfg_th_duracion'), t('panelcfg_bono_label'), 'Importe', t('panelcfg_th_metodo'), t('panelcfg_th_estado')].map(col => (
                       <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
                         {col}
                       </th>
@@ -242,13 +253,13 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                 <tbody className="divide-y divide-line">
                   {filteredVisits.map(v => {
                     const { dmin, entryTime, exitTime, dateStr, bonoName, estado, cost } = rowData(v)
-                    const estadoCls = estado === 'Cobrado' ? 'text-lime' : estado === 'Bono' ? 'text-iris' : estado === 'En curso' ? 'text-amber' : 'text-rose'
+                    const estadoCls = estado === 'cobrado' ? 'text-lime' : estado === 'bono' ? 'text-iris' : estado === 'en_curso' ? 'text-amber' : 'text-rose'
                     return (
                       <tr key={v.id} className="hover:bg-surface2/40 transition-colors">
                         <td className="pl-4 pr-3 py-2.5 text-xs text-mist whitespace-nowrap">{dateStr}</td>
                         <td className="px-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{v.members?.name ?? '—'}</td>
                         <td className="px-3 py-2.5 text-xs text-mist whitespace-nowrap">{v.members?.phone ?? '—'}</td>
-                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.visit_type === 'custodia' ? 'Custodia' : 'Entrada libre'}</td>
+                        <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.visit_type === 'custodia' ? t('panelcfg_custodia') : t('panelcfg_entrada_libre')}</td>
                         <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.adults_count ?? '—'}</td>
                         <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.children_count ?? v.children_present?.length ?? '—'}</td>
                         <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{entryTime}</td>
@@ -257,7 +268,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                         <td className="px-3 py-2.5 text-xs text-iris whitespace-nowrap">{bonoName ?? '—'}</td>
                         <td className="px-3 py-2.5 text-xs font-bold text-snow whitespace-nowrap">{cost != null ? fmtCost(cost) : '—'}</td>
                         <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap capitalize">{v.payment_method ?? '—'}</td>
-                        <td className={`px-3 pr-4 py-2.5 text-xs font-semibold whitespace-nowrap ${estadoCls}`}>{estado}</td>
+                        <td className={`px-3 pr-4 py-2.5 text-xs font-semibold whitespace-nowrap ${estadoCls}`}>{estadoLabel(t, estado)}</td>
                       </tr>
                     )
                   })}
@@ -274,6 +285,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function VisitasPage() {
+  const { t } = useLanguage()
   const [rates, setRates] = useState<ServiceRates>({ adult: FALLBACK_RATE, child: FALLBACK_RATE, custodia: FALLBACK_RATE })
 
   useEffect(() => {
@@ -288,8 +300,8 @@ export default function VisitasPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Histórico de visitas</h1>
-        <p className="text-sm text-fog mt-0.5">Consulta el registro de entradas y salidas</p>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_visitas_titulo')}</h1>
+        <p className="text-sm text-fog mt-0.5">{t('panelcfg_visitas_subtitulo')}</p>
       </div>
 
       <PanelNav />

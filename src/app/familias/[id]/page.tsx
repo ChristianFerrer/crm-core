@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, CreditCard, Clock, Users, Baby, AlertTriangle } from 'lucide-react'
 import FamiliaActions from './FamiliaActions'
+import { getT } from '@/lib/i18n-server'
 
 export const revalidate = 0
 
@@ -18,6 +19,7 @@ type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
 export default async function FamiliaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createServerSupabase()
   const { id } = await params
+  const t = await getT()
 
   const [{ data: family }, { data: members }] = await Promise.all([
     supabase.from('families').select('id, name, notes').eq('id', id).single(),
@@ -61,7 +63,7 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
           <ArrowLeft size={15} className="text-fog" />
         </Link>
         <h1 className="font-display text-xl font-semibold text-snow truncate flex-1">
-          {family.name.replace(/^Familia(s)?\s*/i, 'Familia ')}
+          {family.name.replace(/^Familia(s)?\s*/i, t('familia_prefijo'))}
         </h1>
         <FamiliaActions id={id} />
       </div>
@@ -69,11 +71,11 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
       {/* Titulares */}
       <div className="rounded-2xl border border-line bg-surface p-4 space-y-4">
         <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-          <Users size={12} className="text-iris" /> Titulares
+          <Users size={12} className="text-iris" /> {t('familia_titulares')}
         </p>
 
         {memberList.length === 0 && (
-          <p className="text-sm text-mist">Sin titulares en esta familia.</p>
+          <p className="text-sm text-mist">{t('familia_sin_titulares')}</p>
         )}
 
         {memberList.map((m: any, idx: number) => {
@@ -101,7 +103,7 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-snow truncate group-hover:text-lime transition-colors">{m.name}</p>
-                    <span className="text-xs text-lime shrink-0">Ver →</span>
+                    <span className="text-xs text-lime shrink-0">{t('familia_ver')}</span>
                   </div>
 
                   {m.phone && (
@@ -127,11 +129,11 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
                     {bono ? (
                       <>
                         {bono.membership_types?.name}
-                        {isUnlimited ? ' · ∞' : s != null ? ` · ${s} ses.` : ''}
-                        {isExhausted && ' · agotado'}
-                        {isExpiringSoon && !isExhausted && ` · vence en ${daysLeft}d`}
+                        {isUnlimited ? ' · ∞' : s != null ? ` · ${s} ${t('familia_sesiones_abbr')}` : ''}
+                        {isExhausted && ` · ${t('familia_agotado')}`}
+                        {isExpiringSoon && !isExhausted && ` · ${t('familia_vence_en', { n: daysLeft })}`}
                       </>
-                    ) : 'Sin bono'}
+                    ) : t('familia_sin_bono')}
                     {(isLow && !isExhausted) || isExpiringSoon ? <AlertTriangle size={10} /> : null}
                   </div>
                 </div>
@@ -145,7 +147,7 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
       {allChildren.length > 0 && (
         <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
           <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-            <Baby size={12} className="text-lime" /> Hijos · {allChildren.length}
+            <Baby size={12} className="text-lime" /> {t('familia_hijos', { n: allChildren.length })}
           </p>
           <div className="space-y-2">
             {allChildren.map((c, i) => {
@@ -159,8 +161,8 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
                   </div>
                   <div>
                     <span className="text-sm text-snow">{c.name}</span>
-                    {age !== null && <span className="text-xs text-mist ml-2">{age} años</span>}
-                    {!c.birth_date && c.sex && <span className="text-xs text-mist ml-2">{c.sex === 'M' ? 'Niño' : 'Niña'}</span>}
+                    {age !== null && <span className="text-xs text-mist ml-2">{t('familia_anios', { n: age })}</span>}
+                    {!c.birth_date && c.sex && <span className="text-xs text-mist ml-2">{c.sex === 'M' ? t('familia_nino') : t('familia_nina')}</span>}
                   </div>
                 </div>
               )
@@ -172,11 +174,11 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
       {/* Historial de visitas */}
       <div>
         <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5 mb-3">
-          <Clock size={13} className="text-lime" /> Historial de visitas
+          <Clock size={13} className="text-lime" /> {t('familia_historial_visitas')}
         </p>
         {!(visits as any[])?.length ? (
           <div className="rounded-2xl border border-line bg-surface p-4 text-center text-sm text-mist">
-            Sin visitas registradas
+            {t('familia_sin_visitas')}
           </div>
         ) : (
           <div className="space-y-1">
