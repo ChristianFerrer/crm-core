@@ -1,5 +1,5 @@
 import { cookies, headers } from 'next/headers'
-import { translate, type Lang, type TranslationKey } from './i18n'
+import { translate, type Lang, type TranslationKey } from './i18n-core'
 
 export async function getServerLang(): Promise<Lang> {
   const c = (await cookies()).get('wm_lang')?.value
