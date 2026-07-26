@@ -17,6 +17,7 @@ import { memberMatchesQuery } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { resolveRates } from '@/lib/pricing'
 import { DatePickerModal } from '@/components/DatePickerModal'
+import { ScrollDatePicker } from '@/components/ScrollDatePicker'
 import { MemberForm } from '@/components/MemberForm'
 import { TableFilterBar } from '@/components/TableFilterBar'
 import {
@@ -1510,8 +1511,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
   const selectedDateObj = new Date(selectedDate + 'T12:00:00')
   const dayNum = selectedDateObj.getDate()
-  const weekdayAbbrev = selectedDateObj.toLocaleDateString('es-ES', { weekday: 'short' }).replace(/\.$/, '')
-  const monthLabel = selectedDateObj.toLocaleDateString('es-ES', { month: 'long' })
+  const monthAbbrev = selectedDateObj.toLocaleDateString('es-ES', { month: 'short' }).replace(/\.$/, '')
+
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarDraft, setCalendarDraft] = useState(selectedDate)
+
+  function goToDate(newDate: string) {
+    router.push(newDate === todayStr ? '/' : `/?date=${newDate}`)
+  }
 
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set())
@@ -2133,41 +2140,43 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? 'Mi establecimiento'}</h1>
         </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Date navigation — esquina superior derecha, junto al nombre */}
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-[10px] font-semibold text-fog uppercase tracking-wide pr-0.5">{monthLabel}</span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigateDate(-1)}
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <div className="w-11 h-11 rounded-xl bg-surface2 border border-line flex flex-col items-center justify-center leading-none shadow-sm">
-                <span className="text-[8px] font-bold text-rose uppercase">{weekdayAbbrev}</span>
-                <span className="text-base font-bold text-snow">{dayNum}</span>
-              </div>
-              <button
-                onClick={() => navigateDate(1)}
-                className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-              >
-                <ChevronRight size={16} />
-              </button>
-              {!isToday && (
-                <button
-                  onClick={() => router.push('/')}
-                  className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-1 hover:bg-lime/20 transition-colors"
-                >
-                  Hoy
-                </button>
-              )}
-            </div>
-          </div>
+          <button
+            onClick={() => navigateDate(-1)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            onClick={() => { setCalendarDraft(selectedDate); setCalendarOpen(true) }}
+            className="w-10 h-10 rounded-xl overflow-hidden border border-line flex flex-col shrink-0 hover:border-line2 transition-colors"
+          >
+            <span className="w-full flex-none h-[40%] bg-rose flex items-center justify-center text-[8px] font-bold text-white uppercase leading-none">
+              {monthAbbrev}
+            </span>
+            <span className="w-full flex-1 bg-surface2 flex items-center justify-center text-sm font-bold text-snow leading-none">
+              {dayNum}
+            </span>
+          </button>
+          <button
+            onClick={() => navigateDate(1)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+          {!isToday && (
+            <button
+              onClick={() => router.push('/')}
+              className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-1 hover:bg-lime/20 transition-colors"
+            >
+              Hoy
+            </button>
+          )}
           {isToday && totalAlerts > 0 && (
             <button
               onClick={() => { setDismissedAlerts(new Set()); setAlertsOpen(true) }}
-              className="relative flex items-center justify-center w-10 h-10 rounded-xl border border-amber/40 bg-amber/10 text-amber hover:bg-amber/20 transition-colors"
+              className="relative flex items-center justify-center w-10 h-10 rounded-xl border border-amber/40 bg-amber/10 text-amber hover:bg-amber/20 transition-colors ml-1"
             >
               <Bell size={16} />
               <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
@@ -2177,6 +2186,38 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           )}
         </div>
       </div>
+
+      {/* Calendario para navegar entre fechas */}
+      {calendarOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setCalendarOpen(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-sm mx-4 rounded-3xl border border-line bg-surface flex flex-col"
+            style={{ maxHeight: '85vh' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex-none px-5 pt-4 pb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-snow">Ir a fecha</p>
+              <button type="button" onClick={() => setCalendarOpen(false)} className="text-mist hover:text-fog p-1">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-none px-5">
+              <ScrollDatePicker value={calendarDraft} onChange={setCalendarDraft} />
+            </div>
+            <div className="flex-none px-5 pt-3 pb-5">
+              <button
+                type="button"
+                onClick={() => { goToDate(calendarDraft); setCalendarOpen(false) }}
+                className="w-full rounded-xl border border-lime bg-lime/10 py-3.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors active:scale-[0.99]"
+                style={{ boxShadow: 'var(--shadow-lime)' }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ZONA 2 — En sala ahora (tabla) */}
       <div className="rounded-2xl border border-line bg-surface overflow-hidden">
