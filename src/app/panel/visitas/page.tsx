@@ -151,18 +151,18 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
         filters={
           <div>
             <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Rango de fechas</p>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="min-w-0">
+            <div className="space-y-2.5">
+              <div>
                 <label className="block text-[10px] text-mist mb-1">Desde</label>
                 <input type="date" value={dateFrom} max={todayStr} onChange={e => setDateFrom(e.target.value)}
                   style={{ colorScheme: 'dark' }}
-                  className="w-full min-w-0 bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+                  className="w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
               </div>
-              <div className="min-w-0">
+              <div>
                 <label className="block text-[10px] text-mist mb-1">Hasta</label>
                 <input type="date" value={dateTo} max={todayStr} onChange={e => setDateTo(e.target.value)}
                   style={{ colorScheme: 'dark' }}
-                  className="w-full min-w-0 bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
+                  className="w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow outline-none focus:border-line2" />
               </div>
             </div>
           </div>

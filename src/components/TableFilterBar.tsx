@@ -75,8 +75,8 @@ export function TableFilterBar({
 
           {filterOpen && (
             <>
-              <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setFilterOpen(false)} />
-              <div className="absolute right-0 z-50 mt-2 w-72 max-w-[85vw] rounded-2xl border border-line2 bg-surface shadow-2xl p-4 space-y-4">
+              <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
+              <div className="absolute right-0 z-50 mt-2 w-72 max-w-[85vw] rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4">
                 {filters}
               </div>
             </>

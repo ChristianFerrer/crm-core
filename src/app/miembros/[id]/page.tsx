@@ -99,16 +99,20 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <DeleteMemberButton memberId={id} />
         <Link
           href={`/miembros/${id}/editar`}
-          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors shrink-0"
+          title="Editar"
+          aria-label="Editar miembro"
+          className="w-9 h-9 flex items-center justify-center rounded-xl border border-line bg-surface text-fog hover:text-snow hover:border-line2 transition-colors shrink-0"
         >
-          <Pencil size={13} /> Editar
+          <Pencil size={14} />
         </Link>
         <Link
           href={`/?checkin=${id}`}
-          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-3 py-2 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors shrink-0"
+          title="Registrar entrada"
+          aria-label="Registrar entrada"
+          className="w-9 h-9 flex items-center justify-center rounded-xl border border-lime bg-lime/10 text-lime hover:bg-lime/20 transition-colors shrink-0"
           style={{ boxShadow: 'var(--shadow-lime)' }}
         >
-          <LogIn size={13} /> Entrada
+          <LogIn size={14} />
         </Link>
       </div>
 

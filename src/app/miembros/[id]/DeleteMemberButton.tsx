@@ -42,9 +42,11 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
     <>
       <button
         onClick={() => setStep('confirm')}
-        className="flex items-center gap-1.5 rounded-xl border border-rose/30 px-3 py-2 text-xs font-semibold text-rose hover:bg-rose/20 transition-colors shrink-0"
+        title="Eliminar"
+        aria-label="Eliminar miembro"
+        className="w-9 h-9 flex items-center justify-center rounded-xl border border-rose/30 text-rose hover:bg-rose/20 transition-colors shrink-0"
       >
-        <Trash2 size={13} /> Eliminar
+        <Trash2 size={14} />
       </button>
 
       <Modal open={step !== 'idle'} onClose={() => step === 'confirm' && setStep('idle')} z="z-[70]" label="Eliminar miembro">
