@@ -18,6 +18,7 @@ import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { resolveRates } from '@/lib/pricing'
 import { DatePickerModal } from '@/components/DatePickerModal'
 import { MemberForm } from '@/components/MemberForm'
+import { TableFilterBar } from '@/components/TableFilterBar'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LabelList,
@@ -1335,42 +1336,27 @@ type HomeClientProps = {
   allMembers: MemberData[]
 }
 
-function ColFilter({ label, value, onChange, options }: {
-  label: string
+/** Grupo de opciones (pills verticales) dentro del desplegable de filtros */
+function FilterGroup({ title, value, onChange, options }: {
+  title: string
   value: string
   onChange: (v: string) => void
   options: { value: string; label: string }[]
 }) {
-  const [open, setOpen] = useState(false)
-  const active = value !== 'all'
-  const current = options.find(o => o.value === value)
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
-          active ? 'bg-iris/10 text-iris border-iris/40' : 'text-mist border-line hover:text-fog hover:border-line2'
-        }`}
-      >
-        {active ? current?.label : label}
-        <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full mt-1 left-0 bg-surface border border-line rounded-xl shadow-2xl z-50 min-w-[150px] overflow-hidden py-1">
-            {options.map(opt => (
-              <button key={opt.value} onClick={() => { onChange(opt.value); setOpen(false) }}
-                className={`w-full text-left px-3 py-2 text-xs transition-colors hover:bg-surface2 ${
-                  value === opt.value ? 'text-iris font-semibold' : 'text-fog'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{title}</p>
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+            value === opt.value ? 'bg-iris/10 text-iris' : 'text-fog hover:bg-surface2 hover:text-snow'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -1378,7 +1364,11 @@ function ColFilter({ label, value, onChange, options }: {
 function StackedBar({ x, y, width, height, fill, roundTop }: {
   x?: number; y?: number; width?: number; height?: number; fill?: string; roundTop?: boolean
 }) {
-  const _x = x ?? 0, _y = y ?? 0, _w = width ?? 0, _h = height ?? 0
+  // Barras un 10% más gruesas que el ancho que calcula Recharts, centradas en su posición
+  const rawW = width ?? 0
+  const _w = rawW * 1.1
+  const _x = (x ?? 0) - (_w - rawW) / 2
+  const _y = y ?? 0, _h = height ?? 0
   if (_h <= 0 || _w <= 0) return null
   const r = roundTop ? Math.min(4, _w / 2, _h) : 0
   const d = r === 0
@@ -2233,60 +2223,49 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             </div>
           )}
 
-          {/* Search + column filters */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-mist pointer-events-none">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nombre o teléfono..."
-                className="w-full pl-8 pr-3 py-1.5 bg-surface2 border border-line rounded-xl text-xs text-snow placeholder-mist focus:outline-none focus:border-iris/50 transition-colors"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mist hover:text-snow transition-colors">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            <div className="flex gap-1.5 shrink-0 flex-wrap">
-              <ColFilter
-                label="Tipo"
-                value={filterTipo}
-                onChange={setFilterTipo}
-                options={[
-                  { value: 'all', label: 'Tipo: Todos' },
-                  { value: 'libre', label: 'Libre' },
-                  { value: 'birthday', label: 'Cumpleaños' },
-                  { value: 'custodia', label: 'Custodia' },
-                ]}
-              />
-              <ColFilter
-                label="Bono"
-                value={filterBono}
-                onChange={setFilterBono}
-                options={[
-                  { value: 'all', label: 'Bono: Todos' },
-                  { value: 'con_bono', label: 'Con bono' },
-                  { value: 'sin_bono', label: 'Sin bono' },
-                ]}
-              />
-              <ColFilter
-                label="Sesiones"
-                value={filterSesiones}
-                onChange={setFilterSesiones}
-                options={[
-                  { value: 'all', label: 'Sesiones: Todas' },
-                  { value: 'critical', label: 'Críticas (≤2)' },
-                  { value: 'low', label: 'Bajas (3-5)' },
-                  { value: 'ok', label: 'OK (>5)' },
-                ]}
-              />
-            </div>
-          </div>
+          {/* Search + filtros en embudo */}
+          <TableFilterBar
+            search={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Buscar por nombre o teléfono..."
+            activeFilterCount={[filterTipo, filterBono, filterSesiones].filter(f => f !== 'all').length}
+            filters={
+              <>
+                <FilterGroup
+                  title="Tipo"
+                  value={filterTipo}
+                  onChange={setFilterTipo}
+                  options={[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'libre', label: 'Libre' },
+                    { value: 'birthday', label: 'Cumpleaños' },
+                    { value: 'custodia', label: 'Custodia' },
+                  ]}
+                />
+                <FilterGroup
+                  title="Bono"
+                  value={filterBono}
+                  onChange={setFilterBono}
+                  options={[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'con_bono', label: 'Con bono' },
+                    { value: 'sin_bono', label: 'Sin bono' },
+                  ]}
+                />
+                <FilterGroup
+                  title="Sesiones"
+                  value={filterSesiones}
+                  onChange={setFilterSesiones}
+                  options={[
+                    { value: 'all', label: 'Todas' },
+                    { value: 'critical', label: 'Críticas (≤2)' },
+                    { value: 'low', label: 'Bajas (3-5)' },
+                    { value: 'ok', label: 'OK (>5)' },
+                  ]}
+                />
+              </>
+            }
+          />
         </div>
 
         {/* Empty states */}

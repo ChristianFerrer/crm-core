@@ -27,7 +27,8 @@ export function TableFilterBar({
   showFilter?: boolean
   /** Nº de filtros activos, para el indicador sobre el botón de embudo */
   activeFilterCount?: number
-  onExport: () => void
+  /** Si se omite, no se muestra el botón de exportar */
+  onExport?: () => void
   exporting?: boolean
   exportDisabled?: boolean
 }) {
@@ -84,15 +85,17 @@ export function TableFilterBar({
         </div>
       )}
 
-      <button
-        onClick={onExport}
-        disabled={exporting || exportDisabled}
-        title="Exportar a Excel"
-        aria-label="Exportar a Excel"
-        className="flex items-center justify-center w-10 h-10 rounded-xl border border-lime bg-lime/10 text-lime hover:bg-lime/20 transition-colors disabled:opacity-50 shrink-0"
-      >
-        <Download size={16} />
-      </button>
+      {onExport && (
+        <button
+          onClick={onExport}
+          disabled={exporting || exportDisabled}
+          title="Exportar a Excel"
+          aria-label="Exportar a Excel"
+          className="flex items-center justify-center w-10 h-10 rounded-xl border border-lime bg-lime/10 text-lime hover:bg-lime/20 transition-colors disabled:opacity-50 shrink-0"
+        >
+          <Download size={16} />
+        </button>
+      )}
     </div>
   )
 }
