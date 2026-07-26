@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { memberMatchesQuery, normalizeSearch } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
-import { Plus, User, Users, ChevronRight } from 'lucide-react'
+import { UserPlus, User, Users, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { TableFilterBar } from '@/components/TableFilterBar'
 
@@ -196,7 +196,7 @@ export default function MiembrosPage() {
             className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform shrink-0"
             style={{ boxShadow: 'var(--shadow-lime)' }}
           >
-            <Plus size={16} strokeWidth={2.5} /> Nuevo
+            <UserPlus size={16} strokeWidth={2.2} /> Nuevo miembro
           </Link>
         )}
       </div>

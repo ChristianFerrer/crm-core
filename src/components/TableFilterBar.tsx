@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Search, Filter, Download } from 'lucide-react'
 
 /**
@@ -33,13 +34,30 @@ export function TableFilterBar({
   exportDisabled?: boolean
 }) {
   const [filterOpen, setFilterOpen] = useState(false)
-  const popoverRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+
+  // El popover se monta vía portal en <body> con position:fixed, calculado a
+  // partir del botón — así nunca lo recorta un contenedor con overflow-hidden
+  // (p.ej. la tarjeta de "En sala ahora"), sin importar dónde viva la barra.
+  function openFilters() {
+    const rect = btnRef.current?.getBoundingClientRect()
+    if (rect) setPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right })
+    setFilterOpen(o => !o)
+  }
 
   useEffect(() => {
     if (!filterOpen) return
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setFilterOpen(false) }
+    function onReflow() { setFilterOpen(false) }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    window.addEventListener('resize', onReflow)
+    window.addEventListener('scroll', onReflow, true)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('resize', onReflow)
+      window.removeEventListener('scroll', onReflow, true)
+    }
   }, [filterOpen])
 
   return (
@@ -55,9 +73,10 @@ export function TableFilterBar({
       </div>
 
       {showFilter && (
-        <div className="relative shrink-0" ref={popoverRef}>
+        <div className="relative shrink-0">
           <button
-            onClick={() => setFilterOpen(o => !o)}
+            ref={btnRef}
+            onClick={openFilters}
             title="Filtros"
             aria-label="Filtros"
             className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ${
@@ -74,13 +93,17 @@ export function TableFilterBar({
             )}
           </button>
 
-          {filterOpen && (
+          {filterOpen && pos && typeof document !== 'undefined' && createPortal(
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
-              <div className="absolute right-0 z-50 mt-2 w-72 max-w-[85vw] rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4">
+              <div className="fixed inset-0 z-[90]" onClick={() => setFilterOpen(false)} />
+              <div
+                className="fixed z-[91] w-72 max-w-[85vw] rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4"
+                style={{ top: pos.top, right: pos.right }}
+              >
                 {filters}
               </div>
-            </>
+            </>,
+            document.body
           )}
         </div>
       )}
