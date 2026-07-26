@@ -2410,7 +2410,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         ) : filteredVisits.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_resultados_busqueda')}</div>
         ) : (
-          <>
+          <div className="max-h-[60vh] overflow-y-auto">
             {/* ── MOBILE: expandable cards (< md) ──────────────────────── */}
             <div className="xl:hidden px-3 py-3 space-y-2.5">
               {filteredVisits.map(visit => {
@@ -2685,7 +2685,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
 
       </div>
@@ -2707,7 +2707,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         {timeline.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_reservas_hoy')}</div>
         ) : (
-          <div className="divide-y divide-line">
+          <div className="divide-y divide-line max-h-[60vh] overflow-y-auto">
             {timeline.map(b => {
               const status = getBookingStatus(b)
               const style = bookingTypeStyle[b.type]
