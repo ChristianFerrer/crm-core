@@ -1,6 +1,13 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { dictCommon } from './i18n-dicts/common'
+import { dictHome } from './i18n-dicts/home'
+import { dictMiembros } from './i18n-dicts/miembros'
+import { dictCalendario } from './i18n-dicts/calendario'
+import { dictPanel } from './i18n-dicts/panel'
+import { dictFamilias } from './i18n-dicts/familias'
+import { dictLogin } from './i18n-dicts/login'
 
 export type Lang = 'es' | 'en' | 'ca'
 export const LANGUAGES: { code: Lang; label: string }[] = [
@@ -10,22 +17,29 @@ export const LANGUAGES: { code: Lang; label: string }[] = [
 ]
 
 const STORAGE_KEY = 'wm_language'
+const COOKIE_KEY = 'wm_lang'
 
-const dict = {
-  nav_inicio:   { es: 'Inicio',   en: 'Home',    ca: 'Inici' },
-  nav_miembros: { es: 'Miembros', en: 'Members', ca: 'Membres' },
-  nav_agenda:   { es: 'Agenda',   en: 'Schedule', ca: 'Agenda' },
-  nav_panel:    { es: 'Panel',    en: 'Dashboard', ca: 'Tauler' },
-  cerrar_sesion:{ es: 'Cerrar sesión', en: 'Log out', ca: 'Tanca la sessió' },
-  expandir_menu:{ es: 'Expandir menú', en: 'Expand menu', ca: 'Expandeix el menú' },
-  contraer_menu:{ es: 'Contraer menú', en: 'Collapse menu', ca: 'Redueix el menú' },
-  idioma:       { es: 'Idioma', en: 'Language', ca: 'Idioma' },
-  idioma_auto:  { es: 'Automático (dispositivo)', en: 'Automatic (device)', ca: 'Automàtic (dispositiu)' },
+export const dict = {
+  ...dictCommon,
+  ...dictHome,
+  ...dictMiembros,
+  ...dictCalendario,
+  ...dictPanel,
+  ...dictFamilias,
+  ...dictLogin,
 } as const
 
 export type TranslationKey = keyof typeof dict
 
-function detectDeviceLang(): Lang {
+export function translate(lang: Lang, key: TranslationKey, vars?: Record<string, string | number>): string {
+  let str: string = dict[key][lang] ?? dict[key].es
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) str = str.replace(`{${k}}`, String(v))
+  }
+  return str
+}
+
+export function detectDeviceLang(): Lang {
   if (typeof navigator === 'undefined') return 'es'
   const raw = (navigator.language || 'es').toLowerCase()
   if (raw.startsWith('ca')) return 'ca'
@@ -37,15 +51,19 @@ type LanguageContextValue = {
   lang: Lang
   isAuto: boolean
   setLang: (lang: Lang | 'auto') => void
-  t: (key: TranslationKey) => string
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string
 }
 
 const LanguageContext = createContext<LanguageContextValue>({
   lang: 'es',
   isAuto: true,
   setLang: () => {},
-  t: key => dict[key].es,
+  t: key => translate('es', key),
 })
+
+function syncCookie(lang: Lang) {
+  try { document.cookie = `${COOKIE_KEY}=${lang}; path=/; max-age=31536000` } catch {}
+}
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>('es')
@@ -54,29 +72,29 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let stored: string | null = null
     try { stored = localStorage.getItem(STORAGE_KEY) } catch {}
-    if (stored === 'en' || stored === 'ca' || stored === 'es') {
-      setLangState(stored)
-      setIsAuto(false)
-    } else {
-      setLangState(detectDeviceLang())
-      setIsAuto(true)
-    }
+    const resolved = stored === 'en' || stored === 'ca' || stored === 'es' ? stored : detectDeviceLang()
+    setLangState(resolved)
+    setIsAuto(!(stored === 'en' || stored === 'ca' || stored === 'es'))
+    syncCookie(resolved)
   }, [])
 
   function setLang(next: Lang | 'auto') {
     if (next === 'auto') {
       try { localStorage.removeItem(STORAGE_KEY) } catch {}
-      setLangState(detectDeviceLang())
+      const resolved = detectDeviceLang()
+      setLangState(resolved)
       setIsAuto(true)
+      syncCookie(resolved)
     } else {
       try { localStorage.setItem(STORAGE_KEY, next) } catch {}
       setLangState(next)
       setIsAuto(false)
+      syncCookie(next)
     }
   }
 
-  function t(key: TranslationKey) {
-    return dict[key][lang]
+  function t(key: TranslationKey, vars?: Record<string, string | number>) {
+    return translate(lang, key, vars)
   }
 
   return (
