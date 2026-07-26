@@ -4109,16 +4109,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {Object.entries(productsByCategory).map(([cat, prods]) => (
                   <div key={cat} className="mb-4 last:mb-0">
                     <p className="text-[10px] font-semibold text-fog capitalize mb-2">{cat}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {prods.map(p => (
+                    <div className="flex flex-col gap-2">
+                      {[...prods].sort((a, b) => a.name.localeCompare(b.name, 'es')).map(p => (
                         <button
                           key={p.id}
                           onClick={() => handleAddProduct(consumosVisitId, p)}
                           disabled={addingProduct === p.id + consumosVisitId}
-                          className="flex items-center gap-2 text-xs font-medium text-snow bg-surface2 border border-line rounded-xl px-3 py-2.5 hover:border-iris/50 hover:bg-iris/5 transition-colors disabled:opacity-50 text-left"
+                          className="flex items-center gap-3 text-sm font-medium text-snow bg-surface2 border border-line rounded-xl px-3.5 py-3 hover:border-iris/50 hover:bg-iris/5 transition-colors disabled:opacity-50 text-left"
                         >
-                          <span className="text-base shrink-0">{p.emoji}</span>
-                          <span className="flex-1 truncate">{p.name}</span>
+                          <span className="text-lg shrink-0">{p.emoji}</span>
+                          <span className="flex-1 min-w-0">{p.name}</span>
                           <span className="text-mist shrink-0">{Number(p.price).toFixed(2)}€</span>
                         </button>
                       ))}
