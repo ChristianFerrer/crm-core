@@ -6,18 +6,21 @@ import { supabase } from '@/lib/supabase'
 import { isSuperAdmin } from '@/lib/roles'
 import { toast } from 'sonner'
 import { PasswordInput } from '@/components/PasswordInput'
+import { ProspectsSection } from './ProspectsSection'
+import { MarketingSection } from './MarketingSection'
 import {
   LayoutDashboard, Building2, BarChart3, Settings, Plus, X, Shield,
   Users, TrendingUp, Calendar, Activity, Pencil,
   CheckCircle, AlertTriangle, XCircle, Clock, Eye, HelpCircle, LogOut, ChevronDown,
   Smartphone, Monitor, Tablet, Globe, Wifi, WifiOff, KeyRound, Mail, Check,
+  UserPlus, Megaphone,
 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
 } from 'recharts'
 
-type Tab = 'dashboard' | 'tenants' | 'metrics' | 'accesos' | 'config'
+type Tab = 'dashboard' | 'tenants' | 'prospects' | 'metrics' | 'marketing' | 'accesos' | 'config'
 
 type Tenant = {
   id: string
@@ -36,6 +39,9 @@ type Tenant = {
   trial_ends_at: string | null
   notes: string | null
   last_activity_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  mrr: number | null
 }
 
 const PLAN_COLORS: Record<string, string> = {
@@ -89,8 +95,16 @@ function DashboardSection({ tenants }: { tenants: Tenant[] }) {
   const activeCount = tenants.filter(t => t.status === 'active').length
   const trialCount = tenants.filter(t => t.status === 'trial').length
 
+  const mrr = tenants.filter(t => t.status === 'active').reduce((s, t) => s + (t.mrr ?? 199.99), 0)
+  const monthStartDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  const churnedThisMonth = tenants.filter(t => t.cancelled_at && new Date(t.cancelled_at) >= monthStartDate).length
+  const churnBase = activeCount + churnedThisMonth
+  const churnRate = churnBase > 0 ? Math.round((churnedThisMonth / churnBase) * 100) : 0
+
   const cards = [
     { label: 'Establecimientos', value: tenants.length, sub: `${activeCount} activos · ${trialCount} en prueba`, color: 'text-lime', bg: 'bg-lime/10', icon: Building2 },
+    { label: 'MRR estimado', value: `${mrr.toLocaleString('es-ES', { maximumFractionDigits: 0 })}€`, sub: 'ingresos mensuales recurrentes', color: 'text-lime', bg: 'bg-lime/10', icon: TrendingUp },
+    { label: 'Churn este mes', value: `${churnRate}%`, sub: `${churnedThisMonth} cancelación(es)`, color: churnedThisMonth > 0 ? 'text-rose' : 'text-lime', bg: churnedThisMonth > 0 ? 'bg-rose/10' : 'bg-lime/10', icon: Activity },
     { label: 'Miembros totales', value: stats.members, sub: 'en la plataforma', color: 'text-iris', bg: 'bg-iris/10', icon: Users },
     { label: 'Visitas hoy', value: stats.visitsToday, sub: 'entradas registradas', color: 'text-mint', bg: 'bg-mint/10', icon: TrendingUp },
     { label: 'Visitas este mes', value: stats.visitsMonth, sub: 'sesiones consumidas', color: 'text-amber', bg: 'bg-amber/10', icon: Activity },
@@ -379,11 +393,29 @@ function ChangePasswordModal({ tenant, onClose }: { tenant: Tenant; onClose: () 
   )
 }
 
+function tenantHealth(last: string | null): { label: string; cls: string } {
+  if (!last) return { label: 'Sin accesos', cls: 'text-fog' }
+  const days = Math.floor((Date.now() - new Date(last).getTime()) / 86400000)
+  if (days <= 3) return { label: 'Activo', cls: 'text-lime' }
+  if (days <= 14) return { label: `Hace ${days}d`, cls: 'text-amber' }
+  return { label: `Hace ${days}d`, cls: 'text-rose' }
+}
+
 function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: () => void }) {
   const router = useRouter()
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; initial: TenantForm & { id?: string } } | null>(null)
   const [passwordTenant, setPasswordTenant] = useState<Tenant | null>(null)
   const [sendingReset, setSendingReset] = useState<string | null>(null)
+  const [lastAccess, setLastAccess] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    supabase.from('tenant_sessions').select('tenant_id, logged_in_at').order('logged_in_at', { ascending: false })
+      .then(({ data }) => {
+        const map: Record<string, string> = {}
+        ;(data ?? []).forEach((s: any) => { if (!map[s.tenant_id]) map[s.tenant_id] = s.logged_in_at })
+        setLastAccess(map)
+      })
+  }, [])
 
   async function sendResetEmail(t: Tenant) {
     if (!t.admin_email) { toast.error('Este establecimiento no tiene admin_email configurado'); return }
@@ -415,6 +447,15 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
   async function toggleStatus(t: Tenant) {
     const next = t.status === 'active' ? 'suspended' : 'active'
     await supabase.from('tenants').update({ status: next }).eq('id', t.id)
+    onReload()
+  }
+
+  async function cancelTenant(t: Tenant) {
+    const reason = prompt(`¿Por qué se cancela "${t.name}"? (opcional)`)
+    if (reason === null) return
+    await supabase.from('tenants').update({
+      status: 'cancelled', cancelled_at: new Date().toISOString(), cancellation_reason: reason || null,
+    }).eq('id', t.id)
     onReload()
   }
 
@@ -453,6 +494,7 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-[10px] font-bold ${tenantHealth(lastAccess[t.id] ?? null).cls}`}>● {tenantHealth(lastAccess[t.id] ?? null).label}</span>
                 <span className={`text-[10px] font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
                 <span className={`text-[10px] font-bold ${STATUS_COLORS[t.status]}`}>{t.status}</span>
               </div>
@@ -512,6 +554,12 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 }`}>
                 {t.status === 'active' ? 'Suspender' : 'Activar'}
               </button>
+              {t.status !== 'cancelled' && (
+                <button onClick={() => cancelTenant(t)}
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-mist hover:text-rose hover:border-rose/30 transition-colors">
+                  Cancelar
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -881,7 +929,9 @@ export default function AdminPage() {
   const navItems = [
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'tenants' as Tab, label: 'Establecimientos', icon: Building2 },
+    { id: 'prospects' as Tab, label: 'Prospectos', icon: UserPlus },
     { id: 'metrics' as Tab, label: 'Métricas', icon: BarChart3 },
+    { id: 'marketing' as Tab, label: 'Marketing', icon: Megaphone },
     { id: 'accesos' as Tab, label: 'Accesos', icon: Activity },
     { id: 'config' as Tab, label: 'Configuración', icon: Settings },
   ]
@@ -985,7 +1035,9 @@ export default function AdminPage() {
 
         {tab === 'dashboard' && <DashboardSection tenants={tenants} />}
         {tab === 'tenants' && <TenantsSection tenants={tenants} onReload={loadTenants} />}
+        {tab === 'prospects' && <ProspectsSection />}
         {tab === 'metrics' && <MetricsSection />}
+        {tab === 'marketing' && <MarketingSection />}
         {tab === 'accesos' && <AccesosSection tenants={tenants} />}
         {tab === 'config' && <ConfigSection />}
       </main>

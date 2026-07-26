@@ -5,6 +5,7 @@ import {
   Timer, AlertTriangle, Search, QrCode, CreditCard,
   Clock, ChevronRight, User, Phone, Pencil,
 } from 'lucide-react'
+import { TrackPageView } from '@/components/TrackPageView'
 
 // ─── Mini mockups ────────────────────────────────────────────────────────────
 
@@ -300,6 +301,7 @@ const stats = [
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-carbon text-snow">
+      <TrackPageView />
 
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-line bg-carbon/80 backdrop-blur-md">

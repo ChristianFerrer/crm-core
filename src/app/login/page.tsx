@@ -7,6 +7,7 @@ import { isSuperAdmin } from '@/lib/roles'
 import { loadAndStoreTenant } from '@/lib/tenant'
 import { PasswordInput } from '@/components/PasswordInput'
 import { useLanguage } from '@/lib/i18n'
+import { trackEvent } from '@/lib/trackEvent'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -61,6 +62,7 @@ export default function LoginPage() {
         setError(error.message)
       } else {
         setMessage(t('login_revisa_correo'))
+        trackEvent('alta_complete', { email })
       }
     }
     setLoading(false)
@@ -127,7 +129,7 @@ export default function LoginPage() {
           <p className="text-center text-xs text-mist">
             {mode === 'login' && (
               <>{t('login_primera_vez')}{' '}
-                <button onClick={() => { setMode('register'); setError(''); setMessage('') }}
+                <button onClick={() => { setMode('register'); setError(''); setMessage(''); trackEvent('alta_start') }}
                   className="text-snow underline hover:text-lime transition-colors">{t('login_crear_cuenta')}</button></>
             )}
             {mode === 'register' && (
