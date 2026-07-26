@@ -2125,34 +2125,34 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? 'Mi establecimiento'}</h1>
-          {/* Date navigation */}
-          <div className="flex items-center gap-1 mt-1.5">
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {/* Date navigation — esquina superior derecha, junto al nombre */}
+          <div className="flex items-center gap-1">
             <button
               onClick={() => navigateDate(-1)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={16} />
             </button>
-            <span className="text-sm text-fog capitalize px-1">{dateLabel}</span>
+            <span className="text-sm text-fog capitalize px-1 whitespace-nowrap">{dateLabel}</span>
             <button
               onClick={() => navigateDate(1)}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={16} />
             </button>
             {!isToday && (
               <button
                 onClick={() => router.push('/')}
-                className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-0.5 hover:bg-lime/20 transition-colors"
+                className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-1 hover:bg-lime/20 transition-colors"
               >
                 Hoy
               </button>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
           {isToday && totalAlerts > 0 && (
             <button
               onClick={() => { setDismissedAlerts(new Set()); setAlertsOpen(true) }}

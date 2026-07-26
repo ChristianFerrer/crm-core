@@ -402,10 +402,10 @@ export default function TiendaPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button onClick={() => openEdit(p)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
+                        <button onClick={() => openEdit(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
                           <Pencil size={12} />
                         </button>
-                        <button onClick={() => setConfirmDelete(p)} className="w-7 h-7 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
+                        <button onClick={() => setConfirmDelete(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
                           <Trash2 size={12} />
                         </button>
                       </div>

@@ -90,7 +90,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     <div className="space-y-4 lg:max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-3 pt-2">
-        <Link href="/miembros" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0">
+        <Link href="/miembros" className="w-9 h-9 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0">
           <ArrowLeft size={15} className="text-fog" />
         </Link>
         <div className="flex-1 min-w-0">

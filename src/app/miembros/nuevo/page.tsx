@@ -11,7 +11,7 @@ export default function NuevoMiembroPage() {
   return (
     <div className="space-y-5 lg:max-w-lg">
       <div className="flex items-center gap-3 pt-2">
-        <Link href="/miembros" className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
+        <Link href="/miembros" className="w-9 h-9 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors">
           <ArrowLeft size={15} className="text-fog" />
         </Link>
         <h1 className="font-display text-xl font-semibold text-snow">Nuevo miembro</h1>

@@ -22,14 +22,14 @@ export default function FamiliaActions({ id }: { id: string }) {
     <>
       <Link
         href={`/familias/${id}/editar`}
-        className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0"
+        className="w-9 h-9 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0"
       >
         <Pencil size={14} className="text-fog" />
       </Link>
 
       <button
         onClick={() => setShowModal(true)}
-        className="w-8 h-8 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0"
+        className="w-9 h-9 rounded-xl border border-line bg-surface flex items-center justify-center hover:border-line2 transition-colors shrink-0"
       >
         <Trash2 size={14} className="text-rose" />
       </button>
