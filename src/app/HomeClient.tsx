@@ -2199,7 +2199,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </div>
                 <span className={`text-sm font-bold ${aforoTextColor}`}>{Math.round(aforoPct)}%</span>
               </div>
-              <div className="h-[10.56px] w-full rounded-full bg-line overflow-hidden flex">
+              <div className="h-[10.4px] w-full rounded-full bg-line overflow-hidden flex">
                 <div className="h-full bg-lime transition-all duration-500 rounded-l-full" style={{ width: `${Math.min(100, (activeAdults / capacity) * 100)}%` }} />
                 <div className="h-full bg-cyan-300 transition-all duration-500" style={{ width: `${Math.min(100, (activeChildren / capacity) * 100)}%` }} />
               </div>
