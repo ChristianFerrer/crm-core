@@ -10,8 +10,9 @@ import {
   Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2, CalendarPlus,
   Euro, CreditCard,
   CupSoda, Coffee, Droplet, Citrus, Cookie, Candy, Croissant, Popcorn, Package,
+  Languages,
 } from 'lucide-react'
-import { useLanguage } from '@/lib/i18n'
+import { useLanguage, LANGUAGES } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
@@ -1504,14 +1505,16 @@ function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: st
 }
 
 export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
-  const { t } = useLanguage()
+  const { t, lang, setLang } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
   const isToday = selectedDate === todayStr
+  const [langMenuOpen, setLangMenuOpen] = useState(false)
 
+  const localeMap: Record<string, string> = { es: 'es-ES', en: 'en-GB', ca: 'ca-ES' }
   const selectedDateObj = new Date(selectedDate + 'T12:00:00')
   const dayNum = selectedDateObj.getDate()
-  const monthAbbrev = selectedDateObj.toLocaleDateString('es-ES', { month: 'short' }).replace(/\.$/, '')
+  const monthAbbrev = selectedDateObj.toLocaleDateString(localeMap[lang], { month: 'short' }).replace(/\.$/, '')
 
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [calendarViewDate, setCalendarViewDate] = useState(selectedDate)
@@ -2174,6 +2177,34 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {/* Selector de idioma — junto a la fecha */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setLangMenuOpen(o => !o)}
+              className="flex items-center justify-center w-10 h-10 rounded-xl border border-line bg-surface text-fog hover:text-snow hover:bg-surface2 transition-colors"
+            >
+              <Languages size={16} />
+            </button>
+            {langMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-[70]" onClick={() => setLangMenuOpen(false)} />
+                <div className="absolute right-0 top-[calc(100%+6px)] z-[80] w-40 rounded-xl border border-line bg-surface shadow-2xl p-1.5">
+                  {LANGUAGES.map(l => (
+                    <button
+                      key={l.code}
+                      onClick={() => { setLang(l.code); setLangMenuOpen(false) }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                        lang === l.code ? 'bg-lime/10 text-lime' : 'text-fog hover:bg-surface2 hover:text-snow'
+                      }`}
+                    >
+                      {l.label}
+                      {lang === l.code && <Check size={12} />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {/* Date navigation — esquina superior derecha, junto al nombre */}
           <button
             onClick={() => { setCalendarViewDate(selectedDate); setCalendarOpen(true) }}
