@@ -1508,6 +1508,11 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     router.push(newDate === todayStr ? '/' : `/?date=${newDate}`)
   }
 
+  const selectedDateObj = new Date(selectedDate + 'T12:00:00')
+  const dayNum = selectedDateObj.getDate()
+  const weekdayAbbrev = selectedDateObj.toLocaleDateString('es-ES', { weekday: 'short' }).replace(/\.$/, '')
+  const monthLabel = selectedDateObj.toLocaleDateString('es-ES', { month: 'long' })
+
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
@@ -2130,28 +2135,34 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           {/* Date navigation — esquina superior derecha, junto al nombre */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => navigateDate(-1)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-sm text-fog capitalize px-1 whitespace-nowrap">{dateLabel}</span>
-            <button
-              onClick={() => navigateDate(1)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-            {!isToday && (
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[10px] font-semibold text-fog uppercase tracking-wide pr-0.5">{monthLabel}</span>
+            <div className="flex items-center gap-1">
               <button
-                onClick={() => router.push('/')}
-                className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-1 hover:bg-lime/20 transition-colors"
+                onClick={() => navigateDate(-1)}
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
               >
-                Hoy
+                <ChevronLeft size={16} />
               </button>
-            )}
+              <div className="w-11 h-11 rounded-xl bg-surface2 border border-line flex flex-col items-center justify-center leading-none shadow-sm">
+                <span className="text-[8px] font-bold text-rose uppercase">{weekdayAbbrev}</span>
+                <span className="text-base font-bold text-snow">{dayNum}</span>
+              </div>
+              <button
+                onClick={() => navigateDate(1)}
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+              {!isToday && (
+                <button
+                  onClick={() => router.push('/')}
+                  className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-1 hover:bg-lime/20 transition-colors"
+                >
+                  Hoy
+                </button>
+              )}
+            </div>
           </div>
           {isToday && totalAlerts > 0 && (
             <button
