@@ -13,13 +13,14 @@ export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
   const [open, setOpen] = useState(false)
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const visible = initial.filter(a => !dismissed.has(a.id))
-  if (initial.length === 0) return null
 
   return (
     <div className="relative shrink-0">
       <button
         onClick={() => setOpen(o => !o)}
-        className="relative flex items-center justify-center w-10 h-10 rounded-xl border border-amber/40 bg-amber/10 text-amber hover:bg-amber/20 transition-colors"
+        className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ${
+          visible.length > 0 ? 'border-amber/40 bg-amber/10 text-amber hover:bg-amber/20' : 'border-line bg-surface text-fog hover:text-snow hover:bg-surface2'
+        }`}
       >
         <Bell size={16} />
         {visible.length > 0 && (

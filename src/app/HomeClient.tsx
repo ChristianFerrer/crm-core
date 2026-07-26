@@ -2170,17 +2170,19 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               Hoy
             </button>
           )}
-          {isToday && totalAlerts > 0 && (
-            <button
-              onClick={() => { setDismissedAlerts(new Set()); setAlertsOpen(true) }}
-              className="relative flex items-center justify-center w-10 h-10 rounded-xl border border-amber/40 bg-amber/10 text-amber hover:bg-amber/20 transition-colors ml-1"
-            >
-              <Bell size={16} />
+          <button
+            onClick={() => { setDismissedAlerts(new Set()); setAlertsOpen(true) }}
+            className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ml-1 ${
+              totalAlerts > 0 ? 'border-amber/40 bg-amber/10 text-amber hover:bg-amber/20' : 'border-line bg-surface text-fog hover:text-snow hover:bg-surface2'
+            }`}
+          >
+            <Bell size={16} />
+            {totalAlerts > 0 && (
               <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                 {totalAlerts}
               </span>
-            </button>
-          )}
+            )}
+          </button>
         </div>
       </div>
 
