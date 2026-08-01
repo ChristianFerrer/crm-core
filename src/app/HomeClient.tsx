@@ -2155,7 +2155,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Selector de idioma — junto a la fecha */}
           <div className="relative shrink-0">
             <button
@@ -2200,7 +2200,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </button>
           <button
             onClick={() => { setDismissedAlerts(new Set()); setAlertsOpen(true) }}
-            className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ml-1 ${
+            className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ${
               totalAlerts > 0 ? 'border-amber/40 bg-amber/10 text-amber hover:bg-amber/20' : 'border-line bg-surface text-fog hover:text-snow hover:bg-surface2'
             }`}
           >
