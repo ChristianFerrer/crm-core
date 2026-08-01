@@ -38,6 +38,7 @@ export function TableFilterBar({
   const [filterOpen, setFilterOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
 
   // El popover se monta vía portal en <body> con position:fixed, calculado a
   // partir del botón — así nunca lo recorta un contenedor con overflow-hidden
@@ -52,13 +53,18 @@ export function TableFilterBar({
     if (!filterOpen) return
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setFilterOpen(false) }
     function onReflow() { setFilterOpen(false) }
+    function onScroll(e: Event) {
+      // Ignora el scroll interno del propio popover (su lista de filtros puede ser larga)
+      if (popoverRef.current && e.target instanceof Node && popoverRef.current.contains(e.target)) return
+      setFilterOpen(false)
+    }
     document.addEventListener('keydown', onKey)
     window.addEventListener('resize', onReflow)
-    window.addEventListener('scroll', onReflow, true)
+    window.addEventListener('scroll', onScroll, true)
     return () => {
       document.removeEventListener('keydown', onKey)
       window.removeEventListener('resize', onReflow)
-      window.removeEventListener('scroll', onReflow, true)
+      window.removeEventListener('scroll', onScroll, true)
     }
   }, [filterOpen])
 
@@ -99,6 +105,7 @@ export function TableFilterBar({
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => setFilterOpen(false)} />
               <div
+                ref={popoverRef}
                 className="fixed z-[91] w-72 max-w-[85vw] max-h-[min(70vh,420px)] overflow-y-auto rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4"
                 style={{ top: pos.top, right: pos.right }}
               >
