@@ -1,13 +1,13 @@
-export const metadata = { title: 'Política de Privacidad — Watermelon CRM' }
+export const metadata = { title: 'Política de Privacidad — GERD CRM' }
 
 export default function PrivacidadPage() {
   return (
     <div className="min-h-screen bg-carbon">
       <div className="border-b border-line px-4 py-4 flex items-center gap-3">
         <div className="w-7 h-7 rounded-lg bg-lime flex items-center justify-center shrink-0">
-          <span className="text-ink font-bold text-xs">W</span>
+          <span className="text-ink font-bold text-xs">G</span>
         </div>
-        <p className="text-sm font-semibold text-snow">Watermelon CRM</p>
+        <p className="text-sm font-semibold text-snow">GERD CRM</p>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-10 space-y-8 text-snow">
@@ -19,10 +19,10 @@ export default function PrivacidadPage() {
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-snow">1. Responsable del tratamiento</h2>
         <p className="text-sm text-fog leading-relaxed">
-          El responsable del tratamiento de los datos personales introducidos en esta plataforma es el centro o ludoteca que contrata el servicio de Watermelon CRM (en adelante, «el Centro»). El Centro determina los fines y medios del tratamiento de datos de sus clientes.
+          El responsable del tratamiento de los datos personales introducidos en esta plataforma es el centro o ludoteca que contrata el servicio de GERD CRM (en adelante, «el Centro»). El Centro determina los fines y medios del tratamiento de datos de sus clientes.
         </p>
         <p className="text-sm text-fog leading-relaxed">
-          Watermelon CRM actúa como encargado del tratamiento en nombre del Centro, conforme al artículo 28 del Reglamento (UE) 2016/679 (RGPD).
+          GERD CRM actúa como encargado del tratamiento en nombre del Centro, conforme al artículo 28 del Reglamento (UE) 2016/679 (RGPD).
         </p>
       </section>
 
@@ -88,7 +88,7 @@ export default function PrivacidadPage() {
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-snow">7. Seguridad</h2>
         <p className="text-sm text-fog leading-relaxed">
-          Watermelon CRM aplica medidas técnicas y organizativas adecuadas para garantizar la seguridad de los datos: cifrado en tránsito (TLS), cifrado en reposo (AES-256), control de acceso por tenant y copias de seguridad automáticas diarias.
+          GERD CRM aplica medidas técnicas y organizativas adecuadas para garantizar la seguridad de los datos: cifrado en tránsito (TLS), cifrado en reposo (AES-256), control de acceso por tenant y copias de seguridad automáticas diarias.
         </p>
       </section>
 

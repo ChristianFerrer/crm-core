@@ -276,13 +276,13 @@ function TenantModal({
           <div className="rounded-xl border border-iris/30 bg-iris/5 p-4 space-y-2">
             <label className="flex items-center gap-1.5 text-xs font-semibold text-iris uppercase tracking-wide">
               Email administrador (acceso a la app)
-              <span title="Este correo puede iniciar sesión en Watermelon y acceder al CRM del establecimiento. Distinto al email de contacto."><HelpCircle size={11} className="text-iris/60" /></span>
+              <span title="Este correo puede iniciar sesión en GERD y acceder al CRM del establecimiento. Distinto al email de contacto."><HelpCircle size={11} className="text-iris/60" /></span>
             </label>
             <input type="email" value={form.admin_email} onChange={e => upd('admin_email', e.target.value)}
               placeholder="admin@establecimiento.com"
               className="w-full bg-surface2 border border-iris/30 rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-iris/60 transition-colors" />
             <p className="text-[11px] text-iris/70">
-              Este correo podrá iniciar sesión en Watermelon y acceder a la vista del establecimiento.
+              Este correo podrá iniciar sesión en GERD y acceder a la vista del establecimiento.
             </p>
           </div>
 
@@ -324,7 +324,7 @@ function TenantModal({
           <div>
             <label className={labelCls + ' flex items-center gap-1'}>
               Notas internas
-              <span title="Notas privadas del equipo de Watermelon. No visibles para el cliente."><HelpCircle size={11} className="text-mist" /></span>
+              <span title="Notas privadas del equipo de GERD. No visibles para el cliente."><HelpCircle size={11} className="text-mist" /></span>
             </label>
             <textarea rows={2} value={form.notes} onChange={e => upd('notes', e.target.value)}
               placeholder="Observaciones..." className={inputCls + ' resize-none'} />

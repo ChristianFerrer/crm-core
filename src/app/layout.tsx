@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', axes: ['opsz'] })
 
 export const metadata: Metadata = {
-  title: 'Watermelon CRM',
+  title: 'GERD CRM',
   description: 'CRM para Ludotecas',
 }
 

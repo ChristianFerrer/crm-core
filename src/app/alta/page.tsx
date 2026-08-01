@@ -21,9 +21,9 @@ export default function AltaPage() {
       <div className="text-center mb-10 w-full max-w-sm">
         <div className="flex items-center justify-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center" style={{ boxShadow: '0 10px 40px -12px rgba(198,242,78,0.5)' }}>
-            <span className="text-ink font-bold text-lg">{(tenantName || 'W').charAt(0).toUpperCase()}</span>
+            <span className="text-ink font-bold text-lg">{(tenantName || 'G').charAt(0).toUpperCase()}</span>
           </div>
-          <span className="font-display text-xl font-semibold text-snow">{tenantName || 'Watermelon CRM'}</span>
+          <span className="font-display text-xl font-semibold text-snow">{tenantName || 'GERD CRM'}</span>
         </div>
 
         <h1 className="font-display text-3xl font-semibold text-snow mb-2">Alta de miembro</h1>

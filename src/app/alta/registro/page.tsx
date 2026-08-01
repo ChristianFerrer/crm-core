@@ -119,7 +119,7 @@ export default function RegistroPage() {
         {/* Header */}
         <div className="text-center space-y-1">
           <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center mx-auto mb-4" style={{ boxShadow: '0 10px 40px -12px rgba(198,242,78,0.5)' }}>
-            <span className="text-ink font-bold text-lg">{(tenantName || 'W').charAt(0).toUpperCase()}</span>
+            <span className="text-ink font-bold text-lg">{(tenantName || 'G').charAt(0).toUpperCase()}</span>
           </div>
           <h1 className="font-display text-2xl font-semibold text-snow">Hazte miembro</h1>
           <p className="text-fog text-sm">{tenantName ? `${tenantName} · ` : ''}Alta de familia</p>

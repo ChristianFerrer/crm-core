@@ -52,11 +52,11 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="w-14 h-14 rounded-2xl bg-lime flex items-center justify-center" style={{ boxShadow: 'var(--shadow-lime)' }}>
-            <span className="text-ink font-bold text-2xl">W</span>
+            <span className="text-ink font-bold text-2xl">G</span>
           </div>
           <div>
             <p className="font-display font-bold text-snow text-2xl leading-tight">{t('login_reset_titulo')}</p>
-            <p className="text-sm text-mist mt-0.5">Watermelon CRM</p>
+            <p className="text-sm text-mist mt-0.5">GERD CRM</p>
           </div>
         </div>
 

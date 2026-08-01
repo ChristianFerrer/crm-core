@@ -110,14 +110,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="rounded-xl border border-line bg-surface2 p-4 space-y-3 text-xs text-fog leading-relaxed">
-            <p>Al usar Watermelon CRM, tu centro actúa como <strong className="text-snow">responsable del tratamiento</strong> de los datos personales de tus clientes y sus hijos.</p>
+            <p>Al usar GERD CRM, tu centro actúa como <strong className="text-snow">responsable del tratamiento</strong> de los datos personales de tus clientes y sus hijos.</p>
             <p>Esto implica que:</p>
             <ul className="space-y-1.5 list-disc list-inside ml-1">
               <li>Debes informar a tus clientes sobre el uso de sus datos.</li>
               <li>Debes obtener su consentimiento antes de registrarlos.</li>
               <li>Debes atender sus solicitudes de acceso, rectificación o borrado.</li>
             </ul>
-            <p>Watermelon CRM actúa como encargado del tratamiento y garantiza la seguridad técnica de los datos (cifrado, acceso restringido, copias de seguridad).</p>
+            <p>GERD CRM actúa como encargado del tratamiento y garantiza la seguridad técnica de los datos (cifrado, acceso restringido, copias de seguridad).</p>
           </div>
 
           <label className="flex items-start gap-3 cursor-pointer group">
@@ -161,11 +161,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className={`py-5 border-b border-line ${collapsed ? 'px-2' : 'px-5'}`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
             <div className="w-8 h-8 rounded-xl bg-lime flex items-center justify-center shrink-0" style={{ boxShadow: 'var(--shadow-lime)' }}>
-              <span className="text-ink font-bold text-sm">W</span>
+              <span className="text-ink font-bold text-sm">G</span>
             </div>
             {!collapsed && (
               <div className="flex-1 min-w-0">
-                <p className="font-display font-semibold text-snow text-sm leading-tight">Watermelon</p>
+                <p className="font-display font-semibold text-snow text-sm leading-tight">GERD</p>
                 <p className="text-[10px] text-mist">CRM</p>
               </div>
             )}

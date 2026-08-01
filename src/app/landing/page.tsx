@@ -308,9 +308,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-lime flex items-center justify-center shrink-0" style={{ boxShadow: 'var(--shadow-lime)' }}>
-              <span className="text-ink font-bold text-sm">W</span>
+              <span className="text-ink font-bold text-sm">G</span>
             </div>
-            <span className="font-display font-semibold text-snow text-lg">Watermelon</span>
+            <span className="font-display font-semibold text-snow text-lg">GERD</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm text-fog">
             <a href="#features" className="hover:text-snow transition-colors">Funciones</a>
@@ -369,7 +369,7 @@ export default function LandingPage() {
             <div className="w-3 h-3 rounded-full bg-rose/60" />
             <div className="w-3 h-3 rounded-full bg-amber/60" />
             <div className="w-3 h-3 rounded-full bg-lime/60" />
-            <span className="ml-2 text-[11px] text-mist">Watermelon · Inicio</span>
+            <span className="ml-2 text-[11px] text-mist">GERD · Inicio</span>
           </div>
 
           {/* Aforo bar */}
@@ -507,7 +507,7 @@ export default function LandingPage() {
             ¿Lista para ordenar tu ludoteca?
           </h2>
           <p className="text-ink/70 text-lg mb-8 max-w-lg mx-auto">
-            Únete a las ludotecas que ya gestionan su día a día con Watermelon.
+            Únete a las ludotecas que ya gestionan su día a día con GERD.
           </p>
           <Link
             href="/login"
@@ -524,11 +524,11 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-lg bg-lime flex items-center justify-center shrink-0">
-              <span className="text-ink font-bold text-xs">W</span>
+              <span className="text-ink font-bold text-xs">G</span>
             </div>
-            <span className="text-sm font-semibold text-snow">Watermelon CRM</span>
+            <span className="text-sm font-semibold text-snow">GERD CRM</span>
           </div>
-          <p className="text-xs text-mist">© 2026 Watermelon · Hecho con cariño para ludotecas</p>
+          <p className="text-xs text-mist">© 2026 GERD · Hecho con cariño para ludotecas</p>
           <Link href="/login" className="text-sm text-fog hover:text-snow transition-colors">
             Iniciar sesión →
           </Link>

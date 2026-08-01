@@ -74,10 +74,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="w-14 h-14 rounded-2xl bg-lime flex items-center justify-center" style={{ boxShadow: 'var(--shadow-lime)' }}>
-            <span className="text-ink font-bold text-2xl">W</span>
+            <span className="text-ink font-bold text-2xl">G</span>
           </div>
           <div>
-            <p className="font-display font-bold text-snow text-2xl leading-tight">Watermelon</p>
+            <p className="font-display font-bold text-snow text-2xl leading-tight">GERD</p>
             <p className="text-sm text-mist mt-0.5">{t('login_tagline')}</p>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-[10px] text-mist">
-          Watermelon CRM · v0.1 ·{' '}
+          GERD CRM · v0.1 ·{' '}
           <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-snow transition-colors">{t('login_footer_privacidad')}</a>
         </p>
       </div>
