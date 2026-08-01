@@ -34,17 +34,17 @@
   --color-snow: #14161a;
   --color-fog: #565c68;
   --color-mist: #838a96;
-  --color-lime: #27ae60;
-  --color-lime-deep: #1e8449;
-  --color-iris: #8e44ad;
-  --color-amber: #d35400;
-  --color-mint: #16a085;
-  --color-mint-soft: #d7f5ef;
-  --color-rose: #c0392b;
-  --color-rose-soft: #fbe0dd;
-  --color-cyan-300: #3498db;
+  --color-lime: #20bf6b;
+  --color-lime-deep: #189656;
+  --color-iris: #3867d6;
+  --color-amber: #fa8231;
+  --color-mint: #22a6b3;
+  --color-mint-soft: #dff7f5;
+  --color-rose: #eb3b5a;
+  --color-rose-soft: #fde3e8;
+  --color-cyan-300: #2d98da;
   --shadow-soft: 0 1px 2px rgba(20,22,26,0.06), 0 12px 32px -16px rgba(20,22,26,0.12);
-  --shadow-lime: 0 10px 32px -14px rgba(39,174,96,0.35);
+  --shadow-lime: 0 10px 32px -14px rgba(32,191,107,0.35);
 }
 
 html {
