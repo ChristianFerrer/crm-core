@@ -10,18 +10,18 @@
   --color-snow: #f4f5f2;
   --color-fog: #a2a8b2;
   --color-mist: #6c727c;
-  --color-lime: #c6f24e;
-  --color-lime-deep: #a9da2f;
-  --color-iris: #8b8bff;
-  --color-amber: #f5b945;
-  --color-mint: #34d399;
-  --color-mint-soft: #112a23;
-  --color-rose: #fb7185;
-  --color-rose-soft: #2a1419;
+  --color-lime: #2ecc71;
+  --color-lime-deep: #27ae60;
+  --color-iris: #9b59b6;
+  --color-amber: #e67e22;
+  --color-mint: #1abc9c;
+  --color-mint-soft: #0e2e29;
+  --color-rose: #e74c3c;
+  --color-rose-soft: #2e1613;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", ui-serif, Georgia, serif;
   --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.6);
-  --shadow-lime: 0 10px 40px -12px rgba(198,242,78,0.4);
+  --shadow-lime: 0 10px 40px -12px rgba(46,204,113,0.45);
 }
 
 /* Tema claro — sobrescribe los tokens de color cuando <html data-theme="light"> */
@@ -34,16 +34,16 @@
   --color-snow: #14161a;
   --color-fog: #565c68;
   --color-mist: #838a96;
-  --color-lime: #22c55e;
-  --color-lime-deep: #16a34a;
-  --color-iris: #6363f0;
-  --color-amber: #b8790a;
-  --color-mint: #0f9e6e;
-  --color-mint-soft: #e3f7ef;
-  --color-rose: #e11d48;
-  --color-rose-soft: #fde3e8;
+  --color-lime: #27ae60;
+  --color-lime-deep: #1e8449;
+  --color-iris: #8e44ad;
+  --color-amber: #d35400;
+  --color-mint: #16a085;
+  --color-mint-soft: #d7f5ef;
+  --color-rose: #c0392b;
+  --color-rose-soft: #fbe0dd;
   --shadow-soft: 0 1px 2px rgba(20,22,26,0.06), 0 12px 32px -16px rgba(20,22,26,0.12);
-  --shadow-lime: 0 10px 32px -14px rgba(34,197,94,0.35);
+  --shadow-lime: 0 10px 32px -14px rgba(39,174,96,0.35);
 }
 
 html {
