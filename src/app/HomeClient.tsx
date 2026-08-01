@@ -2213,18 +2213,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <span className="w-full flex-none h-[40%] bg-rose flex items-center justify-center text-[8px] font-bold text-white uppercase leading-none">
               {monthAbbrev}
             </span>
-            <span className="w-full flex-1 bg-surface2 flex items-center justify-center text-sm font-bold text-snow leading-none">
+            <span className="w-full flex-1 bg-white flex items-center justify-center text-sm font-bold text-ink leading-none">
               {dayNum}
             </span>
           </button>
-          {!isToday && (
-            <button
-              onClick={() => router.push('/')}
-              className="ml-1 text-[10px] font-semibold text-lime bg-lime/10 border border-lime/30 rounded-lg px-2 py-1 hover:bg-lime/20 transition-colors"
-            >
-              {t('home_hoy')}
-            </button>
-          )}
           <button
             onClick={() => { setDismissedAlerts(new Set()); setAlertsOpen(true) }}
             className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-colors ml-1 ${
