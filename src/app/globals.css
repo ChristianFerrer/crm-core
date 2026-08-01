@@ -34,8 +34,8 @@
   --color-snow: #14161a;
   --color-fog: #565c68;
   --color-mist: #838a96;
-  --color-lime: #6fa30f;
-  --color-lime-deep: #5c8a0c;
+  --color-lime: #22c55e;
+  --color-lime-deep: #16a34a;
   --color-iris: #6363f0;
   --color-amber: #b8790a;
   --color-mint: #0f9e6e;
@@ -43,7 +43,7 @@
   --color-rose: #e11d48;
   --color-rose-soft: #fde3e8;
   --shadow-soft: 0 1px 2px rgba(20,22,26,0.06), 0 12px 32px -16px rgba(20,22,26,0.12);
-  --shadow-lime: 0 10px 32px -14px rgba(111,163,15,0.35);
+  --shadow-lime: 0 10px 32px -14px rgba(34,197,94,0.35);
 }
 
 html {
