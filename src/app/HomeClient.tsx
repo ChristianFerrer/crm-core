@@ -2160,7 +2160,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <div className="relative shrink-0">
             <button
               onClick={() => setLangMenuOpen(o => !o)}
-              className="flex items-center justify-center w-10 h-10 rounded-xl border border-line bg-surface text-fog hover:text-snow hover:bg-surface2 transition-colors"
+              className="flex items-center justify-center w-10 h-10 rounded-xl border border-line bg-surface text-fog hover:text-snow hover:bg-surface2 transition-colors shrink-0"
             >
               <Languages size={16} />
             </button>
@@ -2188,7 +2188,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <button
             onClick={() => setCalendarOpen(true)}
             className={`w-10 h-10 rounded-xl overflow-hidden border flex flex-col shrink-0 transition-colors ${
-              isToday ? 'border-line hover:border-line2' : 'border-lime ring-1 ring-lime/40'
+              isToday ? 'border-line hover:border-line2' : 'border-lime'
             }`}
           >
             <span className={`w-full flex-none h-[40%] flex items-center justify-center text-[8px] font-bold text-white uppercase leading-none ${isToday ? 'bg-rose' : 'bg-lime-deep'}`}>
