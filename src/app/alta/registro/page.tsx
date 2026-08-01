@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
 import { Plus, Check, X } from 'lucide-react'
+import { DatePickerModal } from '@/components/DatePickerModal'
 
 type MembershipType = { id: string; name: string; sessions: number | null; price: number; validity_days: number }
 type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
@@ -188,11 +189,11 @@ export default function RegistroPage() {
                     <option value="M">Niño</option>
                     <option value="F">Niña</option>
                   </select>
-                  <input
-                    type="date"
+                  <DatePickerModal
                     value={c.birth_date}
-                    onChange={e => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, birth_date: e.target.value } : ch))}
-                    className={inputCls}
+                    onChange={v => setChildren(cs => cs.map((ch, idx) => idx === i ? { ...ch, birth_date: v } : ch))}
+                    placeholder="Fecha de nacimiento"
+                    className="py-2.5"
                   />
                 </div>
               </div>

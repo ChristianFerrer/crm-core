@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { ScrollDatePicker } from './ScrollDatePicker'
+import { MonthCalendarPicker } from './MonthCalendarPicker'
 import { Calendar, X } from 'lucide-react'
 import { useLanguage, type Lang } from '@/lib/i18n'
 
@@ -54,9 +54,9 @@ export function DatePickerModal({ value, onChange, placeholder, className, title
               </div>
             </div>
 
-            {/* Carousel */}
+            {/* Calendario */}
             <div className="flex-none px-5">
-              <ScrollDatePicker value={draft || value} onChange={setDraft} />
+              <MonthCalendarPicker value={draft || value} onChange={setDraft} />
             </div>
 
             {/* Confirm — always pinned at bottom */}

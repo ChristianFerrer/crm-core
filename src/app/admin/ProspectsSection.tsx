@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Plus, X, Phone, Mail, MapPin, Calendar, Trash2, Check } from 'lucide-react'
+import { DatePickerModal } from '@/components/DatePickerModal'
 
 type Stage = 'nuevo' | 'demo_agendada' | 'demo_realizada' | 'propuesta' | 'cliente' | 'descartado'
 
@@ -269,7 +270,7 @@ export function ProspectsSection() {
                 </div>
                 <div>
                   <label className={labelCls}>Fecha</label>
-                  <input type="date" className={inputCls} value={form.next_action_at} onChange={e => setForm(f => ({ ...f, next_action_at: e.target.value }))} />
+                  <DatePickerModal value={form.next_action_at} onChange={v => setForm(f => ({ ...f, next_action_at: v }))} title="Fecha" placeholder="Seleccionar fecha" className="py-2.5" />
                 </div>
               </div>
               <div>
