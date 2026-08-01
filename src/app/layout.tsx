@@ -4,6 +4,7 @@ import './globals.css'
 import { ConditionalShell } from '@/components/ConditionalShell'
 import { Toaster } from 'sonner'
 import { LanguageProvider } from '@/lib/i18n'
+import { ThemeProvider } from '@/lib/theme'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', axes: ['opsz'] })
@@ -24,10 +25,19 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${inter.variable} ${fraunces.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('wm_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-carbon text-snow">
-        <LanguageProvider>
-          <ConditionalShell>{children}</ConditionalShell>
-        </LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <ConditionalShell>{children}</ConditionalShell>
+          </LanguageProvider>
+        </ThemeProvider>
         <Toaster
           position="bottom-right"
           toastOptions={{

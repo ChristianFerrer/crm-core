@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag, LogOut, Languages } from 'lucide-react'
+import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag, LogOut, Languages, SunMoon, Sun, Moon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PanelNav } from '@/components/PanelNav'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useLanguage, LANGUAGES } from '@/lib/i18n'
+import { useTheme } from '@/lib/theme'
 
 type TenantProfile = {
   id: string
@@ -49,6 +50,7 @@ const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-3 py-2 tex
 export default function PerfilPage() {
   const router = useRouter()
   const { lang, isAuto, setLang, t } = useLanguage()
+  const { theme, setTheme } = useTheme()
   const [profile, setProfile] = useState<TenantProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -252,6 +254,31 @@ export default function PerfilPage() {
                   {l.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Apariencia */}
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <SunMoon size={12} /> Apariencia
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setTheme('dark')}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${
+                  theme === 'dark' ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface2 text-fog hover:text-snow'
+                }`}
+              >
+                <Moon size={12} /> Oscuro
+              </button>
+              <button
+                onClick={() => setTheme('light')}
+                className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${
+                  theme === 'light' ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface2 text-fog hover:text-snow'
+                }`}
+              >
+                <Sun size={12} /> Claro
+              </button>
             </div>
           </div>
 

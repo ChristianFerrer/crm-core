@@ -24,6 +24,28 @@
   --shadow-lime: 0 10px 40px -12px rgba(198,242,78,0.4);
 }
 
+/* Tema claro — sobrescribe los tokens de color cuando <html data-theme="light"> */
+:root[data-theme="light"] {
+  --color-carbon: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface2: #f2f3f5;
+  --color-line: #e3e5ea;
+  --color-line2: #cdd1d9;
+  --color-snow: #14161a;
+  --color-fog: #565c68;
+  --color-mist: #838a96;
+  --color-lime: #6fa30f;
+  --color-lime-deep: #5c8a0c;
+  --color-iris: #6363f0;
+  --color-amber: #b8790a;
+  --color-mint: #0f9e6e;
+  --color-mint-soft: #e3f7ef;
+  --color-rose: #e11d48;
+  --color-rose-soft: #fde3e8;
+  --shadow-soft: 0 1px 2px rgba(20,22,26,0.06), 0 12px 32px -16px rgba(20,22,26,0.12);
+  --shadow-lime: 0 10px 32px -14px rgba(111,163,15,0.35);
+}
+
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
