@@ -6,8 +6,8 @@ import {
 } from 'recharts'
 
 const TOOLTIP_STYLE = {
-  contentStyle: { background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, color: '#f0f4f8', fontSize: 12 },
-  labelStyle: { color: '#6b7280', fontSize: 11 },
+  contentStyle: { background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, color: 'var(--color-snow)', fontSize: 12 },
+  labelStyle: { color: 'var(--color-mist)', fontSize: 11 },
 }
 
 type GrowthPoint = { label: string; adultos: number | null; ninos: number | null }
@@ -40,13 +40,13 @@ export function MemberGrowthChart({
       <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
-            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
-            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip {...TOOLTIP_STYLE} cursor={{ stroke: '#1e2530' }}
+            <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip {...TOOLTIP_STYLE} cursor={{ stroke: 'var(--color-line)' }}
               formatter={(v: any, name: any) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
-            <Line type="monotone" dataKey="adultos" stroke="#c6f24e" strokeWidth={2} dot={false} name="adultos" />
-            <Line type="monotone" dataKey="ninos" stroke="#67e8f9" strokeWidth={2} dot={false} name="ninos" />
+            <Line type="monotone" dataKey="adultos" stroke="var(--color-lime)" strokeWidth={2} dot={false} name="adultos" />
+            <Line type="monotone" dataKey="ninos" stroke="var(--color-cyan-300)" strokeWidth={2} dot={false} name="ninos" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -89,16 +89,16 @@ export function VisitMiniChart({
       <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
-            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
-            <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'var(--color-surface2)' }}
               formatter={(v: any, key: any) => [v, key === 'adultos' ? 'Adultos' : 'Niños']} />
             {capacity != null && (
-              <ReferenceLine y={capacity} stroke="#f59e0b" strokeDasharray="4 3" strokeWidth={1.5} />
+              <ReferenceLine y={capacity} stroke="var(--color-amber)" strokeDasharray="4 3" strokeWidth={1.5} />
             )}
-            <Bar dataKey="adultos" stackId="a" fill="#c6f24e" />
-            <Bar dataKey="ninos" stackId="a" fill="#67e8f9" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="adultos" stackId="a" fill="var(--color-lime)" />
+            <Bar dataKey="ninos" stackId="a" fill="var(--color-cyan-300)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -150,9 +150,9 @@ export function BonoDistChart({
       <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 36, left: 0, bottom: 0 }}>
-            <XAxis type="number" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} width={64} />
-            <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            <XAxis type="number" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <YAxis type="category" dataKey="name" tick={{ fill: 'var(--color-mist)', fontSize: 11 }} axisLine={false} tickLine={false} width={64} />
+            <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'var(--color-surface2)' }}
               formatter={(v: any, key: any) =>
                 key === 'ok'
                   ? [v, data[0]?.name === 'Con bono' ? 'Bono activo' : 'Sin bono']
@@ -161,10 +161,10 @@ export function BonoDistChart({
             />
             <Bar dataKey="ok" stackId="a" fill="transparent">
               {data.map((_, i) => (
-                <Cell key={i} fill={i === 0 ? '#8b8bff' : '#f59e0b'} />
+                <Cell key={i} fill={i === 0 ? 'var(--color-iris)' : 'var(--color-amber)'} />
               ))}
             </Bar>
-            <Bar dataKey="bajo" stackId="a" radius={[0, 4, 4, 0]} fill="#f43f5e" />
+            <Bar dataKey="bajo" stackId="a" radius={[0, 4, 4, 0]} fill="var(--color-rose)" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -204,16 +204,16 @@ export function PeakHoursChart({ data }: { data: HourPoint[] }) {
       <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
-            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 9 }} axisLine={false} tickLine={false} interval={1} />
-            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
+            <XAxis dataKey="hour" tick={{ fill: 'var(--color-mist)', fontSize: 9 }} axisLine={false} tickLine={false} interval={1} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [v, 'Visitas']} />
-            <Line type="monotone" dataKey="visitas" stroke="#8b8bff" strokeWidth={2.5}
+            <Line type="monotone" dataKey="visitas" stroke="var(--color-iris)" strokeWidth={2.5}
               dot={(props: any) => {
                 const isPeak = peak.visitas > 0 && props.payload.visitas === peak.visitas
-                return <circle key={props.key ?? props.index} cx={props.cx} cy={props.cy} r={isPeak ? 4 : 0} fill="#8b8bff" stroke="#16181d" strokeWidth={1.5} />
+                return <circle key={props.key ?? props.index} cx={props.cx} cy={props.cy} r={isPeak ? 4 : 0} fill="var(--color-iris)" stroke="var(--color-surface)" strokeWidth={1.5} />
               }}
-              activeDot={{ r: 4, fill: '#8b8bff' }} />
+              activeDot={{ r: 4, fill: 'var(--color-iris)' }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -244,11 +244,11 @@ export function VisitsPerMonthChart({ data }: { data: MonthVisitPoint[] }) {
       <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
-            <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
-            <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [v, 'Visitas']} />
-            <Line type="monotone" dataKey="visitas" stroke="#c6f24e" strokeWidth={2.5} dot={{ r: 2.5, fill: '#c6f24e' }} activeDot={{ r: 4 }} />
+            <Line type="monotone" dataKey="visitas" stroke="var(--color-lime)" strokeWidth={2.5} dot={{ r: 2.5, fill: 'var(--color-lime)' }} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

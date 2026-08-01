@@ -626,8 +626,8 @@ function MetricsSection() {
     style: { fontSize: 11 },
     margin: { top: 5, right: 10, left: -20, bottom: 0 },
   }
-  const axisProps = { stroke: '#4b5563', tick: { fill: '#6b7280', fontSize: 11 } }
-  const gridProps = { stroke: '#1e2530', strokeDasharray: '3 3' }
+  const axisProps = { stroke: 'var(--color-line2)', tick: { fill: 'var(--color-mist)', fontSize: 11 } }
+  const gridProps = { stroke: 'var(--color-line)', strokeDasharray: '3 3' }
 
   return (
     <div className="space-y-6">
@@ -647,8 +647,8 @@ function MetricsSection() {
                 <CartesianGrid {...gridProps} />
                 <XAxis dataKey="month" {...axisProps} />
                 <YAxis {...axisProps} />
-                <Tooltip contentStyle={{ background: '#0f1419', border: '1px solid #1e2530', borderRadius: 12, fontSize: 12 }} />
-                <Bar dataKey="visitas" fill="#84cc16" radius={[4,4,0,0]} />
+                <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, fontSize: 12 }} />
+                <Bar dataKey="visitas" fill="var(--color-lime)" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -660,8 +660,8 @@ function MetricsSection() {
                 <CartesianGrid {...gridProps} />
                 <XAxis dataKey="month" {...axisProps} />
                 <YAxis {...axisProps} />
-                <Tooltip contentStyle={{ background: '#0f1419', border: '1px solid #1e2530', borderRadius: 12, fontSize: 12 }} />
-                <Line type="monotone" dataKey="miembros" stroke="#818cf8" strokeWidth={2} dot={false} />
+                <Tooltip contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, fontSize: 12 }} />
+                <Line type="monotone" dataKey="miembros" stroke="var(--color-iris)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

@@ -1707,7 +1707,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const sinBonoCount = activeVisits.filter(v => !v.membership_id).reduce((s, v) => s + persons(v), 0)
 
   const aforoPct = capacity ? (activeTotal / capacity) * 100 : 0
-  const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose-500'
+  const aforoTextColor = aforoPct < 70 ? 'text-lime' : aforoPct <= 90 ? 'text-amber' : 'text-rose'
 
   // Load products, services rates & open checks
   useEffect(() => {
@@ -2798,66 +2798,66 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </h3>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#38bdf8] shrink-0" /> {t('home_alcanzado')}
+                      <span className="w-2 h-2 rounded-full bg-iris shrink-0" /> {t('home_alcanzado')}
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#fb923c] shrink-0" /> {t('home_reservado')}
+                      <span className="w-2 h-2 rounded-full bg-amber shrink-0" /> {t('home_reservado')}
                     </span>
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={chartData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
-                    <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
+                    <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
                     <XAxis dataKey="hour" tick={({ x, y, payload }: any) => (
                       <text x={x} y={y + 10} textAnchor="middle"
                         fontSize={payload.value === currentHourLabel ? 13 : 10}
-                        fill={payload.value === currentHourLabel ? '#c6f24e' : '#6b7280'}
+                        fill={payload.value === currentHourLabel ? 'var(--color-lime)' : 'var(--color-mist)'}
                         fontWeight={payload.value === currentHourLabel ? 700 : 400}>
                         {payload.value}
                       </text>
                     )} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip
-                      cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                      cursor={{ fill: 'var(--color-surface2)' }}
                       content={({ active, label }: any) => {
                         if (!active) return null
                         const entry = chartData.find(d => d.hour === label)
                         if (!entry) return null
                         return (
                           <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, padding: '10px 14px', fontSize: 11 }}>
-                            <p style={{ color: '#9ca3af', marginBottom: 6 }}>{label}</p>
+                            <p style={{ color: 'var(--color-mist)', marginBottom: 6 }}>{label}</p>
                             {entry.alcanzado != null ? (
                               <>
-                                <p style={{ color: '#38bdf8', fontWeight: 600 }}>{t('home_alcanzado')}: {entry.alcanzado}</p>
-                                <p style={{ color: '#6b7280', marginTop: 4 }}>{entry.adultos} {t('home_adultos_lc')} · {entry.ninos} {t('home_ninos_lc')}</p>
+                                <p style={{ color: 'var(--color-iris)', fontWeight: 600 }}>{t('home_alcanzado')}: {entry.alcanzado}</p>
+                                <p style={{ color: 'var(--color-mist)', marginTop: 4 }}>{entry.adultos} {t('home_adultos_lc')} · {entry.ninos} {t('home_ninos_lc')}</p>
                               </>
                             ) : entry.reservado != null ? (
                               <>
-                                <p style={{ color: '#fb923c', fontWeight: 600 }}>{t('home_reservado')}: {entry.reservado}</p>
-                                {entry.planBirthday ? <p style={{ color: '#6b7280', marginTop: 4 }}>{t('home_cumpleanos')}: {entry.planBirthday}</p> : null}
-                                {entry.planCustodia ? <p style={{ color: '#6b7280', marginTop: 2 }}>{t('home_custodias')}: {entry.planCustodia}</p> : null}
-                                {entry.planOther    ? <p style={{ color: '#6b7280', marginTop: 2 }}>{t('home_otros')}: {entry.planOther}</p> : null}
+                                <p style={{ color: 'var(--color-amber)', fontWeight: 600 }}>{t('home_reservado')}: {entry.reservado}</p>
+                                {entry.planBirthday ? <p style={{ color: 'var(--color-mist)', marginTop: 4 }}>{t('home_cumpleanos')}: {entry.planBirthday}</p> : null}
+                                {entry.planCustodia ? <p style={{ color: 'var(--color-mist)', marginTop: 2 }}>{t('home_custodias')}: {entry.planCustodia}</p> : null}
+                                {entry.planOther    ? <p style={{ color: 'var(--color-mist)', marginTop: 2 }}>{t('home_otros')}: {entry.planOther}</p> : null}
                               </>
                             ) : (
-                              <p style={{ color: '#6b7280' }}>{t('home_sin_datos')}</p>
+                              <p style={{ color: 'var(--color-mist)' }}>{t('home_sin_datos')}</p>
                             )}
                           </div>
                         )
                       }}
                     />
-                    <Bar dataKey="alcanzado" stackId="a" fill="#38bdf8"
+                    <Bar dataKey="alcanzado" stackId="a" fill="var(--color-iris)"
                       shape={(p: any) => <StackedBar {...p} roundTop={!p.reservado} />}>
                       {chartData.map((_, i) => (
-                        <Cell key={i} fill={i + 7 === currentHour ? '#38bdf8' : 'rgba(56,189,248,0.6)'} />
+                        <Cell key={i} fill="var(--color-iris)" fillOpacity={i + 7 === currentHour ? 1 : 0.6} />
                       ))}
-                      <LabelList dataKey="_alcanzadoLabel" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
+                      <LabelList dataKey="_alcanzadoLabel" position="top" style={{ fill: 'var(--color-mist)', fontSize: 9, fontWeight: 600 }} />
                     </Bar>
-                    <Bar dataKey="reservado" stackId="a" fill="#fb923c"
+                    <Bar dataKey="reservado" stackId="a" fill="var(--color-amber)"
                       shape={(p: any) => <StackedBar {...p} roundTop />}>
                       {chartData.map((_, i) => (
-                        <Cell key={i} fill={i + 7 === currentHour ? '#fb923c' : 'rgba(251,146,60,0.6)'} />
+                        <Cell key={i} fill="var(--color-amber)" fillOpacity={i + 7 === currentHour ? 1 : 0.6} />
                       ))}
-                      <LabelList dataKey="_reservadoLabel" position="top" style={{ fill: '#9ca3af', fontSize: 9, fontWeight: 600 }} />
+                      <LabelList dataKey="_reservadoLabel" position="top" style={{ fill: 'var(--color-mist)', fontSize: 9, fontWeight: 600 }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -2871,26 +2871,26 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </h3>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#8b8bff] shrink-0" /> {t('home_con_bono')}
+                      <span className="w-2 h-2 rounded-full bg-iris shrink-0" /> {t('home_con_bono')}
                     </span>
                     <span className="flex items-center gap-1.5 text-[11px] text-fog">
-                      <span className="w-2 h-2 rounded-full bg-[#f59e0b] shrink-0" /> {t('home_sin_bono')}
+                      <span className="w-2 h-2 rounded-full bg-amber shrink-0" /> {t('home_sin_bono')}
                     </span>
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
-                    <CartesianGrid stroke="#1e2530" strokeDasharray="0" vertical={false} />
-                    <XAxis dataKey="hour" tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
+                    <XAxis dataKey="hour" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px' }}
-                      labelStyle={{ color: '#6b7280', fontSize: 11 }}
-                      itemStyle={{ color: '#f0f4f8', fontSize: 11 }}
-                      cursor={{ stroke: '#1e2530' }}
+                      labelStyle={{ color: 'var(--color-mist)', fontSize: 11 }}
+                      itemStyle={{ color: 'var(--color-snow)', fontSize: 11 }}
+                      cursor={{ stroke: 'var(--color-line)' }}
                     />
-                    <Line type="monotone" dataKey="conBono" name={t('home_con_bono')} stroke="#8b8bff" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="sinBono" name={t('home_sin_bono')} stroke="#f59e0b" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="conBono" name={t('home_con_bono')} stroke="var(--color-iris)" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="sinBono" name={t('home_sin_bono')} stroke="var(--color-amber)" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
