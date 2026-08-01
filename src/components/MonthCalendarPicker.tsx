@@ -2,19 +2,23 @@
 
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n'
 
 function todayStr() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+const LOCALE_MAP: Record<string, string> = { es: 'es-ES', en: 'en-GB', ca: 'ca-ES', de: 'de-DE' }
+
 export function MonthCalendarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { lang } = useLanguage()
   const [viewDate, setViewDate] = useState(value || todayStr())
 
   const d = new Date((viewDate || todayStr()) + 'T12:00:00')
   const year = d.getFullYear()
   const month = d.getMonth()
-  const monthLabel = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  const monthLabel = d.toLocaleDateString(LOCALE_MAP[lang], { month: 'long', year: 'numeric' })
   const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 

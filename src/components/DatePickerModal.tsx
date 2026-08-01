@@ -6,7 +6,7 @@ import { useLanguage, type Lang } from '@/lib/i18n'
 
 function fmt(d: string, lang: Lang) {
   if (!d) return null
-  const locale = lang === 'en' ? 'en-GB' : lang === 'ca' ? 'ca-ES' : 'es-ES'
+  const locale = lang === 'en' ? 'en-GB' : lang === 'ca' ? 'ca-ES' : lang === 'de' ? 'de-DE' : 'es-ES'
   return new Date(d + 'T12:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 

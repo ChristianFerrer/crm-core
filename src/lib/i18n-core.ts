@@ -8,11 +8,12 @@ import { dictFamilias } from './i18n-dicts/familias'
 import { dictLogin } from './i18n-dicts/login'
 import { dictShared } from './i18n-dicts/shared'
 
-export type Lang = 'es' | 'en' | 'ca'
+export type Lang = 'es' | 'en' | 'ca' | 'de'
 export const LANGUAGES: { code: Lang; label: string }[] = [
   { code: 'es', label: 'Español' },
   { code: 'en', label: 'English' },
   { code: 'ca', label: 'Català' },
+  { code: 'de', label: 'Deutsch' },
 ]
 
 export const dict = {
@@ -42,5 +43,6 @@ export function detectDeviceLang(): Lang {
   const raw = (navigator.language || 'es').toLowerCase()
   if (raw.startsWith('ca')) return 'ca'
   if (raw.startsWith('en')) return 'en'
+  if (raw.startsWith('de')) return 'de'
   return 'es'
 }

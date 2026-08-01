@@ -34,9 +34,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let stored: string | null = null
     try { stored = localStorage.getItem(STORAGE_KEY) } catch {}
-    const resolved = stored === 'en' || stored === 'ca' || stored === 'es' ? stored : detectDeviceLang()
+    const resolved = stored === 'en' || stored === 'ca' || stored === 'es' || stored === 'de' ? stored : detectDeviceLang()
     setLangState(resolved)
-    setIsAuto(!(stored === 'en' || stored === 'ca' || stored === 'es'))
+    setIsAuto(!(stored === 'en' || stored === 'ca' || stored === 'es' || stored === 'de'))
     syncCookie(resolved)
   }, [])
 

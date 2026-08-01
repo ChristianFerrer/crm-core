@@ -1508,7 +1508,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const isToday = selectedDate === todayStr
   const [langMenuOpen, setLangMenuOpen] = useState(false)
 
-  const localeMap: Record<string, string> = { es: 'es-ES', en: 'en-GB', ca: 'ca-ES' }
+  const localeMap: Record<string, string> = { es: 'es-ES', en: 'en-GB', ca: 'ca-ES', de: 'de-DE' }
   const selectedDateObj = new Date(selectedDate + 'T12:00:00')
   const dayNum = selectedDateObj.getDate()
   const monthAbbrev = selectedDateObj.toLocaleDateString(localeMap[lang], { month: 'short' }).replace(/\.$/, '')
