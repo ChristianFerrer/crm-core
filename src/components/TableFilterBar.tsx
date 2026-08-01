@@ -99,7 +99,7 @@ export function TableFilterBar({
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => setFilterOpen(false)} />
               <div
-                className="fixed z-[91] w-72 max-w-[85vw] rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4"
+                className="fixed z-[91] w-72 max-w-[85vw] max-h-[min(70vh,420px)] overflow-y-auto rounded-2xl border border-line bg-surface shadow-2xl p-4 space-y-4"
                 style={{ top: pos.top, right: pos.right }}
               >
                 {filters}
