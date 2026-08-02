@@ -52,10 +52,15 @@
    decorativos, que son <span>/<div>) para no alterar nada fuera de
    controles interactivos. */
 :root[data-theme="light"] button[class*="bg-lime/"],
+:root[data-theme="light"] a[class*="bg-lime/"],
+:root[data-theme="light"] button[class*="bg-lime/"] *,
+:root[data-theme="light"] a[class*="bg-lime/"] * {
+  color: #fff !important;
+}
+:root[data-theme="light"] button[class*="bg-lime/"],
 :root[data-theme="light"] a[class*="bg-lime/"] {
   background-color: var(--color-lime) !important;
   border-color: var(--color-lime) !important;
-  color: #fff !important;
 }
 :root[data-theme="light"] button[class*="bg-lime/"]:hover,
 :root[data-theme="light"] a[class*="bg-lime/"]:hover {
@@ -64,10 +69,15 @@
 }
 
 :root[data-theme="light"] button[class*="bg-iris/"],
+:root[data-theme="light"] a[class*="bg-iris/"],
+:root[data-theme="light"] button[class*="bg-iris/"] *,
+:root[data-theme="light"] a[class*="bg-iris/"] * {
+  color: #fff !important;
+}
+:root[data-theme="light"] button[class*="bg-iris/"],
 :root[data-theme="light"] a[class*="bg-iris/"] {
   background-color: var(--color-iris) !important;
   border-color: var(--color-iris) !important;
-  color: #fff !important;
 }
 :root[data-theme="light"] button[class*="bg-iris/"]:hover,
 :root[data-theme="light"] a[class*="bg-iris/"]:hover {
@@ -76,10 +86,15 @@
 }
 
 :root[data-theme="light"] button[class*="bg-amber/"],
+:root[data-theme="light"] a[class*="bg-amber/"],
+:root[data-theme="light"] button[class*="bg-amber/"] *,
+:root[data-theme="light"] a[class*="bg-amber/"] * {
+  color: #fff !important;
+}
+:root[data-theme="light"] button[class*="bg-amber/"],
 :root[data-theme="light"] a[class*="bg-amber/"] {
   background-color: var(--color-amber) !important;
   border-color: var(--color-amber) !important;
-  color: #fff !important;
 }
 :root[data-theme="light"] button[class*="bg-amber/"]:hover,
 :root[data-theme="light"] a[class*="bg-amber/"]:hover {
@@ -88,10 +103,15 @@
 }
 
 :root[data-theme="light"] button[class*="bg-mint/"],
+:root[data-theme="light"] a[class*="bg-mint/"],
+:root[data-theme="light"] button[class*="bg-mint/"] *,
+:root[data-theme="light"] a[class*="bg-mint/"] * {
+  color: #fff !important;
+}
+:root[data-theme="light"] button[class*="bg-mint/"],
 :root[data-theme="light"] a[class*="bg-mint/"] {
   background-color: var(--color-mint) !important;
   border-color: var(--color-mint) !important;
-  color: #fff !important;
 }
 :root[data-theme="light"] button[class*="bg-mint/"]:hover,
 :root[data-theme="light"] a[class*="bg-mint/"]:hover {
@@ -100,10 +120,15 @@
 }
 
 :root[data-theme="light"] button[class*="bg-rose/"],
+:root[data-theme="light"] a[class*="bg-rose/"],
+:root[data-theme="light"] button[class*="bg-rose/"] *,
+:root[data-theme="light"] a[class*="bg-rose/"] * {
+  color: #fff !important;
+}
+:root[data-theme="light"] button[class*="bg-rose/"],
 :root[data-theme="light"] a[class*="bg-rose/"] {
   background-color: var(--color-rose) !important;
   border-color: var(--color-rose) !important;
-  color: #fff !important;
 }
 :root[data-theme="light"] button[class*="bg-rose/"]:hover,
 :root[data-theme="light"] a[class*="bg-rose/"]:hover {
@@ -113,7 +138,9 @@
 
 /* Botones ya sólidos (bg-lime con texto oscuro, ej. CTA principal) → texto blanco */
 :root[data-theme="light"] button.bg-lime,
-:root[data-theme="light"] a.bg-lime {
+:root[data-theme="light"] a.bg-lime,
+:root[data-theme="light"] button.bg-lime *,
+:root[data-theme="light"] a.bg-lime * {
   color: #fff !important;
 }
 
