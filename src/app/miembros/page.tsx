@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { memberMatchesQuery, normalizeSearch } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
-import { UserPlus, User, Users, ChevronRight } from 'lucide-react'
+import { UserPlus, ChevronRight, User, Users } from 'lucide-react'
 import Link from 'next/link'
 import { TableFilterBar } from '@/components/TableFilterBar'
+import { MiembrosTabs } from '@/components/MiembrosTabs'
 import { useLanguage } from '@/lib/i18n'
 
 type MemberRow = {
@@ -64,7 +65,6 @@ function statusDot(m: MemberRow) {
 
 export default function MiembrosPage() {
   const { t } = useLanguage()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [view, setView] = useState<'miembros' | 'familias'>(searchParams.get('view') === 'familias' ? 'familias' : 'miembros')
   const [members, setMembers] = useState<MemberRow[]>([])
@@ -75,10 +75,10 @@ export default function MiembrosPage() {
   const [filter, setFilter] = useState<'todos' | 'sin_bono' | 'bono_bajo'>('todos')
   const [exporting, setExporting] = useState(false)
 
-  function changeView(v: 'miembros' | 'familias') {
-    setView(v); setSearch('')
-    router.replace(v === 'familias' ? '/miembros?view=familias' : '/miembros')
-  }
+  useEffect(() => {
+    setView(searchParams.get('view') === 'familias' ? 'familias' : 'miembros')
+    setSearch('')
+  }, [searchParams])
 
   useEffect(() => {
     Promise.all([
@@ -204,24 +204,7 @@ export default function MiembrosPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line shrink-0">
-        <button
-          onClick={() => changeView('miembros')}
-          className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            view === 'miembros' ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
-          }`}
-        >
-          <User size={14} /> {t('miembros_tab_miembros')}
-        </button>
-        <button
-          onClick={() => changeView('familias')}
-          className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            view === 'familias' ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
-          }`}
-        >
-          <Users size={14} /> {t('miembros_tab_familias')}
-        </button>
-      </div>
+      <MiembrosTabs active={view} />
 
       <div className="shrink-0">
         <TableFilterBar

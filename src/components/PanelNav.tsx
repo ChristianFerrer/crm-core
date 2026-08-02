@@ -3,15 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { BarChart2, Tag, ShoppingBag, Building2, CalendarDays, ChevronDown, Check } from 'lucide-react'
+import { BarChart2, Tag, ShoppingBag, ChevronDown, Check } from 'lucide-react'
 import { useLanguage, type TranslationKey } from '@/lib/i18n'
 
 const ITEMS = [
   { href: '/panel', labelKey: 'shared_nav_resumen' as TranslationKey, icon: BarChart2 },
   { href: '/panel/servicios', labelKey: 'shared_nav_servicios' as TranslationKey, icon: Tag },
   { href: '/panel/tienda', labelKey: 'shared_nav_tienda' as TranslationKey, icon: ShoppingBag },
-  { href: '/panel/perfil', labelKey: 'shared_nav_perfil' as TranslationKey, icon: Building2 },
-  { href: '/panel/visitas', labelKey: 'shared_nav_historico_visitas' as TranslationKey, icon: CalendarDays },
 ]
 
 export function PanelNav() {

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Users, BarChart2, CalendarDays } from 'lucide-react'
+import { Home, Users, BarChart2, CalendarDays, Settings } from 'lucide-react'
 import { useNavBadges } from '@/lib/useNavBadges'
 import { useLanguage } from '@/lib/i18n'
 
@@ -25,13 +25,18 @@ export function BottomNav() {
     { href: '/miembros',  label: t('nav_miembros'), icon: Users,      badge: 0 },
     { href: '/calendario',label: t('nav_agenda'),   icon: CalendarDays, badge: badges.agenda },
     { href: '/panel',     label: t('nav_panel'),    icon: BarChart2,  badge: badges.panel },
+    { href: '/panel/configuracion', label: t('shared_nav_configuracion'), icon: Settings, badge: 0 },
   ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden">
       <div className="flex">
         {navItems.map(({ href, label, icon: Icon, badge }) => {
-          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
+          const isActive = href === '/'
+            ? pathname === '/'
+            : href === '/panel'
+              ? pathname.startsWith('/panel') && !pathname.startsWith('/panel/configuracion')
+              : pathname.startsWith(href)
           return (
             <Link
               key={href}

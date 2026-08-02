@@ -148,6 +148,7 @@ export const dictPanelConfig = {
 
   // ── Perfil ──
   panelcfg_perfil_titulo: { es: 'Perfil', en: 'Profile', ca: 'Perfil', de: 'Profil' },
+  panelcfg_configuracion_titulo: { es: 'Configuración', en: 'Settings', ca: 'Configuració', de: 'Einstellungen' },
   panelcfg_perfil_subtitulo: { es: 'Datos del establecimiento y acceso', en: 'Business details and access', ca: 'Dades de l’establiment i accés', de: 'Angaben zum Betrieb und Zugang' },
   panelcfg_no_datos_establecimiento: { es: 'No se encontraron datos del establecimiento.', en: 'No business data was found.', ca: 'No s’han trobat dades de l’establiment.', de: 'Es wurden keine Betriebsdaten gefunden.' },
   panelcfg_establecimiento: { es: 'Establecimiento', en: 'Business', ca: 'Establiment', de: 'Betrieb' },

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check, ChevronLeft, ChevronRight, Settings } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
@@ -179,8 +179,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { href: '/miembros',   label: t('nav_miembros'), icon: Users,       badge: 0 },
             { href: '/calendario', label: t('nav_agenda'),   icon: CalendarDays,badge: badges.agenda },
             { href: '/panel',      label: t('nav_panel'),    icon: BarChart2,   badge: badges.panel },
+            { href: '/panel/configuracion', label: t('shared_nav_configuracion'), icon: Settings, badge: 0 },
           ].map(({ href, label, icon: Icon, badge }) => {
-            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
+            const isActive = href === '/'
+              ? pathname === '/'
+              : href === '/panel'
+                ? pathname.startsWith('/panel') && !pathname.startsWith('/panel/configuracion')
+                : pathname.startsWith(href)
             return (
               <Link
                 key={href}
