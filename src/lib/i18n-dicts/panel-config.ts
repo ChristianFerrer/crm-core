@@ -168,6 +168,14 @@ export const dictPanelConfig = {
   panelcfg_acceso: { es: 'Acceso', en: 'Access', ca: 'Accés', de: 'Zugang' },
   panelcfg_email_administrador_label: { es: 'Email de administrador', en: 'Admin email', ca: 'Correu de l’administrador', de: 'Administrator-E-Mail' },
   panelcfg_cerrar_sesion: { es: 'Cerrar sesión', en: 'Log out', ca: 'Tanca la sessió', de: 'Abmelden' },
+  panelcfg_datos_establecimiento: { es: 'Datos del establecimiento', en: 'Business details', ca: 'Dades de l’establiment', de: 'Betriebsdaten' },
+  panelcfg_datos_contacto: { es: 'Datos de contacto', en: 'Contact details', ca: 'Dades de contacte', de: 'Kontaktdaten' },
+  panelcfg_direccion_label: { es: 'Dirección', en: 'Address', ca: 'Adreça', de: 'Adresse' },
+  panelcfg_dias_operativos_label: { es: 'Días operativos', en: 'Operating days', ca: 'Dies operatius', de: 'Betriebstage' },
+  panelcfg_dias_operativos_placeholder: { es: 'Ej: Lunes a viernes', en: 'E.g: Monday to Friday', ca: 'Ex: Dilluns a divendres', de: 'z. B.: Montag bis Freitag' },
+  panelcfg_horario_operativo_label: { es: 'Horario operativo', en: 'Operating hours', ca: 'Horari operatiu', de: 'Öffnungszeiten' },
+  panelcfg_horario_operativo_placeholder: { es: 'Ej: 9:00 - 20:00', en: 'E.g: 9:00 AM - 8:00 PM', ca: 'Ex: 9:00 - 20:00', de: 'z. B.: 9:00 - 20:00' },
+  panelcfg_admin_tag: { es: 'Admin', en: 'Admin', ca: 'Admin', de: 'Admin' },
 
   // ── Tienda ──
   panelcfg_tienda_titulo: { es: 'Tienda', en: 'Shop', ca: 'Botiga', de: 'Shop' },

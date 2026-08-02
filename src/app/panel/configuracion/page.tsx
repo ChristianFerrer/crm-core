@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { BarChart2, Tag, Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, ShoppingBag, LogOut, Languages, SunMoon, Sun, Moon } from 'lucide-react'
+import { Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, LogOut, Languages, SunMoon, Sun, Moon, ShieldCheck, Clock, CalendarDays } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +19,15 @@ type TenantProfile = {
   city: string | null
   plan: string | null
   capacity: number | null
+  schedule_days: string | null
+  schedule_hours: string | null
+}
+
+type EstablishmentForm = {
+  city: string
+  capacity: string
+  schedule_days: string
+  schedule_hours: string
 }
 
 type ContactForm = {
@@ -27,10 +35,9 @@ type ContactForm = {
   owner_lastname: string
   owner_email: string
   phone: string
-  capacity: string
 }
 
-function InfoRow({ icon: Icon, label, value }: { icon: typeof Building2; label: string; value: string | null | undefined }) {
+function InfoRow({ icon: Icon, label, value, tag }: { icon: typeof Building2; label: string; value: string | null | undefined; tag?: string }) {
   return (
     <div className="flex items-start gap-3 py-3 border-b border-line last:border-0">
       <div className="w-8 h-8 rounded-xl bg-surface2 flex items-center justify-center shrink-0 mt-0.5">
@@ -38,7 +45,14 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Building2; label: 
       </div>
       <div>
         <p className="text-xs text-mist mb-0.5">{label}</p>
-        <p className="text-sm font-semibold text-snow">{value || '—'}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-snow">{value || '—'}</p>
+          {tag && (
+            <span className="flex items-center gap-1 text-[10px] font-bold text-iris bg-iris/10 border border-iris/30 rounded-full px-1.5 py-0.5">
+              <ShieldCheck size={9} /> {tag}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -46,15 +60,20 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Building2; label: 
 
 const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-export default function PerfilPage() {
+export default function ConfiguracionPage() {
   const router = useRouter()
   const { lang, isAuto, setLang, t } = useLanguage()
   const { theme, setTheme } = useTheme()
   const [profile, setProfile] = useState<TenantProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState<ContactForm>({ owner_firstname: '', owner_lastname: '', owner_email: '', phone: '', capacity: '' })
+
+  const [editingEst, setEditingEst] = useState(false)
+  const [savingEst, setSavingEst] = useState(false)
+  const [estForm, setEstForm] = useState<EstablishmentForm>({ city: '', capacity: '', schedule_days: '', schedule_hours: '' })
+
+  const [editingContact, setEditingContact] = useState(false)
+  const [savingContact, setSavingContact] = useState(false)
+  const [contactForm, setContactForm] = useState<ContactForm>({ owner_firstname: '', owner_lastname: '', owner_email: '', phone: '' })
 
   useEffect(() => {
     async function load() {
@@ -76,18 +95,23 @@ export default function PerfilPage() {
 
       const { data } = await supabase
         .from('tenants')
-        .select('id, name, admin_email, owner_firstname, owner_lastname, owner_email, phone, city, plan, capacity')
+        .select('id, name, admin_email, owner_firstname, owner_lastname, owner_email, phone, city, plan, capacity, schedule_days, schedule_hours')
         .eq('id', tenantId)
         .maybeSingle()
 
       if (data) {
         setProfile(data)
-        setForm({
+        setEstForm({
+          city: data.city ?? '',
+          capacity: data.capacity?.toString() ?? '',
+          schedule_days: data.schedule_days ?? '',
+          schedule_hours: data.schedule_hours ?? '',
+        })
+        setContactForm({
           owner_firstname: data.owner_firstname ?? '',
           owner_lastname: data.owner_lastname ?? '',
           owner_email: data.owner_email ?? '',
           phone: data.phone ?? '',
-          capacity: data.capacity?.toString() ?? '',
         })
       }
       setLoading(false)
@@ -95,41 +119,60 @@ export default function PerfilPage() {
     load()
   }, [])
 
-  async function handleSave() {
+  async function handleSaveEst() {
     if (!profile) return
-    setSaving(true)
-    const { error } = await supabase.from('tenants').update({
-      owner_firstname: form.owner_firstname || null,
-      owner_lastname: form.owner_lastname || null,
-      owner_email: form.owner_email || null,
-      phone: form.phone || null,
-      capacity: form.capacity ? parseInt(form.capacity) : null,
-    }).eq('id', profile.id)
-
-    if (!error) {
-      setProfile(p => p ? {
-        ...p,
-        owner_firstname: form.owner_firstname || null,
-        owner_lastname: form.owner_lastname || null,
-        owner_email: form.owner_email || null,
-        phone: form.phone || null,
-        capacity: form.capacity ? parseInt(form.capacity) : null,
-      } : p)
-      setEditing(false)
+    setSavingEst(true)
+    const payload = {
+      city: estForm.city || null,
+      capacity: estForm.capacity ? parseInt(estForm.capacity) : null,
+      schedule_days: estForm.schedule_days || null,
+      schedule_hours: estForm.schedule_hours || null,
     }
-    setSaving(false)
+    const { error } = await supabase.from('tenants').update(payload).eq('id', profile.id)
+    if (!error) {
+      setProfile(p => p ? { ...p, ...payload } : p)
+      setEditingEst(false)
+    }
+    setSavingEst(false)
   }
 
-  function handleCancel() {
+  function handleCancelEst() {
     if (!profile) return
-    setForm({
+    setEstForm({
+      city: profile.city ?? '',
+      capacity: profile.capacity?.toString() ?? '',
+      schedule_days: profile.schedule_days ?? '',
+      schedule_hours: profile.schedule_hours ?? '',
+    })
+    setEditingEst(false)
+  }
+
+  async function handleSaveContact() {
+    if (!profile) return
+    setSavingContact(true)
+    const payload = {
+      owner_firstname: contactForm.owner_firstname || null,
+      owner_lastname: contactForm.owner_lastname || null,
+      owner_email: contactForm.owner_email || null,
+      phone: contactForm.phone || null,
+    }
+    const { error } = await supabase.from('tenants').update(payload).eq('id', profile.id)
+    if (!error) {
+      setProfile(p => p ? { ...p, ...payload } : p)
+      setEditingContact(false)
+    }
+    setSavingContact(false)
+  }
+
+  function handleCancelContact() {
+    if (!profile) return
+    setContactForm({
       owner_firstname: profile.owner_firstname ?? '',
       owner_lastname: profile.owner_lastname ?? '',
       owner_email: profile.owner_email ?? '',
       phone: profile.phone ?? '',
-      capacity: profile.capacity?.toString() ?? '',
     })
-    setEditing(false)
+    setEditingContact(false)
   }
 
   async function handleLogout() {
@@ -138,6 +181,8 @@ export default function PerfilPage() {
     await supabase.auth.signOut()
     router.push('/login')
   }
+
+  const isAdminContact = !!profile?.admin_email && !!profile?.owner_email && profile.admin_email === profile.owner_email
 
   return (
     <div className="space-y-6">
@@ -153,21 +198,13 @@ export default function PerfilPage() {
       ) : (
         <div className="space-y-4">
 
-          {/* Establecimiento — read only */}
-          <div className="rounded-2xl border border-line bg-surface p-5">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1">{t('panelcfg_establecimiento')}</p>
-            <InfoRow icon={Building2} label={t('panelcfg_nombre_label')} value={profile.name} />
-            <InfoRow icon={Star} label={t('panelcfg_plan_label')} value={profile.plan} />
-            <InfoRow icon={MapPin} label={t('panelcfg_ciudad_label')} value={profile.city} />
-          </div>
-
-          {/* Persona de contacto + Capacidad — editable */}
+          {/* Datos del establecimiento */}
           <div className="rounded-2xl border border-line bg-surface p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_contacto_capacidad')}</p>
-              {!editing ? (
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_datos_establecimiento')}</p>
+              {!editingEst ? (
                 <button
-                  onClick={() => setEditing(true)}
+                  onClick={() => setEditingEst(true)}
                   className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
                 >
                   <Pencil size={11} /> {t('panelcfg_editar')}
@@ -175,53 +212,110 @@ export default function PerfilPage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={handleCancel}
+                    onClick={handleCancelEst}
                     className="flex items-center gap-1 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs font-semibold text-fog hover:text-snow transition-colors"
                   >
                     <X size={11} /> {t('panelcfg_cancelar')}
                   </button>
                   <button
-                    onClick={handleSave}
-                    disabled={saving}
+                    onClick={handleSaveEst}
+                    disabled={savingEst}
                     className="flex items-center gap-1 rounded-lg border border-lime bg-lime/10 px-3 py-1.5 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-60"
                   >
-                    <Check size={11} /> {saving ? t('panelcfg_guardando') : t('panelcfg_guardar')}
+                    <Check size={11} /> {savingEst ? t('panelcfg_guardando') : t('panelcfg_guardar')}
                   </button>
                 </div>
               )}
             </div>
 
-            {editing ? (
+            <InfoRow icon={Building2} label={t('panelcfg_nombre_label')} value={profile.name} />
+            <InfoRow icon={Star} label={t('panelcfg_plan_label')} value={profile.plan} />
+
+            {editingEst ? (
+              <div className="space-y-3 pt-3">
+                <div>
+                  <label className="block text-xs text-fog mb-1">{t('panelcfg_direccion_label')}</label>
+                  <input value={estForm.city} onChange={e => setEstForm(f => ({ ...f, city: e.target.value }))} placeholder={t('panelcfg_direccion_label')} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs text-fog mb-1">{t('panelcfg_aforo_maximo_label')}</label>
+                  <input type="number" min="1" value={estForm.capacity} onChange={e => setEstForm(f => ({ ...f, capacity: e.target.value }))} placeholder={t('panelcfg_placeholder_ej30')} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs text-fog mb-1">{t('panelcfg_dias_operativos_label')}</label>
+                  <input value={estForm.schedule_days} onChange={e => setEstForm(f => ({ ...f, schedule_days: e.target.value }))} placeholder={t('panelcfg_dias_operativos_placeholder')} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs text-fog mb-1">{t('panelcfg_horario_operativo_label')}</label>
+                  <input value={estForm.schedule_hours} onChange={e => setEstForm(f => ({ ...f, schedule_hours: e.target.value }))} placeholder={t('panelcfg_horario_operativo_placeholder')} className={inputCls} />
+                </div>
+              </div>
+            ) : (
+              <>
+                <InfoRow icon={MapPin} label={t('panelcfg_direccion_label')} value={profile.city} />
+                <InfoRow icon={Users} label={t('panelcfg_aforo_maximo_label')} value={profile.capacity?.toString() ?? null} />
+                <InfoRow icon={CalendarDays} label={t('panelcfg_dias_operativos_label')} value={profile.schedule_days} />
+                <InfoRow icon={Clock} label={t('panelcfg_horario_operativo_label')} value={profile.schedule_hours} />
+              </>
+            )}
+          </div>
+
+          {/* Datos de contacto */}
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_datos_contacto')}</p>
+              {!editingContact ? (
+                <button
+                  onClick={() => setEditingContact(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
+                >
+                  <Pencil size={11} /> {t('panelcfg_editar')}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCancelContact}
+                    className="flex items-center gap-1 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs font-semibold text-fog hover:text-snow transition-colors"
+                  >
+                    <X size={11} /> {t('panelcfg_cancelar')}
+                  </button>
+                  <button
+                    onClick={handleSaveContact}
+                    disabled={savingContact}
+                    className="flex items-center gap-1 rounded-lg border border-lime bg-lime/10 px-3 py-1.5 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-60"
+                  >
+                    <Check size={11} /> {savingContact ? t('panelcfg_guardando') : t('panelcfg_guardar')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {editingContact ? (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-fog mb-1">{t('panelcfg_nombre_label')}</label>
-                    <input value={form.owner_firstname} onChange={e => setForm(f => ({ ...f, owner_firstname: e.target.value }))} placeholder={t('panelcfg_nombre_label')} className={inputCls} />
+                    <input value={contactForm.owner_firstname} onChange={e => setContactForm(f => ({ ...f, owner_firstname: e.target.value }))} placeholder={t('panelcfg_nombre_label')} className={inputCls} />
                   </div>
                   <div>
                     <label className="block text-xs text-fog mb-1">{t('panelcfg_apellido_label')}</label>
-                    <input value={form.owner_lastname} onChange={e => setForm(f => ({ ...f, owner_lastname: e.target.value }))} placeholder={t('panelcfg_placeholder_apellido')} className={inputCls} />
+                    <input value={contactForm.owner_lastname} onChange={e => setContactForm(f => ({ ...f, owner_lastname: e.target.value }))} placeholder={t('panelcfg_placeholder_apellido')} className={inputCls} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs text-fog mb-1">{t('panelcfg_email_contacto_label')}</label>
-                  <input type="email" value={form.owner_email} onChange={e => setForm(f => ({ ...f, owner_email: e.target.value }))} placeholder={t('panelcfg_placeholder_email_contacto')} className={inputCls} />
+                  <input type="email" value={contactForm.owner_email} onChange={e => setContactForm(f => ({ ...f, owner_email: e.target.value }))} placeholder={t('panelcfg_placeholder_email_contacto')} className={inputCls} />
                 </div>
                 <div>
                   <label className="block text-xs text-fog mb-1">{t('panelcfg_telefono_label')}</label>
-                  <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+34 600 000 000" className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-xs text-fog mb-1">{t('panelcfg_capacidad_local_label')}</label>
-                  <input type="number" min="1" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder={t('panelcfg_placeholder_ej30')} className={inputCls} />
+                  <input value={contactForm.phone} onChange={e => setContactForm(f => ({ ...f, phone: e.target.value }))} placeholder="+34 600 000 000" className={inputCls} />
                 </div>
               </div>
             ) : (
               <>
                 <InfoRow icon={User} label={t('panelcfg_nombre_label')} value={[profile.owner_firstname, profile.owner_lastname].filter(Boolean).join(' ') || null} />
-                <InfoRow icon={Mail} label={t('panelcfg_email_contacto_label')} value={profile.owner_email} />
+                <InfoRow icon={Mail} label={t('panelcfg_email_contacto_label')} value={profile.owner_email} tag={isAdminContact ? t('panelcfg_admin_tag') : undefined} />
                 <InfoRow icon={Phone} label={t('panelcfg_telefono_label')} value={profile.phone} />
-                <InfoRow icon={Users} label={t('panelcfg_aforo_maximo_label')} value={profile.capacity?.toString() ?? null} />
               </>
             )}
           </div>
@@ -231,27 +325,31 @@ export default function PerfilPage() {
             <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <Languages size={12} /> {t('idioma')}
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setLang('auto')}
-                className={`col-span-2 rounded-xl border px-3 py-2.5 text-xs font-semibold text-left transition-colors ${
-                  isAuto ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface2 text-fog hover:text-snow'
-                }`}
-              >
-                {t('idioma_auto')}
-              </button>
+
+            {/* Idioma automático — switch */}
+            <button
+              onClick={() => setLang(isAuto ? lang : 'auto')}
+              className="w-full flex items-center justify-between rounded-xl border border-line bg-surface2 px-3.5 py-3 mb-3"
+            >
+              <span className="text-sm font-medium text-snow text-left">{t('idioma_auto')}</span>
+              <span className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${isAuto ? 'bg-lime' : 'bg-line'}`}>
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${isAuto ? 'translate-x-4' : ''}`} />
+              </span>
+            </button>
+
+            {/* Selección manual — dropdown, deshabilitado si automático está activo */}
+            <select
+              value={lang}
+              disabled={isAuto}
+              onChange={e => setLang(e.target.value as typeof lang)}
+              className={`w-full bg-surface2 border border-line rounded-xl px-3.5 py-3 text-sm outline-none transition-colors ${
+                isAuto ? 'text-mist cursor-not-allowed opacity-60' : 'text-snow focus:border-line2'
+              }`}
+            >
               {LANGUAGES.map(l => (
-                <button
-                  key={l.code}
-                  onClick={() => setLang(l.code)}
-                  className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${
-                    !isAuto && lang === l.code ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface2 text-fog hover:text-snow'
-                  }`}
-                >
-                  {l.label}
-                </button>
+                <option key={l.code} value={l.code}>{l.label}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* Apariencia */}
@@ -279,16 +377,10 @@ export default function PerfilPage() {
             </div>
           </div>
 
-          {/* Acceso — read only */}
-          <div className="rounded-2xl border border-line bg-surface p-5">
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1">{t('panelcfg_acceso')}</p>
-            <InfoRow icon={Mail} label={t('panelcfg_email_administrador_label')} value={profile.admin_email} />
-          </div>
-
           {/* Cerrar sesión */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-semibold text-fog hover:text-rose hover:border-rose/40 transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-rose bg-rose/10 px-4 py-3 text-sm font-semibold text-rose hover:bg-rose/20 transition-colors"
           >
             <LogOut size={15} /> {t('panelcfg_cerrar_sesion')}
           </button>
