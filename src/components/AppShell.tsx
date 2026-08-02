@@ -153,9 +153,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="lg:flex lg:min-h-screen">
+    <div className="lg:flex lg:h-screen lg:overflow-hidden">
       {/* Desktop sidebar */}
-      <aside className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-line bg-surface sticky top-0 h-screen transition-[width] duration-200 ${collapsed ? 'lg:w-16' : 'lg:w-56'}`}>
+      <aside className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-line bg-surface h-screen transition-[width] duration-200 ${collapsed ? 'lg:w-16' : 'lg:w-56'}`}>
 
         {/* Brand */}
         <div className={`py-5 border-b border-line ${collapsed ? 'px-2' : 'px-5'}`}>
@@ -238,7 +238,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 lg:h-screen lg:overflow-y-auto">
         {children}
       </div>
     </div>

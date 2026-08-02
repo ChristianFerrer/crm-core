@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  LogIn, Users, CalendarClock, Cake, ChevronDown, ChevronUp,
+  LogIn, Users, CalendarClock, Cake, ChevronDown,
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
   Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2, CalendarPlus,
@@ -1530,7 +1530,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   // Si se pasó a cobro desde la ventana de salida, volver a mostrarla tras cobrar
   const [returnToCheckoutAfterPay, setReturnToCheckoutAfterPay] = useState<string | null>(null)
   const [executingBooking, setExecutingBooking] = useState<string | null>(null)
-  const [chartsOpen, setChartsOpen] = useState(true)
   const [tenantName, setTenantName] = useState<string | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [bookingServices, setBookingServices] = useState<BookingService[]>([])
@@ -2706,25 +2705,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         )}
       </div>
 
-      {/* ZONA 4 — Métricas (colapsable) */}
-      <div className="rounded-2xl border border-line bg-surface overflow-hidden">
-        <button
-          onClick={() => setChartsOpen(o => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface2 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <BarChart2 size={13} className="text-fog" />
-            <span className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_metricas_del_dia')}</span>
-            <span className="text-[11px] text-mist">{monthCount} {t('home_visitas_este_mes')}</span>
-          </div>
-          {chartsOpen ? <ChevronUp size={14} className="text-fog" /> : <ChevronDown size={14} className="text-fog" />}
-        </button>
+      {/* ZONA 4 — Métricas del día */}
+      <div className="flex items-center gap-2 px-1">
+        <BarChart2 size={13} className="text-fog" />
+        <span className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_metricas_del_dia')}</span>
+        <span className="text-[11px] text-mist">{monthCount} {t('home_visitas_este_mes')}</span>
+      </div>
 
-        {chartsOpen && (
-          <div className="border-t border-line">
-            <div className="grid gap-0 grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-line">
-              {/* Aforo por hora */}
-              <div className="p-4 lg:p-5">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        {/* Aforo por hora */}
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
                     <BarChart2 size={13} /> {t('home_aforo_por_hora')}
@@ -2794,10 +2784,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+        </div>
 
-              {/* Afluencia bono/sin bono */}
-              <div className="p-4 lg:p-5">
+        {/* Afluencia bono/sin bono */}
+        <div className="rounded-2xl border border-line bg-surface p-4 lg:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
                     <Activity size={13} /> {t('home_afluencia_por_hora')}
@@ -2826,10 +2816,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <Line type="monotone" dataKey="sinBono" name={t('home_sin_bono')} stroke="var(--color-amber)" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Modal de alertas */}
