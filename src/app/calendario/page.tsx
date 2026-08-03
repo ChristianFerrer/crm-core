@@ -254,15 +254,7 @@ export default function CalendarioPage() {
         <div className="bg-surface border border-line rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-line">
             <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronLeft size={18} /></button>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-snow">{MONTH_NAMES[month]} {year}</span>
-              <button
-                onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelectedDate(toDateStr(today.getFullYear(), today.getMonth(), today.getDate())) }}
-                className="text-[11px] font-semibold text-fog hover:text-lime border border-line rounded-lg px-2 py-1 transition-colors"
-              >
-                {t('calendario_hoy')}
-              </button>
-            </div>
+            <span className="text-sm font-semibold text-snow">{MONTH_NAMES[month]} {year}</span>
             <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronRight size={18} /></button>
           </div>
           <div className="grid grid-cols-7 border-b border-line">
@@ -278,7 +270,7 @@ export default function CalendarioPage() {
               const isLastRow = idx >= cells.length - 7
               return (
                 <button key={dateStr} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                  className={`min-h-[64px] p-1.5 border-r border-line/50 text-left transition-colors ${!isLastRow ? 'border-b' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'ring-2 ring-inset ring-rose relative z-10' : 'hover:bg-surface2'}`}>
+                  className={`min-h-[64px] p-1.5 border-r border-line/50 text-left transition-colors ${!isLastRow ? 'border-b' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'ring-[3px] ring-inset ring-rose relative z-10' : 'hover:bg-surface2'}`}>
                   <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-lime text-ink' : isSelected ? 'text-rose' : 'text-fog'}`}>{day}</span>
                   <div className="flex flex-wrap gap-0.5">
                     {dayBookings.filter(b => b.status !== 'cancelled').slice(0, 3).map(b => <span key={b.id} className={`w-2 h-2 rounded-full ${bookingColor(b.type)}`} />)}

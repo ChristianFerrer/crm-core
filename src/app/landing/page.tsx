@@ -88,7 +88,7 @@ function MockMember() {
           { name: 'Pau Mas', age: '7 años', date: '10 mar. 2019', sex: 'M' },
         ].map(c => (
           <div key={c.name} className="flex items-center gap-2">
-            <div className={`w-4 h-4 rounded-full flex items-center justify-center font-bold shrink-0 ${c.sex === 'F' ? 'bg-iris/20 text-iris' : 'bg-lime/20 text-lime'}`} style={{ fontSize: 9 }}>
+            <div className={`w-4 h-4 rounded-full flex items-center justify-center font-bold shrink-0 text-white ${c.sex === 'F' ? 'bg-iris' : 'bg-lime'}`} style={{ fontSize: 9 }}>
               {c.sex === 'F' ? '♀' : '♂'}
             </div>
             <span className="text-snow">{c.name}</span>
@@ -108,15 +108,15 @@ function MockAgenda() {
         <p className="font-semibold text-snow">Lunes 22 de junio</p>
         <div className="flex gap-1">
           {['L','M','X','J','V','S','D'].map((d, i) => (
-            <span key={d} className={`w-5 h-5 rounded-md flex items-center justify-center font-semibold ${i === 0 ? 'bg-lime text-ink' : 'text-fog'}`} style={{ fontSize: 9 }}>{d}</span>
+            <span key={d} className={`w-5 h-5 rounded-md flex items-center justify-center font-semibold ${i === 0 ? 'bg-lime text-white' : 'text-fog'}`} style={{ fontSize: 9 }}>{d}</span>
           ))}
         </div>
       </div>
       {/* events */}
       {[
-        { time: '10:30', title: 'Cumpleaños Aina', type: 'birthday', guests: 12, color: 'border-iris/30 bg-iris/5', dot: 'bg-iris', badge: 'Confirmado', badgeColor: 'bg-lime/20 text-lime' },
-        { time: '16:00', title: 'Custodia · Marc Torres', type: 'custodia', guests: 1, color: 'border-mint/30 bg-mint/5', dot: 'bg-mint', badge: 'Pendiente', badgeColor: 'bg-amber/20 text-amber' },
-        { time: '18:30', title: 'Cumpleaños Leo', type: 'birthday', guests: 8, color: 'border-iris/30 bg-iris/5', dot: 'bg-iris', badge: 'Pendiente', badgeColor: 'bg-amber/20 text-amber' },
+        { time: '10:30', title: 'Cumpleaños Aina', type: 'birthday', guests: 12, color: 'border-iris/30 bg-iris/5', dot: 'bg-iris', badge: 'Confirmado', badgeColor: 'bg-lime text-white' },
+        { time: '16:00', title: 'Custodia · Marc Torres', type: 'custodia', guests: 1, color: 'border-mint/30 bg-mint/5', dot: 'bg-mint', badge: 'Pendiente', badgeColor: 'bg-amber text-white' },
+        { time: '18:30', title: 'Cumpleaños Leo', type: 'birthday', guests: 8, color: 'border-iris/30 bg-iris/5', dot: 'bg-iris', badge: 'Pendiente', badgeColor: 'bg-amber text-white' },
       ].map(e => (
         <div key={e.title} className={`rounded-lg border ${e.color} px-2.5 py-2 flex items-center gap-2`}>
           <span className={`w-1.5 h-1.5 rounded-full ${e.dot} shrink-0`} />
@@ -178,9 +178,9 @@ function MockAlertas() {
     <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
       {/* alert rows */}
       {[
-        { name: 'Marc Torres', msg: 'Le queda 1 sesión de bono', color: 'border-amber/30 bg-amber/5', icon: AlertTriangle, iconColor: 'text-amber', status: 'sin_contactar', statusColor: 'bg-rose/20 text-rose' },
-        { name: 'Sara Vidal', msg: 'Bono vence mañana', color: 'border-amber/30 bg-amber/5', icon: Clock, iconColor: 'text-amber', status: 'contactado', statusColor: 'bg-amber/20 text-amber' },
-        { name: 'Pau Llop', msg: 'Sin bono · visita de pago', color: 'border-rose/30 bg-rose/5', icon: CreditCard, iconColor: 'text-rose', status: 'reservado', statusColor: 'bg-lime/20 text-lime' },
+        { name: 'Marc Torres', msg: 'Le queda 1 sesión de bono', color: 'border-amber/30 bg-amber/5', icon: AlertTriangle, iconColor: 'text-amber', status: 'sin_contactar', statusColor: 'bg-rose text-white' },
+        { name: 'Sara Vidal', msg: 'Bono vence mañana', color: 'border-amber/30 bg-amber/5', icon: Clock, iconColor: 'text-amber', status: 'contactado', statusColor: 'bg-amber text-white' },
+        { name: 'Pau Llop', msg: 'Sin bono · visita de pago', color: 'border-rose/30 bg-rose/5', icon: CreditCard, iconColor: 'text-rose', status: 'reservado', statusColor: 'bg-lime text-white' },
       ].map(a => (
         <div key={a.name} className={`rounded-lg border ${a.color} px-2.5 py-2`}>
           <div className="flex items-center gap-2">
@@ -206,9 +206,9 @@ function MockOportunidades() {
     <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
       <p className="font-semibold text-fog uppercase tracking-wide" style={{ fontSize: 9 }}>Cumpleaños este mes · 5 niños</p>
       {[
-        { child: 'Aina Mas', age: 4, date: '22 jun.', client: 'Laura Mas', status: 'reservado', statusColor: 'bg-lime/20 text-lime' },
-        { child: 'Leo Puig', age: 6, date: '28 jun.', client: 'Noa Puig', status: 'contactado', statusColor: 'bg-amber/20 text-amber' },
-        { child: 'Martina Roca', age: 3, date: '3 jul.', client: 'Pau Roca', status: 'sin contactar', statusColor: 'bg-rose/20 text-rose' },
+        { child: 'Aina Mas', age: 4, date: '22 jun.', client: 'Laura Mas', status: 'reservado', statusColor: 'bg-lime text-white' },
+        { child: 'Leo Puig', age: 6, date: '28 jun.', client: 'Noa Puig', status: 'contactado', statusColor: 'bg-amber text-white' },
+        { child: 'Martina Roca', age: 3, date: '3 jul.', client: 'Pau Roca', status: 'sin contactar', statusColor: 'bg-rose text-white' },
       ].map(b => (
         <div key={b.child} className="flex items-center gap-2 rounded-lg border border-line bg-surface px-2.5 py-2">
           <div className="w-5 h-5 rounded-full bg-iris/20 flex items-center justify-center shrink-0">
@@ -333,7 +333,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 pt-24 pb-16 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-lime/30 bg-lime/10 px-4 py-1.5 text-xs font-semibold text-lime mb-8">
+        <div className="inline-flex items-center gap-2 rounded-full bg-lime px-4 py-1.5 text-xs font-semibold text-white mb-8">
           <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
           CRM diseñado para ludotecas
         </div>

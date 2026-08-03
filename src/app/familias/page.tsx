@@ -96,11 +96,11 @@ export default function FamiliasPage() {
                     const s = m.memberships?.[0]?.sessions_remaining
                     const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
                     return (
-                      <span key={m.id} className={`text-xs px-2 py-1 rounded-lg border flex items-center gap-1 ${
-                        s === 0 ? 'border-rose/30 bg-rose/10 text-rose' :
-                        isUnlimited ? 'border-iris/30 bg-iris/10 text-iris' :
-                        s != null && s <= 2 ? 'border-amber/30 bg-amber/10 text-amber' :
-                        'border-line bg-surface2 text-fog'
+                      <span key={m.id} className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
+                        s === 0 ? 'bg-rose text-white' :
+                        isUnlimited ? 'bg-iris text-white' :
+                        s != null && s <= 2 ? 'bg-amber text-white' :
+                        'border border-line bg-surface2 text-fog'
                       }`}>
                         {m.name}{m.birth_date ? ` · ${getAge(m.birth_date)}a` : ''}
                         {isUnlimited ? ' ∞' : s != null ? ` · ${s}` : ''}

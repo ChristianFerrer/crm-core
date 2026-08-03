@@ -2858,7 +2858,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-iris/10 text-iris border border-iris/30">{t('home_cumpleanos')}</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-iris text-white">{t('home_cumpleanos')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
@@ -2884,7 +2884,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-cyan-300/10 text-cyan-300 border border-cyan-300/30">{t('home_custodia')}</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-cyan-300 text-white">{t('home_custodia')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>

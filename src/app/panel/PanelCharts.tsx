@@ -29,7 +29,7 @@ export function MemberGrowthChart({
     <div className="rounded-2xl border border-line bg-surface p-5 flex flex-col h-full">
       <div className="flex items-start justify-between mb-1">
         <p className="text-sm font-semibold text-snow">Miembros · este año</p>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${delta > 0 ? 'bg-lime/15 text-lime' : delta < 0 ? 'bg-rose/15 text-rose' : 'bg-fog/15 text-fog'}`}>
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full text-white ${delta > 0 ? 'bg-lime' : delta < 0 ? 'bg-rose' : 'bg-fog'}`}>
           {delta > 0 ? `+${delta}` : delta === 0 ? '±0' : delta} este año
         </span>
       </div>

@@ -154,8 +154,8 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
               const age = c.birth_date ? calcAge(c.birth_date) : null
               return (
                 <div key={i} className="flex items-center gap-3">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    c.sex === 'F' ? 'bg-iris/20 text-iris' : 'bg-lime/20 text-lime'
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white ${
+                    c.sex === 'F' ? 'bg-iris' : 'bg-lime'
                   }`}>
                     {c.sex === 'F' ? '♀' : c.sex === 'M' ? '♂' : '?'}
                   </div>

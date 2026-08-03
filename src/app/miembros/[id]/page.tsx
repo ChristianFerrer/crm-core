@@ -213,7 +213,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                     const age = child.birth_date ? calcChildAge(child.birth_date) : null
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${child.sex === 'F' ? 'bg-iris/20 text-iris' : 'bg-lime/20 text-lime'}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 text-white ${child.sex === 'F' ? 'bg-iris' : 'bg-lime'}`}>
                           {child.sex === 'F' ? '♀' : child.sex === 'M' ? '♂' : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
