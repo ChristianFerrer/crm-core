@@ -141,6 +141,7 @@ export default function CalendarioPage() {
   const headerRef = useRef<HTMLDivElement>(null)
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const suppressSpy = useRef(false)
+  const didInitialScroll = useRef(false)
   const [showJumpToday, setShowJumpToday] = useState(false)
   // Add-member popup
   const [showAddMember, setShowAddMember] = useState(false)
@@ -310,6 +311,19 @@ export default function CalendarioPage() {
     .filter(d => (bookingsByDate[d] ?? []).length > 0)
     .sort()
 
+  // La agenda abarca 3 meses, así que al entrar arrancaría en el mes anterior.
+  // Tras la primera carga se posiciona en hoy (o en el primer día con reservas
+  // a partir de hoy), sin animación para que no se vea el salto.
+  useEffect(() => {
+    if (didInitialScroll.current || bookings.length === 0) return
+    const target = agendaDays.find(d => d >= todayStr) ?? agendaDays[agendaDays.length - 1]
+    if (!target) return
+    didInitialScroll.current = true
+    setSelectedDate(target)
+    requestAnimationFrame(() => scrollToDay(target, 'auto'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookings])
+
   function relativeLabel(dateStr: string) {
     if (dateStr === todayStr) return t('calendario_hoy')
     if (dateStr === addDaysStr(todayStr, 1)) return t('calendario_manana')
@@ -325,14 +339,14 @@ export default function CalendarioPage() {
 
   // Al pulsar un día de la tira, la agenda se desplaza a ese día
   // Desplaza dejando hueco para la cabecera fija, que si no taparía el día
-  function scrollToDay(dateStr: string) {
+  function scrollToDay(dateStr: string, behavior: ScrollBehavior = 'smooth') {
     const el = dayRefs.current[dateStr]
     if (!el) return false
     const offset = (headerRef.current?.offsetHeight ?? 0) + 8
     const top = el.getBoundingClientRect().top + window.scrollY - offset
     suppressSpy.current = true
-    window.scrollTo({ top, behavior: 'smooth' })
-    setTimeout(() => { suppressSpy.current = false }, 600)
+    window.scrollTo({ top, behavior })
+    setTimeout(() => { suppressSpy.current = false }, behavior === 'smooth' ? 600 : 150)
     return true
   }
 
