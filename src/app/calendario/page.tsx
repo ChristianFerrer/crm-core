@@ -8,7 +8,7 @@ import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates } from '@/lib/pricing'
-import { BookingSearchAndTypeModal, BookingFormModal, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
+import { BookingSearchAndTypeModal, BookingFormModal, bookingBarStyle, bookingDurationLabel, BOOKING_TYPE_COLOR_VAR, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 import { MemberForm, type CreatedMember } from '@/components/MemberForm'
 import { useLanguage } from '@/lib/i18n'
 
@@ -73,34 +73,6 @@ const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; labelKey: 'c
   other:    { bar: 'bg-lime',     badge: 'text-lime',     labelKey: 'calendario_tipo_otro' },
 }
 
-// Barra vertical del evento: sólida cuando está confirmado/ejecutado, rayada
-// cuando aún está pendiente (mismo lenguaje visual que la agenda de Teams)
-function barStyle(b: Booking, solidColorVar: string): React.CSSProperties {
-  if (b.status === 'pending') {
-    return {
-      backgroundImage: `repeating-linear-gradient(45deg, ${solidColorVar} 0 3px, transparent 3px 6px)`,
-    }
-  }
-  return { backgroundColor: solidColorVar }
-}
-
-const TYPE_COLOR_VAR: Record<BookingType, string> = {
-  birthday: 'var(--color-iris)',
-  custodia: 'var(--color-cyan-300)',
-  other: 'var(--color-lime)',
-}
-
-function durationLabel(start: string | null, end: string | null, t: (k: any, v?: any) => string): string | null {
-  if (!start || !end) return null
-  const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number)
-  let mins = (eh * 60 + em) - (sh * 60 + sm)
-  if (mins <= 0) return null
-  const h = Math.floor(mins / 60), m = mins % 60
-  if (h === 0) return `${m} ${t('calendario_min_abrev')}`
-  if (m === 0) return `${h} ${t('calendario_hora_abrev')}`
-  return `${h} ${t('calendario_hora_abrev')} ${m} ${t('calendario_min_abrev')}`
-}
 
 function addDaysStr(dateStr: string, delta: number): string {
   const d = new Date(dateStr + 'T12:00:00')
@@ -549,7 +521,7 @@ export default function CalendarioPage() {
                       onClick={() => allDay.length === 1 ? openEditFlow(allDay[0]) : goToDay(dateStr)}
                       className="flex-1 flex items-center gap-2.5 rounded-xl bg-surface2 px-3 py-2.5 text-left hover:bg-surface transition-colors"
                     >
-                      <span className="w-1 h-5 rounded-full shrink-0" style={barStyle(allDay[0], TYPE_COLOR_VAR[allDay[0].type])} />
+                      <span className="w-1 h-5 rounded-full shrink-0" style={bookingBarStyle(allDay[0].status, BOOKING_TYPE_COLOR_VAR[allDay[0].type])} />
                       <span className="flex-1 text-sm text-snow truncate">
                         {allDay.length === 1 ? allDay[0].title : t('calendario_n_reservas', { n: allDay.length, s: allDay.length !== 1 ? 's' : '' })}
                       </span>
@@ -563,7 +535,7 @@ export default function CalendarioPage() {
                   {timed.map(b => {
                     const ts = TYPE_STYLE[b.type]
                     const st = bookingLiveStatus(b, todayStr)
-                    const dur = durationLabel(b.start_time, b.end_time, t)
+                    const dur = bookingDurationLabel(b.start_time, b.end_time, t)
                     const gA = b.guest_adults ?? 0
                     const gC = b.guest_children ?? 0
                     const totalG = b.guests ?? (gA + gC)
@@ -581,7 +553,7 @@ export default function CalendarioPage() {
                         {/* Barra de color */}
                         <span
                           className="w-1 rounded-full shrink-0"
-                          style={barStyle(b, TYPE_COLOR_VAR[b.type])}
+                          style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])}
                         />
 
                         {/* Contenido */}

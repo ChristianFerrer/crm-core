@@ -78,9 +78,43 @@ type TodayBooking = {
   amount: number | null
   deposit_amount: number | null
   payment_status: string | null
+  status: string | null
   addons: { name: string; price: number }[] | null
   members: { name: string } | null
   services: { name: string } | null
+}
+
+// ── Estilo compartido de los ítems de reserva (Inicio y Agenda) ───────────
+// Se define aquí porque la Agenda ya importa de este módulo; así hay una
+// única fuente de verdad para el aspecto de una reserva en toda la app.
+export const BOOKING_TYPE_COLOR_VAR: Record<'birthday' | 'custodia' | 'other', string> = {
+  birthday: 'var(--color-iris)',
+  custodia: 'var(--color-cyan-300)',
+  other: 'var(--color-lime)',
+}
+
+// Barra vertical: sólida cuando está confirmada, rayada mientras esté pendiente
+export function bookingBarStyle(status: string | null | undefined, colorVar: string): React.CSSProperties {
+  if (status === 'pending') {
+    return { backgroundImage: `repeating-linear-gradient(45deg, ${colorVar} 0 3px, transparent 3px 6px)` }
+  }
+  return { backgroundColor: colorVar }
+}
+
+export function bookingDurationLabel(
+  start: string | null,
+  end: string | null,
+  t: (k: any, v?: any) => string,
+): string | null {
+  if (!start || !end) return null
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const mins = (eh * 60 + em) - (sh * 60 + sm)
+  if (mins <= 0) return null
+  const h = Math.floor(mins / 60), m = mins % 60
+  if (h === 0) return `${m} ${t('calendario_min_abrev')}`
+  if (m === 0) return `${h} ${t('calendario_hora_abrev')}`
+  return `${h} ${t('calendario_hora_abrev')} ${m} ${t('calendario_min_abrev')}`
 }
 
 type Product = {
@@ -2609,65 +2643,78 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         {timeline.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_reservas_hoy')}</div>
         ) : (
-          <div className="divide-y divide-line max-h-[60vh] overflow-y-auto">
+          <div className="px-4 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
             {timeline.map(b => {
               const status = getBookingStatus(b)
               const style = bookingTypeStyle[b.type]
               const canExecute = status === 'pendiente' || status === 'en_curso'
+              const dur = bookingDurationLabel(b.start_time, b.end_time, t)
+              const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
+              const showPago = b.amount != null && b.amount > 0
               return (
-                <div key={b.id} className={`flex gap-0 ${status === 'pasado' ? 'opacity-50' : ''}`}>
-                  <div className={`w-1 shrink-0 ${style.bar}`} />
-                  <button
-                    onClick={() => setSelectedBooking(b)}
-                    className="flex-1 px-4 py-3 flex items-start gap-3 text-left hover:bg-surface2 transition-colors"
-                  >
-                    <div className="shrink-0 text-right w-14">
-                      <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
-                      {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
+                <div key={b.id} className={`flex items-stretch gap-3 ${status === 'pasado' ? 'opacity-50' : ''}`}>
+                  {/* Hora + duración */}
+                  <div className="w-16 shrink-0 pt-0.5">
+                    <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5) ?? '—'}</p>
+                    {dur && <p className="text-xs text-mist leading-tight mt-0.5">{dur}</p>}
+                  </div>
+
+                  {/* Barra de color */}
+                  <span
+                    className="w-1 rounded-full shrink-0"
+                    style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])}
+                  />
+
+                  {/* Contenido */}
+                  <button onClick={() => setSelectedBooking(b)} className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-snow">{b.title}</p>
+                      <span className={`text-xs font-semibold ${style.badge}`}>{style.label}</span>
+                      {status === 'ejecutado' && (
+                        <span className="text-xs font-semibold text-mint flex items-center gap-0.5">
+                          <Check size={10} />{t('home_ejecutado')}
+                        </span>
+                      )}
+                      {status === 'en_curso' && (
+                        <span className="text-xs font-semibold text-lime flex items-center gap-0.5">
+                          <Clock size={10} />{t('home_en_curso')}
+                        </span>
+                      )}
+                      {showPago && (
+                        <span className={`text-xs font-semibold ${b.payment_status === 'paid' ? 'text-mint' : b.payment_status === 'partial' ? 'text-cyan-300' : 'text-amber'}`}>
+                          {b.payment_status === 'paid' ? t('home_pagado') : b.payment_status === 'partial' ? t('home_adelanto') : t('home_pendiente')}
+                          {b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        <p className="text-xs font-semibold text-snow">{b.title}</p>
-                        <span className={`text-[10px] font-semibold ${style.badge}`}>{style.label}</span>
-                        {status === 'ejecutado' && (
-                          <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5">
-                            <Check size={9} />{t('home_ejecutado')}
-                          </span>
-                        )}
-                        {status === 'en_curso' && (
-                          <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5">
-                            <Clock size={9} />{t('home_en_curso')}
-                          </span>
-                        )}
-                      </div>
-                      {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
-                      {(() => {
-                        const gA = b.guest_adults ?? 0
-                        const gC = b.guest_children ?? 0
-                        const totalG = b.guests ?? (gA + gC)
-                        if (totalG <= 0 && gA === 0 && gC === 0) return null
-                        if (b.type === 'custodia') {
-                          return <p className="text-[11px] text-mist">{totalG} {totalG !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</p>
-                        }
-                        return (
-                          <p className="text-[11px] text-mist">
-                            {totalG} {totalG !== 1 ? t('home_invitados_lc') : t('home_invitado_lc')}
-                            {(gA > 0 || gC > 0) && <span> · {gA} {gA !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}, {gC} {gC !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>}
-                          </p>
-                        )
-                      })()}
-                    </div>
-                    {isToday && canExecute && (
-                      <button
-                        onClick={e => { e.stopPropagation(); handleExecuteBooking(b) }}
-                        disabled={executingBooking === b.id}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        <Play size={9} fill="currentColor" />
-                        {executingBooking === b.id ? '...' : t('home_ejecutar')}
-                      </button>
-                    )}
+                    {b.members?.name && <p className="text-xs text-fog mt-0.5">{b.members.name}</p>}
+                    {(() => {
+                      const gA = b.guest_adults ?? 0
+                      const gC = b.guest_children ?? 0
+                      const totalG = b.guests ?? (gA + gC)
+                      if (totalG <= 0 && gA === 0 && gC === 0) return null
+                      if (b.type === 'custodia') {
+                        return <p className="text-xs text-mist mt-0.5">{totalG} {totalG !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</p>
+                      }
+                      return (
+                        <p className="text-xs text-mist mt-0.5">
+                          {totalG} {totalG !== 1 ? t('home_invitados_lc') : t('home_invitado_lc')}
+                          {(gA > 0 || gC > 0) && <span> · {gA} {gA !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}, {gC} {gC !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>}
+                        </p>
+                      )
+                    })()}
                   </button>
+
+                  {isToday && canExecute && (
+                    <button
+                      onClick={e => { e.stopPropagation(); handleExecuteBooking(b) }}
+                      disabled={executingBooking === b.id}
+                      className="flex items-center gap-1 self-start text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      <Play size={11} fill="currentColor" />
+                      {executingBooking === b.id ? '...' : t('home_ejecutar')}
+                    </button>
+                  )}
                 </div>
               )
             })}
