@@ -2175,7 +2175,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           >
             <Bell size={16} />
             {totalAlerts > 0 && (
-              <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-rose border-2 border-carbon text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+              <span className="absolute -top-2 -right-2 min-w-[20px] h-5 bg-rose border-2 border-carbon text-white text-[11px] font-bold rounded-full flex items-center justify-center px-1">
                 {totalAlerts}
               </span>
             )}

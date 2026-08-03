@@ -320,7 +320,13 @@ export default function CalendarioPage() {
     if (!target) return
     didInitialScroll.current = true
     setSelectedDate(target)
-    requestAnimationFrame(() => scrollToDay(target, 'auto'))
+    const d = new Date(target + 'T12:00:00')
+    if (d.getMonth() !== month || d.getFullYear() !== year) {
+      setMonth(d.getMonth()); setYear(d.getFullYear())
+    }
+    // Doble rAF: la primera pasada aún no ha pintado las secciones de día,
+    // así que las refs todavía no existen
+    requestAnimationFrame(() => requestAnimationFrame(() => scrollToDay(target, 'auto')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
 
@@ -337,15 +343,43 @@ export default function CalendarioPage() {
     return `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3).toLowerCase()}`
   }
 
-  // Al pulsar un día de la tira, la agenda se desplaza a ese día
+  // En móvil desplaza la ventana, pero en escritorio quien scrollea es el panel
+  // de contenido del AppShell (h-screen + overflow-y-auto). Se busca el
+  // contenedor real en vez de asumir que siempre es la ventana.
+  function getScroller(): HTMLElement | null {
+    let el: HTMLElement | null = agendaRef.current?.parentElement ?? null
+    while (el) {
+      const oy = getComputedStyle(el).overflowY
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el
+      el = el.parentElement
+    }
+    return null
+  }
+
+  // Día de la agenda al que saltar: el propio si tiene reservas, si no el
+  // siguiente con reservas, y como último recurso el anterior más cercano.
+  function nearestAgendaDay(dateStr: string): string | null {
+    if (dayRefs.current[dateStr]) return dateStr
+    const after = agendaDays.find(d => d >= dateStr)
+    if (after) return after
+    return agendaDays.length ? agendaDays[agendaDays.length - 1] : null
+  }
+
   // Desplaza dejando hueco para la cabecera fija, que si no taparía el día
   function scrollToDay(dateStr: string, behavior: ScrollBehavior = 'smooth') {
-    const el = dayRefs.current[dateStr]
+    const target = nearestAgendaDay(dateStr)
+    const el = target ? dayRefs.current[target] : null
     if (!el) return false
     const offset = (headerRef.current?.offsetHeight ?? 0) + 8
-    const top = el.getBoundingClientRect().top + window.scrollY - offset
+    const scroller = getScroller()
     suppressSpy.current = true
-    window.scrollTo({ top, behavior })
+    if (scroller) {
+      const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - offset
+      scroller.scrollTo({ top, behavior })
+    } else {
+      const top = el.getBoundingClientRect().top + window.scrollY - offset
+      window.scrollTo({ top, behavior })
+    }
     setTimeout(() => { suppressSpy.current = false }, behavior === 'smooth' ? 600 : 150)
     return true
   }
@@ -364,7 +398,11 @@ export default function CalendarioPage() {
     const d = new Date()
     setYear(d.getFullYear()); setMonth(d.getMonth())
     setSelectedDate(todayStr)
-    if (!scrollToDay(todayStr)) window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (!scrollToDay(todayStr)) {
+      const scroller = getScroller()
+      if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' })
+      else window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   // Scroll-spy: el primer día que queda bajo la cabecera fija manda sobre la

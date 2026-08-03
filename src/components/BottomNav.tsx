@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/i18n'
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
   return (
-    <span className="absolute -top-2 -right-2.5 min-w-[16px] h-4 px-0.5 rounded-full bg-lime border-2 border-carbon text-white text-[9px] font-bold flex items-center justify-center leading-none">
+    <span className="absolute -top-2 -right-2.5 min-w-[20px] h-5 px-1 rounded-full bg-lime border-2 border-carbon text-white text-[11px] font-bold flex items-center justify-center leading-none">
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -83,7 +83,7 @@ export function BottomNav() {
         className="fixed bottom-0 left-0 right-0 z-[70] border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden"
         style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}
       >
-        <div className="flex pt-1">
+        <div className="flex">
           {navItems.map(({ href, label, icon: Icon, badge }) => {
             const isActive = href === '/'
               ? pathname === '/'
@@ -94,7 +94,7 @@ export function BottomNav() {
               <Link
                 key={href}
                 href={href}
-                className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold transition-colors relative ${
+                className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-semibold transition-colors relative ${
                   isActive ? 'text-lime' : 'text-mist hover:text-fog'
                 }`}
               >
@@ -110,7 +110,7 @@ export function BottomNav() {
           {/* Más */}
           <button
             onClick={() => setMoreOpen(o => !o)}
-            className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold transition-colors relative ${
+            className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] font-semibold transition-colors relative ${
               moreOpen || moreActive ? 'text-lime' : 'text-mist hover:text-fog'
             }`}
           >

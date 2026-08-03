@@ -95,7 +95,7 @@ export function TableFilterBar({
           >
             <Filter size={16} />
             {activeFilterCount > 0 && (
-              <span className="absolute -top-2 -right-2 min-w-[16px] h-4 px-1 bg-rose border-2 border-surface text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-rose border-2 border-surface text-white text-[11px] font-bold rounded-full flex items-center justify-center">
                 {activeFilterCount}
               </span>
             )}
