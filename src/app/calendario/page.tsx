@@ -369,7 +369,7 @@ export default function CalendarioPage() {
   return (
     <div className="bg-carbon text-snow">
       {/* ── Cabecera fija: mes + acciones + tira de calendario ── */}
-      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 border-b border-line">
+      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 border-b border-line relative">
         <div className="flex items-center justify-between gap-3 pb-2">
           <div className="flex items-center gap-1 min-w-0">
             <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
@@ -400,7 +400,7 @@ export default function CalendarioPage() {
         </div>
 
         {/* ── Tira de calendario plegable ── */}
-        <div className="relative">
+        <div>
         <div className="grid grid-cols-7">
           {DOW_LABELS.map(d => (
             <div key={d} className="py-1.5 text-center text-[11px] font-medium text-mist">{d}</div>
@@ -437,22 +437,22 @@ export default function CalendarioPage() {
           </div>
         ))}
 
-          {/* Pestaña a la derecha para desplegar/plegar el calendario */}
-          <div className="flex justify-end pr-1">
-            <button
-              onClick={() => setStripExpanded(o => !o)}
-              aria-label={stripExpanded ? t('calendario_contraer_calendario') : t('calendario_expandir_calendario')}
-              aria-expanded={stripExpanded}
-              className="flex items-center justify-center w-11 h-6 rounded-b-lg border border-t-0 border-line bg-surface2 text-fog hover:text-snow hover:bg-surface transition-colors"
-            >
-              {stripExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-            </button>
-          </div>
         </div>
+
+        {/* Pestaña sobresaliente: cuelga por debajo del borde del panel */}
+        <button
+          onClick={() => setStripExpanded(o => !o)}
+          aria-label={stripExpanded ? t('calendario_contraer_calendario') : t('calendario_expandir_calendario')}
+          aria-expanded={stripExpanded}
+          className="absolute right-4 lg:right-8 -bottom-[26px] z-10 flex items-center justify-center w-12 h-[26px] rounded-b-xl border border-t-0 border-line bg-surface text-fog hover:text-snow hover:bg-surface2 transition-colors shadow-sm"
+        >
+          {stripExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
       </div>
 
       {/* ── Agenda continua ── */}
-      <div ref={agendaRef} className="pb-28 lg:pb-8 relative">
+      {/* pt-4: deja aire para la pestaña que sobresale de la cabecera */}
+      <div ref={agendaRef} className="pt-4 pb-28 lg:pb-8 relative">
         {agendaDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-mist">{t('calendario_sin_reservas_rango')}</div>
         ) : (

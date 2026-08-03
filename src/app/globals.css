@@ -144,14 +144,17 @@
   color: #fff !important;
 }
 
+/* `overflow-x: clip` en vez de `hidden`: recorta igual en horizontal pero no
+   convierte html/body en contenedores de scroll, que es lo que rompía
+   `position: sticky` (cabecera de la Agenda). */
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
   margin: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
   background: var(--color-carbon);
   color: var(--color-snow);
   font-family: var(--font-sans);
