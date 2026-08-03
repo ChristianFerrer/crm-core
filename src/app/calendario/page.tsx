@@ -282,17 +282,26 @@ export default function CalendarioPage() {
   bookings.forEach(b => { if (!bookingsByDate[b.date]) bookingsByDate[b.date] = []; bookingsByDate[b.date].push(b) })
 
   // ── Tira de calendario ──────────────────────────────────────────────
-  // Se construyen semanas completas (lunes→domingo) del mes visible.
-  const monthCells: (string | null)[] = [
-    ...Array(getFirstDayOfWeek(year, month)).fill(null),
-    ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => toDateStr(year, month, i + 1)),
-  ]
-  while (monthCells.length % 7 !== 0) monthCells.push(null)
-  const weeks: (string | null)[][] = []
+  // Semanas completas (lunes→domingo). Los huecos de inicio y fin se rellenan
+  // con los días reales del mes anterior y del siguiente, atenuados.
+  type Cell = { date: string; inMonth: boolean }
+  const firstDow = getFirstDayOfWeek(year, month)
+  const daysInMonth = getDaysInMonth(year, month)
+  const totalCells = Math.ceil((firstDow + daysInMonth) / 7) * 7
+  const gridStart = new Date(year, month, 1 - firstDow)
+  const monthCells: Cell[] = Array.from({ length: totalCells }, (_, i) => {
+    const d = new Date(gridStart)
+    d.setDate(gridStart.getDate() + i)
+    return {
+      date: toDateStr(d.getFullYear(), d.getMonth(), d.getDate()),
+      inMonth: d.getMonth() === month && d.getFullYear() === year,
+    }
+  })
+  const weeks: Cell[][] = []
   for (let i = 0; i < monthCells.length; i += 7) weeks.push(monthCells.slice(i, i + 7))
 
   const anchor = selectedDate ?? todayStr
-  const weekOfAnchor = weeks.findIndex(w => w.includes(anchor))
+  const weekOfAnchor = weeks.findIndex(w => w.some(c => c.date === anchor))
   const visibleWeeks = stripExpanded ? weeks : [weeks[weekOfAnchor >= 0 ? weekOfAnchor : 0] ?? []]
 
   // ── Agenda continua ─────────────────────────────────────────────────
@@ -311,7 +320,7 @@ export default function CalendarioPage() {
 
   function dayHeading(dateStr: string) {
     const d = new Date(dateStr + 'T12:00:00')
-    return `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 4).toLowerCase()}`
+    return `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3).toLowerCase()}`
   }
 
   // Al pulsar un día de la tira, la agenda se desplaza a ese día
@@ -329,6 +338,11 @@ export default function CalendarioPage() {
 
   function goToDay(dateStr: string) {
     setSelectedDate(dateStr)
+    // Si el día pertenece al mes anterior o siguiente, la tira salta a ese mes
+    const d = new Date(dateStr + 'T12:00:00')
+    if (d.getMonth() !== month || d.getFullYear() !== year) {
+      setMonth(d.getMonth()); setYear(d.getFullYear())
+    }
     scrollToDay(dateStr)
   }
 
@@ -369,7 +383,7 @@ export default function CalendarioPage() {
   return (
     <div className="bg-carbon text-snow">
       {/* ── Cabecera fija: mes + acciones + tira de calendario ── */}
-      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 border-b border-line relative">
+      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 pb-3 border-b border-line relative">
         <div className="flex items-center justify-between gap-3 pb-2">
           <div className="flex items-center gap-1 min-w-0">
             <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
@@ -392,10 +406,9 @@ export default function CalendarioPage() {
           </div>
           <button
             onClick={openNewFlow}
-            className="flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-3 sm:px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors shrink-0"
+            className="hidden sm:flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors shrink-0"
           >
-            <CalendarPlus size={16} />
-            <span className="hidden sm:inline">{t('calendario_nueva_reserva')}</span>
+            <CalendarPlus size={16} /> {t('calendario_nueva_reserva')}
           </button>
         </div>
 
@@ -409,8 +422,7 @@ export default function CalendarioPage() {
 
         {visibleWeeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7">
-            {week.map((dateStr, di) => {
-              if (!dateStr) return <div key={`e-${wi}-${di}`} className="h-12" />
+            {week.map(({ date: dateStr, inMonth }) => {
               const day = Number(dateStr.slice(8, 10))
               const isToday = dateStr === todayStr
               const isSelected = dateStr === selectedDate
@@ -419,18 +431,20 @@ export default function CalendarioPage() {
                 <button
                   key={dateStr}
                   onClick={() => goToDay(dateStr)}
-                  className="h-12 flex flex-col items-center justify-center gap-0.5"
+                  className="h-12 flex flex-col items-center justify-center gap-1"
                 >
                   <span className={`w-9 h-9 flex items-center justify-center rounded-full text-sm transition-colors ${
                     isSelected
                       ? 'bg-iris text-white font-bold'
                       : isToday
                         ? 'text-iris font-bold'
-                        : 'text-snow font-medium hover:bg-surface2'
+                        : inMonth
+                          ? 'text-snow font-medium hover:bg-surface2'
+                          : 'text-mist font-medium hover:bg-surface2'
                   }`}>
                     {day}
                   </span>
-                  <span className={`w-1 h-1 rounded-full ${hasBookings && !isSelected ? 'bg-iris' : 'bg-transparent'}`} />
+                  <span className={`w-1 h-1 rounded-full ${hasBookings && !isSelected ? (inMonth ? 'bg-iris' : 'bg-iris/40') : 'bg-transparent'}`} />
                 </button>
               )
             })}
@@ -570,6 +584,15 @@ export default function CalendarioPage() {
           <ArrowUp size={14} /> {t('calendario_ir_a_hoy')}
         </button>
       )}
+
+      {/* ── Botón flotante de nueva reserva (móvil) ── */}
+      <button
+        onClick={openNewFlow}
+        aria-label={t('calendario_nueva_reserva')}
+        className="sm:hidden fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full bg-iris text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+      >
+        <CalendarPlus size={22} />
+      </button>
 
       {/* ── New booking modal ── */}
 
