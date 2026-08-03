@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, Plus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
@@ -73,6 +73,41 @@ const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; labelKey: 'c
   other:    { bar: 'bg-lime',     badge: 'text-lime',     labelKey: 'calendario_tipo_otro' },
 }
 
+// Barra vertical del evento: sólida cuando está confirmado/ejecutado, rayada
+// cuando aún está pendiente (mismo lenguaje visual que la agenda de Teams)
+function barStyle(b: Booking, solidColorVar: string): React.CSSProperties {
+  if (b.status === 'pending') {
+    return {
+      backgroundImage: `repeating-linear-gradient(45deg, ${solidColorVar} 0 3px, transparent 3px 6px)`,
+    }
+  }
+  return { backgroundColor: solidColorVar }
+}
+
+const TYPE_COLOR_VAR: Record<BookingType, string> = {
+  birthday: 'var(--color-iris)',
+  custodia: 'var(--color-cyan-300)',
+  other: 'var(--color-lime)',
+}
+
+function durationLabel(start: string | null, end: string | null, t: (k: any, v?: any) => string): string | null {
+  if (!start || !end) return null
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  let mins = (eh * 60 + em) - (sh * 60 + sm)
+  if (mins <= 0) return null
+  const h = Math.floor(mins / 60), m = mins % 60
+  if (h === 0) return `${m} ${t('calendario_min_abrev')}`
+  if (m === 0) return `${h} ${t('calendario_hora_abrev')}`
+  return `${h} ${t('calendario_hora_abrev')} ${m} ${t('calendario_min_abrev')}`
+}
+
+function addDaysStr(dateStr: string, delta: number): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + delta)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function bookingLiveStatus(b: Booking, todayStr: string): 'ejecutado' | 'en_curso' | 'pendiente' | 'pasado' {
   if (b.executed_at) return 'ejecutado'
   if (b.date !== todayStr) return b.date < todayStr ? 'pasado' : 'pendiente'
@@ -100,6 +135,12 @@ export default function CalendarioPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(toDateStr(today.getFullYear(), today.getMonth(), today.getDate()))
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
   const [executingId, setExecutingId] = useState<string | null>(null)
+  // Tira de calendario plegable: contraída = solo la semana del día seleccionado
+  const [stripExpanded, setStripExpanded] = useState(false)
+  const agendaRef = useRef<HTMLDivElement>(null)
+  const dayRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const suppressSpy = useRef(false)
+  const [showJumpToday, setShowJumpToday] = useState(false)
   // Add-member popup
   const [showAddMember, setShowAddMember] = useState(false)
   const newMemberForFlow = useRef(false)
@@ -179,9 +220,13 @@ export default function CalendarioPage() {
     setFlowStep('form')
   }
 
+  // La agenda es continua, así que se carga una ventana de 3 meses alrededor
+  // del mes visible (anterior, actual y siguiente) en vez de solo el actual.
   const fetchBookings = useCallback(async () => {
-    const from = `${year}-${String(month + 1).padStart(2, '0')}-01`
-    const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(getDaysInMonth(year, month)).padStart(2, '0')}`
+    const start = new Date(year, month - 1, 1)
+    const end = new Date(year, month + 2, 0)
+    const from = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-01`
+    const to = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
     const { data } = await supabase
       .from('bookings')
       .select('id, date, start_time, end_time, type, title, child_name, member_id, members(id, name, children), notes, status, guests, guest_adults, guest_children, payment_status, amount, deposit_amount, service_id, addons, services(name), executed_at')
@@ -206,8 +251,14 @@ export default function CalendarioPage() {
   useEffect(() => { fetchBookings() }, [fetchBookings])
   useEffect(() => { fetchMembers() }, [fetchMembers])
 
-  function prevMonth() { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1); setSelectedDate(null) }
-  function nextMonth() { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1); setSelectedDate(null) }
+  // Navegar de mes ancla la selección al día 1, para que la tira contraída
+  // muestre una semana coherente con el mes al que se ha saltado.
+  function shiftMonth(delta: number) {
+    const d = new Date(year, month + delta, 1)
+    setYear(d.getFullYear())
+    setMonth(d.getMonth())
+    setSelectedDate(toDateStr(d.getFullYear(), d.getMonth(), 1))
+  }
 
   async function handleCancel(id: string) {
     await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', id)
@@ -226,133 +277,295 @@ export default function CalendarioPage() {
   const DOW_LABELS = DOW_KEYS.map(k => t(k))
   const MONTH_NAMES = MONTH_KEYS.map(k => t(k))
 
-  const cells: (number | null)[] = [...Array(getFirstDayOfWeek(year, month)).fill(null), ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => i + 1)]
-  while (cells.length % 7 !== 0) cells.push(null)
-
   const bookingsByDate: Record<string, Booking[]> = {}
   bookings.forEach(b => { if (!bookingsByDate[b.date]) bookingsByDate[b.date] = []; bookingsByDate[b.date].push(b) })
-  const allSelectedBookings = selectedDate ? bookings.filter(b => b.date === selectedDate) : []
+
+  // ── Tira de calendario ──────────────────────────────────────────────
+  // Se construyen semanas completas (lunes→domingo) del mes visible.
+  const monthCells: (string | null)[] = [
+    ...Array(getFirstDayOfWeek(year, month)).fill(null),
+    ...Array.from({ length: getDaysInMonth(year, month) }, (_, i) => toDateStr(year, month, i + 1)),
+  ]
+  while (monthCells.length % 7 !== 0) monthCells.push(null)
+  const weeks: (string | null)[][] = []
+  for (let i = 0; i < monthCells.length; i += 7) weeks.push(monthCells.slice(i, i + 7))
+
+  const anchor = selectedDate ?? todayStr
+  const weekOfAnchor = weeks.findIndex(w => w.includes(anchor))
+  const visibleWeeks = stripExpanded ? weeks : [weeks[weekOfAnchor >= 0 ? weekOfAnchor : 0] ?? []]
+
+  // ── Agenda continua ─────────────────────────────────────────────────
+  // Solo los días con reservas, ordenados; los días vacíos no ocupan espacio.
+  const agendaDays = Object.keys(bookingsByDate)
+    .filter(d => (bookingsByDate[d] ?? []).length > 0)
+    .sort()
+
+  function relativeLabel(dateStr: string) {
+    if (dateStr === todayStr) return t('calendario_hoy')
+    if (dateStr === addDaysStr(todayStr, 1)) return t('calendario_manana')
+    if (dateStr === addDaysStr(todayStr, -1)) return t('calendario_ayer')
+    const dow = (new Date(dateStr + 'T12:00:00').getDay() + 6) % 7
+    return DOW_LABELS[dow]
+  }
+
+  function dayHeading(dateStr: string) {
+    const d = new Date(dateStr + 'T12:00:00')
+    return `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 4).toLowerCase()}`
+  }
+
+  // Al pulsar un día de la tira, la agenda se desplaza a ese día
+  function goToDay(dateStr: string) {
+    setSelectedDate(dateStr)
+    const el = dayRefs.current[dateStr]
+    if (el) {
+      suppressSpy.current = true
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setTimeout(() => { suppressSpy.current = false }, 600)
+    }
+  }
+
+  function jumpToToday() {
+    const d = new Date()
+    setYear(d.getFullYear()); setMonth(d.getMonth())
+    setSelectedDate(todayStr)
+    const el = dayRefs.current[todayStr]
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else agendaRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Scroll-spy: el día visible arriba de la agenda manda sobre la tira y el título
+  function handleAgendaScroll() {
+    if (suppressSpy.current) return
+    const container = agendaRef.current
+    if (!container) return
+    const top = container.getBoundingClientRect().top
+    let current: string | null = null
+    for (const d of agendaDays) {
+      const el = dayRefs.current[d]
+      if (!el) continue
+      if (el.getBoundingClientRect().top - top <= 8) current = d
+    }
+    if (current && current !== selectedDate) {
+      setSelectedDate(current)
+      const dt = new Date(current + 'T12:00:00')
+      if (dt.getMonth() !== month || dt.getFullYear() !== year) {
+        setMonth(dt.getMonth()); setYear(dt.getFullYear())
+      }
+    }
+    setShowJumpToday((current ?? anchor) !== todayStr)
+  }
 
   return (
-    <div className="min-h-screen bg-carbon text-snow pb-24 lg:pb-8">
-      <div className="px-4 pt-8 pb-4 lg:px-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-snow">{t('calendario_titulo')}</h1>
-            <p className="text-sm text-mist mt-0.5">{t('calendario_subtitulo')}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={openNewFlow} className="flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors">
-              <CalendarPlus size={16} /> {t('calendario_nueva_reserva')}
-            </button>
-          </div>
+    <div className="flex flex-col h-[calc(100svh-4rem)] lg:h-screen bg-carbon text-snow overflow-hidden">
+      {/* ── Cabecera: mes visible ── */}
+      <div className="shrink-0 px-4 lg:px-8 pt-6 pb-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1 min-w-0">
+          <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
+            {MONTH_NAMES[month]}
+          </h1>
+          <button
+            onClick={() => shiftMonth(-1)}
+            aria-label={MONTH_NAMES[(month + 11) % 12]}
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors ml-1"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            onClick={() => shiftMonth(1)}
+            aria-label={MONTH_NAMES[(month + 1) % 12]}
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
+        <button
+          onClick={openNewFlow}
+          className="hidden sm:flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors shrink-0"
+        >
+          <CalendarPlus size={16} /> {t('calendario_nueva_reserva')}
+        </button>
       </div>
 
-      <div className="px-4 lg:px-8 space-y-4">
-        {/* Calendar grid */}
-        <div className="bg-surface border border-line rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronLeft size={18} /></button>
-            <span className="text-sm font-semibold text-snow">{MONTH_NAMES[month]} {year}</span>
-            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronRight size={18} /></button>
-          </div>
-          <div className="grid grid-cols-7 border-b border-line">
-            {DOW_LABELS.map(d => <div key={d} className="py-2 text-center text-[10px] font-semibold text-mist uppercase tracking-wide">{d}</div>)}
-          </div>
-          <div className="grid grid-cols-7">
-            {cells.map((day, idx) => {
-              if (!day) return <div key={`e-${idx}`} className="min-h-[64px] border-b border-r border-line/50 last:border-r-0" />
-              const dateStr = toDateStr(year, month, day)
-              const dayBookings = bookingsByDate[dateStr] ?? []
-              const isToday = dateStr === toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
+      {/* ── Tira de calendario plegable ── */}
+      <div className="shrink-0 px-2 lg:px-6 border-b border-line">
+        <div className="grid grid-cols-7">
+          {DOW_LABELS.map(d => (
+            <div key={d} className="py-1.5 text-center text-[11px] font-medium text-mist">{d}</div>
+          ))}
+        </div>
+
+        {visibleWeeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7">
+            {week.map((dateStr, di) => {
+              if (!dateStr) return <div key={`e-${wi}-${di}`} className="h-12" />
+              const day = Number(dateStr.slice(8, 10))
+              const isToday = dateStr === todayStr
               const isSelected = dateStr === selectedDate
-              const isLastRow = idx >= cells.length - 7
+              const hasBookings = (bookingsByDate[dateStr] ?? []).some(b => b.status !== 'cancelled')
               return (
-                <button key={dateStr} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                  className={`min-h-[64px] p-1.5 border-r border-line/50 text-left transition-colors ${!isLastRow ? 'border-b' : ''} ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'ring-[3px] ring-inset ring-rose relative z-10' : 'hover:bg-surface2'}`}>
-                  <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-lime text-ink' : isSelected ? 'text-rose' : 'text-fog'}`}>{day}</span>
-                  <div className="flex flex-wrap gap-0.5">
-                    {dayBookings.filter(b => b.status !== 'cancelled').slice(0, 3).map(b => <span key={b.id} className={`w-2 h-2 rounded-full ${bookingColor(b.type)}`} />)}
-                    {dayBookings.filter(b => b.status !== 'cancelled').length > 3 && <span className="text-[9px] text-mist self-end">+{dayBookings.filter(b => b.status !== 'cancelled').length - 3}</span>}
-                  </div>
+                <button
+                  key={dateStr}
+                  onClick={() => goToDay(dateStr)}
+                  className="h-12 flex flex-col items-center justify-center gap-0.5"
+                >
+                  <span className={`w-9 h-9 flex items-center justify-center rounded-full text-sm transition-colors ${
+                    isSelected
+                      ? 'bg-iris text-white font-bold'
+                      : isToday
+                        ? 'text-iris font-bold'
+                        : 'text-snow font-medium hover:bg-surface2'
+                  }`}>
+                    {day}
+                  </span>
+                  <span className={`w-1 h-1 rounded-full ${hasBookings && !isSelected ? 'bg-iris' : 'bg-transparent'}`} />
                 </button>
               )
             })}
           </div>
-        </div>
+        ))}
 
-        {/* Day detail */}
-        {selectedDate && (
-          <div className="bg-surface border border-line rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-line flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-snow">{new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                <p className="text-xs text-mist mt-0.5">{(() => { const n = allSelectedBookings.filter(b => b.status !== 'cancelled').length; return t('calendario_n_reservas', { n, s: n !== 1 ? 's' : '' }) })()}</p>
-              </div>
-              <button onClick={() => setSelectedDate(null)} aria-label={t('calendario_cerrar')} className="text-mist hover:text-fog"><X size={16} /></button>
-            </div>
-            {allSelectedBookings.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-mist">{t('calendario_no_hay_reservas')}</div>
-            ) : (
-              <div className="divide-y divide-line">
-                {allSelectedBookings.map(b => {
-                  const ts = TYPE_STYLE[b.type]
-                  const st = bookingLiveStatus(b, todayStr)
-                  const gA = b.guest_adults ?? 0
-                  const gC = b.guest_children ?? 0
-                  const totalG = b.guests ?? (gA + gC)
-                  const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
-                  const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
-                  const showPago = b.status !== 'cancelled' && (b.amount != null && b.amount > 0)
-                  return (
-                    <div key={b.id} className={`flex items-stretch gap-0 hover:bg-surface2 transition-colors ${st === 'pasado' ? 'opacity-50' : ''}`}>
-                      <div className={`w-1 shrink-0 ${ts.bar}`} />
-                      <button onClick={() => openEditFlow(b)} className="flex-1 min-w-0 px-4 py-3 flex items-start gap-3 text-left">
-                        <div className="shrink-0 text-right w-14">
-                          <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
-                          {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
+        {/* Tirador para plegar/desplegar */}
+        <button
+          onClick={() => setStripExpanded(o => !o)}
+          aria-label={stripExpanded ? t('calendario_contraer_calendario') : t('calendario_expandir_calendario')}
+          className="w-full flex items-center justify-center py-2 group"
+        >
+          <span className="w-10 h-1 rounded-full bg-line2 group-hover:bg-fog transition-colors" />
+        </button>
+      </div>
+
+      {/* ── Agenda continua ── */}
+      <div
+        ref={agendaRef}
+        onScroll={handleAgendaScroll}
+        className="flex-1 overflow-y-auto px-4 lg:px-8 pb-28 lg:pb-8 relative"
+      >
+        {agendaDays.length === 0 ? (
+          <div className="py-16 text-center text-sm text-mist">{t('calendario_sin_reservas_rango')}</div>
+        ) : (
+          agendaDays.map(dateStr => {
+            const dayBookings = [...(bookingsByDate[dateStr] ?? [])].sort(
+              (a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '')
+            )
+            const allDay = dayBookings.filter(b => !b.start_time)
+            const timed = dayBookings.filter(b => b.start_time)
+            const isToday = dateStr === todayStr
+            return (
+              <div key={dateStr} ref={el => { dayRefs.current[dateStr] = el }} className="pt-6">
+                {/* Cabecera del día */}
+                <div className="flex items-baseline gap-2.5 mb-3">
+                  <span className={`text-lg font-bold ${isToday ? 'text-iris' : 'text-snow'}`}>
+                    {dayHeading(dateStr)}
+                  </span>
+                  <span className={`text-sm ${isToday ? 'text-iris' : 'text-mist'}`}>
+                    {relativeLabel(dateStr)}
+                  </span>
+                </div>
+
+                {/* Todo el día */}
+                {allDay.length > 0 && (
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-xs text-mist w-16 shrink-0">{t('calendario_todo_el_dia')}</span>
+                    <button
+                      onClick={() => allDay.length === 1 ? openEditFlow(allDay[0]) : goToDay(dateStr)}
+                      className="flex-1 flex items-center gap-2.5 rounded-xl bg-surface2 px-3 py-2.5 text-left hover:bg-surface transition-colors"
+                    >
+                      <span className="w-1 h-5 rounded-full shrink-0" style={barStyle(allDay[0], TYPE_COLOR_VAR[allDay[0].type])} />
+                      <span className="flex-1 text-sm text-snow truncate">
+                        {allDay.length === 1 ? allDay[0].title : t('calendario_n_reservas', { n: allDay.length, s: allDay.length !== 1 ? 's' : '' })}
+                      </span>
+                      <ChevronRight size={14} className="text-mist shrink-0" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Reservas con hora */}
+                <div className="space-y-4">
+                  {timed.map(b => {
+                    const ts = TYPE_STYLE[b.type]
+                    const st = bookingLiveStatus(b, todayStr)
+                    const dur = durationLabel(b.start_time, b.end_time, t)
+                    const gA = b.guest_adults ?? 0
+                    const gC = b.guest_children ?? 0
+                    const totalG = b.guests ?? (gA + gC)
+                    const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
+                    const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
+                    const showPago = b.status !== 'cancelled' && (b.amount != null && b.amount > 0)
+                    return (
+                      <div key={b.id} className={`flex items-stretch gap-3 ${st === 'pasado' || b.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                        {/* Hora + duración */}
+                        <div className="w-16 shrink-0 pt-0.5">
+                          <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5)}</p>
+                          {dur && <p className="text-xs text-mist leading-tight mt-0.5">{dur}</p>}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                            <p className="text-xs font-semibold text-snow">{b.title}</p>
-                            <span className={`text-[10px] font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
-                            {st === 'ejecutado' && <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={9} />{t('calendario_ejecutado')}</span>}
-                            {st === 'en_curso' && <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5"><Clock size={9} />{t('calendario_en_curso')}</span>}
-                            {b.status === 'cancelled' && <span className="text-[10px] font-semibold text-rose">{t('calendario_cancelada')}</span>}
+
+                        {/* Barra de color */}
+                        <span
+                          className="w-1 rounded-full shrink-0"
+                          style={barStyle(b, TYPE_COLOR_VAR[b.type])}
+                        />
+
+                        {/* Contenido */}
+                        <button onClick={() => openEditFlow(b)} className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-snow">{b.title}</p>
+                            <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
+                            {st === 'ejecutado' && <span className="text-xs font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={10} />{t('calendario_ejecutado')}</span>}
+                            {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={10} />{t('calendario_en_curso')}</span>}
+                            {b.status === 'cancelled' && <span className="text-xs font-semibold text-rose">{t('calendario_cancelada')}</span>}
                             {showPago && (
-                              <span className={`text-[10px] font-semibold ${paymentBadge(b.payment_status)}`}>
+                              <span className={`text-xs font-semibold ${paymentBadge(b.payment_status)}`}>
                                 {t(paymentLabelKey(b.payment_status))}{b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
                               </span>
                             )}
                           </div>
-                          {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
+                          {b.members?.name && <p className="text-xs text-fog mt-0.5">{b.members.name}</p>}
                           {(totalG > 0 || gA > 0 || gC > 0) && (
-                            <p className="text-[11px] text-mist">
+                            <p className="text-xs text-mist mt-0.5">
                               {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
                               {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
                             </p>
                           )}
-                        </div>
-                      </button>
-                      {canExecute && (
-                        <button
-                          type="button"
-                          onClick={() => handleExecute(b)}
-                          disabled={executingId === b.id}
-                          className="flex items-center gap-1 self-center text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 mr-4 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
-                        >
-                          <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
                         </button>
-                      )}
-                    </div>
-                  )
-                })}
+
+                        {canExecute && (
+                          <button
+                            type="button"
+                            onClick={() => handleExecute(b)}
+                            disabled={executingId === b.id}
+                            className="flex items-center gap-1 self-start text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            )}
-          </div>
+            )
+          })
         )}
       </div>
+
+      {/* ── Píldora «Hoy» cuando la agenda está lejos del día actual ── */}
+      {showJumpToday && (
+        <button
+          onClick={jumpToToday}
+          className="fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-30 flex items-center gap-1.5 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-iris shadow-2xl hover:bg-surface2 transition-colors"
+        >
+          <ArrowUp size={14} /> {t('calendario_ir_a_hoy')}
+        </button>
+      )}
+
+      {/* ── FAB nueva reserva ── */}
+      <button
+        onClick={openNewFlow}
+        aria-label={t('calendario_nueva_reserva')}
+        className="sm:hidden fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full bg-iris text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+      >
+        <Plus size={24} />
+      </button>
 
       {/* ── New booking modal ── */}
 
