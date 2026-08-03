@@ -228,7 +228,7 @@ export default function TiendaPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('panelcfg_tienda_titulo')}</h1>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_tienda_titulo')}</h1>
         <p className="text-sm text-fog mt-0.5">{t('panelcfg_tienda_subtitulo')}</p>
       </div>
 
@@ -237,7 +237,7 @@ export default function TiendaPage() {
       <div className="flex items-center justify-end gap-2">
         <button
           onClick={() => setShowScanner(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-medium text-fog hover:text-snow transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
           title={t('panelcfg_escanear_titulo')}
         >
           <ScanBarcode size={15} />
@@ -263,7 +263,7 @@ export default function TiendaPage() {
         filters={
           <>
             <div>
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_categoria_label')}</p>
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_categoria_label')}</p>
               <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
                 className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
                 <option value="todas">{t('panelcfg_todas_categorias')}</option>
@@ -271,7 +271,7 @@ export default function TiendaPage() {
               </select>
             </div>
             <div>
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_estado_label')}</p>
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_estado_label')}</p>
               <select value={filterEstado} onChange={e => setFilterEstado(e.target.value as typeof filterEstado)}
                 className="w-full rounded-xl border border-line bg-surface2 px-3 py-2.5 text-sm text-snow outline-none focus:border-line2">
                 <option value="todos">{t('panelcfg_todos_estados')}</option>
@@ -304,13 +304,13 @@ export default function TiendaPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-mist font-mono shrink-0">#{idx + 1}</span>
+                    <span className="text-[10px] text-mist font-mono shrink-0">#{idx + 1}</span>
                     <p className="font-semibold text-snow truncate">{p.name}</p>
                   </div>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-xs text-mist capitalize">{categoryLabel(t, p.category)}</span>
-                    {p.weight && <><span className="text-line2 text-xs">·</span><span className="text-xs text-mist">{p.weight}</span></>}
-                    {p.barcode && <><span className="text-line2 text-xs">·</span><span className="text-xs font-mono text-mist">{p.barcode}</span></>}
+                    {p.weight && <><span className="text-line2 text-[10px]">·</span><span className="text-xs text-mist">{p.weight}</span></>}
+                    {p.barcode && <><span className="text-line2 text-[10px]">·</span><span className="text-[10px] font-mono text-mist">{p.barcode}</span></>}
                   </div>
                 </div>
                 <span className="font-bold text-lime shrink-0">{p.price.toFixed(2)} €</span>
@@ -380,7 +380,7 @@ export default function TiendaPage() {
                     </td>
                     <td className="px-3 py-3 hidden md:table-cell">
                       {p.barcode
-                        ? <span className="text-xs font-mono text-mist bg-surface2 px-1.5 py-0.5 rounded">{p.barcode}</span>
+                        ? <span className="text-[10px] font-mono text-mist bg-surface2 px-1.5 py-0.5 rounded">{p.barcode}</span>
                         : <span className="text-xs text-line2">—</span>}
                     </td>
                     <td className="px-3 py-3 text-center">
@@ -524,7 +524,7 @@ export default function TiendaPage() {
                   <div className="flex gap-1.5 mt-2">
                     {[6, 12, 24, 48].map(n => (
                       <button key={n} type="button" onClick={() => setStockInput(String(n))}
-                        className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-medium text-fog hover:text-snow hover:border-line2 transition-colors">
+                        className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
                         +{n}
                       </button>
                     ))}
@@ -565,7 +565,7 @@ export default function TiendaPage() {
               <div className="flex gap-1.5 mt-2">
                 {[6, 12, 24, 48].map(n => (
                   <button key={n} type="button" onClick={() => setStockEntry(String(n))}
-                    className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-medium text-fog hover:text-snow hover:border-line2 transition-colors">
+                    className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
                     +{n}
                   </button>
                 ))}
@@ -590,7 +590,7 @@ export default function TiendaPage() {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setConfirmDelete(null)}
-                className="flex-1 rounded-xl border border-line py-2.5 text-xs font-medium text-fog hover:text-snow transition-colors">
+                className="flex-1 rounded-xl border border-line py-2.5 text-xs font-semibold text-fog hover:text-snow transition-colors">
                 {t('panelcfg_cancelar')}
               </button>
               <button onClick={() => handleDelete(confirmDelete.id)}

@@ -42,7 +42,7 @@ export default function FamiliasPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">Familias</h1>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">Familias</h1>
         <span className="text-sm text-mist">{filtered.length} familias</span>
       </div>
 
@@ -86,7 +86,7 @@ export default function FamiliasPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {lowBono > 0 && (
-                      <span className="text-xs font-bold text-amber">{lowBono} bono bajo</span>
+                      <span className="text-[10px] font-bold text-amber">{lowBono} bono bajo</span>
                     )}
                     <ChevronRight size={14} className="text-mist" />
                   </div>

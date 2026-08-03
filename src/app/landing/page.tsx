@@ -11,7 +11,7 @@ import { TrackPageView } from '@/components/TrackPageView'
 
 function MockCheckin() {
   return (
-    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-xs">
+    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
       {/* search */}
       <div className="flex items-center gap-2 rounded-lg border border-line2 bg-surface px-2.5 py-1.5">
         <Search size={11} className="text-mist shrink-0" />
@@ -50,7 +50,7 @@ function MockCheckin() {
 
 function MockMember() {
   return (
-    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-xs">
+    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
       {/* header */}
       <div className="flex items-center gap-2 mb-1">
         <div className="w-6 h-6 rounded-lg bg-iris/10 flex items-center justify-center">
@@ -82,13 +82,13 @@ function MockMember() {
       </div>
       {/* hijos */}
       <div className="space-y-1">
-        <p className="text-fog font-semibold uppercase tracking-wide" style={{ fontSize: 12 }}>Hijos · 2</p>
+        <p className="text-fog font-semibold uppercase tracking-wide" style={{ fontSize: 9 }}>Hijos · 2</p>
         {[
           { name: 'Aina Mas', age: '4 años', date: '22 jun. 2022', sex: 'F' },
           { name: 'Pau Mas', age: '7 años', date: '10 mar. 2019', sex: 'M' },
         ].map(c => (
           <div key={c.name} className="flex items-center gap-2">
-            <div className={`w-4 h-4 rounded-full flex items-center justify-center font-bold shrink-0 text-white ${c.sex === 'F' ? 'bg-iris' : 'bg-lime'}`} style={{ fontSize: 12 }}>
+            <div className={`w-4 h-4 rounded-full flex items-center justify-center font-bold shrink-0 text-white ${c.sex === 'F' ? 'bg-iris' : 'bg-lime'}`} style={{ fontSize: 9 }}>
               {c.sex === 'F' ? '♀' : '♂'}
             </div>
             <span className="text-snow">{c.name}</span>
@@ -102,13 +102,13 @@ function MockMember() {
 
 function MockAgenda() {
   return (
-    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-xs">
+    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
       {/* day header */}
       <div className="flex items-center justify-between mb-1">
         <p className="font-semibold text-snow">Lunes 22 de junio</p>
         <div className="flex gap-1">
           {['L','M','X','J','V','S','D'].map((d, i) => (
-            <span key={d} className={`w-5 h-5 rounded-md flex items-center justify-center font-semibold ${i === 0 ? 'bg-lime text-white' : 'text-fog'}`} style={{ fontSize: 12 }}>{d}</span>
+            <span key={d} className={`w-5 h-5 rounded-md flex items-center justify-center font-semibold ${i === 0 ? 'bg-lime text-white' : 'text-fog'}`} style={{ fontSize: 9 }}>{d}</span>
           ))}
         </div>
       </div>
@@ -124,7 +124,7 @@ function MockAgenda() {
             <p className="font-semibold text-snow truncate">{e.title}</p>
             <p className="text-mist">{e.time} · {e.guests} invitados</p>
           </div>
-          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${e.badgeColor} shrink-0`}>{e.badge}</span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${e.badgeColor} shrink-0`}>{e.badge}</span>
         </div>
       ))}
     </div>
@@ -133,7 +133,7 @@ function MockAgenda() {
 
 function MockPanel() {
   return (
-    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-xs">
+    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
       {/* opportunity boxes */}
       <div className="grid grid-cols-4 gap-1.5">
         {[
@@ -144,13 +144,13 @@ function MockPanel() {
         ].map(o => (
           <div key={o.label} className={`rounded-lg border ${o.border} p-2 flex flex-col items-center gap-0.5`}>
             <span className={`font-display text-lg font-semibold ${o.color}`}>{o.value}</span>
-            <span className="text-mist text-center leading-tight" style={{ fontSize: 12 }}>{o.label}</span>
+            <span className="text-mist text-center leading-tight" style={{ fontSize: 9 }}>{o.label}</span>
           </div>
         ))}
       </div>
       {/* mini chart bar */}
       <div className="rounded-lg border border-line bg-surface px-2.5 py-2">
-        <p className="text-fog mb-1.5" style={{ fontSize: 12 }}>Visitas últimos 7 días</p>
+        <p className="text-fog mb-1.5" style={{ fontSize: 9 }}>Visitas últimos 7 días</p>
         <div className="flex items-end gap-1 h-8">
           {[6,9,4,12,8,14,11].map((h, i) => (
             <div key={i} className="flex-1 rounded-sm bg-lime/20 flex items-end">
@@ -158,7 +158,7 @@ function MockPanel() {
             </div>
           ))}
         </div>
-        <div className="flex justify-between mt-1 text-mist" style={{ fontSize: 12 }}>
+        <div className="flex justify-between mt-1 text-mist" style={{ fontSize: 9 }}>
           {['L','M','X','J','V','S','D'].map(d => <span key={d}>{d}</span>)}
         </div>
       </div>
@@ -175,7 +175,7 @@ function MockPanel() {
 
 function MockAlertas() {
   return (
-    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-xs">
+    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
       {/* alert rows */}
       {[
         { name: 'Marc Torres', msg: 'Le queda 1 sesión de bono', color: 'border-amber/30 bg-amber/5', icon: AlertTriangle, iconColor: 'text-amber', status: 'sin_contactar', statusColor: 'bg-rose text-white' },
@@ -189,7 +189,7 @@ function MockAlertas() {
               <p className="font-semibold text-snow">{a.name}</p>
               <p className="text-mist">{a.msg}</p>
             </div>
-            <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${a.statusColor} shrink-0`}>{a.status.replace('_', ' ')}</span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${a.statusColor} shrink-0`}>{a.status.replace('_', ' ')}</span>
           </div>
         </div>
       ))}
@@ -203,8 +203,8 @@ function MockAlertas() {
 
 function MockOportunidades() {
   return (
-    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-xs">
-      <p className="font-semibold text-fog uppercase tracking-wide" style={{ fontSize: 12 }}>Cumpleaños este mes · 5 niños</p>
+    <div className="rounded-xl border border-line bg-carbon p-3 space-y-2 text-[11px]">
+      <p className="font-semibold text-fog uppercase tracking-wide" style={{ fontSize: 9 }}>Cumpleaños este mes · 5 niños</p>
       {[
         { child: 'Aina Mas', age: 4, date: '22 jun.', client: 'Laura Mas', status: 'reservado', statusColor: 'bg-lime text-white' },
         { child: 'Leo Puig', age: 6, date: '28 jun.', client: 'Noa Puig', status: 'contactado', statusColor: 'bg-amber text-white' },
@@ -218,7 +218,7 @@ function MockOportunidades() {
             <p className="font-semibold text-snow">{b.child} · {b.age} años</p>
             <p className="text-mist">{b.date} · {b.client}</p>
           </div>
-          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${b.statusColor} shrink-0`}>{b.status}</span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${b.statusColor} shrink-0`}>{b.status}</span>
         </div>
       ))}
     </div>
@@ -317,7 +317,7 @@ export default function LandingPage() {
             <a href="#how-it-works" className="hover:text-snow transition-colors">Cómo funciona</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-fog hover:text-snow transition-colors">
+            <Link href="/login" className="text-sm font-semibold text-fog hover:text-snow transition-colors">
               Iniciar sesión
             </Link>
             <Link
@@ -354,7 +354,7 @@ export default function LandingPage() {
           </Link>
           <a
             href="#features"
-            className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-8 py-4 text-base font-medium text-fog hover:text-snow hover:border-line2 transition-colors"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-8 py-4 text-base font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
           >
             Ver funciones
           </a>
@@ -369,13 +369,13 @@ export default function LandingPage() {
             <div className="w-3 h-3 rounded-full bg-rose/60" />
             <div className="w-3 h-3 rounded-full bg-amber/60" />
             <div className="w-3 h-3 rounded-full bg-lime/60" />
-            <span className="ml-2 text-xs text-mist">GERD · Inicio</span>
+            <span className="ml-2 text-[11px] text-mist">GERD · Inicio</span>
           </div>
 
           {/* Aforo bar */}
           <div className="rounded-2xl border border-line bg-carbon px-5 py-4 mb-3">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+              <p className="text-[11px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
                 <Timer size={11} className="text-lime" /> Aforo en tiempo real
               </p>
               <span className="text-sm font-bold text-lime">11 / 40 · 28%</span>
@@ -385,8 +385,8 @@ export default function LandingPage() {
               <div className="h-full bg-cyan-300" style={{ width: '14%' }} />
             </div>
             <div className="flex gap-4 mt-2">
-              <span className="text-xs text-fog flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-lime" /> 5 adultos</span>
-              <span className="text-xs text-fog flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-cyan-300" /> 6 niños</span>
+              <span className="text-[10px] text-fog flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-lime" /> 5 adultos</span>
+              <span className="text-[10px] text-fog flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-cyan-300" /> 6 niños</span>
             </div>
           </div>
 
@@ -402,7 +402,7 @@ export default function LandingPage() {
             ].map(s => (
               <div key={s.label} className="rounded-xl border border-line bg-carbon p-3">
                 <div className={`font-display text-2xl font-semibold ${s.color}`}>{s.value}</div>
-                <div className="text-xs text-fog mt-0.5 leading-tight">{s.label}</div>
+                <div className="text-[10px] text-fog mt-0.5 leading-tight">{s.label}</div>
               </div>
             ))}
           </div>

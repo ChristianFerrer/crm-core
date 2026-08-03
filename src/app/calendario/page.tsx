@@ -258,7 +258,7 @@ export default function CalendarioPage() {
             <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-surface2 transition-colors text-fog hover:text-snow"><ChevronRight size={18} /></button>
           </div>
           <div className="grid grid-cols-7 border-b border-line">
-            {DOW_LABELS.map(d => <div key={d} className="py-2 text-center text-xs font-semibold text-mist uppercase tracking-wide">{d}</div>)}
+            {DOW_LABELS.map(d => <div key={d} className="py-2 text-center text-[10px] font-semibold text-mist uppercase tracking-wide">{d}</div>)}
           </div>
           <div className="grid grid-cols-7">
             {cells.map((day, idx) => {
@@ -274,7 +274,7 @@ export default function CalendarioPage() {
                   <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-lime text-ink' : isSelected ? 'text-rose' : 'text-fog'}`}>{day}</span>
                   <div className="flex flex-wrap gap-0.5">
                     {dayBookings.filter(b => b.status !== 'cancelled').slice(0, 3).map(b => <span key={b.id} className={`w-2 h-2 rounded-full ${bookingColor(b.type)}`} />)}
-                    {dayBookings.filter(b => b.status !== 'cancelled').length > 3 && <span className="text-xs text-mist self-end">+{dayBookings.filter(b => b.status !== 'cancelled').length - 3}</span>}
+                    {dayBookings.filter(b => b.status !== 'cancelled').length > 3 && <span className="text-[9px] text-mist self-end">+{dayBookings.filter(b => b.status !== 'cancelled').length - 3}</span>}
                   </div>
                 </button>
               )
@@ -311,24 +311,24 @@ export default function CalendarioPage() {
                       <button onClick={() => openEditFlow(b)} className="flex-1 min-w-0 px-4 py-3 flex items-start gap-3 text-left">
                         <div className="shrink-0 text-right w-14">
                           <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
-                          {b.end_time && <p className="text-xs text-mist">{b.end_time.slice(0, 5)}</p>}
+                          {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-0.5">
                             <p className="text-xs font-semibold text-snow">{b.title}</p>
-                            <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
-                            {st === 'ejecutado' && <span className="text-xs font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={9} />{t('calendario_ejecutado')}</span>}
-                            {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={9} />{t('calendario_en_curso')}</span>}
-                            {b.status === 'cancelled' && <span className="text-xs font-semibold text-rose">{t('calendario_cancelada')}</span>}
+                            <span className={`text-[10px] font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
+                            {st === 'ejecutado' && <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={9} />{t('calendario_ejecutado')}</span>}
+                            {st === 'en_curso' && <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5"><Clock size={9} />{t('calendario_en_curso')}</span>}
+                            {b.status === 'cancelled' && <span className="text-[10px] font-semibold text-rose">{t('calendario_cancelada')}</span>}
                             {showPago && (
-                              <span className={`text-xs font-semibold ${paymentBadge(b.payment_status)}`}>
+                              <span className={`text-[10px] font-semibold ${paymentBadge(b.payment_status)}`}>
                                 {t(paymentLabelKey(b.payment_status))}{b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
                               </span>
                             )}
                           </div>
-                          {b.members?.name && <p className="text-xs text-fog">{b.members.name}</p>}
+                          {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
                           {(totalG > 0 || gA > 0 || gC > 0) && (
-                            <p className="text-xs text-mist">
+                            <p className="text-[11px] text-mist">
                               {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
                               {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
                             </p>
@@ -340,7 +340,7 @@ export default function CalendarioPage() {
                           type="button"
                           onClick={() => handleExecute(b)}
                           disabled={executingId === b.id}
-                          className="flex items-center gap-1 self-center text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 mr-4 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                          className="flex items-center gap-1 self-center text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 mr-4 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                         >
                           <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
                         </button>

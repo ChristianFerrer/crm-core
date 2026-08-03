@@ -283,7 +283,7 @@ export default async function PanelPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('panelres_titulo')}</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelres_titulo')}</h1>
           <p className="text-sm text-fog mt-0.5 capitalize">
             {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>

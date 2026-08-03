@@ -29,7 +29,7 @@ export function MiembrosTabs({ active }: { active: Tab }) {
         const inner = (
           <>
             <Icon size={26} strokeWidth={1.8} className={`${tile.accent} shrink-0`} />
-            <span className={`h-8 mt-[5px] flex items-start justify-center text-center text-xs leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
+            <span className={`h-8 mt-[5px] flex items-start justify-center text-center text-[11px] leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
               {t(tile.labelKey)}
             </span>
           </>

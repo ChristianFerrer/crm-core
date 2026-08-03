@@ -12,7 +12,7 @@ import { useLanguage } from '@/lib/i18n'
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
   return (
-    <span className="ml-auto min-w-[20px] h-5 px-1 rounded-full bg-lime border-2 border-surface text-white text-xs font-bold flex items-center justify-center leading-none shrink-0">
+    <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-lime border-2 border-surface text-white text-[10px] font-bold flex items-center justify-center leading-none shrink-0">
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -143,7 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {termsAccepting ? 'Registrando aceptación...' : 'Acepto y continúo'}
           </button>
 
-          <p className="text-xs text-mist text-center">
+          <p className="text-[10px] text-mist text-center">
             Esta aceptación queda registrada con fecha y hora. Puedes consultar la{' '}
             <a href="/privacidad" target="_blank" className="underline">política de privacidad</a>{' '}en cualquier momento.
           </p>
@@ -166,7 +166,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <p className="font-display font-semibold text-snow text-sm leading-tight">GERD</p>
-                <p className="text-xs text-mist">CRM</p>
+                <p className="text-[10px] text-mist">CRM</p>
               </div>
             )}
           </div>
@@ -202,7 +202,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className="shrink-0" />
                 {!collapsed && label}
                 {collapsed
-                  ? (badge > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-lime border-2 border-surface" />)
+                  ? (badge > 0 && <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-lime border-2 border-surface" />)
                   : <Badge count={badge} />}
               </Link>
             )
@@ -222,7 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {!collapsed && userEmail && (
             <div className="flex items-center gap-2 px-2">
               <User size={11} className="text-mist shrink-0" />
-              <p className="text-xs text-mist truncate">{userEmail}</p>
+              <p className="text-[11px] text-mist truncate">{userEmail}</p>
             </div>
           )}
           <button

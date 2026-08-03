@@ -26,7 +26,7 @@ export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
       >
         <Bell size={16} />
         {visible.length > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 bg-rose border-2 border-carbon text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-rose border-2 border-carbon text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {visible.length}
           </span>
         )}
@@ -42,7 +42,7 @@ export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
               <div className="flex items-center gap-2">
                 <Bell size={14} className="text-amber" />
                 <span className="text-sm font-semibold text-snow">{t('panelres_alertas_activas')}</span>
-                <span className="text-xs font-bold bg-rose border-2 border-surface text-white px-1.5 py-0.5 rounded-full">{visible.length}</span>
+                <span className="text-[10px] font-bold bg-rose border-2 border-surface text-white px-1.5 py-0.5 rounded-full">{visible.length}</span>
               </div>
               <button onClick={() => setOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
                 <X size={16} />

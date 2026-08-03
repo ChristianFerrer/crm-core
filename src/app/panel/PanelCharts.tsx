@@ -7,7 +7,7 @@ import {
 
 const TOOLTIP_STYLE = {
   contentStyle: { background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, color: 'var(--color-snow)', fontSize: 12 },
-  labelStyle: { color: 'var(--color-mist)', fontSize: 12 },
+  labelStyle: { color: 'var(--color-mist)', fontSize: 11 },
 }
 
 type GrowthPoint = { label: string; adultos: number | null; ninos: number | null }
@@ -41,8 +41,8 @@ export function MemberGrowthChart({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} interval={0} />
-            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip {...TOOLTIP_STYLE} cursor={{ stroke: 'var(--color-line)' }}
               formatter={(v: any, name: any) => [v, name === 'adultos' ? 'Adultos' : 'Niños']} />
             <Line type="monotone" dataKey="adultos" stroke="var(--color-lime)" strokeWidth={2} dot={false} name="adultos" />
@@ -90,8 +90,8 @@ export function VisitMiniChart({
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
             <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'var(--color-surface2)' }}
               formatter={(v: any, key: any) => [v, key === 'adultos' ? 'Adultos' : 'Niños']} />
             {capacity != null && (
@@ -150,8 +150,8 @@ export function BonoDistChart({
       <div className="flex-1 min-h-[150px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 36, left: 0, bottom: 0 }}>
-            <XAxis type="number" tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <YAxis type="category" dataKey="name" tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} width={64} />
+            <XAxis type="number" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <YAxis type="category" dataKey="name" tick={{ fill: 'var(--color-mist)', fontSize: 11 }} axisLine={false} tickLine={false} width={64} />
             <Tooltip {...TOOLTIP_STYLE} cursor={{ fill: 'var(--color-surface2)' }}
               formatter={(v: any, key: any) =>
                 key === 'ok'
@@ -205,8 +205,8 @@ export function PeakHoursChart({ data }: { data: HourPoint[] }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="hour" tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} interval={1} />
-            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <XAxis dataKey="hour" tick={{ fill: 'var(--color-mist)', fontSize: 9 }} axisLine={false} tickLine={false} interval={1} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [v, 'Visitas']} />
             <Line type="monotone" dataKey="visitas" stroke="var(--color-iris)" strokeWidth={2.5}
               dot={(props: any) => {
@@ -245,8 +245,8 @@ export function VisitsPerMonthChart({ data }: { data: MonthVisitPoint[] }) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
             <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} interval={0} />
-            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, Math.ceil(max * 1.15)]} />
             <Tooltip {...TOOLTIP_STYLE} formatter={(v: any) => [v, 'Visitas']} />
             <Line type="monotone" dataKey="visitas" stroke="var(--color-lime)" strokeWidth={2.5} dot={{ r: 2.5, fill: 'var(--color-lime)' }} activeDot={{ r: 4 }} />
           </LineChart>

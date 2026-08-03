@@ -179,27 +179,27 @@ export function ProspectsSection() {
             <div key={stage.id} className="rounded-2xl border border-line bg-surface flex flex-col min-h-[120px]">
               <div className="px-4 py-3 border-b border-line flex items-center justify-between">
                 <span className={`text-xs font-bold uppercase tracking-wide ${stage.color}`}>{stage.label}</span>
-                <span className="text-xs font-bold text-mist bg-surface2 rounded-full px-2 py-0.5">{byStage(stage.id).length}</span>
+                <span className="text-[10px] font-bold text-mist bg-surface2 rounded-full px-2 py-0.5">{byStage(stage.id).length}</span>
               </div>
               <div className="p-2.5 space-y-2 flex-1">
                 {byStage(stage.id).length === 0 && (
-                  <p className="text-xs text-mist text-center py-4">Sin prospectos</p>
+                  <p className="text-[11px] text-mist text-center py-4">Sin prospectos</p>
                 )}
                 {byStage(stage.id).map(p => (
                   <div key={p.id} className="rounded-xl border border-line bg-surface2 p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <button onClick={() => openEdit(p)} className="text-left flex-1 min-w-0">
                         <p className="text-sm font-semibold text-snow truncate">{p.business_name}</p>
-                        {p.contact_name && <p className="text-xs text-mist truncate">{p.contact_name}</p>}
+                        {p.contact_name && <p className="text-[11px] text-mist truncate">{p.contact_name}</p>}
                       </button>
                       <button onClick={() => handleDelete(p)} className="text-mist hover:text-rose transition-colors shrink-0"><Trash2 size={12} /></button>
                     </div>
                     <div className="space-y-1">
-                      {p.phone && <p className="text-xs text-fog flex items-center gap-1.5"><Phone size={10} className="shrink-0" />{p.phone}</p>}
-                      {p.email && <p className="text-xs text-fog flex items-center gap-1.5 truncate"><Mail size={10} className="shrink-0" />{p.email}</p>}
-                      {p.city && <p className="text-xs text-fog flex items-center gap-1.5"><MapPin size={10} className="shrink-0" />{p.city}</p>}
+                      {p.phone && <p className="text-[11px] text-fog flex items-center gap-1.5"><Phone size={10} className="shrink-0" />{p.phone}</p>}
+                      {p.email && <p className="text-[11px] text-fog flex items-center gap-1.5 truncate"><Mail size={10} className="shrink-0" />{p.email}</p>}
+                      {p.city && <p className="text-[11px] text-fog flex items-center gap-1.5"><MapPin size={10} className="shrink-0" />{p.city}</p>}
                       {p.next_action && (
-                        <p className="text-xs text-amber flex items-center gap-1.5">
+                        <p className="text-[11px] text-amber flex items-center gap-1.5">
                           <Calendar size={10} className="shrink-0" />
                           {p.next_action}{p.next_action_at ? ` · ${new Date(p.next_action_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}` : ''}
                         </p>
@@ -210,7 +210,7 @@ export function ProspectsSection() {
                         <select
                           value={stage.id}
                           onChange={e => moveStage(p, e.target.value as Stage)}
-                          className="flex-1 bg-surface border border-line rounded-lg px-2 py-1.5 text-xs text-fog outline-none"
+                          className="flex-1 bg-surface border border-line rounded-lg px-2 py-1.5 text-[11px] text-fog outline-none"
                         >
                           {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                         </select>
@@ -279,7 +279,7 @@ export function ProspectsSection() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-medium hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-semibold hover:text-snow transition-colors">Cancelar</button>
               <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50">
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
@@ -295,7 +295,7 @@ export function ProspectsSection() {
             <h3 className="text-base font-semibold text-snow">¿Convertir en establecimiento?</h3>
             <p className="text-sm text-fog">Se creará un establecimiento en prueba (14 días) para <strong className="text-snow">{convertModal.business_name}</strong> con los datos de contacto ya cargados.</p>
             <div className="flex gap-3">
-              <button onClick={() => setConvertModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-medium hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => setConvertModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-semibold hover:text-snow transition-colors">Cancelar</button>
               <button onClick={handleConvert} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors">
                 <Check size={14} /> Convertir
               </button>
@@ -314,7 +314,7 @@ export function ProspectsSection() {
               <textarea className={inputCls} rows={3} value={discardReason} onChange={e => setDiscardReason(e.target.value)} placeholder="Ej. No respondió, precio, etc." />
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setDiscardModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-medium hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => setDiscardModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-semibold hover:text-snow transition-colors">Cancelar</button>
               <button onClick={handleDiscard} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Descartar</button>
             </div>
           </div>

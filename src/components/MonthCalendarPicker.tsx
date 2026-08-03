@@ -48,7 +48,7 @@ export function MonthCalendarPicker({ value, onChange }: { value: string; onChan
 
       <div className="grid grid-cols-7 mb-1">
         {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(w => (
-          <div key={w} className="h-7 flex items-center justify-center text-xs font-medium text-mist">{w}</div>
+          <div key={w} className="h-7 flex items-center justify-center text-[10px] font-semibold text-mist">{w}</div>
         ))}
       </div>
 

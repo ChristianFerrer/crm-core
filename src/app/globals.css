@@ -147,8 +147,6 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
-  /* Base de la escala tipográfica: 16px */
-  font-size: 100%;
 }
 
 body {
@@ -157,31 +155,7 @@ body {
   background: var(--color-carbon);
   color: var(--color-snow);
   font-family: var(--font-sans);
-  font-size: 1rem;      /* cuerpo = 16px */
-  line-height: 1.5;     /* WCAG: interlineado mínimo recomendado en cuerpo */
   -webkit-font-smoothing: antialiased;
-}
-
-/* ─── Escala tipográfica ───────────────────────────────────────────────────
-   Base 16px, razón ~1.25 (tercera mayor). Suelo de 12px: nada por debajo,
-   que es el mínimo legible según Apple HIG / Material 3 / WCAG.
-
-   rol        tamaño   peso   clases Tailwind equivalentes
-   display    30/36px  800    font-display text-3xl lg:text-4xl
-   h1         24px     700    text-2xl font-bold
-   h2         20px     700    text-xl  font-bold
-   h3         18px     600    text-lg  font-semibold
-   body       16px     400    text-base
-   body-sm    14px     400    text-sm     (tablas densas, texto secundario)
-   caption    12px     500    text-xs     (etiquetas, metadatos) — mínimo
-   ------------------------------------------------------------------------ */
-
-/* Interlineado por rol — evita que herede 1.5 en titulares y textos densos */
-h1, h2, h3, h4, .font-display {
-  line-height: 1.2;
-}
-.text-xs, .text-sm {
-  line-height: 1.4;
 }
 
 /* Títulos: misma familia, con peso alto y tracking cerrado como en la referencia */
@@ -189,18 +163,6 @@ h1, h2, h3, h4, .font-display {
   font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.02em;
-}
-
-/* Tracking ligeramente negativo en titulares grandes (evita que "floten") */
-.text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl {
-  letter-spacing: -0.015em;
-}
-
-/* Inputs a 16px en móvil: por debajo, iOS hace zoom automático al enfocarlos */
-@media (max-width: 640px) {
-  input, select, textarea {
-    font-size: 16px;
-  }
 }
 
 ::selection { background: var(--color-lime); color: var(--color-ink); }

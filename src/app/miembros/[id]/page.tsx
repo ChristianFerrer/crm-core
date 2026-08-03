@@ -128,7 +128,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             </div>
             <div>
               <p className="text-base font-semibold text-lime group-hover:underline">{m.phone}</p>
-              <p className="text-xs text-mist">{t('miembros_telefono_contacto')}</p>
+              <p className="text-[10px] text-mist">{t('miembros_telefono_contacto')}</p>
             </div>
           </a>
         ) : (
@@ -213,7 +213,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                     const age = child.birth_date ? calcChildAge(child.birth_date) : null
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white border-2 border-surface ${child.sex === 'F' ? 'bg-iris' : 'bg-lime'}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 text-white border-2 border-surface ${child.sex === 'F' ? 'bg-iris' : 'bg-lime'}`}>
                           {child.sex === 'F' ? '♀' : child.sex === 'M' ? '♂' : '?'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -247,7 +247,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               <p className="text-xs text-mist mt-1">{t('miembros_visitas_mes')}</p>
             </div>
             <div className="text-center">
-              <p className="font-display text-3xl font-medium text-fog">{(visits as any[])?.length ?? 0}</p>
+              <p className="font-display text-3xl font-semibold text-fog">{(visits as any[])?.length ?? 0}</p>
               <p className="text-xs text-mist mt-1">{t('miembros_total_visitas')}</p>
             </div>
           </div>

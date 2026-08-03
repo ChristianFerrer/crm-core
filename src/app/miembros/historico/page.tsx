@@ -162,10 +162,10 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
         exportDisabled={filteredVisits.length === 0}
         filters={
           <div>
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_rango_fechas')}</p>
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_rango_fechas')}</p>
             <div className="space-y-2.5">
               <div>
-                <label className="block text-xs text-mist mb-1">{t('panelcfg_desde')}</label>
+                <label className="block text-[10px] text-mist mb-1">{t('panelcfg_desde')}</label>
                 <DatePickerModal
                   title={t('panelcfg_desde')}
                   value={dateFrom}
@@ -173,7 +173,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                 />
               </div>
               <div>
-                <label className="block text-xs text-mist mb-1">{t('panelcfg_hasta')}</label>
+                <label className="block text-[10px] text-mist mb-1">{t('panelcfg_hasta')}</label>
                 <DatePickerModal
                   title={t('panelcfg_hasta')}
                   value={dateTo}
@@ -214,7 +214,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="text-xs text-mist">{dateStr} ·</span>
+                        <span className="text-[10px] text-mist">{dateStr} ·</span>
                         <span className="text-xs text-fog">{entryTime}{exitTime ? ` → ${exitTime}` : ` → ${t('panelcfg_en_curso')}`}</span>
                         {dmin != null && <span className="text-xs text-mist">· {fmtDuration(dmin)}</span>}
                       </div>
@@ -224,7 +224,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                       <p className={`text-xs font-semibold ${estadoCls}`}>{estadoLabel(t, estado)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap text-xs text-mist">
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap text-[11px] text-mist">
                     <span>{v.visit_type === 'custodia' ? t('panelcfg_custodia') : t('panelcfg_entrada_libre')}</span>
                     <span className="text-line2">·</span>
                     <span>{v.adults_count ?? 0} {v.adults_count !== 1 ? t('panelcfg_adulto_plural') : t('panelcfg_adulto_singular')}, {numChildren} {numChildren !== 1 ? t('panelcfg_nino_plural') : t('panelcfg_nino_singular')}</span>
@@ -244,7 +244,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                 <thead>
                   <tr className="border-b border-line">
                     {[t('panelcfg_th_fecha'), t('panelcfg_th_titular'), t('panelcfg_th_telefono'), t('panelcfg_tipo_label'), t('panelcfg_th_adultos'), t('panelcfg_th_ninos'), t('panelcfg_th_entrada'), t('panelcfg_th_salida'), t('panelcfg_th_duracion'), t('panelcfg_bono_label'), 'Importe', t('panelcfg_th_metodo'), t('panelcfg_th_estado')].map(col => (
-                      <th key={col} className="px-3 py-2 text-xs font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
+                      <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
                         {col}
                       </th>
                     ))}
@@ -257,7 +257,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                     return (
                       <tr key={v.id} className="hover:bg-surface2/40 transition-colors">
                         <td className="pl-4 pr-3 py-2.5 text-xs text-mist whitespace-nowrap">{dateStr}</td>
-                        <td className="px-3 py-2.5 text-xs font-medium text-snow whitespace-nowrap">{v.members?.name ?? '—'}</td>
+                        <td className="px-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{v.members?.name ?? '—'}</td>
                         <td className="px-3 py-2.5 text-xs text-mist whitespace-nowrap">{v.members?.phone ?? '—'}</td>
                         <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.visit_type === 'custodia' ? t('panelcfg_custodia') : t('panelcfg_entrada_libre')}</td>
                         <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{v.adults_count ?? '—'}</td>
@@ -268,7 +268,7 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
                         <td className="px-3 py-2.5 text-xs text-iris whitespace-nowrap">{bonoName ?? '—'}</td>
                         <td className="px-3 py-2.5 text-xs font-bold text-snow whitespace-nowrap">{cost != null ? fmtCost(cost) : '—'}</td>
                         <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap capitalize">{v.payment_method ?? '—'}</td>
-                        <td className={`px-3 pr-4 py-2.5 text-xs font-medium whitespace-nowrap ${estadoCls}`}>{estadoLabel(t, estado)}</td>
+                        <td className={`px-3 pr-4 py-2.5 text-xs font-semibold whitespace-nowrap ${estadoCls}`}>{estadoLabel(t, estado)}</td>
                       </tr>
                     )
                   })}
@@ -300,7 +300,7 @@ export default function VisitasPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('panelcfg_visitas_titulo')}</h1>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_visitas_titulo')}</h1>
         <p className="text-sm text-fog mt-0.5">{t('panelcfg_visitas_subtitulo')}</p>
       </div>
 

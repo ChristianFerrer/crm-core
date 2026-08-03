@@ -195,7 +195,7 @@ function CheckinSearchModal({
             <LogIn size={15} className="text-lime shrink-0" />
             <div>
               <p className="text-sm font-semibold text-snow">{t('home_registrar_entrada')}</p>
-              <p className="text-xs text-fog">{t('home_registro_entrada_visitantes')}</p>
+              <p className="text-[11px] text-fog">{t('home_registro_entrada_visitantes')}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
@@ -252,7 +252,7 @@ function CheckinSearchModal({
                       {inside && <span className="block text-xs text-iris">{t('home_dentro_ahora')}</span>}
                     </span>
                     {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
-                      : b?.sessions != null ? <span className="text-xs font-medium text-mist shrink-0">{b.sessions} ses.</span>
+                      : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
                       : <span className="text-xs text-rose shrink-0">{t('home_sin_bono_corto')}</span>}
                   </button>
                 )
@@ -424,7 +424,7 @@ function CheckinConfirmModal({
             <>
               {/* Tipo de entrada */}
               <div>
-                <p className="px-1 pb-1.5 text-xs font-semibold text-fog uppercase tracking-wide">{t('home_tipo_de_entrada')}</p>
+                <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_tipo_de_entrada')}</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setVisitType('entrada')}
                     className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors ${
@@ -438,14 +438,14 @@ function CheckinConfirmModal({
                 {visitType === 'custodia' && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
-                      <p className="px-1 text-xs font-semibold text-fog uppercase tracking-wide">{t('home_entrada')} <span className="text-rose">*</span></p>
+                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_entrada')} <span className="text-rose">*</span></p>
                       <div className="flex items-center px-3 py-2.5 rounded-xl border border-cyan-300/30 bg-surface2">
                         <input type="time" value={custodiaStart} onChange={e => setCustodiaStart(e.target.value)}
                           className="w-full bg-transparent text-sm text-snow outline-none" />
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="px-1 text-xs font-semibold text-fog uppercase tracking-wide">{t('home_salida')} <span className="text-rose">*</span></p>
+                      <p className="px-1 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_salida')} <span className="text-rose">*</span></p>
                       <div className="flex items-center px-3 py-2.5 rounded-xl border border-cyan-300/30 bg-surface2">
                         <input type="time" value={custodiaEnd} onChange={e => setCustodiaEnd(e.target.value)}
                           className="w-full bg-transparent text-sm text-snow outline-none" />
@@ -458,7 +458,7 @@ function CheckinConfirmModal({
               {/* Co-titulares — solo en entrada libre */}
               {visitType === 'entrada' && coTitulares.length > 0 && (
                 <div>
-                  <p className="px-1 pb-1.5 text-xs font-semibold text-fog uppercase tracking-wide">{t('home_co_titulares')}</p>
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_co_titulares')}</p>
                   <div className="space-y-2">
                     {coTitulares.map((co, i) => (
                       <button key={co.id} type="button"
@@ -470,7 +470,7 @@ function CheckinConfirmModal({
                           {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
                         </div>
                         <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
-                        <span className="text-xs text-iris font-medium shrink-0">{t('home_co_titular')}</span>
+                        <span className="text-[10px] text-iris font-medium shrink-0">{t('home_co_titular')}</span>
                       </button>
                     ))}
                   </div>
@@ -480,7 +480,7 @@ function CheckinConfirmModal({
               {/* Menores — #1 sin pre-seleccionar */}
               {currentMember.children && currentMember.children.length > 0 && (
                 <div>
-                  <p className="px-1 pb-1.5 text-xs font-semibold text-fog uppercase tracking-wide">{t('home_menores')}</p>
+                  <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_menores')}</p>
                   <div className="space-y-2">
                     {currentMember.children.map((child, i) => {
                       const sel = childrenPresent.some(c => c.name === child.name)
@@ -516,13 +516,13 @@ function CheckinConfirmModal({
               {/* Invitados adicionales — #2 colapsados */}
               {!showGuests ? (
                 <button type="button" onClick={() => setShowGuests(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-medium text-fog hover:border-line2 hover:text-snow transition-colors">
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
                   <Plus size={13} /> {t('home_anadir_invitados_adicionales')}
                 </button>
               ) : (
                 <div>
                   <div className="flex items-center justify-between px-1 pb-1.5">
-                    <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_invitados_adicionales')}</p>
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_invitados_adicionales')}</p>
                     <button type="button" onClick={() => { setShowGuests(false); setExtraAdultsCount(0); setExtraChildrenCount(0) }}
                       className="text-mist hover:text-fog transition-colors"><X size={13} /></button>
                   </div>
@@ -650,7 +650,7 @@ export function BookingSearchAndTypeModal({
             <CalendarClock size={15} className="text-iris shrink-0" />
             <div>
               <p className="text-sm font-semibold text-snow">{t('home_nueva_reserva')}</p>
-              <p className="text-xs text-fog">{t('home_paso1_titular_tipo')}</p>
+              <p className="text-[11px] text-fog">{t('home_paso1_titular_tipo')}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
@@ -659,7 +659,7 @@ export function BookingSearchAndTypeModal({
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
           {/* Titular */}
           <div>
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
               {t('home_titular')} <span className="text-rose">*</span>
             </p>
             {member ? (
@@ -710,7 +710,7 @@ export function BookingSearchAndTypeModal({
 
           {/* Tipo de reserva */}
           <div>
-            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">
+            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
               {t('home_tipo_de_reserva')} <span className="text-rose">*</span>
             </p>
             <div className="space-y-2">
@@ -991,7 +991,7 @@ export function BookingFormModal({
                     <FitText className="font-bold text-snow leading-tight" min={15} max={20}>{typeLabels[bookingType]}</FitText>
                   </div>
                 </div>
-                <p className="text-xs text-fog mt-1">{editId ? t('home_editar_reserva') : t('home_paso2_de_2')}</p>
+                <p className="text-[11px] text-fog mt-1">{editId ? t('home_editar_reserva') : t('home_paso2_de_2')}</p>
               </div>
             </div>
             <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1 mt-0.5 shrink-0"><X size={16} /></button>
@@ -1012,20 +1012,20 @@ export function BookingFormModal({
             <>
               {/* Titular — no editable */}
               <div>
-                <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">{t('home_titular')}</p>
+                <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('home_titular')}</p>
                 <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-surface2/40">
                   <div className="w-5 h-5 rounded-md border-2 border-line2 bg-line2 flex items-center justify-center shrink-0">
                     <Check size={11} className="text-fog" strokeWidth={3} />
                   </div>
                   <span className="flex-1 text-sm font-medium text-snow">{member.name}</span>
-                  <span className="text-xs text-snow font-medium">{t('home_titular')}</span>
+                  <span className="text-[10px] text-snow font-medium">{t('home_titular')}</span>
                 </div>
               </div>
 
               {/* Niño/a — selector cumpleaños (checkbox) y custodia (multi-checkbox) */}
               {member.children && member.children.length > 0 && (bookingType === 'birthday' || bookingType === 'custodia') && (
                 <div>
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
                     {bookingType === 'birthday' ? t('home_nino_que_cumple') : t('home_menores')}
                     {' '}<span className="text-rose">*</span>
                   </p>
@@ -1078,7 +1078,7 @@ export function BookingFormModal({
 
               {/* Título */}
               <div>
-                <label className="block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
                   {t('home_titulo')} {needsTitle && <span className="text-rose">*</span>}
                 </label>
                 <input value={title} onChange={e => setTitle(e.target.value)}
@@ -1088,7 +1088,7 @@ export function BookingFormModal({
 
               {/* Fecha */}
               <div>
-                <label className="block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
                   {t('home_fecha')} <span className="text-rose">*</span>
                 </label>
                 <DatePickerModal value={date} onChange={setDate} title={t('home_fecha')} />
@@ -1096,16 +1096,16 @@ export function BookingFormModal({
 
               {/* Horario */}
               <div>
-                <label className="block text-xs font-semibold text-fog uppercase tracking-wide mb-2">
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">
                   {t('home_horario')} <span className="text-rose">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <p className="text-xs text-mist px-1">{t('home_inicio')}</p>
+                    <p className="text-[10px] text-mist px-1">{t('home_inicio')}</p>
                     <TimePicker value={startTime} onChange={setStart} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-mist px-1">{t('home_fin')}</p>
+                    <p className="text-[10px] text-mist px-1">{t('home_fin')}</p>
                     <TimePicker value={endTime} onChange={setEnd} />
                   </div>
                 </div>
@@ -1125,11 +1125,11 @@ export function BookingFormModal({
                 ) : (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-fog uppercase tracking-wide">
+                      <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">
                         {bookingType === 'custodia' ? t('home_ninos_adicionales') : bookingType === 'birthday' ? t('home_asistentes_capacidad') : t('home_invitados')}
                       </p>
                       <button type="button" onClick={() => { setGuestsOpen(false); setGuestAdults(0); setGuestChildren(0) }}
-                        className="text-xs text-mist hover:text-rose transition-colors">{t('home_quitar')}</button>
+                        className="text-[10px] text-mist hover:text-rose transition-colors">{t('home_quitar')}</button>
                     </div>
                     <div className="space-y-2">
                       {bookingType !== 'custodia' && (
@@ -1159,16 +1159,16 @@ export function BookingFormModal({
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
+                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
                           <Receipt size={12} /> {t('home_pagos')}
                         </p>
                         <button type="button" onClick={() => { setPaymentsOpen(false); setServiceId(''); setTotalStr(''); setDepositStr('') }}
-                          className="text-xs text-mist hover:text-rose transition-colors">{t('home_quitar')}</button>
+                          className="text-[10px] text-mist hover:text-rose transition-colors">{t('home_quitar')}</button>
                       </div>
                       <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
                         {/* Paquete */}
                         <div>
-                          <p className="text-xs text-mist mb-1.5">{t('home_paquete')}</p>
+                          <p className="text-[10px] text-mist mb-1.5">{t('home_paquete')}</p>
                           <div className="relative">
                             <select value={serviceId} onChange={e => setServiceId(e.target.value)}
                               style={{ colorScheme: 'dark' }}
@@ -1181,7 +1181,7 @@ export function BookingFormModal({
                             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-fog pointer-events-none" />
                           </div>
                           {selectedService && Number(selectedService.included_guests) > 0 && (
-                            <p className="text-xs text-mist mt-1.5">
+                            <p className="text-[11px] text-mist mt-1.5">
                               {bookingType === 'birthday'
                                 ? `${t('home_precio_fijo_capacidad')} ${Number(selectedService.included_guests)} ${t('home_personas')}.`
                                 : `${t('home_incluye')} ${Number(selectedService.included_guests)} ${t('home_personas_invitados_exceden')}`}
@@ -1191,7 +1191,7 @@ export function BookingFormModal({
                         {/* Sub-servicios / Extras */}
                         {subServices.length > 0 && (
                           <div>
-                            <p className="text-xs text-mist mb-1.5">{t('home_sub_servicios')}</p>
+                            <p className="text-[10px] text-mist mb-1.5">{t('home_sub_servicios')}</p>
                             <div className="space-y-1.5">
                               {subServices.map(s => {
                                 const sel = selectedAddons.some(a => a.name === s.name)
@@ -1211,7 +1211,7 @@ export function BookingFormModal({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className={`text-sm font-medium truncate ${sel ? 'text-snow' : 'text-fog'}`}>{s.name}</p>
-                                      {s.description && <p className="text-xs text-mist truncate">{s.description}</p>}
+                                      {s.description && <p className="text-[11px] text-mist truncate">{s.description}</p>}
                                     </div>
                                     <span className="text-xs font-semibold text-snow shrink-0">{p.toFixed(2)}€</span>
                                   </button>
@@ -1249,7 +1249,7 @@ export function BookingFormModal({
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-mist">{t('home_estado')}</span>
-                          <span className={`text-xs font-semibold ${
+                          <span className={`text-[10px] font-semibold ${
                             paymentStatus === 'paid'    ? 'text-mint' :
                             paymentStatus === 'partial' ? 'text-amber' :
                                                           'text-fog'
@@ -1265,7 +1265,7 @@ export function BookingFormModal({
 
               {/* Notas */}
               <div>
-                <label className="block text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">
+                <label className="block text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">
                   {t('home_notas')}
                 </label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)}
@@ -1349,7 +1349,7 @@ function FilterGroup({ title, value, onChange, options }: {
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-semibold text-fog uppercase tracking-wide">{title}</p>
+      <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{title}</p>
       {options.map(opt => (
         <button
           key={opt.value}
@@ -2049,7 +2049,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     return pricingReady === false && !imp.isPackage && !v.membership_id
   }
   const ConfigTarifasChip = () => (
-    <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber bg-amber/10 px-1.5 py-0.5 text-xs font-semibold text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
+    <Link href="/panel/servicios" className="inline-flex items-center gap-1 rounded-md border border-amber bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
       <AlertTriangle size={10} /> {t('home_configura_tarifas')}
     </Link>
   )
@@ -2150,7 +2150,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Date navigation — esquina superior derecha, junto al nombre */}
@@ -2160,7 +2160,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               isToday ? 'border-line hover:border-line2' : 'border-lime'
             }`}
           >
-            <span className={`w-full flex-none h-[40%] flex items-center justify-center text-xs font-bold text-white uppercase leading-none ${isToday ? 'bg-rose' : 'bg-lime-deep'}`}>
+            <span className={`w-full flex-none h-[40%] flex items-center justify-center text-[8px] font-bold text-white uppercase leading-none ${isToday ? 'bg-rose' : 'bg-lime-deep'}`}>
               {monthAbbrev}
             </span>
             <span className="w-full flex-1 bg-white flex items-center justify-center text-sm font-bold text-ink leading-none">
@@ -2175,7 +2175,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           >
             <Bell size={16} />
             {totalAlerts > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 bg-rose border-2 border-carbon text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+              <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-rose border-2 border-carbon text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                 {totalAlerts}
               </span>
             )}
@@ -2220,7 +2220,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             {isToday && (
               <button
                 onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
-                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all"
+                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all"
               >
                 <LogIn size={12} className="shrink-0" /> {t('home_registrar_entrada')}
               </button>
@@ -2338,7 +2338,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           <button onClick={() => setDetailVisitId(visit.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left">
                             <span className="text-sm font-bold text-snow leading-tight truncate">{visit.members?.name ?? '—'}</span>
                             <span className="text-line2 shrink-0">·</span>
-                            <span className={`text-xs font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
+                            <span className={`text-[10px] font-semibold shrink-0 ${tipoColor}`}>{tipo}</span>
                           </button>
                           {isToday && (
                             <button
@@ -2396,7 +2396,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         (col.key === 'Bono' && filterBono !== 'all') ||
                         (col.key === 'Sesiones' && filterSesiones !== 'all')
                       return (
-                        <th key={col.key} className="px-3 py-2 text-xs font-semibold uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
+                        <th key={col.key} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap first:pl-4 last:pr-4">
                           <span className={`flex items-center gap-1 ${isFiltered ? 'text-iris' : 'text-mist'}`}>
                             {col.label}
                             {isFiltered && <span className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />}
@@ -2437,16 +2437,16 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                                 <div className="flex items-center gap-1.5">
                                   <div className="flex items-center gap-1">
                                     {extraAdults > 0 && (
-                                      <span className="text-xs font-bold text-lime flex items-center gap-0.5">
-                                        {extraAdults} <span className="text-xs font-normal">{extraAdults !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}</span>
+                                      <span className="text-[11px] font-bold text-lime flex items-center gap-0.5">
+                                        {extraAdults} <span className="text-[10px] font-normal">{extraAdults !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}</span>
                                       </span>
                                     )}
                                     {extraAdults > 0 && numChildren > 0 && (
-                                      <span className="text-mist text-xs">·</span>
+                                      <span className="text-mist text-[10px]">·</span>
                                     )}
                                     {numChildren > 0 && (
-                                      <span className="text-xs font-bold text-cyan-300 flex items-center gap-0.5">
-                                        {numChildren} <span className="text-xs font-normal">{numChildren !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>
+                                      <span className="text-[11px] font-bold text-cyan-300 flex items-center gap-0.5">
+                                        {numChildren} <span className="text-[10px] font-normal">{numChildren !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>
                                       </span>
                                     )}
                                     {!hasAcomp && <span className="text-xs text-mist">—</span>}
@@ -2475,7 +2475,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                                 ? 'text-cyan-300'
                                 : 'text-fog'
                               return (
-                                <span className={`text-xs font-semibold whitespace-nowrap ${cls}`}>
+                                <span className={`text-[10px] font-semibold whitespace-nowrap ${cls}`}>
                                   {tipo}
                                 </span>
                               )
@@ -2483,7 +2483,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                           </td>
                           {/* Bono */}
                           <td className="px-3 py-3 align-top">
-                            <span className={`text-xs font-semibold whitespace-nowrap ${bono ? 'text-iris' : 'text-amber'}`}>
+                            <span className={`text-[10px] font-semibold whitespace-nowrap ${bono ? 'text-iris' : 'text-amber'}`}>
                               {bono ? (visit.memberships?.membership_types?.name ?? t('home_con_bono')) : t('home_sin_bono')}
                             </span>
                           </td>
@@ -2497,7 +2497,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                                 {visit.memberships.sessions_remaining}
                               </span>
                             ) : (
-                              <span className="text-xs text-mist">—</span>
+                              <span className="text-[11px] text-mist">—</span>
                             )}
                           </td>
                           {/* Entrada */}
@@ -2577,7 +2577,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                                 <LogOut size={12} />
                               </button>
                             ) : (
-                              <span className="text-xs text-mist">—</span>
+                              <span className="text-[10px] text-mist">—</span>
                             )}
                           </td>
                         </tr>
@@ -2597,10 +2597,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <div className="px-4 pt-4 pb-3 border-b border-line flex items-center gap-2">
           <CalendarClock size={13} className="text-fog" />
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_agenda_de_hoy')}</h2>
-          <span className="text-xs text-mist">{todayBookings.length} {todayBookings.length !== 1 ? t('home_reservas_lc') : t('home_reserva_lc')}</span>
+          <span className="text-[11px] text-mist">{todayBookings.length} {todayBookings.length !== 1 ? t('home_reservas_lc') : t('home_reserva_lc')}</span>
           <button
             onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
-            className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-iris bg-iris/10 border border-iris rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-all"
+            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-all"
           >
             <CalendarPlus size={13} /> {t('home_nueva_reserva')}
           </button>
@@ -2623,34 +2623,34 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   >
                     <div className="shrink-0 text-right w-14">
                       <p className="text-xs font-semibold text-snow">{b.start_time?.slice(0, 5) ?? '—'}</p>
-                      {b.end_time && <p className="text-xs text-mist">{b.end_time.slice(0, 5)}</p>}
+                      {b.end_time && <p className="text-[10px] text-mist">{b.end_time.slice(0, 5)}</p>}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-0.5">
                         <p className="text-xs font-semibold text-snow">{b.title}</p>
-                        <span className={`text-xs font-semibold ${style.badge}`}>{style.label}</span>
+                        <span className={`text-[10px] font-semibold ${style.badge}`}>{style.label}</span>
                         {status === 'ejecutado' && (
-                          <span className="text-xs font-semibold text-mint flex items-center gap-0.5">
+                          <span className="text-[10px] font-semibold text-mint flex items-center gap-0.5">
                             <Check size={9} />{t('home_ejecutado')}
                           </span>
                         )}
                         {status === 'en_curso' && (
-                          <span className="text-xs font-semibold text-lime flex items-center gap-0.5">
+                          <span className="text-[10px] font-semibold text-lime flex items-center gap-0.5">
                             <Clock size={9} />{t('home_en_curso')}
                           </span>
                         )}
                       </div>
-                      {b.members?.name && <p className="text-xs text-fog">{b.members.name}</p>}
+                      {b.members?.name && <p className="text-[11px] text-fog">{b.members.name}</p>}
                       {(() => {
                         const gA = b.guest_adults ?? 0
                         const gC = b.guest_children ?? 0
                         const totalG = b.guests ?? (gA + gC)
                         if (totalG <= 0 && gA === 0 && gC === 0) return null
                         if (b.type === 'custodia') {
-                          return <p className="text-xs text-mist">{totalG} {totalG !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</p>
+                          return <p className="text-[11px] text-mist">{totalG} {totalG !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</p>
                         }
                         return (
-                          <p className="text-xs text-mist">
+                          <p className="text-[11px] text-mist">
                             {totalG} {totalG !== 1 ? t('home_invitados_lc') : t('home_invitado_lc')}
                             {(gA > 0 || gC > 0) && <span> · {gA} {gA !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}, {gC} {gC !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>}
                           </p>
@@ -2661,7 +2661,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       <button
                         onClick={e => { e.stopPropagation(); handleExecuteBooking(b) }}
                         disabled={executingBooking === b.id}
-                        className="flex items-center gap-1 text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                        className="flex items-center gap-1 text-[10px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                       >
                         <Play size={9} fill="currentColor" />
                         {executingBooking === b.id ? '...' : t('home_ejecutar')}
@@ -2679,7 +2679,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       <div className="flex items-center gap-2 px-1">
         <BarChart2 size={13} className="text-fog" />
         <span className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_metricas_del_dia')}</span>
-        <span className="text-xs text-mist">{monthCount} {t('home_visitas_este_mes')}</span>
+        <span className="text-[11px] text-mist">{monthCount} {t('home_visitas_este_mes')}</span>
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
@@ -2690,10 +2690,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <BarChart2 size={13} /> {t('home_aforo_por_hora')}
                   </h3>
                   <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1.5 text-xs text-fog">
+                    <span className="flex items-center gap-1.5 text-[11px] text-fog">
                       <span className="w-2 h-2 rounded-full bg-iris shrink-0" /> {t('home_alcanzado')}
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs text-fog">
+                    <span className="flex items-center gap-1.5 text-[11px] text-fog">
                       <span className="w-2 h-2 rounded-full bg-amber shrink-0" /> {t('home_reservado')}
                     </span>
                   </div>
@@ -2709,7 +2709,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         {payload.value}
                       </text>
                     )} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip
                       cursor={{ fill: 'var(--color-surface2)' }}
                       content={({ active, label }: any) => {
@@ -2717,7 +2717,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         const entry = chartData.find(d => d.hour === label)
                         if (!entry) return null
                         return (
-                          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, padding: '10px 14px', fontSize: 12 }}>
+                          <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: 12, padding: '10px 14px', fontSize: 11 }}>
                             <p style={{ color: 'var(--color-mist)', marginBottom: 6 }}>{label}</p>
                             {entry.alcanzado != null ? (
                               <>
@@ -2743,14 +2743,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       {chartData.map((_, i) => (
                         <Cell key={i} fill="var(--color-iris)" fillOpacity={i + 7 === currentHour ? 1 : 0.6} />
                       ))}
-                      <LabelList dataKey="_alcanzadoLabel" position="top" style={{ fill: 'var(--color-mist)', fontSize: 12, fontWeight: 600 }} />
+                      <LabelList dataKey="_alcanzadoLabel" position="top" style={{ fill: 'var(--color-mist)', fontSize: 9, fontWeight: 600 }} />
                     </Bar>
                     <Bar dataKey="reservado" stackId="a" fill="var(--color-amber)"
                       shape={(p: any) => <StackedBar {...p} roundTop />}>
                       {chartData.map((_, i) => (
                         <Cell key={i} fill="var(--color-amber)" fillOpacity={i + 7 === currentHour ? 1 : 0.6} />
                       ))}
-                      <LabelList dataKey="_reservadoLabel" position="top" style={{ fill: 'var(--color-mist)', fontSize: 12, fontWeight: 600 }} />
+                      <LabelList dataKey="_reservadoLabel" position="top" style={{ fill: 'var(--color-mist)', fontSize: 9, fontWeight: 600 }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -2763,10 +2763,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <Activity size={13} /> {t('home_afluencia_por_hora')}
                   </h3>
                   <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1.5 text-xs text-fog">
+                    <span className="flex items-center gap-1.5 text-[11px] text-fog">
                       <span className="w-2 h-2 rounded-full bg-iris shrink-0" /> {t('home_con_bono')}
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs text-fog">
+                    <span className="flex items-center gap-1.5 text-[11px] text-fog">
                       <span className="w-2 h-2 rounded-full bg-amber shrink-0" /> {t('home_sin_bono')}
                     </span>
                   </div>
@@ -2774,12 +2774,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={chartData} margin={{ top: 0, right: 8, left: -24, bottom: 0 }}>
                     <CartesianGrid stroke="var(--color-line)" strokeDasharray="0" vertical={false} />
-                    <XAxis dataKey="hour" tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <XAxis dataKey="hour" tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--color-mist)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-line)', borderRadius: '12px' }}
-                      labelStyle={{ color: 'var(--color-mist)', fontSize: 12 }}
-                      itemStyle={{ color: 'var(--color-snow)', fontSize: 12 }}
+                      labelStyle={{ color: 'var(--color-mist)', fontSize: 11 }}
+                      itemStyle={{ color: 'var(--color-snow)', fontSize: 11 }}
                       cursor={{ stroke: 'var(--color-line)' }}
                     />
                     <Line type="monotone" dataKey="conBono" name={t('home_con_bono')} stroke="var(--color-iris)" strokeWidth={2} dot={false} />
@@ -2798,7 +2798,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="flex items-center gap-2">
                 <Bell size={14} className="text-amber" />
                 <span className="text-sm font-semibold text-snow">{t('home_alertas_activas')}</span>
-                <span className="text-xs font-bold bg-rose border-2 border-surface text-white px-1.5 py-0.5 rounded-full">{totalAlerts - dismissedAlerts.size}</span>
+                <span className="text-[10px] font-bold bg-rose border-2 border-surface text-white px-1.5 py-0.5 rounded-full">{totalAlerts - dismissedAlerts.size}</span>
               </div>
               <button onClick={() => setAlertsOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
                 <X size={16} />
@@ -2816,7 +2816,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-snow truncate">{v.members?.name ?? '—'}</p>
-                          <p className="text-xs text-fog">{t('home_lleva')} {fmtElapsed(v.checked_in_at)} {t('home_en_sala_lc')}</p>
+                          <p className="text-[11px] text-fog">{t('home_lleva')} {fmtElapsed(v.checked_in_at)} {t('home_en_sala_lc')}</p>
                         </div>
                       </div>
                       <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'long-' + v.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
@@ -2825,12 +2825,12 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line">{fmtVisitType(v)}</span>
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface2 text-fog border border-line">{fmtVisitType(v)}</span>
                         <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>
                       </div>
                       <button
                         onClick={() => { setConfirmCheckout(v.id); setAlertsOpen(false) }}
-                        className="flex items-center gap-1 text-xs font-medium text-rose bg-rose/10 border border-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
+                        className="flex items-center gap-1 text-[10px] font-medium text-rose bg-rose/10 border border-rose rounded-lg px-2 py-1 hover:brightness-110 transition-all shrink-0"
                       >
                         <LogOut size={10} /> {t('home_salida')}
                       </button>
@@ -2850,7 +2850,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <Cake size={13} className="text-rose shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
-                          <p className="text-xs text-fog">{t('home_empieza_a_las')} {b.start_time?.slice(0, 5)}</p>
+                          <p className="text-[11px] text-fog">{t('home_empieza_a_las')} {b.start_time?.slice(0, 5)}</p>
                         </div>
                       </div>
                       <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'bday-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
@@ -2858,7 +2858,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-iris text-white border-2 border-surface">{t('home_cumpleanos')}</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-iris border-2 border-surface text-white">{t('home_cumpleanos')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
@@ -2876,7 +2876,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         <CalendarClock size={13} className="text-amber shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-snow truncate">{b.title}</p>
-                          <p className="text-xs text-fog">{t('home_custodia_termina_a_las')} {b.end_time?.slice(0, 5)}</p>
+                          <p className="text-[11px] text-fog">{t('home_custodia_termina_a_las')} {b.end_time?.slice(0, 5)}</p>
                         </div>
                       </div>
                       <button onClick={() => setDismissedAlerts(prev => new Set([...prev, 'cust-' + b.id]))} className="text-mist hover:text-fog transition-colors p-1 shrink-0">
@@ -2884,7 +2884,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-cyan-300 text-white border-2 border-surface">{t('home_custodia')}</span>
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-cyan-300 border-2 border-surface text-white">{t('home_custodia')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
@@ -2941,7 +2941,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <Receipt size={15} className="text-lime shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-xs text-fog">{t('home_total_a_pagar')}</p>
+                    <p className="text-[11px] text-fog">{t('home_total_a_pagar')}</p>
                   </div>
                 </div>
                 <button onClick={closeTotalModal} className="text-fog hover:text-snow transition-colors p-1">
@@ -2952,7 +2952,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Sección paquete de reserva (cumpleaños/custodia/otro con importe) */}
                 {imp.isPackage ? (
                   <div>
-                    <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_reserva')}</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_reserva')}</p>
                     <div className="space-y-1.5">
                       {imp.pkg?.live && (
                         <>
@@ -2990,7 +2990,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       )}
                       {(visit.bookings?.addons ?? []).length > 0 && (
                         <div className="pt-1 border-t border-line/60 space-y-1.5">
-                          <p className="text-xs text-mist">{t('home_sub_servicios')}</p>
+                          <p className="text-[10px] text-mist">{t('home_sub_servicios')}</p>
                           {(visit.bookings?.addons ?? []).map((a, i) => (
                             <div key={i} className="flex justify-between text-xs">
                               <span className="text-fog">+ {a.name}</span>
@@ -3017,7 +3017,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                 ) : (
                 <div>
-                  <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_importe_por_tiempo')}</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_importe_por_tiempo')}</p>
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs text-fog">
                       <span>{t('home_tiempo_en_sala')}</span><span className="text-snow">{fmtH(elapsedMins)}</span>
@@ -3062,7 +3062,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Sección consumos */}
                 <div>
-                  <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_consumos')}</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_consumos')}</p>
                   {grouped.length === 0 ? (
                     <p className="text-xs text-mist">{t('home_sin_consumos')}</p>
                   ) : (
@@ -3142,7 +3142,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <LogOut size={15} className="text-rose shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-xs text-fog">{t('home_confirmar_salida')}</p>
+                    <p className="text-[11px] text-fog">{t('home_confirmar_salida')}</p>
                   </div>
                 </div>
                 <button onClick={() => setConfirmCheckout(null)} className="text-fog hover:text-snow transition-colors p-1">
@@ -3223,7 +3223,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <Users size={15} className="text-iris shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-xs text-fog">{totalAcomp} {totalAcomp !== 1 ? t('home_acompanantes_lc') : t('home_acompanante_lc')}</p>
+                    <p className="text-[11px] text-fog">{totalAcomp} {totalAcomp !== 1 ? t('home_acompanantes_lc') : t('home_acompanante_lc')}</p>
                   </div>
                 </div>
                 <button onClick={() => closeAndReturn(() => setAcompVisitId(null))} className="text-fog hover:text-snow transition-colors p-1">
@@ -3234,7 +3234,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
                 {/* Titular */}
                 <div>
-                  <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_titular')}</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_titular')}</p>
                   <button
                     onClick={() => setAcompTitularPresent(p => !p)}
                     className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
@@ -3247,14 +3247,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       {acompTitularPresent && <Check size={10} className="text-ink" strokeWidth={3} />}
                     </span>
                     <span className="text-xs font-medium text-snow flex-1">{visit.members?.name ?? '—'}</span>
-                    <span className="text-xs text-iris font-medium">{t('home_titular')}</span>
+                    <span className="text-[11px] text-iris font-medium">{t('home_titular')}</span>
                   </button>
                 </div>
 
                 {/* Co-titulares */}
                 {acompCoTitulares.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_co_titulares')}</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_co_titulares')}</p>
                     <div className="space-y-1.5">
                       {acompCoTitulares.map(cot => (
                         <button key={cot.id}
@@ -3269,7 +3269,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {cot.selected && <Check size={10} className="text-white" strokeWidth={3} />}
                           </span>
                           <span className="text-xs font-medium text-snow flex-1">{cot.name}</span>
-                          <span className="text-xs text-iris font-medium">{t('home_co_titular')}</span>
+                          <span className="text-[11px] text-iris font-medium">{t('home_co_titular')}</span>
                         </button>
                       ))}
                     </div>
@@ -3279,7 +3279,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Hijos registrados */}
                 {registeredChildren.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_hijos_registrados')}</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_hijos_registrados')}</p>
                     <div className="space-y-1.5">
                       {registeredChildren.map((child, i) => {
                         const checked = selectedNames.has(child.name)
@@ -3296,7 +3296,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                               {checked && <Check size={10} className="text-ink" strokeWidth={3} />}
                             </span>
                             <span className="text-xs font-medium text-snow flex-1">{child.name}</span>
-                            {age && <span className="text-xs text-fog">{age}</span>}
+                            {age && <span className="text-[11px] text-fog">{age}</span>}
                           </button>
                         )
                       })}
@@ -3306,7 +3306,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Invitados */}
                 <div>
-                  <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_invitados')}</p>
+                  <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_invitados')}</p>
                   <div className="space-y-2">
                     {/* Adultos invitados */}
                     <div className="flex items-center justify-between rounded-xl bg-surface2 border border-line px-3 py-2.5">
@@ -3329,7 +3329,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     {acompChildren.filter(c => c.isGuest).map((child, i) => (
                       <div key={i} className="flex items-center gap-2 rounded-xl bg-surface2 border border-line px-3 py-2.5">
                         <span className="text-xs text-snow flex-1">{child.name}</span>
-                        <span className="text-xs text-cyan-300 font-medium">{t('home_nino_invitado')}</span>
+                        <span className="text-[10px] text-cyan-300 font-medium">{t('home_nino_invitado')}</span>
                         <button
                           onClick={() => setAcompChildren(prev => {
                             const guestIdx = prev.filter(c => c.isGuest).indexOf(child)
@@ -3370,8 +3370,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
               {/* Footer */}
               <div className="px-5 py-3 border-t border-line shrink-0 flex items-center justify-between">
-                <span className="text-xs text-mist">{totalAcomp} {totalAcomp !== 1 ? t('home_acompanantes_lc') : t('home_acompanante_lc')}</span>
-                <span className={`text-xs flex items-center gap-1 transition-opacity ${savingAcomp || savedAcomp ? 'opacity-100' : 'opacity-0'}`}>
+                <span className="text-[11px] text-mist">{totalAcomp} {totalAcomp !== 1 ? t('home_acompanantes_lc') : t('home_acompanante_lc')}</span>
+                <span className={`text-[11px] flex items-center gap-1 transition-opacity ${savingAcomp || savedAcomp ? 'opacity-100' : 'opacity-0'}`}>
                   {savingAcomp
                     ? <span className="text-fog">{t('home_guardando')}</span>
                     : <span className="text-mint flex items-center gap-1"><Check size={11} /> {t('home_guardado')}</span>
@@ -3407,7 +3407,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <Receipt size={15} className="text-lime shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-snow">{visit.members?.name ?? '—'}</p>
-                    <p className="text-xs text-fog">{t('home_desglose_del_importe')}</p>
+                    <p className="text-[11px] text-fog">{t('home_desglose_del_importe')}</p>
                   </div>
                 </div>
                 <button onClick={() => closeAndReturn(() => setImporteVisitId(null))} className="text-fog hover:text-snow transition-colors p-1">
@@ -3540,8 +3540,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-base font-bold text-snow truncate">{titularName}</p>
-                    <span className={`text-xs font-semibold shrink-0 ${tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-fog'}`}>{tipo}</span>
-                    {isLong && <span className="text-xs font-semibold text-amber shrink-0">⚠ {t('home_larga')}</span>}
+                    <span className={`text-[10px] font-semibold shrink-0 ${tipo === 'Cumpleaños' ? 'text-iris' : tipo === 'Custodia' ? 'text-cyan-300' : 'text-fog'}`}>{tipo}</span>
+                    {isLong && <span className="text-[10px] font-semibold text-amber shrink-0">⚠ {t('home_larga')}</span>}
                   </div>
                   <p className="text-xs text-fog mt-0.5">{t('home_entrada')} {fmtTime(visit.checked_in_at)} · <span className={isLong ? 'text-amber font-semibold' : 'text-snow'}>{fmtElapsed(visit.checked_in_at)}</span></p>
                 </div>
@@ -3595,7 +3595,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-lime/40 transition-colors">
                     <Receipt size={15} className="text-lime" />
                     <span className="text-xs font-semibold text-lime">{imp.total.toFixed(2)}€</span>
-                    <span className="text-xs text-mist">{t('home_importe')}</span>
+                    <span className="text-[10px] text-mist">{t('home_importe')}</span>
                   </button>
                   <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); setProductSearch(''); setConsumosVisitId(detailVisitId) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
@@ -3603,15 +3603,15 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
                       {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : '—'}
                     </span>
-                    <span className="text-xs text-mist">{t('home_consumos')}</span>
+                    <span className="text-[10px] text-mist">{t('home_consumos')}</span>
                   </button>
                   <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); openAcompPopup(visit) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
                     <UserPlus size={15} className="text-fog" />
-                    <span className="text-xs font-medium text-mist">
+                    <span className="text-xs font-semibold text-mist">
                       {Math.max(0, visit.adults_count - 1) + numChildren}
                     </span>
-                    <span className="text-xs text-mist">{t('home_acomp_abrev')}</span>
+                    <span className="text-[10px] text-mist">{t('home_acomp_abrev')}</span>
                   </button>
                 </div>
 
@@ -3624,7 +3624,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 ) : (
                   <button onClick={() => { setDetailVisitId(null); setTotalVisitId(detailVisitId) }}
                     className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/20 transition-colors">
-                    <span className="text-sm font-medium text-fog">{t('home_total_a_pagar')}</span>
+                    <span className="text-sm font-semibold text-fog">{t('home_total_a_pagar')}</span>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
                       <Receipt size={13} className="text-lime/60" />
@@ -3672,8 +3672,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </div>
                   <FitText className="font-bold text-snow leading-tight" min={13} max={18}>{b.title}</FitText>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-xs font-semibold ${style.badge}`}>{style.label}</span>
-                    <span className={`text-xs font-semibold ${st.cls}`}>{st.label}</span>
+                    <span className={`text-[10px] font-semibold ${style.badge}`}>{style.label}</span>
+                    <span className={`text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
                   </div>
                 </div>
                 <button onClick={() => setSelectedBooking(null)} className="text-fog hover:text-snow transition-colors p-1 shrink-0 ml-2">
@@ -3710,18 +3710,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 {/* Horario */}
                 <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
-                  <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_horario')}</p>
+                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_horario')}</p>
                   <div className="flex items-center gap-4">
                     {b.start_time && (
                       <div>
-                        <p className="text-xs text-mist mb-0.5">{t('home_inicio')}</p>
+                        <p className="text-[10px] text-mist mb-0.5">{t('home_inicio')}</p>
                         <p className="text-lg font-bold text-snow">{b.start_time.slice(0, 5)}</p>
                       </div>
                     )}
                     {b.start_time && b.end_time && <span className="text-mist">→</span>}
                     {b.end_time && (
                       <div>
-                        <p className="text-xs text-mist mb-0.5">{t('home_fin')}</p>
+                        <p className="text-[10px] text-mist mb-0.5">{t('home_fin')}</p>
                         <p className="text-lg font-bold text-snow">{b.end_time.slice(0, 5)}</p>
                       </div>
                     )}
@@ -3730,8 +3730,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       const h = Math.floor(diff / 60), m = diff % 60
                       return (
                         <div className="ml-auto">
-                          <p className="text-xs text-mist mb-0.5">{t('home_duracion')}</p>
-                          <p className="text-sm font-medium text-fog">{h > 0 ? `${h}h ` : ''}{m > 0 ? `${m}min` : ''}</p>
+                          <p className="text-[10px] text-mist mb-0.5">{t('home_duracion')}</p>
+                          <p className="text-sm font-semibold text-fog">{h > 0 ? `${h}h ` : ''}{m > 0 ? `${m}min` : ''}</p>
                         </div>
                       )
                     })()}
@@ -3753,7 +3753,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                         </span>
                       </div>
                       {b.type !== 'custodia' && (gA > 0 || gC > 0) && (
-                        <div className="flex items-center gap-3 mt-1.5 text-xs text-mist">
+                        <div className="flex items-center gap-3 mt-1.5 text-[11px] text-mist">
                           <span>{gA} {gA !== 1 ? t('home_adultos_lc') : t('home_adulto_lc')}</span>
                           <span>·</span>
                           <span>{gC} {gC !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</span>
@@ -3775,8 +3775,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   return (
                     <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> {t('home_pagos')}</p>
-                        <span className={`text-xs font-semibold ${badge.cls}`}>{badge.label}</span>
+                        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5"><Receipt size={12} /> {t('home_pagos')}</p>
+                        <span className={`text-[10px] font-semibold ${badge.cls}`}>{badge.label}</span>
                       </div>
                       {b.services?.name && (
                         <div className="flex items-center justify-between pb-1.5 border-b border-line/60">
@@ -3815,7 +3815,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {/* Notas */}
                 {b.notes && (
                   <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">
-                    <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1.5">{t('home_notas')}</p>
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{t('home_notas')}</p>
                     <p className="text-xs text-snow whitespace-pre-wrap leading-relaxed">{b.notes}</p>
                   </div>
                 )}
@@ -3969,7 +3969,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 <ShoppingCart size={15} className="text-iris shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-snow">{consumosVisit.members?.name ?? '—'}</p>
-                  <p className="text-xs text-fog">{t('home_consumos_de_la_visita')}</p>
+                  <p className="text-[11px] text-fog">{t('home_consumos_de_la_visita')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -4001,7 +4001,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
                 return grouped.length > 0 ? (
                   <div>
-                    <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-2">{t('home_consumido')}</p>
+                    <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_consumido')}</p>
                     <div className="space-y-1.5">
                       {grouped.map(g => {
                         const qty = g.ids.length
@@ -4012,7 +4012,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                             {/* Name + unit price */}
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-snow truncate">{g.name}</p>
-                              <p className="text-xs text-mist">{Number(g.unit_price).toFixed(2)}€/ud.</p>
+                              <p className="text-[10px] text-mist">{Number(g.unit_price).toFixed(2)}€/ud.</p>
                             </div>
                             {/* Quantity controls */}
                             <div className="flex items-center gap-1.5">
@@ -4050,7 +4050,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
               {/* Selector de productos */}
               <div>
-                <p className="text-xs font-semibold text-mist uppercase tracking-wide mb-3">{t('home_anadir_producto')}</p>
+                <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-3">{t('home_anadir_producto')}</p>
 
                 {/* Buscador */}
                 <div className="relative mb-3">
@@ -4071,7 +4071,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   if (filtered.length === 0) return null
                   return (
                     <div key={cat} className="mb-4 last:mb-0">
-                      <p className="text-xs font-medium text-fog capitalize mb-2">{cat}</p>
+                      <p className="text-[10px] font-semibold text-fog capitalize mb-2">{cat}</p>
                       <div className="flex flex-col gap-2">
                         {filtered.map(p => {
                           const Icon = getProductIcon(p)

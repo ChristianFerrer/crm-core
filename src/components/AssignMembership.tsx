@@ -42,7 +42,7 @@ export function AssignMembership({ memberId }: { memberId: string }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line2 py-3 text-sm font-medium text-fog hover:text-snow hover:border-lime/40 transition-colors"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line2 py-3 text-sm font-semibold text-fog hover:text-snow hover:border-lime/40 transition-colors"
       >
         <Plus size={15} /> Asignar bono
       </button>

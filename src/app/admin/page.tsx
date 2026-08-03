@@ -148,8 +148,8 @@ function DashboardSection({ tenants }: { tenants: Tenant[] }) {
                   <p className="text-sm font-semibold text-snow truncate">{t.name}</p>
                   <p className="text-xs text-mist">{t.city ?? '—'} · {t.owner_email ?? '—'}</p>
                 </div>
-                <span className={`text-xs font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
-                <span className={`text-xs font-bold hidden sm:inline ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <span className={`text-[10px] font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
+                <span className={`text-[10px] font-bold hidden sm:inline ${STATUS_COLORS[t.status]}`}>{t.status}</span>
                 <span className="text-xs text-mist shrink-0">{new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
             )
@@ -281,7 +281,7 @@ function TenantModal({
             <input type="email" value={form.admin_email} onChange={e => upd('admin_email', e.target.value)}
               placeholder="admin@establecimiento.com"
               className="w-full bg-surface2 border border-iris/30 rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-iris/60 transition-colors" />
-            <p className="text-xs text-iris/70">
+            <p className="text-[11px] text-iris/70">
               Este correo podrá iniciar sesión en GERD y acceder a la vista del establecimiento.
             </p>
           </div>
@@ -494,9 +494,9 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-xs font-bold ${tenantHealth(lastAccess[t.id] ?? null).cls}`}>● {tenantHealth(lastAccess[t.id] ?? null).label}</span>
-                <span className={`text-xs font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
-                <span className={`text-xs font-bold ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <span className={`text-[10px] font-bold ${tenantHealth(lastAccess[t.id] ?? null).cls}`}>● {tenantHealth(lastAccess[t.id] ?? null).label}</span>
+                <span className={`text-[10px] font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
+                <span className={`text-[10px] font-bold ${STATUS_COLORS[t.status]}`}>{t.status}</span>
               </div>
             </div>
 
@@ -504,23 +504,23 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
             <div className="mt-3 space-y-1">
               {t.admin_email && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-iris uppercase tracking-wide w-24 shrink-0">Admin email</span>
+                  <span className="text-[10px] font-semibold text-iris uppercase tracking-wide w-24 shrink-0">Admin email</span>
                   <span className="text-xs text-snow font-medium">{t.admin_email}</span>
                 </div>
               )}
               {t.phone && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Teléfono</span>
+                  <span className="text-[10px] font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Teléfono</span>
                   <span className="text-xs text-fog">{t.phone}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Alta</span>
+                <span className="text-[10px] font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Alta</span>
                 <span className="text-xs text-fog">{new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
               {t.trial_ends_at && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-amber uppercase tracking-wide w-24 shrink-0">Trial hasta</span>
+                  <span className="text-[10px] font-semibold text-amber uppercase tracking-wide w-24 shrink-0">Trial hasta</span>
                   <span className="text-xs text-amber">{new Date(t.trial_ends_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
                 </div>
               )}
@@ -531,7 +531,7 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
             {/* Actions */}
             <div className="mt-4 flex items-center gap-2 border-t border-line pt-3">
               <button onClick={() => openEdit(t)}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
                 <Pencil size={12} /> Editar
               </button>
               <button onClick={() => enterAsTenant(t)}
@@ -539,11 +539,11 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 <Eye size={12} /> Ver cliente
               </button>
               <button onClick={() => sendResetEmail(t)} disabled={sendingReset === t.id}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors disabled:opacity-50">
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors disabled:opacity-50">
                 <Mail size={12} /> {sendingReset === t.id ? 'Enviando...' : 'Restablecer contraseña'}
               </button>
               <button onClick={() => setPasswordTenant(t)}
-                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
                 <KeyRound size={12} /> Cambiar contraseña
               </button>
               <button onClick={() => toggleStatus(t)}
@@ -556,7 +556,7 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
               </button>
               {t.status !== 'cancelled' && (
                 <button onClick={() => cancelTenant(t)}
-                  className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-mist hover:text-rose hover:border-rose/30 transition-colors">
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-mist hover:text-rose hover:border-rose/30 transition-colors">
                   Cancelar
                 </button>
               )}
@@ -623,10 +623,10 @@ function MetricsSection() {
   }, [])
 
   const chartProps = {
-    style: { fontSize: 12 },
+    style: { fontSize: 11 },
     margin: { top: 5, right: 10, left: -20, bottom: 0 },
   }
-  const axisProps = { stroke: 'var(--color-line2)', tick: { fill: 'var(--color-mist)', fontSize: 12 } }
+  const axisProps = { stroke: 'var(--color-line2)', tick: { fill: 'var(--color-mist)', fontSize: 11 } }
   const gridProps = { stroke: 'var(--color-line)', strokeDasharray: '3 3' }
 
   return (
@@ -798,8 +798,8 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-medium text-fog">{t.sessions_30d} sesiones</span>
-                    <span className={`flex items-center gap-1 text-xs font-bold ${cls}`}>
+                    <span className="text-xs font-semibold text-fog">{t.sessions_30d} sesiones</span>
+                    <span className={`flex items-center gap-1 text-[10px] font-bold ${cls}`}>
                       <StatusIcon size={9} /> {label}
                     </span>
                     <ChevronDown size={13} className={`text-mist transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -814,7 +814,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                       <>
                         {/* Device summary */}
                         <div>
-                          <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">Terminales detectados</p>
+                          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Terminales detectados</p>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(uniqueDevices).map(([key, count]) => {
                               const [device, browser, os, pwa] = key.split('|')
@@ -825,7 +825,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                                     {pwa === 'true' ? 'PWA' : browser}
                                   </span>
                                   <span className="text-xs text-fog">· {os}</span>
-                                  {count > 1 && <span className="text-xs font-bold text-lime ml-1">×{count}</span>}
+                                  {count > 1 && <span className="text-[10px] font-bold text-lime ml-1">×{count}</span>}
                                 </div>
                               )
                             })}
@@ -834,7 +834,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
 
                         {/* Last 5 sessions */}
                         <div>
-                          <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">Últimas sesiones</p>
+                          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Últimas sesiones</p>
                           <div className="space-y-1">
                             {t.devices.slice(0, 5).map((s, i) => (
                               <div key={i} className="flex items-center gap-2 text-xs text-fog">
@@ -875,7 +875,7 @@ function ConfigSection() {
         <div><label className={labelCls}>Versión</label><input defaultValue="v0.1" disabled className={inputCls + ' opacity-50'} /></div>
         <div><label className={labelCls}>Supabase Project URL</label><input defaultValue="https://nylqzrr*****" disabled className={inputCls + ' opacity-50 font-mono text-xs'} /></div>
         <div><label className={labelCls}>Email de administrador</label><input type="email" defaultValue="admin@elboscmagic.cat" className={inputCls} /></div>
-        <button disabled className="w-full flex items-center justify-center gap-2 rounded-xl bg-surface2 py-3 text-sm font-medium text-mist cursor-not-allowed border border-line">
+        <button disabled className="w-full flex items-center justify-center gap-2 rounded-xl bg-surface2 py-3 text-sm font-semibold text-mist cursor-not-allowed border border-line">
           Guardar — Próximamente
         </button>
       </div>
@@ -947,7 +947,7 @@ export default function AdminPage() {
             </div>
             <div>
               <p className="font-display font-semibold text-snow text-sm leading-tight">Admin</p>
-              <p className="text-xs text-mist">Plataforma SaaS</p>
+              <p className="text-[10px] text-mist">Plataforma SaaS</p>
             </div>
           </div>
         </div>
@@ -970,12 +970,12 @@ export default function AdminPage() {
               <div className="w-6 h-6 rounded-full bg-amber/20 flex items-center justify-center shrink-0">
                 <Shield size={12} className="text-amber" />
               </div>
-              <p className="text-xs text-fog truncate">{userEmail}</p>
+              <p className="text-[11px] text-fog truncate">{userEmail}</p>
             </div>
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-fog hover:text-rose hover:bg-rose/20 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors"
           >
             <LogOut size={14} /> Cerrar sesión
           </button>
@@ -1011,7 +1011,7 @@ export default function AdminPage() {
             )}
             <button
               onClick={() => { setMobileMenuOpen(false); handleLogout() }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-fog hover:text-rose hover:bg-rose/20 transition-colors border border-line"
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors border border-line"
             >
               <LogOut size={14} /> Cerrar sesión
             </button>
