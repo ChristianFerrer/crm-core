@@ -170,7 +170,7 @@ export default function RegistroPage() {
             {children.map((c, i) => (
               <div key={i} className="border-t border-line pt-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-fog">Hijo/a {i + 1}</p>
+                  <p className="text-xs font-medium text-fog">Hijo/a {i + 1}</p>
                   <button type="button" onClick={() => setChildren(cs => cs.filter((_, idx) => idx !== i))} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
                 </div>
                 <input

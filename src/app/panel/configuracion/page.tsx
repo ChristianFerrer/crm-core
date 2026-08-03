@@ -187,7 +187,7 @@ export default function ConfiguracionPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_configuracion_titulo')}</h1>
+        <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('panelcfg_configuracion_titulo')}</h1>
         <p className="text-sm text-fog mt-0.5">{t('panelcfg_perfil_subtitulo')}</p>
       </div>
 
@@ -205,7 +205,7 @@ export default function ConfiguracionPage() {
               {!editingEst ? (
                 <button
                   onClick={() => setEditingEst(true)}
-                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1.5 text-xs font-medium text-fog hover:text-snow hover:border-line2 transition-colors"
                 >
                   <Pencil size={11} /> {t('panelcfg_editar')}
                 </button>
@@ -213,7 +213,7 @@ export default function ConfiguracionPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCancelEst}
-                    className="flex items-center gap-1 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs font-semibold text-fog hover:text-snow transition-colors"
+                    className="flex items-center gap-1 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs font-medium text-fog hover:text-snow transition-colors"
                   >
                     <X size={11} /> {t('panelcfg_cancelar')}
                   </button>
@@ -267,7 +267,7 @@ export default function ConfiguracionPage() {
               {!editingContact ? (
                 <button
                   onClick={() => setEditingContact(true)}
-                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1.5 text-xs font-medium text-fog hover:text-snow hover:border-line2 transition-colors"
                 >
                   <Pencil size={11} /> {t('panelcfg_editar')}
                 </button>
@@ -275,7 +275,7 @@ export default function ConfiguracionPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCancelContact}
-                    className="flex items-center gap-1 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs font-semibold text-fog hover:text-snow transition-colors"
+                    className="flex items-center gap-1 rounded-lg border border-line bg-surface2 px-2.5 py-1.5 text-xs font-medium text-fog hover:text-snow transition-colors"
                   >
                     <X size={11} /> {t('panelcfg_cancelar')}
                   </button>

@@ -66,7 +66,7 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
               <button
                 onClick={() => setStep('idle')}
                 disabled={step === 'deleting'}
-                className="flex-1 rounded-xl border border-line py-2.5 text-xs font-semibold text-fog hover:text-snow transition-colors disabled:opacity-50"
+                className="flex-1 rounded-xl border border-line py-2.5 text-xs font-medium text-fog hover:text-snow transition-colors disabled:opacity-50"
               >
                 {t('miembros_cancelar')}
               </button>

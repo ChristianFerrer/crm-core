@@ -300,7 +300,7 @@ export default function VisitasPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_visitas_titulo')}</h1>
+        <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('panelcfg_visitas_titulo')}</h1>
         <p className="text-sm text-fog mt-0.5">{t('panelcfg_visitas_subtitulo')}</p>
       </div>
 

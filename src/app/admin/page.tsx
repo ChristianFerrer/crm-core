@@ -531,7 +531,7 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
             {/* Actions */}
             <div className="mt-4 flex items-center gap-2 border-t border-line pt-3">
               <button onClick={() => openEdit(t)}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
                 <Pencil size={12} /> Editar
               </button>
               <button onClick={() => enterAsTenant(t)}
@@ -539,11 +539,11 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 <Eye size={12} /> Ver cliente
               </button>
               <button onClick={() => sendResetEmail(t)} disabled={sendingReset === t.id}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors disabled:opacity-50">
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors disabled:opacity-50">
                 <Mail size={12} /> {sendingReset === t.id ? 'Enviando...' : 'Restablecer contraseña'}
               </button>
               <button onClick={() => setPasswordTenant(t)}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
+                className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-fog hover:text-snow hover:border-line2 transition-colors">
                 <KeyRound size={12} /> Cambiar contraseña
               </button>
               <button onClick={() => toggleStatus(t)}
@@ -556,7 +556,7 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
               </button>
               {t.status !== 'cancelled' && (
                 <button onClick={() => cancelTenant(t)}
-                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-line text-mist hover:text-rose hover:border-rose/30 transition-colors">
+                  className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-xl border border-line text-mist hover:text-rose hover:border-rose/30 transition-colors">
                   Cancelar
                 </button>
               )}
@@ -798,7 +798,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-semibold text-fog">{t.sessions_30d} sesiones</span>
+                    <span className="text-xs font-medium text-fog">{t.sessions_30d} sesiones</span>
                     <span className={`flex items-center gap-1 text-xs font-bold ${cls}`}>
                       <StatusIcon size={9} /> {label}
                     </span>
@@ -875,7 +875,7 @@ function ConfigSection() {
         <div><label className={labelCls}>Versión</label><input defaultValue="v0.1" disabled className={inputCls + ' opacity-50'} /></div>
         <div><label className={labelCls}>Supabase Project URL</label><input defaultValue="https://nylqzrr*****" disabled className={inputCls + ' opacity-50 font-mono text-xs'} /></div>
         <div><label className={labelCls}>Email de administrador</label><input type="email" defaultValue="admin@elboscmagic.cat" className={inputCls} /></div>
-        <button disabled className="w-full flex items-center justify-center gap-2 rounded-xl bg-surface2 py-3 text-sm font-semibold text-mist cursor-not-allowed border border-line">
+        <button disabled className="w-full flex items-center justify-center gap-2 rounded-xl bg-surface2 py-3 text-sm font-medium text-mist cursor-not-allowed border border-line">
           Guardar — Próximamente
         </button>
       </div>
@@ -975,7 +975,7 @@ export default function AdminPage() {
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-fog hover:text-rose hover:bg-rose/20 transition-colors"
           >
             <LogOut size={14} /> Cerrar sesión
           </button>
@@ -1011,7 +1011,7 @@ export default function AdminPage() {
             )}
             <button
               onClick={() => { setMobileMenuOpen(false); handleLogout() }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-fog hover:text-rose hover:bg-rose/20 transition-colors border border-line"
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-fog hover:text-rose hover:bg-rose/20 transition-colors border border-line"
             >
               <LogOut size={14} /> Cerrar sesión
             </button>

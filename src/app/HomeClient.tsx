@@ -252,7 +252,7 @@ function CheckinSearchModal({
                       {inside && <span className="block text-xs text-iris">{t('home_dentro_ahora')}</span>}
                     </span>
                     {b?.unlimited ? <span className="text-xs font-semibold text-iris shrink-0">∞</span>
-                      : b?.sessions != null ? <span className="text-xs font-semibold text-mist shrink-0">{b.sessions} ses.</span>
+                      : b?.sessions != null ? <span className="text-xs font-medium text-mist shrink-0">{b.sessions} ses.</span>
                       : <span className="text-xs text-rose shrink-0">{t('home_sin_bono_corto')}</span>}
                   </button>
                 )
@@ -516,7 +516,7 @@ function CheckinConfirmModal({
               {/* Invitados adicionales — #2 colapsados */}
               {!showGuests ? (
                 <button type="button" onClick={() => setShowGuests(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-medium text-fog hover:border-line2 hover:text-snow transition-colors">
                   <Plus size={13} /> {t('home_anadir_invitados_adicionales')}
                 </button>
               ) : (
@@ -2150,7 +2150,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
+          <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Date navigation — esquina superior derecha, junto al nombre */}
@@ -3608,7 +3608,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); openAcompPopup(visit) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
                     <UserPlus size={15} className="text-fog" />
-                    <span className="text-xs font-semibold text-mist">
+                    <span className="text-xs font-medium text-mist">
                       {Math.max(0, visit.adults_count - 1) + numChildren}
                     </span>
                     <span className="text-xs text-mist">{t('home_acomp_abrev')}</span>
@@ -3624,7 +3624,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 ) : (
                   <button onClick={() => { setDetailVisitId(null); setTotalVisitId(detailVisitId) }}
                     className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-lime/5 border border-lime/20 hover:bg-lime/20 transition-colors">
-                    <span className="text-sm font-semibold text-fog">{t('home_total_a_pagar')}</span>
+                    <span className="text-sm font-medium text-fog">{t('home_total_a_pagar')}</span>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xl font-bold text-lime">{grandTotal.toFixed(2)}€</span>
                       <Receipt size={13} className="text-lime/60" />
@@ -3731,7 +3731,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       return (
                         <div className="ml-auto">
                           <p className="text-xs text-mist mb-0.5">{t('home_duracion')}</p>
-                          <p className="text-sm font-semibold text-fog">{h > 0 ? `${h}h ` : ''}{m > 0 ? `${m}min` : ''}</p>
+                          <p className="text-sm font-medium text-fog">{h > 0 ? `${h}h ` : ''}{m > 0 ? `${m}min` : ''}</p>
                         </div>
                       )
                     })()}
@@ -4071,7 +4071,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   if (filtered.length === 0) return null
                   return (
                     <div key={cat} className="mb-4 last:mb-0">
-                      <p className="text-xs font-semibold text-fog capitalize mb-2">{cat}</p>
+                      <p className="text-xs font-medium text-fog capitalize mb-2">{cat}</p>
                       <div className="flex flex-col gap-2">
                         {filtered.map(p => {
                           const Icon = getProductIcon(p)

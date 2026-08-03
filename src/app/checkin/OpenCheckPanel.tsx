@@ -157,7 +157,7 @@ export function OpenCheckPanel({
         {/* Tiempo */}
         <div className="flex items-center justify-between py-2 border-b border-line">
           <div>
-            <p className="text-xs font-semibold text-fog">Tiempo en sala</p>
+            <p className="text-xs font-medium text-fog">Tiempo en sala</p>
             <p className="text-xs text-mist">{durationMin} min · {Math.ceil(durationMin / 60)}h facturadas</p>
           </div>
           <p className="text-sm font-semibold text-snow">
@@ -177,7 +177,7 @@ export function OpenCheckPanel({
                   <button onClick={() => changeItemQty(item, -1)} className="w-6 h-6 rounded-lg bg-surface border border-line text-fog hover:text-snow flex items-center justify-center transition-colors">
                     <Minus size={10} />
                   </button>
-                  <span className="text-xs text-fog w-5 text-center font-semibold">{item.quantity}</span>
+                  <span className="text-xs text-fog w-5 text-center font-medium">{item.quantity}</span>
                   <button onClick={() => changeItemQty(item, +1)} className="w-6 h-6 rounded-lg bg-surface border border-line text-fog hover:text-snow flex items-center justify-center transition-colors">
                     <Plus size={10} />
                   </button>
@@ -193,17 +193,17 @@ export function OpenCheckPanel({
         <div className="flex gap-2">
           <button
             onClick={() => setShowScanner(true)}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line py-2.5 px-3 text-xs font-semibold text-fog hover:text-lime hover:border-lime/40 transition-colors"
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line py-2.5 px-3 text-xs font-medium text-fog hover:text-lime hover:border-lime/40 transition-colors"
             title="Escanear código de barras"
           >
             <ScanBarcode size={14} />
           </button>
           {!showProducts ? (
-            <button onClick={() => setShowProducts(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-line py-2.5 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
+            <button onClick={() => setShowProducts(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-line py-2.5 text-xs font-medium text-fog hover:text-snow hover:border-line2 transition-colors">
               <Plus size={13} /> Añadir producto
             </button>
           ) : (
-            <button onClick={() => setShowProducts(false)} className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-line py-2.5 text-xs font-semibold text-fog hover:text-snow transition-colors">
+            <button onClick={() => setShowProducts(false)} className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-line py-2.5 text-xs font-medium text-fog hover:text-snow transition-colors">
               <X size={12} /> Cerrar catálogo
             </button>
           )}

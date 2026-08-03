@@ -317,7 +317,7 @@ export default function LandingPage() {
             <a href="#how-it-works" className="hover:text-snow transition-colors">Cómo funciona</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-semibold text-fog hover:text-snow transition-colors">
+            <Link href="/login" className="text-sm font-medium text-fog hover:text-snow transition-colors">
               Iniciar sesión
             </Link>
             <Link
@@ -354,7 +354,7 @@ export default function LandingPage() {
           </Link>
           <a
             href="#features"
-            className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-8 py-4 text-base font-semibold text-fog hover:text-snow hover:border-line2 transition-colors"
+            className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-8 py-4 text-base font-medium text-fog hover:text-snow hover:border-line2 transition-colors"
           >
             Ver funciones
           </a>

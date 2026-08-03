@@ -228,7 +228,7 @@ export default function TiendaPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_tienda_titulo')}</h1>
+        <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('panelcfg_tienda_titulo')}</h1>
         <p className="text-sm text-fog mt-0.5">{t('panelcfg_tienda_subtitulo')}</p>
       </div>
 
@@ -237,7 +237,7 @@ export default function TiendaPage() {
       <div className="flex items-center justify-end gap-2">
         <button
           onClick={() => setShowScanner(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
+          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-medium text-fog hover:text-snow transition-colors"
           title={t('panelcfg_escanear_titulo')}
         >
           <ScanBarcode size={15} />
@@ -524,7 +524,7 @@ export default function TiendaPage() {
                   <div className="flex gap-1.5 mt-2">
                     {[6, 12, 24, 48].map(n => (
                       <button key={n} type="button" onClick={() => setStockInput(String(n))}
-                        className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
+                        className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-medium text-fog hover:text-snow hover:border-line2 transition-colors">
                         +{n}
                       </button>
                     ))}
@@ -565,7 +565,7 @@ export default function TiendaPage() {
               <div className="flex gap-1.5 mt-2">
                 {[6, 12, 24, 48].map(n => (
                   <button key={n} type="button" onClick={() => setStockEntry(String(n))}
-                    className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-semibold text-fog hover:text-snow hover:border-line2 transition-colors">
+                    className="flex-1 py-1 rounded-lg border border-line bg-surface2 text-xs font-medium text-fog hover:text-snow hover:border-line2 transition-colors">
                     +{n}
                   </button>
                 ))}
@@ -590,7 +590,7 @@ export default function TiendaPage() {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setConfirmDelete(null)}
-                className="flex-1 rounded-xl border border-line py-2.5 text-xs font-semibold text-fog hover:text-snow transition-colors">
+                className="flex-1 rounded-xl border border-line py-2.5 text-xs font-medium text-fog hover:text-snow transition-colors">
                 {t('panelcfg_cancelar')}
               </button>
               <button onClick={() => handleDelete(confirmDelete.id)}

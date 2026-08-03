@@ -279,7 +279,7 @@ export function ProspectsSection() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-semibold hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-medium hover:text-snow transition-colors">Cancelar</button>
               <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-50">
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
@@ -295,7 +295,7 @@ export function ProspectsSection() {
             <h3 className="text-base font-semibold text-snow">¿Convertir en establecimiento?</h3>
             <p className="text-sm text-fog">Se creará un establecimiento en prueba (14 días) para <strong className="text-snow">{convertModal.business_name}</strong> con los datos de contacto ya cargados.</p>
             <div className="flex gap-3">
-              <button onClick={() => setConvertModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-semibold hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => setConvertModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-medium hover:text-snow transition-colors">Cancelar</button>
               <button onClick={handleConvert} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-lime bg-lime/10 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors">
                 <Check size={14} /> Convertir
               </button>
@@ -314,7 +314,7 @@ export function ProspectsSection() {
               <textarea className={inputCls} rows={3} value={discardReason} onChange={e => setDiscardReason(e.target.value)} placeholder="Ej. No respondió, precio, etc." />
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setDiscardModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-semibold hover:text-snow transition-colors">Cancelar</button>
+              <button onClick={() => setDiscardModal(null)} className="flex-1 py-2.5 rounded-xl border border-line text-fog text-sm font-medium hover:text-snow transition-colors">Cancelar</button>
               <button onClick={handleDiscard} className="flex-1 py-2.5 rounded-xl border border-rose bg-rose/10 text-rose text-sm font-semibold hover:bg-rose/20 transition-colors">Descartar</button>
             </div>
           </div>

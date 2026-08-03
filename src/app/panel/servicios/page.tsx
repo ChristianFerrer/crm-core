@@ -436,7 +436,7 @@ export default function ServiciosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelcfg_servicios_titulo')}</h1>
+        <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('panelcfg_servicios_titulo')}</h1>
         <p className="text-sm text-fog mt-0.5">{t('panelcfg_servicios_subtitulo')}</p>
       </div>
 
@@ -654,7 +654,7 @@ export default function ServiciosPage() {
             <div className="space-y-4">
               {/* Paso 1 — Tipo de servicio (define el comportamiento y los campos) */}
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_tipo_servicio_req')}</label>
+                <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_tipo_servicio_req')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {TIPOS.map(opt => {
                     const sel = form.tipo === opt.value
@@ -671,11 +671,11 @@ export default function ServiciosPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_nombre_req')}</label>
+                <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_nombre_req')}</label>
                 <input className={INPUT_CLASS} placeholder={t('panelcfg_placeholder_nombre_servicio')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_descripcion_opcional')}</label>
+                <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_descripcion_opcional')}</label>
                 <input className={INPUT_CLASS} placeholder={t('panelcfg_placeholder_descripcion_breve')} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
               {/* BONO — campos propios (se guardan en membership_types) */}
@@ -694,17 +694,17 @@ export default function ServiciosPage() {
                   <div className="grid grid-cols-2 gap-3">
                     {!form.ilimitado && (
                       <div>
-                        <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_num_sesiones_req')}</label>
+                        <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_num_sesiones_req')}</label>
                         <input className={INPUT_CLASS} type="number" min="1" placeholder={t('panelcfg_placeholder_ej10')} value={form.sessions} onChange={e => setForm(f => ({ ...f, sessions: e.target.value }))} />
                       </div>
                     )}
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_precio_eur_req')}</label>
+                      <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_precio_eur_req')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="60.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_vigencia_dias_opcional')}</label>
+                    <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_vigencia_dias_opcional')}</label>
                     <input className={INPUT_CLASS} type="number" min="0" placeholder={t('panelcfg_placeholder_ej90')} value={form.validity_days} onChange={e => setForm(f => ({ ...f, validity_days: e.target.value }))} />
                   </div>
                 </>
@@ -713,7 +713,7 @@ export default function ServiciosPage() {
               {/* Flujo de reserva — solo para paquetes reservables (define la UX de la reserva) */}
               {form.tipo === 'reservable' && (
                 <div>
-                  <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_flujo_reserva_req')}</label>
+                  <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_flujo_reserva_req')}</label>
                   <select className={INPUT_CLASS} value={form.flujo} onChange={e => setForm(f => ({ ...f, flujo: e.target.value }))}>
                     {FLUJOS.map(fl => <option key={fl.value} value={fl.value}>{t(fl.labelKey)}</option>)}
                   </select>
@@ -724,18 +724,18 @@ export default function ServiciosPage() {
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_precio_eur_req')}</label>
+                      <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_precio_eur_req')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_unidad_precio')}</label>
+                      <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_unidad_precio')}</label>
                       <select className={INPUT_CLASS} value={form.price_unit} onChange={e => setForm(f => ({ ...f, price_unit: e.target.value }))}>
                         {PRICE_UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_duracion_min_opcional')}</label>
+                    <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_duracion_min_opcional')}</label>
                     <input className={INPUT_CLASS} type="number" min="0" placeholder={t('panelcfg_placeholder_ej60')} value={form.duration_min} onChange={e => setForm(f => ({ ...f, duration_min: e.target.value }))} />
                   </div>
                 </>
@@ -747,24 +747,24 @@ export default function ServiciosPage() {
                   <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_config_reservas')}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_adelanto_sugerido')}</label>
+                      <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_adelanto_sugerido')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" max="100" step="1" placeholder="50"
                         value={form.deposit_pct} onChange={e => setForm(f => ({ ...f, deposit_pct: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_personas_incluidas')}</label>
+                      <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_personas_incluidas')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="1" placeholder="0"
                         value={form.included_guests} onChange={e => setForm(f => ({ ...f, included_guests: e.target.value }))} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_adulto_extra')}</label>
+                      <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_adulto_extra')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder={t('panelcfg_placeholder_entrada_libre')}
                         value={form.price_per_guest_adult} onChange={e => setForm(f => ({ ...f, price_per_guest_adult: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_nino_extra')}</label>
+                      <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_nino_extra')}</label>
                       <input className={INPUT_CLASS} type="number" min="0" step="0.01" placeholder={t('panelcfg_placeholder_entrada_libre')}
                         value={form.price_per_guest_child} onChange={e => setForm(f => ({ ...f, price_per_guest_child: e.target.value }))} />
                     </div>
@@ -818,7 +818,7 @@ export default function ServiciosPage() {
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_nombre_categoria_req')}</label>
+                <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_nombre_categoria_req')}</label>
                 <input
                   className={INPUT_CLASS}
                   placeholder={t('panelcfg_placeholder_categoria')}
@@ -828,7 +828,7 @@ export default function ServiciosPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_identificador_opcional')}</label>
+                <label className="block text-xs font-medium text-fog mb-1.5">{t('panelcfg_identificador_opcional')}</label>
                 <input
                   className={INPUT_CLASS}
                   placeholder={t('panelcfg_placeholder_autogenerado')}

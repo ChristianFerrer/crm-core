@@ -253,7 +253,7 @@ export function OpportunityDashboard({
                 <a key={m.id} href={`/miembros/${m.id}`} className="flex items-center gap-3 rounded-xl bg-surface2 px-3 py-2.5 hover:bg-surface transition-colors">
                   <span className="w-6 h-6 rounded-full bg-lime flex items-center justify-center text-xs font-bold text-white shrink-0">{i + 1}</span>
                   <span className="flex-1 text-sm text-snow font-medium">{m.name}</span>
-                  <span className="text-sm font-semibold text-fog">{m.count} vis.</span>
+                  <span className="text-sm font-medium text-fog">{m.count} vis.</span>
                   <ChevronRight size={13} className="text-mist shrink-0" />
                 </a>
               ))}

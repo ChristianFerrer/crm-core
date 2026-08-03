@@ -207,7 +207,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
           {children.map((c, i) => (
             <div key={i} className="border-t border-line pt-4 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-fog">{t('miembros_hijo_n', { n: i + 1 })}</p>
+                <p className="text-xs font-medium text-fog">{t('miembros_hijo_n', { n: i + 1 })}</p>
                 <button type="button" onClick={() => removeChild(i)} className="text-mist hover:text-rose transition-colors"><X size={14} /></button>
               </div>
               <input value={c.name} onChange={e => updateChild(i, 'name', e.target.value)} placeholder={t('miembros_placeholder_nombre')} className={inputCls} />
@@ -253,7 +253,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
         {/* Añadir titular — solo si no hay ninguno */}
         {!hasPartner && !showPartner && (
           <button type="button" onClick={() => setShowPartner(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-semibold text-fog hover:border-line2 hover:text-snow transition-colors">
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-xs font-medium text-fog hover:border-line2 hover:text-snow transition-colors">
             <UserPlus size={14} /> {t('miembros_vincular_otro_titular')}
           </button>
         )}

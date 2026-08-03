@@ -189,7 +189,7 @@ export default function MiembrosPage() {
     <div className="flex flex-col h-[calc(100svh-5rem)] gap-4">
       <div className="flex items-center justify-between gap-4 shrink-0">
         <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('miembros_titulo')}</h1>
+          <h1 className="font-display text-3xl lg:text-4xl font-semibold text-snow">{t('miembros_titulo')}</h1>
           <p className="text-sm text-fog mt-0.5">{countLabel}</p>
         </div>
         {view === 'miembros' && (

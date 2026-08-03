@@ -247,7 +247,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               <p className="text-xs text-mist mt-1">{t('miembros_visitas_mes')}</p>
             </div>
             <div className="text-center">
-              <p className="font-display text-3xl font-semibold text-fog">{(visits as any[])?.length ?? 0}</p>
+              <p className="font-display text-3xl font-medium text-fog">{(visits as any[])?.length ?? 0}</p>
               <p className="text-xs text-mist mt-1">{t('miembros_total_visitas')}</p>
             </div>
           </div>
