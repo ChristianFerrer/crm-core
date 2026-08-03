@@ -66,7 +66,7 @@ export default async function DashboardPage({
   const allVisits = (todayVisits ?? []) as any[]
   const todayCustodias = allVisits.filter((v: any) => v.visit_type === 'custodia')
   const capacity: number | null = tenants?.[0]?.capacity ?? null
-  const homeSections = { agenda: true, metricas: true, ...((tenants?.[0] as any)?.home_sections ?? {}) }
+  const homeSections = { agenda: true, metricas: true, nuevaReserva: true, ...((tenants?.[0] as any)?.home_sections ?? {}) }
 
   // Children with birthday on the selected day
   const todayBirthdays: { name: string; birth_date: string; titularName: string; booking: { start_time: string | null; end_time: string | null; guests: number | null; title: string } | null }[] = []

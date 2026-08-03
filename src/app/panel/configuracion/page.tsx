@@ -479,6 +479,7 @@ export default function ConfiguracionPage() {
               {([
                 { key: 'agenda' as const,   label: t('panelcfg_seccion_agenda_hoy') },
                 { key: 'metricas' as const, label: t('panelcfg_seccion_metricas') },
+                { key: 'nuevaReserva' as const, label: t('panelcfg_seccion_nueva_reserva') },
               ]).map(({ key, label }) => {
                 const on = homeSections[key]
                 return (

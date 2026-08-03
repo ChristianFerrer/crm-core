@@ -8,9 +8,10 @@ import { getStoredTenant, loadAndStoreTenant } from './tenant'
 export type HomeSections = {
   agenda: boolean
   metricas: boolean
+  nuevaReserva: boolean
 }
 
-export const HOME_SECTION_DEFAULTS: HomeSections = { agenda: true, metricas: true }
+export const HOME_SECTION_DEFAULTS: HomeSections = { agenda: true, metricas: true, nuevaReserva: true }
 
 /** Resuelve el establecimiento activo (contempla la vista de super admin). */
 async function resolveTenantId(): Promise<string | null> {

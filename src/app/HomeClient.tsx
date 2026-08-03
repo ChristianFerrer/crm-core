@@ -1539,6 +1539,9 @@ function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: st
 export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, homeSections: initialSections, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
   const { t, lang } = useLanguage()
   const { sections: homeSections } = useHomeSections(initialSections)
+  // Si Inicio no muestra ni la agenda ni las métricas, la sala se queda sola
+  // en la pantalla y puede usar todo el alto disponible
+  const salaFullHeight = !homeSections.agenda && !homeSections.metricas
   const router = useRouter()
   const searchParams = useSearchParams()
   const isToday = selectedDate === todayStr
@@ -2254,14 +2257,6 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {isToday ? t('home_en_sala_ahora') : t('home_visitas_del_dia')}
               </h2>
             </div>
-            {isToday && (
-              <button
-                onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
-                className="shrink-0 whitespace-nowrap flex items-center gap-1.5 text-[11px] font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all"
-              >
-                <LogIn size={12} className="shrink-0" /> {t('home_registrar_entrada')}
-              </button>
-            )}
           </div>
 
           {/* Aforo bar */}
@@ -2349,7 +2344,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         ) : filteredVisits.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_resultados_busqueda')}</div>
         ) : (
-          <div className="max-h-[60vh] overflow-y-auto">
+          // Sin los otros paneles, la sala deja de limitarse a 60vh y usa todo
+          // el alto disponible de la pantalla
+          <div className={salaFullHeight ? 'overflow-y-auto' : 'max-h-[60vh] overflow-y-auto'}>
             {/* ── MOBILE: expandable cards (< md) ──────────────────────── */}
             <div className="xl:hidden px-3 py-3 space-y-2.5">
               {filteredVisits.map(visit => {
@@ -2636,12 +2633,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           <CalendarClock size={13} className="text-fog" />
           <h2 className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_agenda_de_hoy')}</h2>
           <span className="text-[11px] text-mist">{todayBookings.length} {todayBookings.length !== 1 ? t('home_reservas_lc') : t('home_reserva_lc')}</span>
-          <button
-            onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
-            className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-all"
-          >
-            <CalendarPlus size={13} /> {t('home_nueva_reserva')}
-          </button>
+          {homeSections.nuevaReserva && (
+            <button
+              onClick={() => { setBookingModal('pick'); setBookingQuery('') }}
+              className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-iris bg-iris/10 border border-iris rounded-lg px-2.5 py-1.5 hover:bg-iris/20 transition-all"
+            >
+              <CalendarPlus size={13} /> {t('home_nueva_reserva')}
+            </button>
+          )}
         </div>
 
         {timeline.length === 0 ? (
@@ -2842,6 +2841,18 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         </div>
       </div>
       </>)}
+
+      {/* Botón flotante de registrar entrada (solo icono) */}
+      {isToday && (
+        <button
+          onClick={() => { setCheckinModal('search'); setCheckinQuery('') }}
+          aria-label={t('home_registrar_entrada')}
+          title={t('home_registrar_entrada')}
+          className="fixed bottom-above-nav right-4 lg:right-8 z-30 w-14 h-14 rounded-full bg-lime text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+        >
+          <LogIn size={22} />
+        </button>
+      )}
 
       {/* Modal de alertas */}
       {alertsOpen && (

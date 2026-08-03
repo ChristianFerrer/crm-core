@@ -230,4 +230,5 @@ export const dictPanelConfig = {
   panelcfg_secciones_inicio_desc: { es: 'Elige qué bloques se muestran en la pantalla de Inicio', en: 'Choose which blocks appear on the Home screen', ca: 'Tria quins blocs es mostren a la pantalla d’Inici', de: 'Wählen Sie, welche Blöcke auf der Startseite erscheinen' },
   panelcfg_seccion_agenda_hoy: { es: 'Agenda de hoy', en: "Today's schedule", ca: 'Agenda d’avui', de: 'Heutiger Terminplan' },
   panelcfg_seccion_metricas: { es: 'Métricas del día', en: 'Day metrics', ca: 'Mètriques del dia', de: 'Tagesmetriken' },
+  panelcfg_seccion_nueva_reserva: { es: 'Botón de nueva reserva', en: 'New booking button', ca: 'Botó de nova reserva', de: 'Schaltfläche "Neue Buchung"' },
 } as const
