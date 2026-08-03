@@ -60,6 +60,37 @@ function InfoRow({ icon: Icon, label, value, tag }: { icon: typeof Building2; la
 
 const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-3 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
+// Días operativos — se guardan como códigos separados por comas ("lun,mar,mie")
+const DAYS = [
+  { code: 'lun', labelKey: 'calendario_dow_lun' },
+  { code: 'mar', labelKey: 'calendario_dow_mar' },
+  { code: 'mie', labelKey: 'calendario_dow_mie' },
+  { code: 'jue', labelKey: 'calendario_dow_jue' },
+  { code: 'vie', labelKey: 'calendario_dow_vie' },
+  { code: 'sab', labelKey: 'calendario_dow_sab' },
+  { code: 'dom', labelKey: 'calendario_dow_dom' },
+] as const
+
+type Translate = (key: any, vars?: Record<string, string | number>) => string
+
+// Formatea para lectura; si el valor es texto libre heredado, se muestra tal cual
+function formatDays(raw: string | null, t: Translate): string | null {
+  if (!raw) return null
+  const codes = raw.split(',').map(s => s.trim()).filter(Boolean)
+  const known = codes.filter(c => DAYS.some(d => d.code === c))
+  if (known.length > 0 && known.length === codes.length) {
+    return DAYS.filter(d => known.includes(d.code)).map(d => t(d.labelKey)).join(', ')
+  }
+  return raw
+}
+
+function formatHours(raw: string | null): string | null {
+  if (!raw) return null
+  const [from, to] = raw.split('-').map(s => s?.trim())
+  const isTime = (v?: string) => !!v && /^\d{1,2}:\d{2}$/.test(v)
+  return isTime(from) && isTime(to) ? `${from} – ${to}` : raw
+}
+
 export default function ConfiguracionPage() {
   const router = useRouter()
   const { lang, isAuto, setLang, t } = useLanguage()
@@ -184,6 +215,27 @@ export default function ConfiguracionPage() {
 
   const isAdminContact = !!profile?.admin_email && !!profile?.owner_email && profile.admin_email === profile.owner_email
 
+  // ── Días operativos (boxes) y horario (dos inputs de hora) ──
+  const selectedDays = estForm.schedule_days.split(',').map(s => s.trim()).filter(Boolean)
+
+  function toggleDay(code: string) {
+    const next = new Set(selectedDays)
+    if (next.has(code)) next.delete(code); else next.add(code)
+    // Se guarda siempre en orden lunes → domingo, no en orden de clic
+    const ordered = DAYS.filter(d => next.has(d.code)).map(d => d.code)
+    setEstForm(f => ({ ...f, schedule_days: ordered.join(',') }))
+  }
+
+  const [hoursFrom, hoursTo] = (() => {
+    const [a, b] = (estForm.schedule_hours || '').split('-').map(s => s?.trim() ?? '')
+    const isTime = (v: string) => /^\d{1,2}:\d{2}$/.test(v)
+    return [isTime(a) ? a : '', isTime(b) ? b : '']
+  })()
+
+  function setHours(from: string, to: string) {
+    setEstForm(f => ({ ...f, schedule_hours: from || to ? `${from}-${to}` : '' }))
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -242,20 +294,58 @@ export default function ConfiguracionPage() {
                   <input type="number" min="1" value={estForm.capacity} onChange={e => setEstForm(f => ({ ...f, capacity: e.target.value }))} placeholder={t('panelcfg_placeholder_ej30')} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs text-fog mb-1">{t('panelcfg_dias_operativos_label')}</label>
-                  <input value={estForm.schedule_days} onChange={e => setEstForm(f => ({ ...f, schedule_days: e.target.value }))} placeholder={t('panelcfg_dias_operativos_placeholder')} className={inputCls} />
+                  <label className="block text-xs text-fog mb-1.5">{t('panelcfg_dias_operativos_label')}</label>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {DAYS.map(d => {
+                      const on = selectedDays.includes(d.code)
+                      return (
+                        <button
+                          key={d.code}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => toggleDay(d.code)}
+                          className={`h-10 rounded-xl border text-xs font-semibold transition-colors ${
+                            on ? 'border-lime bg-lime/10 text-lime' : 'border-line bg-surface2 text-fog hover:text-snow hover:border-line2'
+                          }`}
+                        >
+                          {t(d.labelKey)}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-fog mb-1">{t('panelcfg_horario_operativo_label')}</label>
-                  <input value={estForm.schedule_hours} onChange={e => setEstForm(f => ({ ...f, schedule_hours: e.target.value }))} placeholder={t('panelcfg_horario_operativo_placeholder')} className={inputCls} />
+                  <label className="block text-xs text-fog mb-1.5">{t('panelcfg_horario_operativo_label')}</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] text-mist mb-1">{t('panelcfg_desde')}</label>
+                      <input
+                        type="time"
+                        value={hoursFrom}
+                        onChange={e => setHours(e.target.value, hoursTo)}
+                        style={{ colorScheme: theme === 'light' ? 'light' : 'dark' }}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-mist mb-1">{t('panelcfg_hasta')}</label>
+                      <input
+                        type="time"
+                        value={hoursTo}
+                        onChange={e => setHours(hoursFrom, e.target.value)}
+                        style={{ colorScheme: theme === 'light' ? 'light' : 'dark' }}
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
               <>
                 <InfoRow icon={MapPin} label={t('panelcfg_direccion_label')} value={profile.city} />
                 <InfoRow icon={Users} label={t('panelcfg_aforo_maximo_label')} value={profile.capacity?.toString() ?? null} />
-                <InfoRow icon={CalendarDays} label={t('panelcfg_dias_operativos_label')} value={profile.schedule_days} />
-                <InfoRow icon={Clock} label={t('panelcfg_horario_operativo_label')} value={profile.schedule_hours} />
+                <InfoRow icon={CalendarDays} label={t('panelcfg_dias_operativos_label')} value={formatDays(profile.schedule_days, t)} />
+                <InfoRow icon={Clock} label={t('panelcfg_horario_operativo_label')} value={formatHours(profile.schedule_hours)} />
               </>
             )}
           </div>
