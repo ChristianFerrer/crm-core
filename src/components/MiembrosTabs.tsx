@@ -3,37 +3,50 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { User, Users, History } from 'lucide-react'
-import { useLanguage } from '@/lib/i18n'
+import { useLanguage, type TranslationKey } from '@/lib/i18n'
 
-export function MiembrosTabs({ active }: { active: 'miembros' | 'familias' | 'historico' }) {
+type Tab = 'miembros' | 'familias' | 'historico'
+
+// Cada tile lleva su acento propio, como las tarjetas del Panel.
+// Nota: el fondo tintado vive en el badge del icono (un <div>), nunca en el
+// <button>/<a>, para que la regla de "botones sólidos" del tema claro no lo
+// convierta en un bloque de color macizo.
+const TILES: { id: Tab; href: string; labelKey: TranslationKey; icon: typeof User; badge: string; accent: string; activeBorder: string }[] = [
+  { id: 'miembros',  href: '/miembros',                  labelKey: 'miembros_tab_miembros',      icon: User,    badge: 'bg-lime/10', accent: 'text-lime', activeBorder: 'border-lime' },
+  { id: 'familias',  href: '/miembros?view=familias',    labelKey: 'miembros_tab_familias',      icon: Users,   badge: 'bg-iris/10', accent: 'text-iris', activeBorder: 'border-iris' },
+  { id: 'historico', href: '/miembros/historico',        labelKey: 'shared_nav_historico_visitas', icon: History, badge: 'bg-mint/10', accent: 'text-mint', activeBorder: 'border-mint' },
+]
+
+export function MiembrosTabs({ active }: { active: Tab }) {
   const { t } = useLanguage()
   const router = useRouter()
 
-  function goTo(v: 'miembros' | 'familias') {
-    router.push(v === 'familias' ? '/miembros?view=familias' : '/miembros')
-  }
-
-  const cls = (isActive: boolean) =>
-    `flex-1 min-w-[104px] flex flex-col items-center justify-center gap-1.5 px-3 py-3 rounded-xl border text-xs font-semibold transition-colors ${
-      isActive
-        ? 'border-lime bg-lime/10 text-lime'
-        : 'border-line bg-surface text-fog hover:text-snow hover:border-line2'
-    }`
-
   return (
-    <div className="flex gap-2 shrink-0 overflow-x-auto scrollbar-hide">
-      <button onClick={() => goTo('miembros')} className={cls(active === 'miembros')}>
-        <User size={18} strokeWidth={1.8} />
-        <span className="whitespace-nowrap">{t('miembros_tab_miembros')}</span>
-      </button>
-      <button onClick={() => goTo('familias')} className={cls(active === 'familias')}>
-        <Users size={18} strokeWidth={1.8} />
-        <span className="whitespace-nowrap">{t('miembros_tab_familias')}</span>
-      </button>
-      <Link href="/miembros/historico" className={cls(active === 'historico')}>
-        <History size={18} strokeWidth={1.8} />
-        <span className="whitespace-nowrap">{t('shared_nav_historico_visitas')}</span>
-      </Link>
+    <div className="grid grid-cols-3 gap-2 shrink-0">
+      {TILES.map(tile => {
+        const Icon = tile.icon
+        const isActive = tile.id === active
+        const cls = `h-[88px] rounded-2xl border bg-surface p-3 flex flex-col justify-between items-start text-left transition-colors ${
+          isActive ? `${tile.activeBorder}` : 'border-line hover:border-line2'
+        }`
+        const inner = (
+          <>
+            <div className={`w-7 h-7 rounded-lg ${tile.badge} flex items-center justify-center shrink-0`}>
+              <Icon size={13} className={tile.accent} />
+            </div>
+            <span className={`text-[11px] leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
+              {t(tile.labelKey)}
+            </span>
+          </>
+        )
+
+        // Miembros y Familias comparten ruta (query param), así que navegan por router
+        return tile.id === 'historico' ? (
+          <Link key={tile.id} href={tile.href} className={cls}>{inner}</Link>
+        ) : (
+          <button key={tile.id} onClick={() => router.push(tile.href)} className={cls}>{inner}</button>
+        )
+      })}
     </div>
   )
 }
