@@ -1,13 +1,18 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Fraunces } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
 import { ConditionalShell } from '@/components/ConditionalShell'
 import { Toaster } from 'sonner'
 import { LanguageProvider } from '@/lib/i18n'
 import { ThemeProvider } from '@/lib/theme'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', axes: ['opsz'] })
+// Tipografía única de la app: geométrica, "a" de dos pisos y terminales
+// inclinadas — la alternativa libre más cercana al tipo de las referencias.
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-jakarta',
+  weight: ['400', '500', '600', '700', '800'],
+})
 
 export const metadata: Metadata = {
   title: 'GERD CRM',
@@ -24,7 +29,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${inter.variable} ${fraunces.variable}`}>
+    <html lang="es" className={jakarta.variable}>
       <head>
         <script
           dangerouslySetInnerHTML={{

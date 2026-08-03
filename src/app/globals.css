@@ -18,8 +18,8 @@
   --color-mint-soft: #112a23;
   --color-rose: #fb7185;
   --color-rose-soft: #2a1419;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --shadow-soft: 0 1px 2px rgba(0,0,0,0.3), 0 12px 32px -16px rgba(0,0,0,0.6);
   --shadow-lime: 0 10px 40px -12px rgba(198,242,78,0.4);
 }
@@ -158,10 +158,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Títulos: misma familia, con peso alto y tracking cerrado como en la referencia */
 .font-display {
   font-family: var(--font-display);
-  font-optical-sizing: auto;
-  letter-spacing: -0.015em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 ::selection { background: var(--color-lime); color: var(--color-ink); }
