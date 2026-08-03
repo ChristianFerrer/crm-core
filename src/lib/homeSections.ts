@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { supabase } from './supabase'
+import { getStoredTenant, loadAndStoreTenant } from './tenant'
 
 /** Secciones de la pantalla de Inicio que se pueden mostrar u ocultar. */
 export type HomeSections = {
@@ -8,33 +10,58 @@ export type HomeSections = {
   metricas: boolean
 }
 
-const STORAGE_KEY = 'wm_home_sections'
-const DEFAULTS: HomeSections = { agenda: true, metricas: true }
+export const HOME_SECTION_DEFAULTS: HomeSections = { agenda: true, metricas: true }
 
-export function readHomeSections(): HomeSections {
+/** Resuelve el establecimiento activo (contempla la vista de super admin). */
+async function resolveTenantId(): Promise<string | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) }
+    const impersonating = localStorage.getItem('viewingAsTenant')
+    if (impersonating) return JSON.parse(impersonating).id ?? null
   } catch {}
-  return DEFAULTS
+  let tenant = getStoredTenant()
+  if (!tenant) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user?.email) tenant = await loadAndStoreTenant(session.user.email)
+  }
+  return tenant?.id ?? null
 }
 
 /**
- * Preferencia por dispositivo, igual que el tema y el idioma. Se lee en un
- * efecto (no en el primer render) para no romper la hidratación del servidor.
+ * Preferencia del establecimiento (columna `tenants.home_sections`), por lo que
+ * se comparte entre dispositivos y usuarios del mismo centro.
+ *
+ * `initial` permite pintar el valor ya resuelto en el servidor y evitar el
+ * parpadeo de mostrar las secciones antes de saber si están desactivadas.
  */
-export function useHomeSections() {
-  const [sections, setSections] = useState<HomeSections>(DEFAULTS)
+export function useHomeSections(initial?: HomeSections) {
+  const [sections, setSections] = useState<HomeSections>(initial ?? HOME_SECTION_DEFAULTS)
+  const [tenantId, setTenantId] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(!!initial)
 
-  useEffect(() => { setSections(readHomeSections()) }, [])
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const id = await resolveTenantId()
+      if (cancelled || !id) { setLoaded(true); return }
+      setTenantId(id)
+      // Con `initial` ya tenemos el valor del servidor; no hace falta releer
+      if (initial) { setLoaded(true); return }
+      const { data } = await supabase.from('tenants').select('home_sections').eq('id', id).maybeSingle()
+      if (cancelled) return
+      setSections({ ...HOME_SECTION_DEFAULTS, ...((data?.home_sections as Partial<HomeSections>) ?? {}) })
+      setLoaded(true)
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  function toggle(key: keyof HomeSections) {
-    setSections(prev => {
-      const next = { ...prev, [key]: !prev[key] }
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch {}
-      return next
-    })
+  async function toggle(key: keyof HomeSections) {
+    const next = { ...sections, [key]: !sections[key] }
+    setSections(next) // optimista: el interruptor responde al instante
+    if (!tenantId) return
+    const { error } = await supabase.from('tenants').update({ home_sections: next }).eq('id', tenantId)
+    if (error) setSections(sections) // revierte si la escritura falla
   }
 
-  return { sections, toggle }
+  return { sections, toggle, loaded }
 }

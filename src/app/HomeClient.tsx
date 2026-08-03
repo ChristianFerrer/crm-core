@@ -12,7 +12,7 @@ import {
   CupSoda, Coffee, Droplet, Citrus, Cookie, Candy, Croissant, Popcorn, Package,
 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
-import { useHomeSections } from '@/lib/homeSections'
+import { useHomeSections, type HomeSections } from '@/lib/homeSections'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
@@ -1368,6 +1368,7 @@ type HomeClientProps = {
   monthCount: number
   dateLabel: string
   capacity: number | null
+  homeSections?: HomeSections
   todayBirthdays: BirthdayMember[]
   todayBookings: TodayBooking[]
   selectedDate: string
@@ -1535,9 +1536,9 @@ function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: st
   )
 }
 
-export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
+export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, homeSections: initialSections, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
   const { t, lang } = useLanguage()
-  const { sections: homeSections } = useHomeSections()
+  const { sections: homeSections } = useHomeSections(initialSections)
   const router = useRouter()
   const searchParams = useSearchParams()
   const isToday = selectedDate === todayStr
