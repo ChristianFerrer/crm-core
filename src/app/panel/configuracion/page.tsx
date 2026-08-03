@@ -48,7 +48,7 @@ function InfoRow({ icon: Icon, label, value, tag }: { icon: typeof Building2; la
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold text-snow">{value || '—'}</p>
           {tag && (
-            <span className="flex items-center gap-1 text-xs font-bold text-white bg-iris rounded-full px-1.5 py-0.5">
+            <span className="flex items-center gap-1 text-xs font-bold text-white bg-iris border-2 border-surface rounded-full px-1.5 py-0.5">
               <ShieldCheck size={9} /> {tag}
             </span>
           )}

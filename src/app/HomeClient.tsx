@@ -2175,7 +2175,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           >
             <Bell size={16} />
             {totalAlerts > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 bg-rose text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 bg-rose border-2 border-carbon text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
                 {totalAlerts}
               </span>
             )}
@@ -2798,7 +2798,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
               <div className="flex items-center gap-2">
                 <Bell size={14} className="text-amber" />
                 <span className="text-sm font-semibold text-snow">{t('home_alertas_activas')}</span>
-                <span className="text-xs font-bold bg-rose text-white px-1.5 py-0.5 rounded-full">{totalAlerts - dismissedAlerts.size}</span>
+                <span className="text-xs font-bold bg-rose border-2 border-surface text-white px-1.5 py-0.5 rounded-full">{totalAlerts - dismissedAlerts.size}</span>
               </div>
               <button onClick={() => setAlertsOpen(false)} className="text-fog hover:text-snow transition-colors p-1">
                 <X size={16} />
@@ -2858,7 +2858,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-iris text-white">{t('home_cumpleanos')}</span>
+                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-iris text-white border-2 border-surface">{t('home_cumpleanos')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>
@@ -2884,7 +2884,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-cyan-300 text-white">{t('home_custodia')}</span>
+                      <span className="text-xs font-medium px-1.5 py-0.5 rounded-md bg-cyan-300 text-white border-2 border-surface">{t('home_custodia')}</span>
                       {grandTotal !== null && <span className="text-xs font-bold text-lime">{grandTotal.toFixed(2)}€</span>}
                     </div>
                   </div>

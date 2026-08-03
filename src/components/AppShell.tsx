@@ -12,7 +12,7 @@ import { useLanguage } from '@/lib/i18n'
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
   return (
-    <span className="ml-auto min-w-[20px] h-5 px-1 rounded-full bg-lime text-white text-xs font-bold flex items-center justify-center leading-none shrink-0">
+    <span className="ml-auto min-w-[20px] h-5 px-1 rounded-full bg-lime border-2 border-surface text-white text-xs font-bold flex items-center justify-center leading-none shrink-0">
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -202,7 +202,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className="shrink-0" />
                 {!collapsed && label}
                 {collapsed
-                  ? (badge > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-lime" />)
+                  ? (badge > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-lime border-2 border-surface" />)
                   : <Badge count={badge} />}
               </Link>
             )

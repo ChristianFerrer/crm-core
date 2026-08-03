@@ -97,9 +97,9 @@ export default function FamiliasPage() {
                     const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
                     return (
                       <span key={m.id} className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
-                        s === 0 ? 'bg-rose text-white' :
-                        isUnlimited ? 'bg-iris text-white' :
-                        s != null && s <= 2 ? 'bg-amber text-white' :
+                        s === 0 ? 'bg-rose text-white border-2 border-surface' :
+                        isUnlimited ? 'bg-iris text-white border-2 border-surface' :
+                        s != null && s <= 2 ? 'bg-amber text-white border-2 border-surface' :
                         'border border-line bg-surface2 text-fog'
                       }`}>
                         {m.name}{m.birth_date ? ` · ${getAge(m.birth_date)}a` : ''}

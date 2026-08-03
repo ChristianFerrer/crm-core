@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/i18n'
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
   return (
-    <span className="absolute -top-0.5 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-lime text-white text-xs font-bold flex items-center justify-center leading-none">
+    <span className="absolute -top-0.5 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-lime border-2 border-carbon text-white text-xs font-bold flex items-center justify-center leading-none">
       {count > 99 ? '99+' : count}
     </span>
   )
