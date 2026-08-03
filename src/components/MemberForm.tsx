@@ -280,7 +280,7 @@ export function MemberForm({ onCreated, submitLabel }: {
             </div>
           )}
 
-          <p className="text-[11px] text-mist">{t('miembros_familia_compartida_desc')}</p>
+          <p className="text-xs text-mist">{t('miembros_familia_compartida_desc')}</p>
         </div>
       )}
 
@@ -306,7 +306,7 @@ export function MemberForm({ onCreated, submitLabel }: {
           </p>
         </label>
         {!consentAccepted && (
-          <p className="text-[11px] text-amber flex items-center gap-1">
+          <p className="text-xs text-amber flex items-center gap-1">
             <AlertTriangle size={11} /> {t('miembros_consentimiento_obligatorio')}
           </p>
         )}

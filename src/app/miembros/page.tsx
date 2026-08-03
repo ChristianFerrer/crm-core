@@ -218,7 +218,7 @@ export default function MiembrosPage() {
           exportDisabled={count === 0}
           filters={
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('miembros_estado_bono')}</p>
+              <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('miembros_estado_bono')}</p>
               {([
                 { key: 'todos', label: t('miembros_filtro_todos') },
                 { key: 'sin_bono', label: t('miembros_filtro_sin_bono') },
@@ -279,7 +279,7 @@ export default function MiembrosPage() {
                             {isUnlimited ? t('miembros_ilimitado') : label}
                           </p>
                           {m.memberships?.[0]?.membership_types?.name && !isUnlimited && (
-                            <p className="text-[10px] text-mist">{m.memberships[0].membership_types!.name}</p>
+                            <p className="text-xs text-mist">{m.memberships[0].membership_types!.name}</p>
                           )}
                         </div>
                         <span className={`w-2 h-2 rounded-full shrink-0 ${cls}`} />
@@ -296,7 +296,7 @@ export default function MiembrosPage() {
                     <thead>
                       <tr className="border-b border-line">
                         {[t('miembros_col_nombre'), t('miembros_col_telefono'), t('miembros_col_familia'), t('miembros_col_edad'), t('miembros_col_bono'), t('miembros_col_estado')].map(col => (
-                          <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
+                          <th key={col} className="px-3 py-2 text-xs font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
                             {col}
                           </th>
                         ))}
@@ -309,7 +309,7 @@ export default function MiembrosPage() {
                         return (
                           <tr key={m.id} onClick={() => window.location.assign(`/miembros/${m.id}`)}
                             className="hover:bg-surface2/40 transition-colors cursor-pointer">
-                            <td className="pl-4 pr-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{m.name}</td>
+                            <td className="pl-4 pr-3 py-2.5 text-xs font-medium text-snow whitespace-nowrap">{m.name}</td>
                             <td className="px-3 py-2.5 text-xs text-mist whitespace-nowrap">{m.phone ?? '—'}</td>
                             <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{m.families?.name ?? '—'}</td>
                             <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{m.birth_date ? `${getAge(m.birth_date)}a` : '—'}</td>
@@ -364,7 +364,7 @@ export default function MiembrosPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {lowBono > 0 && (
-                            <span className="text-[10px] font-bold text-amber">{t('miembros_bono_bajo_badge', { n: lowBono })}</span>
+                            <span className="text-xs font-bold text-amber">{t('miembros_bono_bajo_badge', { n: lowBono })}</span>
                           )}
                           <ChevronRight size={14} className="text-mist" />
                         </div>
@@ -398,7 +398,7 @@ export default function MiembrosPage() {
                     <thead>
                       <tr className="border-b border-line">
                         {[t('miembros_col_familia'), t('miembros_col_titulares'), t('miembros_col_hijos'), t('miembros_col_visitas'), t('miembros_col_miembros'), t('miembros_col_bono_bajo')].map(col => (
-                          <th key={col} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
+                          <th key={col} className="px-3 py-2 text-xs font-semibold uppercase tracking-wide whitespace-nowrap text-mist first:pl-4 last:pr-4">
                             {col}
                           </th>
                         ))}
@@ -414,20 +414,20 @@ export default function MiembrosPage() {
                         return (
                           <tr key={family.id} onClick={() => window.location.assign(`/familias/${family.id}`)}
                             className="hover:bg-surface2/40 transition-colors cursor-pointer">
-                            <td className="pl-4 pr-3 py-2.5 text-xs font-semibold text-snow whitespace-nowrap">{family.name}</td>
+                            <td className="pl-4 pr-3 py-2.5 text-xs font-medium text-snow whitespace-nowrap">{family.name}</td>
                             <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{family.members?.length ?? 0}</td>
                             <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{hijos}</td>
                             <td className="px-3 py-2.5 text-xs text-fog whitespace-nowrap">{visitas}</td>
                             <td className="px-3 py-2.5 text-xs text-fog">
                               <div className="flex flex-wrap gap-1">
                                 {family.members?.map(m => (
-                                  <span key={m.id} className="text-[11px] px-1.5 py-0.5 rounded-md bg-surface2 text-fog whitespace-nowrap">{m.name}</span>
+                                  <span key={m.id} className="text-xs px-1.5 py-0.5 rounded-md bg-surface2 text-fog whitespace-nowrap">{m.name}</span>
                                 ))}
                               </div>
                             </td>
                             <td className="px-3 pr-4 py-2.5 whitespace-nowrap">
                               {lowBono > 0
-                                ? <span className="text-[10px] font-bold text-amber">{lowBono}</span>
+                                ? <span className="text-xs font-bold text-amber">{lowBono}</span>
                                 : <span className="text-xs text-mist">—</span>}
                             </td>
                           </tr>

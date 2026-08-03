@@ -319,7 +319,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
               </div>
             )}
 
-            <p className="text-[11px] text-mist">{t('miembros_hijos_asignaran')}</p>
+            <p className="text-xs text-mist">{t('miembros_hijos_asignaran')}</p>
           </div>
         )}
 

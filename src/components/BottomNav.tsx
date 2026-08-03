@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/i18n'
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
   return (
-    <span className="absolute -top-0.5 -right-1 min-w-[16px] h-4 px-0.5 rounded-full bg-lime text-white text-[9px] font-bold flex items-center justify-center leading-none">
+    <span className="absolute -top-0.5 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-lime text-white text-xs font-bold flex items-center justify-center leading-none">
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -65,7 +65,7 @@ export function BottomNav() {
                     }`}
                   >
                     <Icon size={26} strokeWidth={1.8} className={`${accent} shrink-0`} />
-                    <span className={`h-8 mt-[5px] flex items-start justify-center text-center text-[11px] leading-tight ${isActive ? `${accent} font-semibold` : 'text-fog'}`}>
+                    <span className={`h-8 mt-[5px] flex items-start justify-center text-center text-xs leading-tight ${isActive ? `${accent} font-semibold` : 'text-fog'}`}>
                       {label}
                     </span>
                   </Link>
@@ -88,7 +88,7 @@ export function BottomNav() {
               <Link
                 key={href}
                 href={href}
-                className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold transition-colors relative ${
+                className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-xs font-semibold transition-colors relative ${
                   isActive ? 'text-lime' : 'text-mist hover:text-fog'
                 }`}
               >
@@ -104,7 +104,7 @@ export function BottomNav() {
           {/* Más */}
           <button
             onClick={() => setMoreOpen(o => !o)}
-            className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold transition-colors relative ${
+            className={`flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-xs font-semibold transition-colors relative ${
               moreOpen || moreActive ? 'text-lime' : 'text-mist hover:text-fog'
             }`}
           >

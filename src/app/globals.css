@@ -147,6 +147,8 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  /* Base de la escala tipográfica: 16px */
+  font-size: 100%;
 }
 
 body {
@@ -155,7 +157,17 @@ body {
   background: var(--color-carbon);
   color: var(--color-snow);
   font-family: var(--font-sans);
+  font-size: 1rem;      /* cuerpo = 16px */
+  line-height: 1.5;     /* WCAG: interlineado mínimo recomendado en cuerpo */
   -webkit-font-smoothing: antialiased;
+}
+
+/* Interlineado por rol — evita que herede 1.5 en titulares y textos densos */
+h1, h2, h3, h4, .font-display {
+  line-height: 1.2;
+}
+.text-xs, .text-sm {
+  line-height: 1.4;
 }
 
 /* Títulos: misma familia, con peso alto y tracking cerrado como en la referencia */
@@ -163,6 +175,13 @@ body {
   font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+/* Inputs a 16px en móvil: por debajo, iOS hace zoom automático al enfocarlos */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
 }
 
 ::selection { background: var(--color-lime); color: var(--color-ink); }

@@ -465,7 +465,7 @@ export default function ServiciosPage() {
         exportDisabled={totalFiltered === 0}
         filters={
           <div>
-            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_tipo_label')}</p>
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">{t('panelcfg_tipo_label')}</p>
             <div className="flex flex-wrap gap-1.5">
               {([
                 { key: 'todos', label: t('panelcfg_todos') },
@@ -508,7 +508,7 @@ export default function ServiciosPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-snow">{s.price}€</p>
-                    <p className="text-[10px] text-mist">/ {s.price_unit}</p>
+                    <p className="text-xs text-mist">/ {s.price_unit}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-2.5">
@@ -551,7 +551,7 @@ export default function ServiciosPage() {
           <div className="overflow-auto max-h-[60vh]">
             <table className="w-full text-sm whitespace-nowrap">
               <thead className="sticky top-0 z-10 bg-surface">
-                <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
+                <tr className="text-left text-xs font-semibold text-mist uppercase tracking-wide border-b border-line">
                   <th className="px-4 py-3">{t('panelcfg_th_servicio')}</th>
                   <th className="px-3 py-3">{t('panelcfg_tipo_label')}</th>
                   <th className="px-3 py-3">{t('panelcfg_th_flujo')}</th>
@@ -584,7 +584,7 @@ export default function ServiciosPage() {
                       </td>
                       <td className="px-3 py-2.5 text-fog">{s.flujo ? flujoLabel(t, s.flujo) : dash}</td>
                       <td className="px-3 py-2.5 text-center">{s.reservable ? <Check size={14} className="inline text-lime" /> : dash}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold text-snow">{s.price != null ? `${s.price}€` : dash}</td>
+                      <td className="px-3 py-2.5 text-right font-medium text-snow">{s.price != null ? `${s.price}€` : dash}</td>
                       <td className="px-3 py-2.5 text-fog">{s.price_unit || dash}</td>
                       <td className="px-3 py-2.5 text-right text-fog">{s.duration_min != null ? `${s.duration_min} min` : dash}</td>
                       <td className="px-3 py-2.5 text-right text-fog">{s.included_guests ? s.included_guests : dash}</td>
@@ -610,11 +610,11 @@ export default function ServiciosPage() {
                 {/* Bonos (membership_types) en la misma tabla */}
                 {filteredBonos.map(b => (
                   <tr key={`bono-${b.id}`} className={`${b.active ? '' : 'opacity-50'} hover:bg-surface2/40 transition-colors`}>
-                    <td className="px-4 py-2.5 font-semibold text-snow">{b.name}</td>
+                    <td className="px-4 py-2.5 font-medium text-snow">{b.name}</td>
                     <td className="px-3 py-2.5"><span className="text-xs font-medium text-snow">{t('panelcfg_bono_label')}</span></td>
                     <td className="px-3 py-2.5"><span className="text-mist">—</span></td>
                     <td className="px-3 py-2.5 text-center"><span className="text-mist">—</span></td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-snow">{b.price != null ? `${b.price}€` : '—'}</td>
+                    <td className="px-3 py-2.5 text-right font-medium text-snow">{b.price != null ? `${b.price}€` : '—'}</td>
                     <td className="px-3 py-2.5 text-fog"><span className="text-mist">—</span></td>
                     <td className="px-3 py-2.5 text-right text-fog">{b.validity_days != null ? `${b.validity_days} ${t('panelcfg_dias')}` : '—'}</td>
                     <td className="px-3 py-2.5 text-right text-fog">{b.sessions == null ? <span className="text-iris">{t('panelcfg_ilimitado')}</span> : `${b.sessions} ${t('panelcfg_sesiones_abrev')}`}</td>
@@ -663,7 +663,7 @@ export default function ServiciosPage() {
                         onClick={() => setForm(f => ({ ...f, tipo: opt.value, flujo: f.flujo || 'cumpleanos' }))}
                         className={`px-3 py-2.5 rounded-xl border text-left transition-colors ${sel ? 'border-lime/40 bg-lime/10' : 'border-line bg-surface2 hover:border-line2'}`}>
                         <p className={`text-sm font-semibold ${sel ? 'text-snow' : 'text-fog'}`}>{t(opt.labelKey)}</p>
-                        <p className="text-[10px] text-mist leading-tight">{t(opt.descKey)}</p>
+                        <p className="text-xs text-mist leading-tight">{t(opt.descKey)}</p>
                       </button>
                     )
                   })}
@@ -688,7 +688,7 @@ export default function ServiciosPage() {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-snow">{t('panelcfg_ilimitado_label')}</p>
-                      <p className="text-[11px] text-mist">{t('panelcfg_ilimitado_desc')}</p>
+                      <p className="text-xs text-mist">{t('panelcfg_ilimitado_desc')}</p>
                     </div>
                   </button>
                   <div className="grid grid-cols-2 gap-3">
@@ -717,7 +717,7 @@ export default function ServiciosPage() {
                   <select className={INPUT_CLASS} value={form.flujo} onChange={e => setForm(f => ({ ...f, flujo: e.target.value }))}>
                     {FLUJOS.map(fl => <option key={fl.value} value={fl.value}>{t(fl.labelKey)}</option>)}
                   </select>
-                  <p className="text-[11px] text-mist mt-1">{t('panelcfg_flujo_reserva_hint')}</p>
+                  <p className="text-xs text-mist mt-1">{t('panelcfg_flujo_reserva_hint')}</p>
                 </div>
               )}
               {form.tipo !== 'bono' && (
@@ -744,7 +744,7 @@ export default function ServiciosPage() {
               {/* Config de reservas — solo para paquetes reservables */}
               {form.tipo === 'reservable' && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
-                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('panelcfg_config_reservas')}</p>
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_config_reservas')}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_adelanto_sugerido')}</label>
@@ -769,7 +769,7 @@ export default function ServiciosPage() {
                         value={form.price_per_guest_child} onChange={e => setForm(f => ({ ...f, price_per_guest_child: e.target.value }))} />
                     </div>
                   </div>
-                  <p className="text-[11px] text-mist leading-relaxed">
+                  <p className="text-xs text-mist leading-relaxed">
                     {t('panelcfg_config_reservas_hint', { personas: t('panelcfg_personas_incluidas_inline'), entrada: t('panelcfg_entrada_libre_inline') })}
                   </p>
                 </div>
@@ -778,7 +778,7 @@ export default function ServiciosPage() {
               {/* Sub-servicio: a qué tipos de reserva puede agregarse */}
               {form.tipo === 'subservicio' && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-2.5">
-                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('panelcfg_se_puede_agregar_a')}</p>
+                  <p className="text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_se_puede_agregar_a')}</p>
                   <div className="space-y-1.5">
                     {RESERVABLE_TYPES.map(opt => {
                       const sel = form.applies_to.includes(opt.value)
@@ -794,7 +794,7 @@ export default function ServiciosPage() {
                       )
                     })}
                   </div>
-                  <p className="text-[11px] text-mist">{t('panelcfg_agregar_a_hint')}</p>
+                  <p className="text-xs text-mist">{t('panelcfg_agregar_a_hint')}</p>
                 </div>
               )}
             </div>

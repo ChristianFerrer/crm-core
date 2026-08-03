@@ -172,8 +172,8 @@ export function OpportunityDashboard({
                 <div className={`font-display text-3xl font-bold leading-none ${count > 0 ? s.accent : 'text-fog'}`}>
                   {count}
                 </div>
-                <div className="text-[11px] font-semibold text-snow mt-1 leading-tight">{s.label}</div>
-                <div className="text-[10px] text-mist mt-0.5">{s.sub}</div>
+                <div className="text-xs font-semibold text-snow mt-1 leading-tight">{s.label}</div>
+                <div className="text-xs text-mist mt-0.5">{s.sub}</div>
               </div>
             </button>
           )

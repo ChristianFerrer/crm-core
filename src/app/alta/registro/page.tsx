@@ -256,7 +256,7 @@ export default function RegistroPage() {
           </button>
 
           {type && (
-            <p className="text-[11px] text-mist text-center">
+            <p className="text-xs text-mist text-center">
               El bono <span className="text-fog font-medium">{type.name}</span> ({type.price}€) se abona en recepción.
             </p>
           )}

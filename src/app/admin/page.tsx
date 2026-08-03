@@ -148,8 +148,8 @@ function DashboardSection({ tenants }: { tenants: Tenant[] }) {
                   <p className="text-sm font-semibold text-snow truncate">{t.name}</p>
                   <p className="text-xs text-mist">{t.city ?? '—'} · {t.owner_email ?? '—'}</p>
                 </div>
-                <span className={`text-[10px] font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
-                <span className={`text-[10px] font-bold hidden sm:inline ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <span className={`text-xs font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
+                <span className={`text-xs font-bold hidden sm:inline ${STATUS_COLORS[t.status]}`}>{t.status}</span>
                 <span className="text-xs text-mist shrink-0">{new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
             )
@@ -281,7 +281,7 @@ function TenantModal({
             <input type="email" value={form.admin_email} onChange={e => upd('admin_email', e.target.value)}
               placeholder="admin@establecimiento.com"
               className="w-full bg-surface2 border border-iris/30 rounded-xl px-4 py-3 text-sm text-snow placeholder:text-mist outline-none focus:border-iris/60 transition-colors" />
-            <p className="text-[11px] text-iris/70">
+            <p className="text-xs text-iris/70">
               Este correo podrá iniciar sesión en GERD y acceder a la vista del establecimiento.
             </p>
           </div>
@@ -494,9 +494,9 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-[10px] font-bold ${tenantHealth(lastAccess[t.id] ?? null).cls}`}>● {tenantHealth(lastAccess[t.id] ?? null).label}</span>
-                <span className={`text-[10px] font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
-                <span className={`text-[10px] font-bold ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <span className={`text-xs font-bold ${tenantHealth(lastAccess[t.id] ?? null).cls}`}>● {tenantHealth(lastAccess[t.id] ?? null).label}</span>
+                <span className={`text-xs font-bold ${PLAN_COLORS[t.plan]}`}>{t.plan}</span>
+                <span className={`text-xs font-bold ${STATUS_COLORS[t.status]}`}>{t.status}</span>
               </div>
             </div>
 
@@ -504,23 +504,23 @@ function TenantsSection({ tenants, onReload }: { tenants: Tenant[]; onReload: ()
             <div className="mt-3 space-y-1">
               {t.admin_email && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-iris uppercase tracking-wide w-24 shrink-0">Admin email</span>
+                  <span className="text-xs font-semibold text-iris uppercase tracking-wide w-24 shrink-0">Admin email</span>
                   <span className="text-xs text-snow font-medium">{t.admin_email}</span>
                 </div>
               )}
               {t.phone && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Teléfono</span>
+                  <span className="text-xs font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Teléfono</span>
                   <span className="text-xs text-fog">{t.phone}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Alta</span>
+                <span className="text-xs font-semibold text-fog uppercase tracking-wide w-24 shrink-0">Alta</span>
                 <span className="text-xs text-fog">{new Date(t.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               </div>
               {t.trial_ends_at && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-amber uppercase tracking-wide w-24 shrink-0">Trial hasta</span>
+                  <span className="text-xs font-semibold text-amber uppercase tracking-wide w-24 shrink-0">Trial hasta</span>
                   <span className="text-xs text-amber">{new Date(t.trial_ends_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
                 </div>
               )}
@@ -623,10 +623,10 @@ function MetricsSection() {
   }, [])
 
   const chartProps = {
-    style: { fontSize: 11 },
+    style: { fontSize: 12 },
     margin: { top: 5, right: 10, left: -20, bottom: 0 },
   }
-  const axisProps = { stroke: 'var(--color-line2)', tick: { fill: 'var(--color-mist)', fontSize: 11 } }
+  const axisProps = { stroke: 'var(--color-line2)', tick: { fill: 'var(--color-mist)', fontSize: 12 } }
   const gridProps = { stroke: 'var(--color-line)', strokeDasharray: '3 3' }
 
   return (
@@ -799,7 +799,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs font-semibold text-fog">{t.sessions_30d} sesiones</span>
-                    <span className={`flex items-center gap-1 text-[10px] font-bold ${cls}`}>
+                    <span className={`flex items-center gap-1 text-xs font-bold ${cls}`}>
                       <StatusIcon size={9} /> {label}
                     </span>
                     <ChevronDown size={13} className={`text-mist transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -814,7 +814,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                       <>
                         {/* Device summary */}
                         <div>
-                          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Terminales detectados</p>
+                          <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">Terminales detectados</p>
                           <div className="flex flex-wrap gap-2">
                             {Object.entries(uniqueDevices).map(([key, count]) => {
                               const [device, browser, os, pwa] = key.split('|')
@@ -825,7 +825,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
                                     {pwa === 'true' ? 'PWA' : browser}
                                   </span>
                                   <span className="text-xs text-fog">· {os}</span>
-                                  {count > 1 && <span className="text-[10px] font-bold text-lime ml-1">×{count}</span>}
+                                  {count > 1 && <span className="text-xs font-bold text-lime ml-1">×{count}</span>}
                                 </div>
                               )
                             })}
@@ -834,7 +834,7 @@ function AccesosSection({ tenants }: { tenants: Tenant[] }) {
 
                         {/* Last 5 sessions */}
                         <div>
-                          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2">Últimas sesiones</p>
+                          <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-2">Últimas sesiones</p>
                           <div className="space-y-1">
                             {t.devices.slice(0, 5).map((s, i) => (
                               <div key={i} className="flex items-center gap-2 text-xs text-fog">
@@ -947,7 +947,7 @@ export default function AdminPage() {
             </div>
             <div>
               <p className="font-display font-semibold text-snow text-sm leading-tight">Admin</p>
-              <p className="text-[10px] text-mist">Plataforma SaaS</p>
+              <p className="text-xs text-mist">Plataforma SaaS</p>
             </div>
           </div>
         </div>
@@ -970,7 +970,7 @@ export default function AdminPage() {
               <div className="w-6 h-6 rounded-full bg-amber/20 flex items-center justify-center shrink-0">
                 <Shield size={12} className="text-amber" />
               </div>
-              <p className="text-[11px] text-fog truncate">{userEmail}</p>
+              <p className="text-xs text-fog truncate">{userEmail}</p>
             </div>
           )}
           <button

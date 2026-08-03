@@ -49,7 +49,7 @@ export function StatFlipCards({
                 </div>
                 <div>
                   <div className={`font-display text-2xl font-bold leading-none ${c.accent}`}>{c.value}</div>
-                  <div className="text-[11px] text-fog mt-1 leading-tight">{c.label}</div>
+                  <div className="text-xs text-fog mt-1 leading-tight">{c.label}</div>
                 </div>
               </div>
               {/* Reverso */}
@@ -57,8 +57,8 @@ export function StatFlipCards({
                 className="absolute inset-0 rounded-2xl border border-line bg-surface2 p-3 flex flex-col justify-center"
                 style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
               >
-                <p className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${c.accent}`}>{c.label}</p>
-                <p className="text-[10px] text-fog leading-snug">{c.desc}</p>
+                <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${c.accent}`}>{c.label}</p>
+                <p className="text-xs text-fog leading-snug">{c.desc}</p>
               </div>
             </div>
           </button>

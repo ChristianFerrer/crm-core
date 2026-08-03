@@ -144,7 +144,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <p className="text-center text-[10px] text-mist">
+        <p className="text-center text-xs text-mist">
           GERD CRM · v0.1 ·{' '}
           <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-snow transition-colors">{t('login_footer_privacidad')}</a>
         </p>

@@ -62,8 +62,8 @@ export function MarketingSection() {
   })
   const sourceRows = Object.entries(bySource).sort(([, a], [, b]) => b - a).slice(0, 8)
 
-  const chartProps = { style: { fontSize: 11 }, margin: { top: 5, right: 10, left: -20, bottom: 0 } }
-  const axisProps = { stroke: 'var(--color-line2)', tick: { fill: 'var(--color-mist)', fontSize: 11 } }
+  const chartProps = { style: { fontSize: 12 }, margin: { top: 5, right: 10, left: -20, bottom: 0 } }
+  const axisProps = { stroke: 'var(--color-line2)', tick: { fill: 'var(--color-mist)', fontSize: 12 } }
   const gridProps = { stroke: 'var(--color-line)', strokeDasharray: '3 3' }
 
   return (
@@ -117,7 +117,7 @@ export function MarketingSection() {
                     </div>
                   </div>
                   {i < funnel.length - 1 && (
-                    <p className="text-[10px] text-mist ml-11 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-mist ml-11 mt-1 flex items-center gap-1">
                       <TrendingDown size={10} /> {i === 0 ? conv1 : conv2}% de conversión al siguiente paso
                     </p>
                   )}
