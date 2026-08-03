@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
@@ -138,6 +138,7 @@ export default function CalendarioPage() {
   // Tira de calendario plegable: contraída = solo la semana del día seleccionado
   const [stripExpanded, setStripExpanded] = useState(false)
   const agendaRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const suppressSpy = useRef(false)
   const [showJumpToday, setShowJumpToday] = useState(false)
@@ -314,80 +315,92 @@ export default function CalendarioPage() {
   }
 
   // Al pulsar un día de la tira, la agenda se desplaza a ese día
+  // Desplaza dejando hueco para la cabecera fija, que si no taparía el día
+  function scrollToDay(dateStr: string) {
+    const el = dayRefs.current[dateStr]
+    if (!el) return false
+    const offset = (headerRef.current?.offsetHeight ?? 0) + 8
+    const top = el.getBoundingClientRect().top + window.scrollY - offset
+    suppressSpy.current = true
+    window.scrollTo({ top, behavior: 'smooth' })
+    setTimeout(() => { suppressSpy.current = false }, 600)
+    return true
+  }
+
   function goToDay(dateStr: string) {
     setSelectedDate(dateStr)
-    const el = dayRefs.current[dateStr]
-    if (el) {
-      suppressSpy.current = true
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setTimeout(() => { suppressSpy.current = false }, 600)
-    }
+    scrollToDay(dateStr)
   }
 
   function jumpToToday() {
     const d = new Date()
     setYear(d.getFullYear()); setMonth(d.getMonth())
     setSelectedDate(todayStr)
-    const el = dayRefs.current[todayStr]
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    else agendaRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    if (!scrollToDay(todayStr)) window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Scroll-spy: el día visible arriba de la agenda manda sobre la tira y el título
-  function handleAgendaScroll() {
-    if (suppressSpy.current) return
-    const container = agendaRef.current
-    if (!container) return
-    const top = container.getBoundingClientRect().top
-    let current: string | null = null
-    for (const d of agendaDays) {
-      const el = dayRefs.current[d]
-      if (!el) continue
-      if (el.getBoundingClientRect().top - top <= 8) current = d
-    }
-    if (current && current !== selectedDate) {
-      setSelectedDate(current)
-      const dt = new Date(current + 'T12:00:00')
-      if (dt.getMonth() !== month || dt.getFullYear() !== year) {
-        setMonth(dt.getMonth()); setYear(dt.getFullYear())
+  // Scroll-spy: el primer día que queda bajo la cabecera fija manda sobre la
+  // tira y el título del mes. La página desplaza de forma natural, así que se
+  // escucha el scroll de la ventana (o del panel de contenido en escritorio).
+  useEffect(() => {
+    function onScroll() {
+      if (suppressSpy.current) return
+      const offset = (headerRef.current?.offsetHeight ?? 0) + 8
+      let current: string | null = null
+      for (const d of agendaDays) {
+        const el = dayRefs.current[d]
+        if (!el) continue
+        if (el.getBoundingClientRect().top - offset <= 0) current = d
       }
+      if (current && current !== selectedDate) {
+        setSelectedDate(current)
+        const dt = new Date(current + 'T12:00:00')
+        if (dt.getMonth() !== month || dt.getFullYear() !== year) {
+          setMonth(dt.getMonth()); setYear(dt.getFullYear())
+        }
+      }
+      setShowJumpToday((current ?? anchor) !== todayStr)
     }
-    setShowJumpToday((current ?? anchor) !== todayStr)
-  }
+    window.addEventListener('scroll', onScroll, true)
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll, true)
+  }, [agendaDays.join(','), selectedDate, month, year, anchor, todayStr])
 
   return (
-    <div className="flex flex-col h-[calc(100svh-4rem)] lg:h-screen bg-carbon text-snow overflow-hidden">
-      {/* ── Cabecera: mes visible ── */}
-      <div className="shrink-0 px-4 lg:px-8 pt-6 pb-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1 min-w-0">
-          <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
-            {MONTH_NAMES[month]}
-          </h1>
+    <div className="bg-carbon text-snow">
+      {/* ── Cabecera fija: mes + acciones + tira de calendario ── */}
+      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 border-b border-line">
+        <div className="flex items-center justify-between gap-3 pb-2">
+          <div className="flex items-center gap-1 min-w-0">
+            <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
+              {MONTH_NAMES[month]}
+            </h1>
+            <button
+              onClick={() => shiftMonth(-1)}
+              aria-label={MONTH_NAMES[(month + 11) % 12]}
+              className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors ml-1"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => shiftMonth(1)}
+              aria-label={MONTH_NAMES[(month + 1) % 12]}
+              className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
           <button
-            onClick={() => shiftMonth(-1)}
-            aria-label={MONTH_NAMES[(month + 11) % 12]}
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors ml-1"
+            onClick={openNewFlow}
+            className="flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-3 sm:px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors shrink-0"
           >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={() => shiftMonth(1)}
-            aria-label={MONTH_NAMES[(month + 1) % 12]}
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-          >
-            <ChevronRight size={18} />
+            <CalendarPlus size={16} />
+            <span className="hidden sm:inline">{t('calendario_nueva_reserva')}</span>
           </button>
         </div>
-        <button
-          onClick={openNewFlow}
-          className="hidden sm:flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors shrink-0"
-        >
-          <CalendarPlus size={16} /> {t('calendario_nueva_reserva')}
-        </button>
-      </div>
 
-      {/* ── Tira de calendario plegable ── */}
-      <div className="shrink-0 px-2 lg:px-6 border-b border-line">
+        {/* ── Tira de calendario plegable ── */}
+        <div className="relative">
         <div className="grid grid-cols-7">
           {DOW_LABELS.map(d => (
             <div key={d} className="py-1.5 text-center text-[11px] font-medium text-mist">{d}</div>
@@ -424,22 +437,22 @@ export default function CalendarioPage() {
           </div>
         ))}
 
-        {/* Tirador para plegar/desplegar */}
-        <button
-          onClick={() => setStripExpanded(o => !o)}
-          aria-label={stripExpanded ? t('calendario_contraer_calendario') : t('calendario_expandir_calendario')}
-          className="w-full flex items-center justify-center py-2 group"
-        >
-          <span className="w-10 h-1 rounded-full bg-line2 group-hover:bg-fog transition-colors" />
-        </button>
+          {/* Pestaña a la derecha para desplegar/plegar el calendario */}
+          <div className="flex justify-end pr-1">
+            <button
+              onClick={() => setStripExpanded(o => !o)}
+              aria-label={stripExpanded ? t('calendario_contraer_calendario') : t('calendario_expandir_calendario')}
+              aria-expanded={stripExpanded}
+              className="flex items-center justify-center w-11 h-6 rounded-b-lg border border-t-0 border-line bg-surface2 text-fog hover:text-snow hover:bg-surface transition-colors"
+            >
+              {stripExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── Agenda continua ── */}
-      <div
-        ref={agendaRef}
-        onScroll={handleAgendaScroll}
-        className="flex-1 overflow-y-auto px-4 lg:px-8 pb-28 lg:pb-8 relative"
-      >
+      <div ref={agendaRef} className="pb-28 lg:pb-8 relative">
         {agendaDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-mist">{t('calendario_sin_reservas_rango')}</div>
         ) : (
@@ -557,15 +570,6 @@ export default function CalendarioPage() {
           <ArrowUp size={14} /> {t('calendario_ir_a_hoy')}
         </button>
       )}
-
-      {/* ── FAB nueva reserva ── */}
-      <button
-        onClick={openNewFlow}
-        aria-label={t('calendario_nueva_reserva')}
-        className="sm:hidden fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full bg-iris text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
-      >
-        <Plus size={24} />
-      </button>
 
       {/* ── New booking modal ── */}
 
