@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { PanelNav } from '@/components/PanelNav'
 import { Modal } from '@/components/Modal'
 import { TableFilterBar } from '@/components/TableFilterBar'
 import { getStoredTenant } from '@/lib/tenant'
@@ -234,7 +233,6 @@ export default function TiendaPage() {
       </div>
 
       {/* Sub-nav panel */}
-      <PanelNav />
 
       <div className="flex items-center justify-end gap-2">
         <button

@@ -184,6 +184,11 @@ body {
   animation: scroll-names-once 3s ease-in-out 1 forwards;
 }
 
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
 /* react-grid-layout — ajustes de tema */
 .react-grid-item.react-grid-placeholder {
   background: var(--color-lime) !important;

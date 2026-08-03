@@ -14,20 +14,25 @@ export function MiembrosTabs({ active }: { active: 'miembros' | 'familias' | 'hi
   }
 
   const cls = (isActive: boolean) =>
-    `flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-      isActive ? 'border border-lime bg-lime/10 text-lime' : 'border border-transparent text-fog hover:text-snow'
+    `flex-1 min-w-[104px] flex flex-col items-center justify-center gap-1.5 px-3 py-3 rounded-xl border text-xs font-semibold transition-colors ${
+      isActive
+        ? 'border-lime bg-lime/10 text-lime'
+        : 'border-line bg-surface text-fog hover:text-snow hover:border-line2'
     }`
 
   return (
-    <div className="flex lg:inline-flex gap-1 bg-surface rounded-xl p-1 border border-line shrink-0">
+    <div className="flex gap-2 shrink-0 overflow-x-auto scrollbar-hide">
       <button onClick={() => goTo('miembros')} className={cls(active === 'miembros')}>
-        <User size={14} /> {t('miembros_tab_miembros')}
+        <User size={18} strokeWidth={1.8} />
+        <span className="whitespace-nowrap">{t('miembros_tab_miembros')}</span>
       </button>
       <button onClick={() => goTo('familias')} className={cls(active === 'familias')}>
-        <Users size={14} /> {t('miembros_tab_familias')}
+        <Users size={18} strokeWidth={1.8} />
+        <span className="whitespace-nowrap">{t('miembros_tab_familias')}</span>
       </button>
       <Link href="/miembros/historico" className={cls(active === 'historico')}>
-        <History size={14} /> {t('shared_nav_historico_visitas')}
+        <History size={18} strokeWidth={1.8} />
+        <span className="whitespace-nowrap">{t('shared_nav_historico_visitas')}</span>
       </Link>
     </div>
   )

@@ -10,6 +10,7 @@ export const dictShared = {
   shared_nav_perfil: { es: 'Perfil', en: 'Profile', ca: 'Perfil', de: 'Profil' },
   shared_nav_historico_visitas: { es: 'Histórico de visitas', en: 'Visit history', ca: 'Historial de visites', de: 'Besuchsverlauf' },
   shared_nav_configuracion: { es: 'Configuración', en: 'Settings', ca: 'Configuració', de: 'Einstellungen' },
+  shared_nav_mas: { es: 'Más', en: 'More', ca: 'Més', de: 'Mehr' },
   shared_mes_enero: { es: 'Enero', en: 'January', ca: 'Gener', de: 'Januar' },
   shared_mes_febrero: { es: 'Feb', en: 'Feb', ca: 'Febr', de: 'Feb' },
   shared_mes_marzo: { es: 'Marzo', en: 'March', ca: 'Març', de: 'März' },

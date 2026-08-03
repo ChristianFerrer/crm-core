@@ -5,7 +5,6 @@ import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart, Visit
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
-import { PanelNav } from '@/components/PanelNav'
 import { CustomizableDashboard } from './CustomizableDashboard'
 import { getT } from '@/lib/i18n-server'
 
@@ -292,7 +291,6 @@ export default async function PanelPage() {
         <UrgentAlerts alerts={urgentAlerts} />
       </div>
 
-      <PanelNav />
 
       {/* Dashboard personalizable (mover / redimensionar / añadir / quitar) */}
       <CustomizableDashboard

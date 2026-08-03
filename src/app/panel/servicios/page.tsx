@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { PanelNav } from '@/components/PanelNav'
 import { TableFilterBar } from '@/components/TableFilterBar'
 import { useLanguage } from '@/lib/i18n'
 
@@ -442,7 +441,6 @@ export default function ServiciosPage() {
       </div>
 
       {/* Tab nav */}
-      <PanelNav />
 
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
