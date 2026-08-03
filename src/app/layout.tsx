@@ -25,6 +25,9 @@ export const viewport: Viewport = {
   // Permitir zoom (accesibilidad, WCAG 1.4.4)
   maximumScale: 5,
   userScalable: true,
+  // Necesario para que env(safe-area-inset-*) devuelva valores reales y la
+  // barra inferior pueda separarse del indicador de inicio del dispositivo
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

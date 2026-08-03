@@ -593,7 +593,7 @@ export default function CalendarioPage() {
       {showJumpToday && (
         <button
           onClick={jumpToToday}
-          className="fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-30 flex items-center gap-1.5 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-iris shadow-2xl hover:bg-surface2 transition-colors"
+          className="fixed left-1/2 -translate-x-1/2 bottom-above-nav z-30 flex items-center gap-1.5 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-semibold text-iris shadow-2xl hover:bg-surface2 transition-colors"
         >
           <ArrowUp size={14} /> {t('calendario_ir_a_hoy')}
         </button>
@@ -603,7 +603,7 @@ export default function CalendarioPage() {
       <button
         onClick={openNewFlow}
         aria-label={t('calendario_nueva_reserva')}
-        className="sm:hidden fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full bg-iris text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+        className="sm:hidden fixed bottom-above-nav right-4 z-30 w-14 h-14 rounded-full bg-iris text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
       >
         <CalendarPlus size={22} />
       </button>

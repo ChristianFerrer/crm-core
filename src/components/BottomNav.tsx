@@ -48,7 +48,8 @@ export function BottomNav() {
         <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div
-            className="absolute bottom-0 left-0 right-0 rounded-t-3xl border-t border-x border-line bg-surface pb-[76px] animate-[slideUp_.18s_ease-out]"
+            className="absolute bottom-0 left-0 right-0 rounded-t-3xl border-t border-x border-line bg-surface animate-[slideUp_.18s_ease-out]"
+            style={{ paddingBottom: 'calc(4.75rem + env(safe-area-inset-bottom))' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="mx-auto w-10 h-1 rounded-full bg-line2 mt-3 mb-4" />
@@ -76,8 +77,13 @@ export function BottomNav() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-[70] border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden">
-        <div className="flex">
+      {/* La barra reserva abajo el alto del indicador de inicio del dispositivo
+          (con un mínimo en Android, donde el inset suele ser 0) */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-[70] border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden"
+        style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex pt-1">
           {navItems.map(({ href, label, icon: Icon, badge }) => {
             const isActive = href === '/'
               ? pathname === '/'

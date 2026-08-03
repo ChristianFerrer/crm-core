@@ -80,7 +80,7 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <AppShell>
-        <main className={`pb-20 lg:pb-0 px-4 md:px-6 lg:px-8 lg:pt-8 ${viewingAs ? 'pt-12 lg:pt-4' : 'pt-6 lg:pt-4'}`}>
+        <main className={`pb-safe-nav px-4 md:px-6 lg:px-8 lg:pt-8 ${viewingAs ? 'pt-12 lg:pt-4' : 'pt-6 lg:pt-4'}`}>
           {children}
         </main>
       </AppShell>
