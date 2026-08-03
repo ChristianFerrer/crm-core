@@ -8,13 +8,10 @@ import { useLanguage, type TranslationKey } from '@/lib/i18n'
 type Tab = 'miembros' | 'familias' | 'historico'
 
 // Cada tile lleva su acento propio, como las tarjetas del Panel.
-// Nota: el fondo tintado vive en el badge del icono (un <div>), nunca en el
-// <button>/<a>, para que la regla de "botones sólidos" del tema claro no lo
-// convierta en un bloque de color macizo.
-const TILES: { id: Tab; href: string; labelKey: TranslationKey; icon: typeof User; badge: string; accent: string; activeBorder: string }[] = [
-  { id: 'miembros',  href: '/miembros',                  labelKey: 'miembros_tab_miembros',      icon: User,    badge: 'bg-lime/10', accent: 'text-lime', activeBorder: 'border-lime' },
-  { id: 'familias',  href: '/miembros?view=familias',    labelKey: 'miembros_tab_familias',      icon: Users,   badge: 'bg-iris/10', accent: 'text-iris', activeBorder: 'border-iris' },
-  { id: 'historico', href: '/miembros/historico',        labelKey: 'shared_nav_historico_visitas', icon: History, badge: 'bg-mint/10', accent: 'text-mint', activeBorder: 'border-mint' },
+const TILES: { id: Tab; href: string; labelKey: TranslationKey; icon: typeof User; accent: string; activeBorder: string }[] = [
+  { id: 'miembros',  href: '/miembros',                  labelKey: 'miembros_tab_miembros',      icon: User,    accent: 'text-lime', activeBorder: 'border-lime' },
+  { id: 'familias',  href: '/miembros?view=familias',    labelKey: 'miembros_tab_familias',      icon: Users,   accent: 'text-iris', activeBorder: 'border-iris' },
+  { id: 'historico', href: '/miembros/historico',        labelKey: 'shared_nav_historico_visitas', icon: History, accent: 'text-mint', activeBorder: 'border-mint' },
 ]
 
 export function MiembrosTabs({ active }: { active: Tab }) {
@@ -26,15 +23,13 @@ export function MiembrosTabs({ active }: { active: Tab }) {
       {TILES.map(tile => {
         const Icon = tile.icon
         const isActive = tile.id === active
-        const cls = `h-[88px] rounded-2xl border bg-surface p-3 flex flex-col justify-between items-start text-left transition-colors ${
+        const cls = `h-[88px] rounded-2xl border bg-surface px-2 py-3 flex flex-col items-center justify-center transition-colors ${
           isActive ? `${tile.activeBorder}` : 'border-line hover:border-line2'
         }`
         const inner = (
           <>
-            <div className={`w-7 h-7 rounded-lg ${tile.badge} flex items-center justify-center shrink-0`}>
-              <Icon size={13} className={tile.accent} />
-            </div>
-            <span className={`text-[11px] leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
+            <Icon size={26} strokeWidth={1.8} className={`${tile.accent} shrink-0`} />
+            <span className={`h-8 mt-[5px] flex items-start justify-center text-center text-[11px] leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
               {t(tile.labelKey)}
             </span>
           </>

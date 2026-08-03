@@ -33,12 +33,10 @@ export function BottomNav() {
   ]
 
   // Secciones secundarias — viven dentro de «Más».
-  // El fondo tintado va en el badge del icono (un <div>), nunca en el <a>,
-  // para no activar la regla de "botones sólidos" del tema claro.
   const moreItems = [
-    { href: '/panel/servicios',    label: t('shared_nav_servicios'),    icon: Tag,         badge: 'bg-lime/10', accent: 'text-lime', activeBorder: 'border-lime' },
-    { href: '/panel/tienda',       label: t('shared_nav_tienda'),       icon: ShoppingBag, badge: 'bg-iris/10', accent: 'text-iris', activeBorder: 'border-iris' },
-    { href: '/panel/configuracion',label: t('shared_nav_configuracion'),icon: Settings,    badge: 'bg-mint/10', accent: 'text-mint', activeBorder: 'border-mint' },
+    { href: '/panel/servicios',    label: t('shared_nav_servicios'),    icon: Tag,         accent: 'text-lime', activeBorder: 'border-lime' },
+    { href: '/panel/tienda',       label: t('shared_nav_tienda'),       icon: ShoppingBag, accent: 'text-iris', activeBorder: 'border-iris' },
+    { href: '/panel/configuracion',label: t('shared_nav_configuracion'),icon: Settings,    accent: 'text-mint', activeBorder: 'border-mint' },
   ]
 
   const moreActive = moreItems.some(i => pathname.startsWith(i.href))
@@ -55,21 +53,19 @@ export function BottomNav() {
           >
             <div className="mx-auto w-10 h-1 rounded-full bg-line2 mt-3 mb-4" />
             <div className="grid grid-cols-3 gap-3 px-5 pb-5">
-              {moreItems.map(({ href, label, icon: Icon, badge, accent, activeBorder }) => {
+              {moreItems.map(({ href, label, icon: Icon, accent, activeBorder }) => {
                 const isActive = pathname.startsWith(href)
                 return (
                   <Link
                     key={href}
                     href={href}
                     onClick={() => setMoreOpen(false)}
-                    className={`h-[88px] rounded-2xl border bg-surface p-3 flex flex-col justify-between items-start text-left transition-colors ${
+                    className={`h-[88px] rounded-2xl border bg-surface px-2 py-3 flex flex-col items-center justify-center transition-colors ${
                       isActive ? activeBorder : 'border-line hover:border-line2'
                     }`}
                   >
-                    <div className={`w-7 h-7 rounded-lg ${badge} flex items-center justify-center shrink-0`}>
-                      <Icon size={13} className={accent} />
-                    </div>
-                    <span className={`text-[11px] leading-tight ${isActive ? `${accent} font-semibold` : 'text-fog'}`}>
+                    <Icon size={26} strokeWidth={1.8} className={`${accent} shrink-0`} />
+                    <span className={`h-8 mt-[5px] flex items-start justify-center text-center text-[11px] leading-tight ${isActive ? `${accent} font-semibold` : 'text-fog'}`}>
                       {label}
                     </span>
                   </Link>
