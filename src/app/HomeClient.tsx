@@ -12,6 +12,7 @@ import {
   CupSoda, Coffee, Droplet, Citrus, Cookie, Candy, Croissant, Popcorn, Package,
 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
+import { useHomeSections } from '@/lib/homeSections'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking } from '@/lib/bookingExecution'
@@ -1536,6 +1537,7 @@ function ScrollingName({ text, suffix, suffixClass }: { text: string; suffix: st
 
 export default function HomeClient({ todayVisits, monthCount, dateLabel, capacity, todayBirthdays, todayBookings, selectedDate, todayStr, allMembers }: HomeClientProps) {
   const { t, lang } = useLanguage()
+  const { sections: homeSections } = useHomeSections()
   const router = useRouter()
   const searchParams = useSearchParams()
   const isToday = selectedDate === todayStr
@@ -2626,7 +2628,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
       </div>
 
-      {/* ZONA 3 — Agenda de hoy */}
+      {/* ZONA 3 — Agenda de hoy (se puede ocultar desde Configuración) */}
+      {homeSections.agenda && (
       <div className="rounded-2xl border border-line bg-surface overflow-hidden">
         <div className="px-4 pt-4 pb-3 border-b border-line flex items-center gap-2">
           <CalendarClock size={13} className="text-fog" />
@@ -2721,8 +2724,10 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
           </div>
         )}
       </div>
+      )}
 
-      {/* ZONA 4 — Métricas del día */}
+      {/* ZONA 4 — Métricas del día (se puede ocultar desde Configuración) */}
+      {homeSections.metricas && (<>
       <div className="flex items-center gap-2 px-1">
         <BarChart2 size={13} className="text-fog" />
         <span className="text-xs font-semibold text-fog uppercase tracking-wide">{t('home_metricas_del_dia')}</span>
@@ -2835,6 +2840,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 </ResponsiveContainer>
         </div>
       </div>
+      </>)}
 
       {/* Modal de alertas */}
       {alertsOpen && (

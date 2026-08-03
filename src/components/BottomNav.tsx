@@ -27,8 +27,8 @@ export function BottomNav() {
 
   const navItems = [
     { href: '/',          label: t('nav_inicio'),   icon: Home,       badge: 0 },
-    { href: '/miembros',  label: t('nav_miembros'), icon: Users,      badge: 0 },
     { href: '/calendario',label: t('nav_agenda'),   icon: CalendarDays, badge: badges.agenda },
+    { href: '/miembros',  label: t('nav_miembros'), icon: Users,      badge: 0 },
     { href: '/panel',     label: t('nav_panel'),    icon: BarChart2,  badge: badges.panel },
   ]
 

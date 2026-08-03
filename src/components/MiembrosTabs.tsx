@@ -23,13 +23,13 @@ export function MiembrosTabs({ active }: { active: Tab }) {
       {TILES.map(tile => {
         const Icon = tile.icon
         const isActive = tile.id === active
-        const cls = `h-[88px] rounded-2xl border bg-surface px-2 py-3 flex flex-col items-center justify-center transition-colors ${
+        const cls = `h-[68px] rounded-xl border bg-surface px-2 py-2 flex flex-col items-center justify-center transition-colors ${
           isActive ? `${tile.activeBorder}` : 'border-line hover:border-line2'
         }`
         const inner = (
           <>
-            <Icon size={26} strokeWidth={1.8} className={`${tile.accent} shrink-0`} />
-            <span className={`h-8 mt-[5px] flex items-start justify-center text-center text-[11px] leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
+            <Icon size={20} strokeWidth={1.8} className={`${tile.accent} shrink-0`} />
+            <span className={`h-6 mt-[5px] flex items-start justify-center text-center text-[10px] leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
               {t(tile.labelKey)}
             </span>
           </>

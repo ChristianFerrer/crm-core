@@ -1,12 +1,13 @@
 'use client'
 
-import { Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, LogOut, Languages, SunMoon, Sun, Moon, ShieldCheck, Clock, CalendarDays } from 'lucide-react'
+import { Building2, Mail, Phone, MapPin, User, Star, Users, Pencil, Check, X, LogOut, Languages, SunMoon, Sun, Moon, ShieldCheck, Clock, CalendarDays, LayoutDashboard } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useLanguage, LANGUAGES } from '@/lib/i18n'
 import { useTheme } from '@/lib/theme'
+import { useHomeSections } from '@/lib/homeSections'
 
 type TenantProfile = {
   id: string
@@ -95,6 +96,7 @@ export default function ConfiguracionPage() {
   const router = useRouter()
   const { lang, isAuto, setLang, t } = useLanguage()
   const { theme, setTheme } = useTheme()
+  const { sections: homeSections, toggle: toggleHomeSection } = useHomeSections()
   const [profile, setProfile] = useState<TenantProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -464,6 +466,35 @@ export default function ConfiguracionPage() {
               >
                 <Sun size={12} /> Claro
               </button>
+            </div>
+          </div>
+
+          {/* Secciones de Inicio */}
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <p className="text-xs font-semibold text-fog uppercase tracking-wide mb-1 flex items-center gap-1.5">
+              <LayoutDashboard size={12} /> {t('panelcfg_secciones_inicio')}
+            </p>
+            <p className="text-xs text-mist mb-3">{t('panelcfg_secciones_inicio_desc')}</p>
+            <div className="space-y-2">
+              {([
+                { key: 'agenda' as const,   label: t('panelcfg_seccion_agenda_hoy') },
+                { key: 'metricas' as const, label: t('panelcfg_seccion_metricas') },
+              ]).map(({ key, label }) => {
+                const on = homeSections[key]
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleHomeSection(key)}
+                    aria-pressed={on}
+                    className="w-full flex items-center justify-between rounded-xl border border-line bg-surface2 px-3.5 py-3"
+                  >
+                    <span className="text-sm font-medium text-snow text-left">{label}</span>
+                    <span className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${on ? 'bg-lime' : 'bg-line'}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${on ? 'translate-x-4' : ''}`} />
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 

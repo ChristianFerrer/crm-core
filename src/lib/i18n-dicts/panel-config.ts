@@ -226,4 +226,8 @@ export const dictPanelConfig = {
   panelcfg_eliminar_producto_titulo: { es: '¿Eliminar producto?', en: 'Delete product?', ca: 'Vols eliminar el producte?', de: 'Produkt löschen?' },
   panelcfg_eliminar_producto_msg: { es: 'Se eliminará {name} de forma permanente.', en: '{name} will be permanently deleted.', ca: 'S’eliminarà {name} de manera permanent.', de: '{name} wird dauerhaft gelöscht.' },
   panelcfg_si_eliminar: { es: 'Sí, eliminar', en: 'Yes, delete', ca: 'Sí, elimina', de: 'Ja, löschen' },
+  panelcfg_secciones_inicio: { es: 'Secciones de Inicio', en: 'Home sections', ca: 'Seccions d’Inici', de: 'Startseiten-Bereiche' },
+  panelcfg_secciones_inicio_desc: { es: 'Elige qué bloques se muestran en la pantalla de Inicio', en: 'Choose which blocks appear on the Home screen', ca: 'Tria quins blocs es mostren a la pantalla d’Inici', de: 'Wählen Sie, welche Blöcke auf der Startseite erscheinen' },
+  panelcfg_seccion_agenda_hoy: { es: 'Agenda de hoy', en: "Today's schedule", ca: 'Agenda d’avui', de: 'Heutiger Terminplan' },
+  panelcfg_seccion_metricas: { es: 'Métricas del día', en: 'Day metrics', ca: 'Mètriques del dia', de: 'Tagesmetriken' },
 } as const

@@ -176,8 +176,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav className={`flex-1 py-4 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
           {[
             { href: '/',           label: t('nav_inicio'),   icon: Home,        badge: 0 },
-            { href: '/miembros',   label: t('nav_miembros'), icon: Users,       badge: 0 },
             { href: '/calendario', label: t('nav_agenda'),   icon: CalendarDays,badge: badges.agenda },
+            { href: '/miembros',   label: t('nav_miembros'), icon: Users,       badge: 0 },
             { href: '/panel',      label: t('nav_panel'),    icon: BarChart2,   badge: badges.panel },
             { href: '/panel/servicios',     label: t('shared_nav_servicios'),     icon: Tag,         badge: 0 },
             { href: '/panel/tienda',        label: t('shared_nav_tienda'),        icon: ShoppingBag, badge: 0 },
