@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Shapes, Home, Users, BarChart2, CalendarDays, MoreHorizontal, Settings, Tag, ShoppingBag } from 'lucide-react'
+import { Shapes, Home, Users, BarChart2, CalendarDays, MoreHorizontal, Settings, Tag, Store } from 'lucide-react'
 import { useNavBadges } from '@/lib/useNavBadges'
 import { useLanguage } from '@/lib/i18n'
 
@@ -35,7 +35,7 @@ export function BottomNav() {
   // Secciones secundarias — viven dentro de «Más».
   const moreItems = [
     { href: '/panel/servicios',    label: t('shared_nav_servicios'),    icon: Tag,         accent: 'text-lime', activeBorder: 'border-lime' },
-    { href: '/panel/tienda',       label: t('shared_nav_tienda'),       icon: ShoppingBag, accent: 'text-iris', activeBorder: 'border-iris' },
+    { href: '/panel/tienda',       label: t('shared_nav_tienda'),       icon: Store, accent: 'text-iris', activeBorder: 'border-iris' },
     { href: '/panel/configuracion',label: t('shared_nav_configuracion'),icon: Settings,    accent: 'text-mint', activeBorder: 'border-mint' },
     { href: '/panel/iconos',       label: 'Iconos',                     icon: Shapes,      accent: 'text-amber', activeBorder: 'border-amber' },
   ]

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { ShoppingBag, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
+import { Store, Plus, Pencil, Trash2, X, Check, ScanBarcode, PackagePlus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Modal } from '@/components/Modal'
 import { TableFilterBar } from '@/components/TableFilterBar'
@@ -270,7 +270,7 @@ export default function TiendaPage() {
         <div className="text-sm text-mist text-center py-8">{t('panelcfg_cargando')}</div>
       ) : products.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-line p-10 text-center">
-          <ShoppingBag size={28} className="mx-auto text-mist mb-3" />
+          <Store size={28} className="mx-auto text-mist mb-3" />
           <p className="text-sm text-fog font-medium">{t('panelcfg_sin_productos')}</p>
           <p className="text-xs text-mist mt-1">{t('panelcfg_sin_productos_hint')}</p>
         </div>

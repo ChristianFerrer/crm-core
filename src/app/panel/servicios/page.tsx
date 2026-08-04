@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2, ShoppingBag } from 'lucide-react'
+import { BarChart2, Tag, Plus, Pencil, Trash2, X, Check, Building2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { TableFilterBar } from '@/components/TableFilterBar'
 import { useLanguage } from '@/lib/i18n'

@@ -1,6 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase-server'
 import Link from 'next/link'
-import { Users, TrendingUp, BarChart2, Tag, Building2, ShoppingBag } from 'lucide-react'
+import { Users, TrendingUp, BarChart2, Tag, Building2 } from 'lucide-react'
 import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart, VisitsPerMonthChart } from './PanelCharts'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
