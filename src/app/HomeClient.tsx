@@ -223,7 +223,7 @@ function CheckinSearchModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80dvh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
           <div className="flex items-center gap-2">
@@ -409,7 +409,7 @@ function CheckinConfirmModal({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80dvh]" onClick={e => e.stopPropagation()}>
         {/* Header — nombre del miembro */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
@@ -630,7 +630,7 @@ function CheckinNewMemberModal({
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80dvh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
           <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
@@ -678,7 +678,7 @@ export function BookingSearchAndTypeModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90dvh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
           <div className="flex items-center gap-2">
@@ -1011,7 +1011,7 @@ export function BookingFormModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90dvh]" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-line shrink-0">
           <div className="flex items-start justify-between gap-2">
@@ -2346,7 +2346,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         ) : (
           // Sin los otros paneles, la sala deja de limitarse a 60vh y usa todo
           // el alto disponible de la pantalla
-          <div className={salaFullHeight ? 'overflow-y-auto' : 'max-h-[60vh] overflow-y-auto'}>
+          <div className={salaFullHeight ? 'overflow-y-auto' : 'max-h-[60dvh] overflow-y-auto'}>
             {/* ── MOBILE: expandable cards (< md) ──────────────────────── */}
             <div className="xl:hidden px-3 py-3 space-y-2.5">
               {filteredVisits.map(visit => {
@@ -2646,7 +2646,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         {timeline.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-mist">{t('home_sin_reservas_hoy')}</div>
         ) : (
-          <div className="px-4 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="px-4 py-4 space-y-4 max-h-[60dvh] overflow-y-auto">
             {timeline.map(b => {
               const status = getBookingStatus(b)
               const style = bookingTypeStyle[b.type]
@@ -2858,7 +2858,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       {alertsOpen && (
         <div className="fixed inset-0 z-[60] flex items-start justify-end p-4 pt-16 sm:pt-4" onClick={() => setAlertsOpen(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative w-full max-w-sm rounded-2xl border border-amber/30 bg-surface shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-sm rounded-2xl border border-amber/30 bg-surface shadow-2xl flex flex-col max-h-[80dvh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-line shrink-0">
               <div className="flex items-center gap-2">
                 <Bell size={14} className="text-amber" />
@@ -2999,7 +2999,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closeTotalModal}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90dvh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
                 <div className="flex items-center gap-2">
@@ -3281,7 +3281,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => closeAndReturn(() => setAcompVisitId(null))}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full sm:max-w-md rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full sm:max-w-md rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90dvh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
                 <div className="flex items-center gap-2">
@@ -3595,7 +3595,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setDetailVisitId(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85dvh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
                 <div className="min-w-0 flex-1">
@@ -3727,7 +3727,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setSelectedBooking(null)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full sm:max-w-sm rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85dvh]" onClick={e => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
                 <div className="flex-1 min-w-0">
@@ -4025,7 +4025,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
           {/* Panel */}
           <div
-            className="relative w-full sm:max-w-md rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85vh]"
+            className="relative w-full sm:max-w-md rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[85dvh]"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}

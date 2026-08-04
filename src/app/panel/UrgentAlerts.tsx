@@ -35,7 +35,7 @@ export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
       {open && (
         <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)}>
           <div
-            className="absolute right-4 top-16 sm:top-auto sm:right-0 sm:mt-2 w-[calc(100vw-2rem)] max-w-sm rounded-2xl border border-amber/30 bg-surface shadow-2xl flex flex-col max-h-[70vh]"
+            className="absolute right-4 top-16 sm:top-auto sm:right-0 sm:mt-2 w-[calc(100vw-2rem)] max-w-sm rounded-2xl border border-amber/30 bg-surface shadow-2xl flex flex-col max-h-[70dvh]"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-line shrink-0">

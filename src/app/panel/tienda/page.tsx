@@ -341,7 +341,7 @@ export default function TiendaPage() {
 
         {/* ── ESCRITORIO: tabla con scroll interno (lg+) ── */}
         <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
-          <div className="overflow-auto max-h-[60vh]">
+          <div className="overflow-auto max-h-[60dvh]">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-surface">
                 <tr className="border-b border-line">
@@ -420,7 +420,7 @@ export default function TiendaPage() {
       {/* Product modal */}
       {showModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
-          <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-5 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-5 space-y-4 max-h-[90dvh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-semibold text-snow">{editing ? t('panelcfg_editar_producto') : t('panelcfg_nuevo_producto')}</h2>
               <button onClick={() => setShowModal(false)} className="text-mist hover:text-snow"><X size={16} /></button>

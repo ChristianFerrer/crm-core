@@ -217,7 +217,7 @@ function TenantModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-surface border border-line rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="relative w-full max-w-lg bg-surface border border-line rounded-2xl overflow-hidden max-h-[90dvh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
           <h3 className="text-base font-semibold text-snow">
             {mode === 'create' ? 'Nuevo establecimiento' : `Editar · ${initial.name}`}

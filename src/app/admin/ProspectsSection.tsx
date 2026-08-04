@@ -227,7 +227,7 @@ export function ProspectsSection() {
       {/* Modal alta/edición */}
       {modalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-carbon/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 shadow-2xl max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-semibold text-snow">{editing ? 'Editar prospecto' : 'Nuevo prospecto'}</h3>
               <button onClick={() => setModalOpen(false)} className="text-fog hover:text-snow"><X size={18} /></button>

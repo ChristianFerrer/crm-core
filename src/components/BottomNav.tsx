@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Home, Users, BarChart2, CalendarDays, MoreHorizontal, Settings, Tag, ShoppingBag } from 'lucide-react'
+import { Shapes, Home, Users, BarChart2, CalendarDays, MoreHorizontal, Settings, Tag, ShoppingBag } from 'lucide-react'
 import { useNavBadges } from '@/lib/useNavBadges'
 import { useLanguage } from '@/lib/i18n'
 
@@ -37,6 +37,7 @@ export function BottomNav() {
     { href: '/panel/servicios',    label: t('shared_nav_servicios'),    icon: Tag,         accent: 'text-lime', activeBorder: 'border-lime' },
     { href: '/panel/tienda',       label: t('shared_nav_tienda'),       icon: ShoppingBag, accent: 'text-iris', activeBorder: 'border-iris' },
     { href: '/panel/configuracion',label: t('shared_nav_configuracion'),icon: Settings,    accent: 'text-mint', activeBorder: 'border-mint' },
+    { href: '/panel/iconos',       label: 'Iconos',                     icon: Shapes,      accent: 'text-amber', activeBorder: 'border-amber' },
   ]
 
   const moreActive = moreItems.some(i => pathname.startsWith(i.href))
@@ -45,7 +46,7 @@ export function BottomNav() {
     <>
       {/* Bottom sheet «Más» */}
       {moreOpen && (
-        <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setMoreOpen(false)}>
+        <div className="fixed inset-0 z-[44] lg:hidden" onClick={() => setMoreOpen(false)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div
             className="absolute bottom-0 left-0 right-0 rounded-t-3xl border-t border-x border-line bg-surface animate-[slideUp_.18s_ease-out]"
@@ -78,10 +79,13 @@ export function BottomNav() {
       )}
 
       {/* La barra reserva abajo el alto del indicador de inicio del dispositivo
-          (con un mínimo en Android, donde el inset suele ser 0) */}
+          (con un mínimo en Android, donde el inset suele ser 0) y 2px arriba
+          para que los badges no toquen el borde superior.
+          z-[45]: por encima del contenido y de los FAB (z-30) pero por debajo
+          de los modales (z-[60]+), que antes quedaban tapados por la barra. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[70] border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden"
-        style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}
+        className="fixed bottom-0 left-0 right-0 z-[45] border-t border-line bg-carbon/90 backdrop-blur-md lg:hidden"
+        style={{ paddingTop: '2px', paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}
       >
         <div className="flex">
           {navItems.map(({ href, label, icon: Icon, badge }) => {
