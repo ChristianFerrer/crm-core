@@ -8,7 +8,7 @@ import {
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
   Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2, CalendarPlus,
-  Euro, CreditCard,
+  Euro, CreditCard, Store,
   CupSoda, Coffee, Droplet, Citrus, Cookie, Candy, Croissant, Popcorn, Package,
 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
@@ -27,6 +27,28 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, LabelList,
 } from 'recharts'
+
+/**
+ * Personas que ya están dentro en OTRA visita abierta, por nombre.
+ *
+ * Evita que dos titulares de la misma familia registren al mismo hijo o al
+ * mismo co-titular: sin esto el aforo los contaba dos veces.
+ */
+export function namesAlreadyInside(
+  visits: { id: string; checked_out_at: string | null; members: { name: string } | null; children_present: { name: string; is_adult?: boolean }[] | null }[],
+  excludeVisitId?: string,
+): { adults: Set<string>; children: Set<string> } {
+  const adults = new Set<string>()
+  const children = new Set<string>()
+  for (const v of visits) {
+    if (v.checked_out_at || v.id === excludeVisitId) continue
+    if (v.members?.name) adults.add(v.members.name)
+    for (const e of v.children_present ?? []) {
+      (e.is_adult ? adults : children).add(e.name)
+    }
+  }
+  return { adults, children }
+}
 
 type TodayVisit = {
   id: string
@@ -352,6 +374,8 @@ function CheckinConfirmModal({
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const bono = getBonoInfo(currentMember)
+  // Nombres que ya están dentro en otra visita: no se pueden volver a añadir
+  const inside = namesAlreadyInside(activeVisits)
   const activeVisit = activeVisits.find(v => v.member_id === currentMember.id && !v.checked_out_at)
   const alreadyInside = !!activeVisit
   const custodiaValid = visitType !== 'custodia' || (custodiaStart.trim() !== '' && custodiaEnd.trim() !== '')
@@ -495,19 +519,24 @@ function CheckinConfirmModal({
                 <div>
                   <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_co_titulares')}</p>
                   <div className="space-y-2">
-                    {coTitulares.map((co, i) => (
-                      <button key={co.id} type="button"
+                    {coTitulares.map((co, i) => {
+                      const busy = inside.adults.has(co.name)
+                      return (
+                      <button key={co.id} type="button" disabled={busy}
+                        title={busy ? t('home_ya_en_sala') : undefined}
                         onClick={() => setCoTitulares(prev => prev.map((c, j) => j === i ? { ...c, selected: !c.selected } : c))}
                         className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
-                          co.selected ? 'bg-iris/5 border-iris/30' : 'border-line bg-surface2 hover:border-line2'
+                          busy ? 'border-line bg-surface2 opacity-50 cursor-not-allowed'
+                          : co.selected ? 'bg-iris/5 border-iris/30' : 'border-line bg-surface2 hover:border-line2'
                         }`}>
-                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
-                          {co.selected && <Check size={11} className="text-white" strokeWidth={3} />}
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${co.selected && !busy ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
+                          {co.selected && !busy && <Check size={11} className="text-white" strokeWidth={3} />}
                         </div>
-                        <span className={`flex-1 text-sm font-medium ${co.selected ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
-                        <span className="text-[10px] text-iris font-medium shrink-0">{t('home_co_titular')}</span>
+                        <span className={`flex-1 text-sm font-medium ${co.selected && !busy ? 'text-snow' : 'text-fog'}`}>{co.name}</span>
+                        <span className="text-[10px] text-iris font-medium shrink-0">{busy ? t('home_ya_en_sala') : t('home_co_titular')}</span>
                       </button>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -519,6 +548,7 @@ function CheckinConfirmModal({
                   <div className="space-y-2">
                     {currentMember.children.map((child, i) => {
                       const sel = childrenPresent.some(c => c.name === child.name)
+                      const busyChild = inside.children.has(child.name)
                       const bd = (child as any).birth_date as string | undefined
                       const age = bd ? (() => {
                         const now = new Date(), dob = new Date(bd)
@@ -529,18 +559,22 @@ function CheckinConfirmModal({
                         return y > 0 ? `${y} año${y !== 1 ? 's' : ''}${m > 0 ? ` ${m} m.` : ''}` : `${m} mes${m !== 1 ? 'es' : ''}`
                       })() : null
                       return (
-                        <button key={child.name + i} type="button"
+                        <button key={child.name + i} type="button" disabled={busyChild}
+                          title={busyChild ? t('home_ya_en_sala') : undefined}
                           onClick={() => setChildrenPresent(prev =>
                             sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
                           )}
                           className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
-                            sel ? 'bg-iris/5 border-iris/30' : 'border-line bg-surface2 hover:border-line2'
+                            busyChild ? 'border-line bg-surface2 opacity-50 cursor-not-allowed'
+                            : sel ? 'bg-iris/5 border-iris/30' : 'border-line bg-surface2 hover:border-line2'
                           }`}>
-                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
-                            {sel && <Check size={11} className="text-white" strokeWidth={3} />}
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${sel && !busyChild ? 'bg-iris border-iris' : 'bg-surface2 border-line2'}`}>
+                            {sel && !busyChild && <Check size={11} className="text-white" strokeWidth={3} />}
                           </div>
-                          <span className={`flex-1 text-sm font-medium ${sel ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
-                          {age && <span className="text-xs text-mist shrink-0">{age}</span>}
+                          <span className={`flex-1 text-sm font-medium ${sel && !busyChild ? 'text-snow' : 'text-fog'}`}>{child.name}</span>
+                          {busyChild
+                            ? <span className="text-[10px] text-mist shrink-0">{t('home_ya_en_sala')}</span>
+                            : age && <span className="text-xs text-mist shrink-0">{age}</span>}
                         </button>
                       )
                     })}
@@ -3266,6 +3300,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         const member = allMembers.find(m => m.id === visit.member_id)
         const registeredChildren = member?.children ?? []
         const selectedNames = new Set(acompChildren.filter(c => !c.isGuest).map(c => c.name))
+        // Nombres presentes en OTRA visita abierta: no se pueden añadir aquí
+        const inside = namesAlreadyInside(activeVisits, visit.id)
 
         function toggleChild(child: { name: string; birth_date?: string }) {
           setAcompChildren(prev => {
@@ -3321,22 +3357,27 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   <div>
                     <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_co_titulares')}</p>
                     <div className="space-y-1.5">
-                      {acompCoTitulares.map(cot => (
-                        <button key={cot.id}
+                      {acompCoTitulares.map(cot => {
+                        const busy = inside.adults.has(cot.name)
+                        return (
+                        <button key={cot.id} disabled={busy}
+                          title={busy ? t('home_ya_en_sala') : undefined}
                           onClick={() => setAcompCoTitulares(prev => prev.map(c => c.id === cot.id ? { ...c, selected: !c.selected } : c))}
                           className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
-                            cot.selected ? 'bg-iris/10 border-iris/40' : 'bg-surface2 border-line hover:border-line2'
+                            busy ? 'bg-surface2 border-line opacity-50 cursor-not-allowed'
+                            : cot.selected ? 'bg-iris/10 border-iris/40' : 'bg-surface2 border-line hover:border-line2'
                           }`}
                         >
                           <span className={`w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            cot.selected ? 'bg-iris border-iris' : 'border-line2'
+                            cot.selected && !busy ? 'bg-iris border-iris' : 'border-line2'
                           }`}>
-                            {cot.selected && <Check size={10} className="text-white" strokeWidth={3} />}
+                            {cot.selected && !busy && <Check size={10} className="text-white" strokeWidth={3} />}
                           </span>
                           <span className="text-xs font-medium text-snow flex-1">{cot.name}</span>
-                          <span className="text-[11px] text-iris font-medium">{t('home_co_titular')}</span>
+                          <span className={`text-[11px] font-medium ${busy ? 'text-mist' : 'text-iris'}`}>{busy ? t('home_ya_en_sala') : t('home_co_titular')}</span>
                         </button>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -3348,20 +3389,25 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <div className="space-y-1.5">
                       {registeredChildren.map((child, i) => {
                         const checked = selectedNames.has(child.name)
+                        const busy = inside.children.has(child.name)
                         const age = fmtChildAge(child.birth_date, child.age)
                         return (
-                          <button key={i} onClick={() => toggleChild(child)}
+                          <button key={i} onClick={() => toggleChild(child)} disabled={busy}
+                            title={busy ? t('home_ya_en_sala') : undefined}
                             className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors text-left ${
-                              checked ? 'bg-iris/10 border-iris/40' : 'bg-surface2 border-line hover:border-iris/30'
+                              busy ? 'bg-surface2 border-line opacity-50 cursor-not-allowed'
+                              : checked ? 'bg-iris/10 border-iris/40' : 'bg-surface2 border-line hover:border-iris/30'
                             }`}
                           >
                             <span className={`w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              checked ? 'bg-iris border-iris' : 'border-line2'
+                              checked && !busy ? 'bg-iris border-iris' : 'border-line2'
                             }`}>
-                              {checked && <Check size={10} className="text-ink" strokeWidth={3} />}
+                              {checked && !busy && <Check size={10} className="text-ink" strokeWidth={3} />}
                             </span>
                             <span className="text-xs font-medium text-snow flex-1">{child.name}</span>
-                            {age && <span className="text-[11px] text-fog">{age}</span>}
+                            {busy
+                              ? <span className="text-[11px] text-mist">{t('home_ya_en_sala')}</span>
+                              : age && <span className="text-[11px] text-fog">{age}</span>}
                           </button>
                         )
                       })}
@@ -3664,7 +3710,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                   </button>
                   <button onClick={() => { returnToDetailRef.current = detailVisitId; setDetailVisitId(null); setProductSearch(''); setConsumosVisitId(detailVisitId) }}
                     className="flex flex-col items-center gap-1.5 py-3.5 rounded-xl border border-line bg-surface2 hover:border-iris/40 transition-colors">
-                    <Plus size={15} className="text-fog" />
+                    <Store size={15} className="text-fog" />
                     <span className={`text-xs font-semibold ${consumosTotal > 0 ? 'text-lime' : 'text-mist'}`}>
                       {consumosTotal > 0 ? `${consumosTotal.toFixed(2)}€` : '—'}
                     </span>
