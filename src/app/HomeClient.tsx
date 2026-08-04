@@ -8,7 +8,7 @@ import {
   BarChart2, Activity, LogOut, AlertTriangle, Play, Clock,
   Check, ShoppingCart, Plus, X, ChevronLeft, ChevronRight, Receipt, UserPlus, Bell,
   Search, QrCode, RotateCcw, User, Phone, Loader2, Save, Calendar, Trash2, CalendarPlus,
-  Euro, CreditCard, Store,
+  Euro, CreditCard, Store, ArrowLeft,
   CupSoda, Coffee, Droplet, Citrus, Cookie, Candy, Croissant, Popcorn, Package,
 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
@@ -674,28 +674,60 @@ function CheckinNewMemberModal({
 }) {
   const { t } = useLanguage()
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[80dvh]" onClick={e => e.stopPropagation()}>
+    <FlowScreen z="z-[80]" onClose={onClose}>
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
-          <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0">
-            <ChevronLeft size={16} />
-          </button>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-snow">{t('home_nuevo_miembro')}</p>
+          <FlowBackButton onClick={onBack} label={t('home_volver')} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-snow truncate">{t('home_nuevo_miembro')}</p>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4">
           <MemberForm onCreated={onCreated} submitLabel={submitLabel} />
         </div>
       </div>
+    </FlowScreen>
+  )
+}
+
+
+
+/**
+ * Envoltorio de los pasos de un flujo (nueva reserva, nuevo miembro).
+ *
+ * En móvil ocupa toda la pantalla y se navega con la flecha de volver, como
+ * el detalle de un miembro; en escritorio se mantiene como diálogo centrado.
+ */
+export function FlowScreen({ z = 'z-[60]', onClose, children }: {
+  z?: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className={`fixed inset-0 ${z} flex items-stretch justify-center sm:items-center sm:p-4`} onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm hidden sm:block" />
+      <div
+        onClick={e => e.stopPropagation()}
+        className="relative flex w-full flex-col bg-surface h-full sm:h-auto sm:max-w-lg sm:max-h-[90dvh] sm:rounded-2xl sm:border sm:border-line sm:shadow-2xl"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
 
+/** Botón de volver de los flujos: flecha en móvil, igual en escritorio. */
+export function FlowBackButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button onClick={onClick} aria-label={label} title={label}
+      className="w-9 h-9 flex items-center justify-center rounded-lg border border-line/60 bg-surface2/60 text-fog hover:text-snow transition-colors shrink-0">
+      <ArrowLeft size={18} />
+    </button>
+  )
+}
 
 // ── Modal reserva: titular + tipo (paso 1 de 2) ──
 export function BookingSearchAndTypeModal({
@@ -722,19 +754,18 @@ export function BookingSearchAndTypeModal({
   const types = reservableTypes.map(t => { const m = flowMeta[t.flow]; return { ...m, flow: t.flow, flujo: t.flujo, label: t.label, serviceId: t.serviceId, desc: t.desc ?? m.desc } })
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90dvh]" onClick={e => e.stopPropagation()}>
+    <FlowScreen onClose={onClose}>
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-line shrink-0">
+          <FlowBackButton onClick={onClose} label={t('home_cerrar')} />
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <CalendarClock size={15} className="text-iris shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-snow">{t('home_nueva_reserva')}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-snow truncate">{t('home_nueva_reserva')}</p>
               <p className="text-[11px] text-fog">{t('home_paso1_titular_tipo')}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-fog hover:text-snow transition-colors p-1" aria-label={t('home_cerrar')}><X size={16} /></button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
@@ -822,7 +853,7 @@ export function BookingSearchAndTypeModal({
           </div>
         </div>
       </div>
-    </div>
+    </FlowScreen>
   )
 }
 
@@ -1055,16 +1086,13 @@ export function BookingFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative w-full max-w-lg rounded-2xl border border-line bg-surface shadow-2xl flex flex-col max-h-[90dvh]" onClick={e => e.stopPropagation()}>
+    <FlowScreen onClose={onClose}>
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Header */}
         <div className="px-5 pt-5 pb-4 border-b border-line shrink-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg border border-line/60 bg-surface/60 text-fog hover:text-snow transition-colors shrink-0 mt-0.5">
-                <ChevronLeft size={16} />
-              </button>
+              <FlowBackButton onClick={onBack} label={t('home_volver')} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <TypeIcon size={20} className="text-snow shrink-0" />
@@ -1386,7 +1414,7 @@ export function BookingFormModal({
           )}
         </div>
       </div>
-    </div>
+    </FlowScreen>
   )
 }
 

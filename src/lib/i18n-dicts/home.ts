@@ -6,6 +6,7 @@ export const dictHome = {
   home_escanear_qr: { es: 'Escanear QR', en: 'Scan QR', ca: 'Escaneja QR' , de: 'QR-Code scannen' },
   home_codigo_qr_no_reconocido: { es: 'Código QR no reconocido', en: 'QR code not recognized', ca: 'Codi QR no reconegut' , de: 'QR-Code nicht erkannt' },
   home_no_camara: { es: 'No se puede acceder a la cámara', en: 'Cannot access the camera', ca: 'No es pot accedir a la càmera' , de: 'Auf die Kamera kann nicht zugegriffen werden' },
+  home_volver: { es: 'Volver', en: 'Back', ca: 'Tornar', de: 'Zurück' },
   home_volver_a_escanear: { es: 'Volver a escanear', en: 'Scan again', ca: 'Torna a escanejar' , de: 'Erneut scannen' },
   home_buscar_nombre_telefono: { es: 'Buscar por nombre o teléfono...', en: 'Search by name or phone...', ca: 'Cerca per nom o telèfon...' , de: 'Nach Name oder Telefonnummer suchen...' },
   home_dentro_ahora: { es: 'Dentro ahora', en: 'Currently inside', ca: 'Dins ara' , de: 'Derzeit anwesend' },
