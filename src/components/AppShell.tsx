@@ -203,7 +203,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className="shrink-0" />
                 {!collapsed && label}
                 {collapsed
-                  ? (badge > 0 && <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-lime border-2 border-surface" />)
+                  ? (badge > 0 && (
+                      // Con la barra plegada el número va sobre el icono, como en móvil
+                      <span className="absolute -top-1 right-1 min-w-[20px] h-5 px-1 rounded-full bg-lime border-2 border-surface text-white text-[11px] font-bold flex items-center justify-center leading-none">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    ))
                   : <Badge count={badge} />}
               </Link>
             )
