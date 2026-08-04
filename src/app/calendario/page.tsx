@@ -229,6 +229,17 @@ export default function CalendarioPage() {
   // muestre una semana coherente con el mes al que se ha saltado.
   // Cambiar de mes también mueve la agenda: si solo se cambiaba el estado, el
   // scroll-spy volvía a fijar el mes del día visible y la flecha «no hacía nada».
+  // Con la tira contraída (vista de semana) las flechas mueven una semana;
+  // con la tira desplegada (vista de mes), un mes.
+  function shiftWeek(delta: number) {
+    goToDay(addDaysStr(selectedDate ?? todayStr, delta * 7))
+  }
+
+  function shiftStrip(delta: number) {
+    if (stripExpanded) shiftMonth(delta)
+    else shiftWeek(delta)
+  }
+
   function shiftMonth(delta: number) {
     const d = new Date(year, month + delta, 1)
     const first = toDateStr(d.getFullYear(), d.getMonth(), 1)
@@ -301,7 +312,7 @@ export default function CalendarioPage() {
     }
     // Doble rAF: la primera pasada aún no ha pintado las secciones de día,
     // así que las refs todavía no existen
-    requestAnimationFrame(() => requestAnimationFrame(() => scrollToDay(target, 'auto')))
+    requestAnimationFrame(() => requestAnimationFrame(() => scrollToDay(target, 'instant')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
 
@@ -341,7 +352,7 @@ export default function CalendarioPage() {
   }
 
   // Desplaza dejando hueco para la cabecera fija, que si no taparía el día
-  function scrollToDay(dateStr: string, behavior: ScrollBehavior = 'auto') {
+  function scrollToDay(dateStr: string, behavior: ScrollBehavior = 'instant') {
     const target = nearestAgendaDay(dateStr)
     const el = target ? dayRefs.current[target] : null
     if (!el) return false
@@ -355,7 +366,7 @@ export default function CalendarioPage() {
       const top = el.getBoundingClientRect().top + window.scrollY - offset
       window.scrollTo({ top, behavior })
     }
-    setTimeout(() => { suppressSpy.current = false }, behavior === 'smooth' ? 600 : 150)
+    setTimeout(() => { suppressSpy.current = false }, behavior === 'smooth' ? 600 : 60)
     return true
   }
 
@@ -375,8 +386,8 @@ export default function CalendarioPage() {
     setSelectedDate(todayStr)
     if (!scrollToDay(todayStr)) {
       const scroller = getScroller()
-      if (scroller) scroller.scrollTo({ top: 0 })
-      else window.scrollTo({ top: 0 })
+      if (scroller) scroller.scrollTo({ top: 0, behavior: 'instant' })
+      else window.scrollTo({ top: 0, behavior: 'instant' })
     }
   }
 
@@ -417,15 +428,15 @@ export default function CalendarioPage() {
               {MONTH_NAMES[month]}
             </h1>
             <button
-              onClick={() => shiftMonth(-1)}
-              aria-label={MONTH_NAMES[(month + 11) % 12]}
+              onClick={() => shiftStrip(-1)}
+              aria-label={stripExpanded ? MONTH_NAMES[(month + 11) % 12] : t('calendario_semana_anterior')}
               className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors ml-1"
             >
               <ChevronLeft size={18} />
             </button>
             <button
-              onClick={() => shiftMonth(1)}
-              aria-label={MONTH_NAMES[(month + 1) % 12]}
+              onClick={() => shiftStrip(1)}
+              aria-label={stripExpanded ? MONTH_NAMES[(month + 1) % 12] : t('calendario_semana_siguiente')}
               className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
             >
               <ChevronRight size={18} />

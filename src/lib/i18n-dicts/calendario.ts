@@ -3,6 +3,8 @@ export const dictCalendario = {
   calendario_subtitulo: { es: 'Reservas y custodia', en: 'Bookings and childcare', ca: 'Reserves i custòdia', de: 'Buchungen und Kinderbetreuung' },
   calendario_nueva_reserva: { es: 'Nueva reserva', en: 'New booking', ca: 'Nova reserva', de: 'Neue Buchung' },
   calendario_hoy: { es: 'Hoy', en: 'Today', ca: 'Avui', de: 'Heute' },
+  calendario_semana_anterior: { es: 'Semana anterior', en: 'Previous week', ca: 'Setmana anterior', de: 'Vorherige Woche' },
+  calendario_semana_siguiente: { es: 'Semana siguiente', en: 'Next week', ca: 'Setmana següent', de: 'Nächste Woche' },
   calendario_cerrar: { es: 'Cerrar', en: 'Close', ca: 'Tancar', de: 'Schließen' },
   calendario_no_hay_reservas: { es: 'No hay reservas este día', en: 'No bookings on this day', ca: 'No hi ha reserves aquest dia', de: 'An diesem Tag gibt es keine Buchungen' },
   calendario_n_reservas: { es: '{n} reserva{s}', en: '{n} booking{s}', ca: '{n} reserva{s}', de: '{n} Buchung{s}' },
