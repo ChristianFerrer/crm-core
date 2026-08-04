@@ -16,6 +16,7 @@ import { useHomeSections, type HomeSections } from '@/lib/homeSections'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
+import { childKey } from '@/lib/children'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { resolveRates } from '@/lib/pricing'
@@ -35,7 +36,7 @@ import {
  * mismo co-titular: sin esto el aforo los contaba dos veces.
  */
 export function namesAlreadyInside(
-  visits: { id: string; checked_out_at: string | null; members: { name: string } | null; children_present: { name: string; is_adult?: boolean }[] | null }[],
+  visits: { id: string; checked_out_at: string | null; members: { name: string } | null; children_present: { id?: string; name: string; is_adult?: boolean }[] | null }[],
   excludeVisitId?: string,
 ): { adults: Set<string>; children: Set<string> } {
   const adults = new Set<string>()
@@ -44,7 +45,8 @@ export function namesAlreadyInside(
     if (v.checked_out_at || v.id === excludeVisitId) continue
     if (v.members?.name) adults.add(v.members.name)
     for (const e of v.children_present ?? []) {
-      (e.is_adult ? adults : children).add(e.name)
+      if (e.is_adult) adults.add(e.name)
+      else children.add(childKey(e))
     }
   }
   return { adults, children }
@@ -57,7 +59,7 @@ type TodayVisit = {
   membership_id: string | null
   member_id: string
   visit_type: string
-  children_present: { name: string; age?: number; birth_date?: string; is_adult?: boolean }[] | null
+  children_present: { id?: string; name: string; age?: number; birth_date?: string; is_adult?: boolean }[] | null
   adults_count: number
   children_count: number
   booking_id: string | null
@@ -360,7 +362,7 @@ function CheckinConfirmModal({
   const [currentMember, setCurrentMember] = useState<FullMember>(member)
   const [visitType, setVisitType] = useState<'entrada' | 'custodia'>('entrada')
   // Mejora #1: menores sin pre-seleccionar
-  const [childrenPresent, setChildrenPresent] = useState<{ name: string; birth_date?: string }[]>([])
+  const [childrenPresent, setChildrenPresent] = useState<{ id?: string; name: string; birth_date?: string }[]>([])
   const [extraChildrenCount, setExtraChildrenCount] = useState(0)
   const [coTitulares, setCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>(
     member.family_id
@@ -556,8 +558,8 @@ function CheckinConfirmModal({
                   <p className="px-1 pb-1.5 text-[10px] font-semibold text-fog uppercase tracking-wide">{t('home_menores')}</p>
                   <div className="space-y-2">
                     {currentMember.children.map((child, i) => {
-                      const sel = childrenPresent.some(c => c.name === child.name)
-                      const busyChild = inside.children.has(child.name)
+                      const sel = childrenPresent.some(c => childKey(c) === childKey(child))
+                      const busyChild = inside.children.has(childKey(child))
                       const bd = (child as any).birth_date as string | undefined
                       const age = bd ? (() => {
                         const now = new Date(), dob = new Date(bd)
@@ -571,7 +573,8 @@ function CheckinConfirmModal({
                         <button key={child.name + i} type="button" disabled={busyChild}
                           title={busyChild ? t('home_ya_en_sala') : undefined}
                           onClick={() => setChildrenPresent(prev =>
-                            sel ? prev.filter(c => c.name !== child.name) : [...prev, { name: child.name, birth_date: bd }]
+                            sel ? prev.filter(c => childKey(c) !== childKey(child))
+                                : [...prev, { id: (child as any).id, name: child.name, birth_date: bd }]
                           )}
                           className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
                             busyChild ? 'border-line bg-surface2 opacity-50 cursor-not-allowed'
@@ -1623,7 +1626,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   const [payingVisit, setPayingVisit] = useState<string | null>(null)
   const [acompVisitId, setAcompVisitId] = useState<string | null>(null)
   const [acompCoTitulares, setAcompCoTitulares] = useState<{ id: string; name: string; selected: boolean }[]>([])
-  const [acompChildren, setAcompChildren] = useState<{ name: string; birth_date?: string; isGuest?: boolean }[]>([])
+  const [acompChildren, setAcompChildren] = useState<{ id?: string; name: string; birth_date?: string; isGuest?: boolean }[]>([])
   const [acompGuestAdults, setAcompGuestAdults] = useState(0)
   const [acompGuestChildren, setAcompGuestChildren] = useState(0)
   const [acompTitularPresent, setAcompTitularPresent] = useState(true)
@@ -1904,7 +1907,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
 
     // Split children_present into adults (co-titulares saved before) and children
     const presentAdultNames = new Set(presentEntries.filter(e => e.is_adult).map(e => e.name))
-    const presentChildNames = new Set(presentEntries.filter(e => !e.is_adult).map(e => e.name))
+    const presentChildKeys = new Set(presentEntries.filter(e => !e.is_adult).map(e => childKey(e)))
 
     // Co-titulares: other members in the same family
     const coTitulares = allMembers
@@ -1914,8 +1917,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     // Children: registered (with check state) + guest children
     const regChildren = registeredChildren.map(c => ({ ...c, isGuest: false }))
     const guestKids = presentEntries
-      .filter(e => !e.is_adult && !registeredChildren.some(r => r.name === e.name))
-      .map(e => ({ name: e.name, birth_date: e.birth_date, isGuest: true }))
+      .filter(e => !e.is_adult && !registeredChildren.some((r: { id?: string; name: string }) => childKey(r) === childKey(e)))
+      .map(e => ({ id: e.id, name: e.name, birth_date: e.birth_date, isGuest: true }))
 
     // If children_present is empty but children_count > 0 (e.g. just executed from booking),
     // pre-select registered children up to children_count so the popup isn't blank
@@ -1923,7 +1926,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     const selectedChildren = noPresenceData && (visit.children_count ?? 0) > 0
       ? regChildren.slice(0, visit.children_count)
       : [
-          ...regChildren.filter(c => presentChildNames.has(c.name)),
+          ...regChildren.filter((c: { id?: string; name: string }) => presentChildKeys.has(childKey(c))),
           ...guestKids,
         ]
 
@@ -3323,14 +3326,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         if (!visit) return null
         const member = allMembers.find(m => m.id === visit.member_id)
         const registeredChildren = member?.children ?? []
-        const selectedNames = new Set(acompChildren.filter(c => !c.isGuest).map(c => c.name))
+        const selectedNames = new Set(acompChildren.filter(c => !c.isGuest).map(c => childKey(c)))
         // Nombres presentes en OTRA visita abierta: no se pueden añadir aquí
         const inside = namesAlreadyInside(activeVisits, visit.id)
 
-        function toggleChild(child: { name: string; birth_date?: string }) {
+        function toggleChild(child: { id?: string; name: string; birth_date?: string }) {
           setAcompChildren(prev => {
-            const exists = prev.some(c => c.name === child.name && !c.isGuest)
-            if (exists) return prev.filter(c => !(c.name === child.name && !c.isGuest))
+            const exists = prev.some(c => !c.isGuest && childKey(c) === childKey(child))
+            if (exists) return prev.filter(c => c.isGuest || childKey(c) !== childKey(child))
             return [...prev, { ...child, isGuest: false }]
           })
         }
@@ -3412,8 +3415,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     <p className="text-[10px] font-semibold text-mist uppercase tracking-wide mb-2">{t('home_hijos_registrados')}</p>
                     <div className="space-y-1.5">
                       {registeredChildren.map((child, i) => {
-                        const checked = selectedNames.has(child.name)
-                        const busy = inside.children.has(child.name)
+                        const checked = selectedNames.has(childKey(child))
+                        const busy = inside.children.has(childKey(child))
                         const age = fmtChildAge(child.birth_date, child.age)
                         return (
                           <button key={i} onClick={() => toggleChild(child)} disabled={busy}

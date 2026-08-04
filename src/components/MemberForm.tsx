@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { Plus, X, UserPlus, Check, Loader2, AlertTriangle, Save } from 'lucide-react'
 import { DatePickerModal } from '@/components/DatePickerModal'
 import { useLanguage } from '@/lib/i18n'
+import { withChildIds } from '@/lib/children'
 
-type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
+type Child = { id?: string; name: string; sex: 'M' | 'F' | ''; birth_date: string }
 type PartnerResult = { id: string; name: string; phone: string }
 
 export type CreatedMember = {
@@ -15,7 +16,7 @@ export type CreatedMember = {
   phone: string | null
   family_id: string | null
   memberships: { id: string; sessions_remaining: number | null; expires_at: string; membership_types: { name: string } | null }[]
-  children: { name: string; birth_date: string }[]
+  children: { id?: string; name: string; birth_date: string }[]
 }
 
 const inputCls = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
@@ -90,7 +91,7 @@ export function MemberForm({ onCreated, submitLabel }: {
     setSaving(true); setError(null)
 
     try {
-      const cleanChildren = children.filter(c => c.name.trim())
+      const cleanChildren = withChildIds(children.filter(c => c.name.trim()))
       const hasPartner = showPartner && partnerPhone.trim() && (partnerConfirmed || partnerName.trim())
 
       let familyId: string | null = null

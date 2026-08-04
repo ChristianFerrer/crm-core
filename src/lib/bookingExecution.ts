@@ -7,6 +7,8 @@ export type ExecutableBooking = {
   guest_adults: number | null
   guest_children: number | null
   guests: number | null
+  /** Menor(es) de la reserva: en custodia van separados por coma */
+  child_name?: string | null
 }
 
 /**
@@ -57,13 +59,21 @@ export async function executeBooking(b: ExecutableBooking): Promise<{ error: str
 
   if (b.member_id) {
     const { adults, children } = bookingAttendance(b)
+    // Los menores de la reserva se copian a la visita: sin esto la ficha de
+    // sala caía al comodín de "los hijos del titular" y mostraba otros niños.
+    const childrenPresent = (b.child_name ?? '')
+      .split(',')
+      .map(n => n.trim())
+      .filter(Boolean)
+      .slice(0, children)
+      .map(name => ({ name }))
     const { error } = await supabase.from('visits').insert({
       member_id: b.member_id,
       visit_type: b.type === 'custodia' ? 'custodia' : 'entrada',
       checked_in_at: now,
       adults_count: adults,
       children_count: children,
-      children_present: [],
+      children_present: childrenPresent,
       booking_id: b.id,
     })
     if (error) return { error: error.message }

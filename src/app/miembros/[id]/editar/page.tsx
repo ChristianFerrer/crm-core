@@ -8,8 +8,9 @@ import { ArrowLeft, Save, Plus, X, UserPlus, Check, Loader2, UserX } from 'lucid
 import { use } from 'react'
 import { DatePickerModal } from '@/components/DatePickerModal'
 import { useLanguage } from '@/lib/i18n'
+import { withChildIds } from '@/lib/children'
 
-type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
+type Child = { id?: string; name: string; sex: 'M' | 'F' | ''; birth_date: string }
 type PartnerResult = { id: string; name: string; phone: string }
 
 export default function EditMemberPage({ params }: { params: Promise<{ id: string }> }) {
@@ -99,7 +100,7 @@ export default function EditMemberPage({ params }: { params: Promise<{ id: strin
     setSaving(true); setError(null)
 
     try {
-      const cleanChildren = children.filter(c => c.name.trim())
+      const cleanChildren = withChildIds(children.filter(c => c.name.trim()))
       const hasNewPartner = showPartner && partnerPhone.trim() && (partnerConfirmed || partnerName.trim())
 
       let fid = familyId

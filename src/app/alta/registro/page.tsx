@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { withChildIds } from '@/lib/children'
 import { QRCodeSVG } from 'qrcode.react'
 import { Plus, Check, X } from 'lucide-react'
 import { DatePickerModal } from '@/components/DatePickerModal'
 
 type MembershipType = { id: string; name: string; sessions: number | null; price: number; validity_days: number }
-type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
+type Child = { id?: string; name: string; sex: 'M' | 'F' | ''; birth_date: string }
 
 export default function RegistroPage() {
   const [step, setStep] = useState<'form' | 'done'>('form')
@@ -45,7 +46,7 @@ export default function RegistroPage() {
     setError(null)
 
     try {
-      const cleanChildren = children.filter(c => c.name.trim())
+      const cleanChildren = withChildIds(children.filter(c => c.name.trim()))
       const { data, error: rpcErr } = await supabase.rpc('public_register', {
         p_slug: null,
         p_name: name.trim(),
