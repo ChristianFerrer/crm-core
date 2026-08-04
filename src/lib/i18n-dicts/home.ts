@@ -32,6 +32,8 @@ export const dictHome = {
   home_co_titular: { es: 'Co-titular', en: 'Co-holder', ca: 'Co-titular' , de: 'Mitinhaber' },
   home_co_titulares: { es: 'Co-titulares', en: 'Co-holders', ca: 'Co-titulars' , de: 'Mitinhaber' },
   home_ya_en_sala: { es: 'Ya en sala', en: 'Already inside', ca: 'Ja a la sala', de: 'Bereits im Raum' },
+  home_custodia_programada: { es: 'Custodia programada', en: 'Childcare scheduled', ca: 'Custòdia programada', de: 'Betreuung geplant' },
+  home_entrara_en_sala_a_las: { es: 'Entrará en sala a las', en: 'Will enter the room at', ca: 'Entrarà a la sala a les', de: 'Betritt den Raum um' },
   home_ninos: { es: 'Niños', en: 'Children', ca: 'Nens' , de: 'Kinder' },
   home_menores: { es: 'Menores', en: 'Minors', ca: 'Menors' , de: 'Minderjährige' },
   home_adultos: { es: 'Adultos', en: 'Adults', ca: 'Adults' , de: 'Erwachsene' },

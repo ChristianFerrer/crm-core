@@ -369,6 +369,8 @@ function CheckinConfirmModal({
       : []
   )
   const [extraAdultsCount, setExtraAdultsCount] = useState(0)
+  // Hora a la que empieza una custodia programada para más tarde (para el mensaje final)
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null)
   const [custodiaStart, setCustodiaStart] = useState('')
   const [custodiaEnd, setCustodiaEnd] = useState('')
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -424,6 +426,10 @@ function CheckinConfirmModal({
         .update({ sessions_remaining: Math.max(0, m.sessions_remaining - 1) })
         .eq('id', m.id)
     }
+    const startsAt = visitType === 'custodia' && custodiaStart
+      ? new Date(`${today}T${custodiaStart}:00`)
+      : null
+    setScheduledAt(startsAt && startsAt.getTime() > Date.now() ? custodiaStart : null)
     setRegistering(false)
     setRegistered(true)
     onCheckedIn()
@@ -454,8 +460,11 @@ function CheckinConfirmModal({
               <div className="w-16 h-16 rounded-full bg-lime/15 border border-lime/30 flex items-center justify-center">
                 <Check size={30} className="text-lime" strokeWidth={2.5} />
               </div>
-              <p className="text-lg font-bold text-snow">{t('home_entrada_registrada_excl')}</p>
-              <p className="text-sm text-fog text-center">{t('home_la_visita_de')} <span className="text-snow font-medium">{currentMember.name}</span> {t('home_ha_sido_registrada')}</p>
+              <p className="text-lg font-bold text-snow">{scheduledAt ? t('home_custodia_programada') : t('home_entrada_registrada_excl')}</p>
+              <p className="text-sm text-fog text-center">
+                {t('home_la_visita_de')} <span className="text-snow font-medium">{currentMember.name}</span> {t('home_ha_sido_registrada')}
+                {scheduledAt && <> · {t('home_entrara_en_sala_a_las')} <span className="text-snow font-medium">{scheduledAt}</span></>}
+              </p>
               <p className="text-xs text-mist mt-1">{t('home_cerrando_automaticamente')}</p>
             </div>
           ) : alreadyInside ? (
@@ -1740,8 +1749,23 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     return items
   })()
 
+  // Reloj de minuto: sirve para que las custodias programadas entren en sala solas
+  const [nowMs, setNowMs] = useState(0)
+  useEffect(() => {
+    setNowMs(Date.now())
+    const id = setInterval(() => setNowMs(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+
   const persons = (v: TodayVisit) => (v.adults_count ?? 1) + (v.children_count ?? 0)
-  const activeVisits = todayVisits.filter(v => !v.checked_out_at)
+  // Visitas sin salida: incluye las custodias programadas para más tarde
+  const openVisits = todayVisits.filter(v => !v.checked_out_at)
+  // En sala AHORA: una custodia con hora de entrada futura aún no ha entrado.
+  // `nowMs` arranca a 0 para que el primer render coincida con el del servidor
+  // (hidratación) y luego avanza cada minuto, así entra sola al llegar la hora.
+  const activeVisits = nowMs === 0
+    ? openVisits
+    : openVisits.filter(v => new Date(v.checked_in_at).getTime() <= nowMs)
 
   const filteredVisits = activeVisits.filter(v => {
     if (filterBono === 'con_bono' && !v.membership_id) return false
@@ -4015,7 +4039,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             filtered={filtered}
             query={checkinQuery}
             onQueryChange={setCheckinQuery}
-            activeVisits={activeVisits}
+            activeVisits={openVisits}
             onSelect={m => { setCheckinSelectedMember(m); setCheckinModal('confirm') }}
             onNewMember={() => { newMemberReturnTo.current = 'checkin'; setCheckinModal('new-member') }}
             onClose={closeAll}
@@ -4028,7 +4052,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         <CheckinConfirmModal
           member={checkinSelectedMember}
           checkinMembers={checkinMembers}
-          activeVisits={activeVisits}
+          activeVisits={openVisits}
           rates={{ adult: rateAdult, child: rateChild, custodia: rateCustodia }}
           onBack={() => setCheckinModal('search')}
           onClose={() => { setCheckinModal(null); setCheckinSelectedMember(null); setCheckinQuery('') }}
