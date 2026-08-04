@@ -192,15 +192,6 @@ export default function MiembrosPage() {
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('miembros_titulo')}</h1>
           <p className="text-sm text-fog mt-0.5">{countLabel}</p>
         </div>
-        {view === 'miembros' && (
-          <Link
-            href="/miembros/nuevo"
-            className="flex items-center gap-2 border border-lime bg-lime/10 text-lime font-semibold rounded-xl px-4 py-2.5 text-sm active:scale-95 transition-transform shrink-0"
-            style={{ boxShadow: 'var(--shadow-lime)' }}
-          >
-            <UserPlus size={16} strokeWidth={2.2} /> {t('miembros_nuevo_miembro')}
-          </Link>
-        )}
       </div>
 
       {/* Tab switcher */}
@@ -440,6 +431,17 @@ export default function MiembrosPage() {
             </>
           )}
         </div>
+      )}
+      {/* Alta de miembro: botón flotante solo con icono */}
+      {view === 'miembros' && (
+        <Link
+          href="/miembros/nuevo"
+          aria-label={t('miembros_nuevo_miembro')}
+          title={t('miembros_nuevo_miembro')}
+          className="fixed bottom-above-nav right-4 lg:right-8 z-30 w-14 h-14 rounded-full bg-lime text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+        >
+          <UserPlus size={22} strokeWidth={2.2} />
+        </Link>
       )}
     </div>
   )

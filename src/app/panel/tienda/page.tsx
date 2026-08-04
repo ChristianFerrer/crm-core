@@ -242,13 +242,6 @@ export default function TiendaPage() {
         >
           <ScanBarcode size={15} />
         </button>
-        <button
-          onClick={openNew}
-          title={t('panelcfg_anadir_producto_titulo')}
-          className="flex items-center gap-1.5 rounded-xl border border-lime bg-lime/10 px-4 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors"
-        >
-          <Plus size={15} /> {t('panelcfg_anadir_producto')}
-        </button>
       </div>
 
       {/* Búsqueda + filtros + exportar */}
@@ -609,6 +602,15 @@ export default function TiendaPage() {
           onClose={() => setShowScanner(false)}
         />
       )}
+      {/* Nuevo producto: botón flotante solo con icono */}
+      <button
+        onClick={openNew}
+        aria-label={t('panelcfg_anadir_producto')}
+        title={t('panelcfg_anadir_producto_titulo')}
+        className="fixed bottom-above-nav right-4 lg:right-8 z-30 w-14 h-14 rounded-full bg-lime text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+      >
+        <Plus size={24} />
+      </button>
     </div>
   )
 }

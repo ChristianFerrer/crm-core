@@ -445,13 +445,6 @@ export default function ServiciosPage() {
       {/* Header row */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-fog">{t('panelcfg_servicios_count', { n: services.length, s: services.length !== 1 ? 's' : '', a: services.filter(s => s.active).length, as: services.filter(s => s.active).length !== 1 ? 's' : '' })}</p>
-        <button
-          onClick={openAdd}
-          title={t('panelcfg_nuevo_servicio_titulo_btn')}
-          className="flex items-center gap-1.5 border border-lime bg-lime/10 text-lime text-xs font-semibold px-4 py-2 rounded-xl hover:bg-lime/20 transition-colors"
-        >
-          <Plus size={13} /> {t('panelcfg_nuevo_servicio')}
-        </button>
       </div>
 
       {/* Búsqueda + filtros + exportar */}
@@ -890,6 +883,15 @@ export default function ServiciosPage() {
           </div>
         </div>
       )}
+      {/* Nuevo servicio: botón flotante solo con icono */}
+      <button
+        onClick={openAdd}
+        aria-label={t('panelcfg_nuevo_servicio')}
+        title={t('panelcfg_nuevo_servicio_titulo_btn')}
+        className="fixed bottom-above-nav right-4 lg:right-8 z-30 w-14 h-14 rounded-full bg-lime text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+      >
+        <Plus size={24} />
+      </button>
     </div>
   )
 }
