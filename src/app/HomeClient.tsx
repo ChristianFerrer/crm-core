@@ -15,7 +15,7 @@ import { useLanguage } from '@/lib/i18n'
 import { useHomeSections, type HomeSections } from '@/lib/homeSections'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
-import { executeBooking } from '@/lib/bookingExecution'
+import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { resolveRates } from '@/lib/pricing'
@@ -2694,7 +2694,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                     {(() => {
                       const gA = b.guest_adults ?? 0
                       const gC = b.guest_children ?? 0
-                      const totalG = b.guests ?? (gA + gC)
+                      const totalG = bookingGuestCount(b)
                       if (totalG <= 0 && gA === 0 && gC === 0) return null
                       if (b.type === 'custodia') {
                         return <p className="text-xs text-mist mt-0.5">{totalG} {totalG !== 1 ? t('home_ninos_lc') : t('home_nino_lc')}</p>
@@ -3807,7 +3807,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
                 {(() => {
                   const gA = b.guest_adults ?? 0
                   const gC = b.guest_children ?? 0
-                  const totalG = b.guests ?? (gA + gC)
+                  const totalG = bookingGuestCount(b)
                   if (totalG <= 0 && gA === 0 && gC === 0) return null
                   return (
                     <div className="rounded-xl border border-line bg-surface2/40 px-4 py-3">

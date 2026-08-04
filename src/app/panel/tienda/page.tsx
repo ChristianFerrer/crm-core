@@ -234,16 +234,6 @@ export default function TiendaPage() {
 
       {/* Sub-nav panel */}
 
-      <div className="flex items-center justify-end gap-2">
-        <button
-          onClick={() => setShowScanner(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors"
-          title={t('panelcfg_escanear_titulo')}
-        >
-          <ScanBarcode size={15} />
-        </button>
-      </div>
-
       {/* Búsqueda + filtros + exportar */}
       <TableFilterBar
         search={search}
@@ -330,7 +320,7 @@ export default function TiendaPage() {
                   <button onClick={() => openEdit(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
                     <Pencil size={13} />
                   </button>
-                  <button onClick={() => setConfirmDelete(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
+                  <button onClick={() => setConfirmDelete(p)} className="w-8 h-8 rounded-lg flex items-center justify-center text-fog hover:text-rose hover:bg-rose/10 transition-colors">
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -403,7 +393,7 @@ export default function TiendaPage() {
                         <button onClick={() => openEdit(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors">
                           <Pencil size={12} />
                         </button>
-                        <button onClick={() => setConfirmDelete(p)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-rose transition-colors">
+                        <button onClick={() => setConfirmDelete(p)} className="w-8 h-8 rounded-lg flex items-center justify-center text-fog hover:text-rose hover:bg-rose/10 transition-colors">
                           <Trash2 size={12} />
                         </button>
                       </div>
@@ -603,6 +593,16 @@ export default function TiendaPage() {
         />
       )}
       {/* Nuevo producto: botón flotante solo con icono */}
+      {/* Escanear: FAB secundario, justo encima del de añadir producto */}
+      <button
+        onClick={() => setShowScanner(true)}
+        aria-label={t('panelcfg_escanear_titulo')}
+        title={t('panelcfg_escanear_titulo')}
+        className="fixed bottom-above-nav right-4 lg:right-8 z-30 mb-[4.25rem] mr-1 w-12 h-12 rounded-full border border-line bg-surface text-fog flex items-center justify-center shadow-xl active:scale-95 transition-transform"
+      >
+        <ScanBarcode size={20} />
+      </button>
+
       <button
         onClick={openNew}
         aria-label={t('panelcfg_anadir_producto')}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
-import { executeBooking } from '@/lib/bookingExecution'
+import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates } from '@/lib/pricing'
 import { BookingSearchAndTypeModal, BookingFormModal, bookingBarStyle, bookingDurationLabel, BOOKING_TYPE_COLOR_VAR, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
@@ -538,7 +538,7 @@ export default function CalendarioPage() {
                     const dur = bookingDurationLabel(b.start_time, b.end_time, t)
                     const gA = b.guest_adults ?? 0
                     const gC = b.guest_children ?? 0
-                    const totalG = b.guests ?? (gA + gC)
+                    const totalG = bookingGuestCount(b)
                     const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
                     const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
                     const showPago = b.status !== 'cancelled' && (b.amount != null && b.amount > 0)

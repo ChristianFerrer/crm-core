@@ -510,8 +510,8 @@ export default function ServiciosPage() {
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${s.active ? 'translate-x-4' : ''}`} />
                   </button>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={() => openEdit(s)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => setDeleteId(s.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={14} /></button>
                   </div>
                 </div>
               </div>
@@ -531,8 +531,8 @@ export default function ServiciosPage() {
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${b.active ? 'translate-x-4' : ''}`} />
                   </button>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEditBono(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={14} /></button>
+                    <button onClick={() => openEditBono(b)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors"><Pencil size={14} /></button>
+                    <button onClick={() => setBonoDeleteId(b.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={14} /></button>
                   </div>
                 </div>
               </div>
@@ -593,8 +593,8 @@ export default function ServiciosPage() {
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-1">
-                          <button onClick={() => openEdit(s)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
-                          <button onClick={() => setDeleteId(s.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/20 transition-colors"><Trash2 size={13} /></button>
+                          <button onClick={() => openEdit(s)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors"><Pencil size={13} /></button>
+                          <button onClick={() => setDeleteId(s.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
                         </div>
                       </td>
                     </tr>
@@ -623,8 +623,8 @@ export default function ServiciosPage() {
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEditBono(b)} className="p-1.5 rounded-lg text-fog hover:text-snow hover:bg-line transition-colors"><Pencil size={13} /></button>
-                        <button onClick={() => setBonoDeleteId(b.id)} className="p-1.5 rounded-lg text-fog hover:text-rose hover:bg-rose/20 transition-colors"><Trash2 size={13} /></button>
+                        <button onClick={() => openEditBono(b)} className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-fog hover:text-snow transition-colors"><Pencil size={13} /></button>
+                        <button onClick={() => setBonoDeleteId(b.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-fog hover:text-rose hover:bg-rose/10 transition-colors"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
