@@ -161,6 +161,15 @@
   color: #fff !important;
 }
 
+/* Tema oscuro: sobre verde lima sólido, texto e iconos del color del fondo
+   oscuro (el blanco sobre lima brillante no tiene contraste suficiente).
+   Solo afecta al lima sólido: los fondos con opacidad (`bg-lime/10`) llevan
+   texto lima y se quedan como están. */
+:root:not([data-theme="light"]) [class*="bg-lime"]:not([class*="bg-lime/"]),
+:root:not([data-theme="light"]) [class*="bg-lime"]:not([class*="bg-lime/"]) * {
+  color: var(--color-carbon) !important;
+}
+
 /* `overflow-x: clip` en vez de `hidden`: recorta igual en horizontal pero no
    convierte html/body en contenedores de scroll, que es lo que rompía
    `position: sticky` (cabecera de la Agenda). */
