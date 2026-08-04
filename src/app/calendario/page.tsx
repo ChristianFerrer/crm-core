@@ -109,6 +109,8 @@ export default function CalendarioPage() {
   const [executingId, setExecutingId] = useState<string | null>(null)
   // Tira de calendario plegable: contraída = solo la semana del día seleccionado
   const [stripExpanded, setStripExpanded] = useState(false)
+  const pendingScroll = useRef<string | null>(null)
+  const navAt = useRef(0)
   const agendaRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -244,7 +246,10 @@ export default function CalendarioPage() {
     const d = new Date(year, month + delta, 1)
     const first = toDateStr(d.getFullYear(), d.getMonth(), 1)
     // Salta al primer día CON reservas del nuevo mes; si no tiene, al día 1
-    const inMonth = agendaDays.find(x => x >= first && x.slice(0, 7) === first.slice(0, 7))
+    const inMonth = Object.keys(bookingsByDate)
+      .filter(x => (bookingsByDate[x] ?? []).length > 0)
+      .sort()
+      .find(x => x >= first && x.slice(0, 7) === first.slice(0, 7))
     goToDay(inMonth ?? first)
   }
 
@@ -293,9 +298,13 @@ export default function CalendarioPage() {
 
   // ── Agenda continua ─────────────────────────────────────────────────
   // Solo los días con reservas, ordenados; los días vacíos no ocupan espacio.
-  const agendaDays = Object.keys(bookingsByDate)
-    .filter(d => (bookingsByDate[d] ?? []).length > 0)
-    .sort()
+  // El día seleccionado siempre tiene sección, aunque esté vacío: así se puede
+  // navegar a cualquier mes (con o sin reservas), hay a dónde desplazarse y el
+  // scroll-spy no devuelve la cabecera al mes de la reserva más cercana.
+  const agendaDays = Array.from(new Set([
+    ...Object.keys(bookingsByDate).filter(d => (bookingsByDate[d] ?? []).length > 0),
+    ...(selectedDate ? [selectedDate] : []),
+  ])).sort()
 
   // La agenda abarca 3 meses, así que al entrar arrancaría en el mes anterior.
   // Tras la primera carga se posiciona en hoy (o en el primer día con reservas
@@ -313,6 +322,21 @@ export default function CalendarioPage() {
     // Doble rAF: la primera pasada aún no ha pintado las secciones de día,
     // así que las refs todavía no existen
     requestAnimationFrame(() => requestAnimationFrame(() => scrollToDay(target, 'instant')))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookings])
+
+  // Desplazamiento pendiente tras navegar (ver goToDay)
+  useEffect(() => {
+    const target = pendingScroll.current
+    if (!target) return
+    if (scrollToDay(target, 'instant')) pendingScroll.current = null
+  })
+
+  // Al llegar las reservas del mes recién seleccionado, recolocar si el usuario
+  // no ha tocado nada desde la navegación
+  useEffect(() => {
+    if (!selectedDate || Date.now() - navAt.current > 1500) return
+    scrollToDay(selectedDate, 'instant')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
 
@@ -372,12 +396,17 @@ export default function CalendarioPage() {
 
   function goToDay(dateStr: string) {
     setSelectedDate(dateStr)
-    // Si el día pertenece al mes anterior o siguiente, la tira salta a ese mes
+    // Si el día pertenece a otro mes, la tira salta a ese mes
     const d = new Date(dateStr + 'T12:00:00')
     if (d.getMonth() !== month || d.getFullYear() !== year) {
       setMonth(d.getMonth()); setYear(d.getFullYear())
     }
-    scrollToDay(dateStr)
+    // La sección del día puede no existir todavía (mes recién seleccionado),
+    // así que el desplazamiento se hace tras pintar y, si el mes cambia, otra
+    // vez cuando lleguen sus reservas.
+    pendingScroll.current = dateStr
+    navAt.current = Date.now()
+    suppressSpy.current = true
   }
 
   function jumpToToday() {
@@ -526,6 +555,10 @@ export default function CalendarioPage() {
                     {relativeLabel(dateStr)}
                   </span>
                 </div>
+
+                {dayBookings.length === 0 && (
+                  <p className="text-sm text-mist py-2">{t('calendario_sin_reservas')}</p>
+                )}
 
                 {/* Todo el día */}
                 {allDay.length > 0 && (

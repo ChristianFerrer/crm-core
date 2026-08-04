@@ -46,6 +46,7 @@ export const dictCalendario = {
   calendario_manana: { es: 'Mañana', en: 'Tomorrow', ca: 'Demà', de: 'Morgen' },
   calendario_ayer: { es: 'Ayer', en: 'Yesterday', ca: 'Ahir', de: 'Gestern' },
   calendario_todo_el_dia: { es: 'Todo el día', en: 'All day', ca: 'Tot el dia', de: 'Ganztägig' },
+  calendario_sin_reservas: { es: 'Sin reservas', en: 'No bookings', ca: 'Sense reserves', de: 'Keine Buchungen' },
   calendario_sin_reservas_rango: { es: 'No hay reservas en este período', en: 'No bookings in this period', ca: 'No hi ha reserves en aquest període', de: 'Keine Buchungen in diesem Zeitraum' },
   calendario_ir_a_hoy: { es: 'Hoy', en: 'Today', ca: 'Avui', de: 'Heute' },
   calendario_expandir_calendario: { es: 'Expandir calendario', en: 'Expand calendar', ca: 'Expandeix el calendari', de: 'Kalender ausklappen' },
