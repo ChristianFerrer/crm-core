@@ -227,11 +227,14 @@ export default function CalendarioPage() {
 
   // Navegar de mes ancla la selección al día 1, para que la tira contraída
   // muestre una semana coherente con el mes al que se ha saltado.
+  // Cambiar de mes también mueve la agenda: si solo se cambiaba el estado, el
+  // scroll-spy volvía a fijar el mes del día visible y la flecha «no hacía nada».
   function shiftMonth(delta: number) {
     const d = new Date(year, month + delta, 1)
-    setYear(d.getFullYear())
-    setMonth(d.getMonth())
-    setSelectedDate(toDateStr(d.getFullYear(), d.getMonth(), 1))
+    const first = toDateStr(d.getFullYear(), d.getMonth(), 1)
+    // Salta al primer día CON reservas del nuevo mes; si no tiene, al día 1
+    const inMonth = agendaDays.find(x => x >= first && x.slice(0, 7) === first.slice(0, 7))
+    goToDay(inMonth ?? first)
   }
 
   async function handleCancel(id: string) {
@@ -338,7 +341,7 @@ export default function CalendarioPage() {
   }
 
   // Desplaza dejando hueco para la cabecera fija, que si no taparía el día
-  function scrollToDay(dateStr: string, behavior: ScrollBehavior = 'smooth') {
+  function scrollToDay(dateStr: string, behavior: ScrollBehavior = 'auto') {
     const target = nearestAgendaDay(dateStr)
     const el = target ? dayRefs.current[target] : null
     if (!el) return false
@@ -372,8 +375,8 @@ export default function CalendarioPage() {
     setSelectedDate(todayStr)
     if (!scrollToDay(todayStr)) {
       const scroller = getScroller()
-      if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' })
-      else window.scrollTo({ top: 0, behavior: 'smooth' })
+      if (scroller) scroller.scrollTo({ top: 0 })
+      else window.scrollTo({ top: 0 })
     }
   }
 
