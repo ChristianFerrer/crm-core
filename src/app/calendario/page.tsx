@@ -450,7 +450,7 @@ export default function CalendarioPage() {
   return (
     <div className="bg-carbon text-snow">
       {/* ── Cabecera fija: mes + acciones + tira de calendario ── */}
-      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 pb-3 border-b border-line relative">
+      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 pb-[17px] border-b border-line relative">
         <div className="flex items-center justify-between gap-3 pb-2">
           <div className="flex items-center gap-1 min-w-0">
             <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
