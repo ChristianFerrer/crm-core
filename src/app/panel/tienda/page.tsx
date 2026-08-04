@@ -592,17 +592,17 @@ export default function TiendaPage() {
           onClose={() => setShowScanner(false)}
         />
       )}
-      {/* Nuevo producto: botón flotante solo con icono */}
-      {/* Escanear: FAB secundario, justo encima del de añadir producto */}
+      {/* Escanear: mismo FAB que añadir producto, justo encima */}
       <button
         onClick={() => setShowScanner(true)}
         aria-label={t('panelcfg_escanear_titulo')}
         title={t('panelcfg_escanear_titulo')}
-        className="fixed bottom-above-nav right-4 lg:right-8 z-30 mb-[4.25rem] mr-1 w-12 h-12 rounded-full border border-line bg-surface text-fog flex items-center justify-center shadow-xl active:scale-95 transition-transform"
+        className="fixed bottom-above-nav right-4 lg:right-8 z-30 mb-[4.5rem] w-14 h-14 rounded-full bg-lime text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
       >
-        <ScanBarcode size={20} />
+        <ScanBarcode size={24} strokeWidth={2} />
       </button>
 
+      {/* Nuevo producto: botón flotante solo con icono */}
       <button
         onClick={openNew}
         aria-label={t('panelcfg_anadir_producto')}
