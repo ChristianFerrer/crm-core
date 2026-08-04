@@ -890,7 +890,11 @@ export default function ServiciosPage() {
         title={t('panelcfg_nuevo_servicio_titulo_btn')}
         className="fixed bottom-above-nav right-4 lg:right-8 z-30 w-14 h-14 rounded-full bg-lime text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
       >
-        <Plus size={24} />
+        {/* Icono de la sección (Tag) con un `+` superpuesto: lucide no trae un glifo `tag-plus` */}
+        <span className="relative flex items-center justify-center">
+          <Tag size={24} strokeWidth={2} />
+          <Plus size={13} strokeWidth={4} className="absolute -right-1.5 -bottom-1.5" />
+        </span>
       </button>
     </div>
   )
