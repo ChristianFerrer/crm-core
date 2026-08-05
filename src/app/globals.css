@@ -170,6 +170,15 @@
   color: var(--color-carbon) !important;
 }
 
+/* Banda de conflicto: trama diagonal en rose sobre la propia tarjeta. */
+.hatch-rose {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--color-rose) 35%, transparent) 0 6px,
+    color-mix(in srgb, var(--color-rose) 12%, transparent) 6px 12px
+  );
+}
+
 /* Escalonado de las reservas simultáneas de la agenda: en escritorio cada
    tarjeta baja en proporción a lo que empieza más tarde, como en Outlook.
    En móvil se apilan, así que el desplazamiento se anula. */

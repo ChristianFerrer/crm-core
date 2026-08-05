@@ -702,121 +702,104 @@ export default function CalendarioPage() {
       return afterPrev && beforeNext
     })
   }
-
   /**
-   * Tarjeta de una reserva. `grouped` es la variante para bloques de reservas
-   * simultáneas: sin columna de hora propia (la lleva el bloque) y con la
-   * franja dentro de la tarjeta.
+   * Tarjeta de una reserva. Muestra la franja y la duración a la izquierda y,
+   * como mucho, dos líneas de detalle (una en móvil): lo demás vive en la
+   * página de detalle y no se repite aquí.
    */
-  function renderBookingCard(b: Booking, conflicts: Record<string, Booking[]>, dateStr: string, grouped = false) {
-    const ts = TYPE_STYLE[b.type]
+  function renderBookingCard(b: Booking, conflicts: Record<string, Booking[]>, dateStr: string) {
     const st = bookingLiveStatus(b, todayStr)
-    const dur = bookingDurationLabel(b.start_time, b.end_time, t)
+    const r = bookingRange(b)
     const gA = b.guest_adults ?? 0
     const gC = b.guest_children ?? 0
     const totalG = bookingGuestCount(b)
-    const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
     const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
-    // El badge de pago solo aparece cuando queda algo por cobrar
-    const showPago = b.status !== 'cancelled' && pendiente > 0
     const hasConflict = !!conflicts[b.id]
     const sala = resourceOf(b)
     const isOpen = expandedId === b.id
+    const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
+
+    // Segunda línea: titular, personas y sala. En móvil solo el titular.
+    const linea2 = [
+      totalG > 0
+        ? `${totalG} ${b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}`
+        : null,
+      sala,
+    ].filter(Boolean).join(' · ')
+
     return (
-        <div className={`flex items-stretch gap-3 rounded-xl border px-3 py-2.5 lg:px-4 lg:py-3 ${
-          hasConflict ? 'border-rose/50 bg-rose/5' : 'border-line bg-surface'
-        } ${st === 'pasado' ? 'opacity-50' : ''}`}>
-        {/* Hora + duración (en bloque simultáneo la lleva el propio bloque) */}
-        {!grouped && (
-          <div className="w-16 shrink-0 pt-0.5">
-            <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5)}</p>
-            {dur && <p className="text-xs text-mist leading-tight mt-0.5">{dur}</p>}
+      <div className={`overflow-hidden rounded-xl border ${hasConflict ? 'border-rose' : 'border-line'} bg-surface ${st === 'pasado' ? 'opacity-50' : ''}`}>
+        {/* Conflicto: banda con trama, centrada arriba */}
+        {hasConflict && (
+          <div className="hatch-rose py-0.5 text-center">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-rose">
+              {t('calendario_conflicto_banner')}
+            </span>
           </div>
         )}
 
-        {/* Barra de color */}
-        <span
-          className="w-1 rounded-full shrink-0"
-          style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])}
-        />
+        <div className="flex items-stretch gap-3 px-3 py-2.5 lg:px-4 lg:py-3">
+          {/* Franja horaria y duración */}
+          <div className="w-[76px] shrink-0">
+            <p className="text-xs font-semibold text-snow leading-tight tabular-nums">
+              {r ? `${minutesToLabel(r.start)}–${minutesToLabel(r.end)}` : '—'}
+            </p>
+            {r && <p className="text-[11px] text-mist leading-tight mt-0.5">{durationLabel(r.end - r.start)}</p>}
+          </div>
 
-        {/* Contenido: lo básico siempre, el resto al desplegar */}
-        <div className="flex-1 min-w-0">
-          <button
-            onClick={() => router.push(`/calendario/${b.id}`)}
-            className="w-full text-left"
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-medium text-snow">{b.title}</p>
-              <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
-              {st === 'ejecutado' && <span className="text-xs font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={10} />{t('calendario_ejecutado')}</span>}
-              {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={10} />{t('calendario_en_curso')}</span>}
-              {showPago && (
-                <span className="text-xs font-semibold text-amber">
-                  {t('calendario_faltan')} {pendiente.toFixed(0)}€
-                </span>
-              )}
-              {hasConflict && (
-                <span className="text-xs font-semibold text-rose flex items-center gap-0.5" title={conflicts[b.id].map(c => c.title).join(', ')}>
-                  <AlertTriangle size={11} />{t('calendario_conflicto')}
-                </span>
-              )}
-            </div>
-            {grouped && (
-              <p className="text-[11px] text-mist mt-0.5">
-                {b.start_time?.slice(0, 5)}{b.end_time ? `–${b.end_time.slice(0, 5)}` : ''}
-              </p>
-            )}
-            {b.members?.name && <p className="text-xs text-fog mt-0.5 truncate">{b.members.name}</p>}
-          </button>
+          <span className="w-1 rounded-full shrink-0" style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])} />
 
-          {isOpen && (
-            <div className="mt-2 pt-2 border-t border-line/60 space-y-1">
-              {(totalG > 0 || gA > 0 || gC > 0) && (
-                <p className="text-xs text-mist">
-                  {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
-                  {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
-                </p>
-              )}
-              {sala && <p className="text-[11px] text-mist flex items-center gap-1"><MapPin size={11} />{sala}</p>}
-              {b.amount != null && b.amount > 0 && (
-                <p className="text-[11px] text-mist flex items-center gap-1">
-                  <Euro size={11} />{b.amount.toFixed(0)}€
-                  {b.deposit_amount ? ` · ${t('calendario_senal')} ${b.deposit_amount.toFixed(0)}€` : ''}
-                  {pendiente > 0 ? ` · ${t('calendario_faltan')} ${pendiente.toFixed(0)}€` : ` · ${t('calendario_pagado')}`}
-                </p>
-              )}
-              {hasConflict && (
-                <p className="text-[11px] text-rose flex items-center gap-1">
-                  <AlertTriangle size={11} />{conflicts[b.id].map(c => c.title).join(', ')}
-                </p>
-              )}
-              {b.notes && <p className="text-[11px] text-mist flex items-start gap-1"><FileText size={11} className="mt-0.5 shrink-0" />{b.notes}</p>}
-              <div className="flex items-center gap-2 pt-1">
-                <button onClick={() => openEditFlow(b)}
-                  className="flex items-center gap-1 text-xs font-semibold text-fog border border-line rounded-lg px-2.5 py-1.5 hover:text-snow transition-colors">
-                  <Pencil size={11} /> {t('calendario_editar')}
-                </button>
-                {canExecute && (
-                  <button type="button" onClick={() => handleExecute(b)} disabled={executingId === b.id}
-                    className="flex items-center gap-1 text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50">
-                    <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
-                  </button>
+          <div className="flex-1 min-w-0">
+            <button onClick={() => router.push(`/calendario/${b.id}`)} className="w-full text-left">
+              {/* Línea 1: título y solo los estados que piden acción */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-medium text-snow truncate">{b.title}</span>
+                {st === 'ejecutado' && <CheckCircle size={12} className="text-mint shrink-0" />}
+                {st === 'en_curso' && <Clock size={12} className="text-lime shrink-0" />}
+                {pendiente > 0 && b.status !== 'cancelled' && (
+                  <span className="ml-auto shrink-0 text-[11px] font-semibold text-amber">
+                    {t('calendario_faltan')} {pendiente.toFixed(0)}€
+                  </span>
                 )}
               </div>
-            </div>
-          )}
-        </div>
+              {/* Línea 2: titular en móvil; con personas y sala en escritorio */}
+              <p className="text-[11px] text-fog truncate mt-0.5">
+                {b.members?.name ?? ''}
+                {linea2 && <span className="hidden lg:inline text-mist"> · {linea2}</span>}
+              </p>
+            </button>
 
-        <button
-          onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
-          aria-label={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
-          title={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
-          className="self-start ml-auto w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-snow transition-colors"
-        >
-          {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-        </button>
+            {/* Detalle desplegable: solo en móvil (en escritorio está la página) */}
+            {isOpen && (
+              <div className="lg:hidden mt-2 pt-2 border-t border-line/60 space-y-1">
+                {linea2 && <p className="text-[11px] text-mist">{linea2}</p>}
+                {b.notes && <p className="text-[11px] text-mist">{b.notes}</p>}
+                <div className="flex items-center gap-2 pt-1">
+                  <button onClick={() => router.push(`/calendario/${b.id}`)}
+                    className="flex items-center gap-1 text-xs font-semibold text-fog border border-line rounded-lg px-2.5 py-1.5">
+                    <Pencil size={11} /> {t('calendario_editar')}
+                  </button>
+                  {canExecute && (
+                    <button type="button" onClick={() => handleExecute(b)} disabled={executingId === b.id}
+                      className="flex items-center gap-1 text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 disabled:opacity-50">
+                      <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* La flecha de desplegar solo tiene sentido en móvil */}
+          <button
+            onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
+            aria-label={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
+            className="lg:hidden self-start w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-mist"
+          >
+            {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          </button>
         </div>
+      </div>
     )
   }
 
@@ -1148,8 +1131,8 @@ export default function CalendarioPage() {
                 className="pt-6 lg:pt-8"
               >
                 {/* Cabecera del día: banda con el resumen operativo de la jornada */}
-                <div className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 mb-3 rounded-xl px-3 py-2 border-l-4 ${
-                  isToday ? 'border-iris bg-iris/10' : 'border-line2 bg-surface2'
+                <div className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 mb-3 rounded-xl px-3 py-2 ${
+                  isToday ? 'bg-iris/10' : 'bg-surface2'
                 }`}>
                   <span className={`text-lg font-bold ${isToday ? 'text-iris' : 'text-snow'}`}>
                     {dayHeading(dateStr)}
@@ -1235,7 +1218,7 @@ export default function CalendarioPage() {
                             )
                           ) : inHour.map(cluster => {
                             const clusterStart = bookingRange(cluster[0])?.start ?? 0
-                            if (cluster.length === 1) return <div key={cluster[0].id}>{renderBookingCard(cluster[0], conflicts, dateStr, true)}</div>
+                            if (cluster.length === 1) return <div key={cluster[0].id}>{renderBookingCard(cluster[0], conflicts, dateStr)}</div>
                             return (
                               <div key={cluster[0].id} className="flex flex-col lg:flex-row lg:items-start gap-2">
                                 {cluster.map(b => {
@@ -1248,7 +1231,7 @@ export default function CalendarioPage() {
                                       className="stagger lg:flex-1 lg:min-w-0"
                                       style={{ '--stagger': `${offset}px` } as React.CSSProperties}
                                     >
-                                      {renderBookingCard(b, conflicts, dateStr, true)}
+                                      {renderBookingCard(b, conflicts, dateStr)}
                                     </div>
                                   )
                                 })}
@@ -1287,8 +1270,8 @@ export default function CalendarioPage() {
       </div>
 
       {/* ── Escritorio: calendario del mes siempre desplegado, a la derecha ── */}
-      <aside className="hidden lg:block lg:w-[320px] lg:shrink-0 lg:sticky lg:top-2 lg:pt-2">
-        <div className="rounded-2xl border border-line bg-surface px-3 pb-3">
+      <aside className="hidden lg:flex lg:flex-col lg:w-[320px] lg:shrink-0 lg:sticky lg:top-0 lg:h-dvh lg:py-3">
+        <div className="flex-1 flex flex-col justify-between rounded-2xl border border-line bg-surface px-3 pb-3 overflow-hidden">
           {[-1, 0, 1].map((rel, i) => {
             const d = new Date(year, month + panelOffset + rel, 1)
             return (

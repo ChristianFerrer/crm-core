@@ -26,6 +26,7 @@ export const dictCalendario = {
   calendario_cerrado: { es: 'Cerrado', en: 'Closed', ca: 'Tancat', de: 'Geschlossen' },
   calendario_personas: { es: 'personas', en: 'people', ca: 'persones', de: 'Personen' },
   calendario_por_cobrar: { es: 'Pendiente de pago', en: 'Payment pending', ca: 'Pendent de pagament', de: 'Zahlung offen' },
+  calendario_conflicto_banner: { es: 'Conflicto de reserva', en: 'Booking conflict', ca: 'Conflicte de reserva', de: 'Buchungskonflikt' },
   calendario_conflicto: { es: 'Choca con otra reserva', en: 'Clashes with another booking', ca: 'Xoca amb una altra reserva', de: 'Kollidiert mit einer anderen Buchung' },
   calendario_libre: { es: 'libre', en: 'free', ca: 'lliure', de: 'frei' },
   calendario_faltan: { es: 'Pendiente de pago', en: 'Payment pending', ca: 'Pendent de pagament', de: 'Zahlung offen' },
