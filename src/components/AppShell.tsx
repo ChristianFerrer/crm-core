@@ -12,7 +12,7 @@ import { useLanguage } from '@/lib/i18n'
 function Badge({ count }: { count: number }) {
   if (count === 0) return null
   return (
-    <span className="ml-auto min-w-[20px] h-5 px-1 rounded-full bg-lime border-2 border-surface text-white text-[11px] font-bold flex items-center justify-center leading-none shrink-0">
+    <span className="ml-auto min-w-[20px] h-5 px-1 rounded-full bg-rose border-2 border-surface text-white text-[11px] font-bold flex items-center justify-center leading-none shrink-0">
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -196,16 +196,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 title={collapsed ? label : undefined}
                 className={`flex items-center rounded-xl text-sm font-semibold transition-colors relative ${collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'} ${
                   isActive
-                    ? 'bg-lime/15 text-lime'
+                    ? 'bg-surface2 text-snow'
                     : 'text-fog hover:text-snow hover:bg-surface2'
                 }`}
               >
-                <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className="shrink-0" />
+                {/* Como en móvil: el activo se marca con el icono en lima */}
+                <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className={`shrink-0 ${isActive ? 'text-lime' : ''}`} />
                 {!collapsed && label}
                 {collapsed
                   ? (badge > 0 && (
                       // Con la barra plegada el número va sobre el icono, como en móvil
-                      <span className="absolute -top-1 right-1 min-w-[20px] h-5 px-1 rounded-full bg-lime border-2 border-surface text-white text-[11px] font-bold flex items-center justify-center leading-none">
+                      <span className="absolute -top-1 right-1 min-w-[20px] h-5 px-1 rounded-full bg-rose border-2 border-surface text-white text-[11px] font-bold flex items-center justify-center leading-none">
                         {badge > 99 ? '99+' : badge}
                       </span>
                     ))
