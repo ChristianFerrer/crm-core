@@ -731,14 +731,15 @@ export default function CalendarioPage() {
       <div className={`overflow-hidden rounded-xl border ${hasConflict ? 'border-rose' : 'border-line'} bg-surface ${st === 'pasado' ? 'opacity-50' : ''}`}>
         {/* Conflicto: banda con trama, centrada arriba */}
         {hasConflict && (
-          <div className="hatch-rose py-0.5 text-center">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-rose">
+          <div className="hatch-rose flex items-center justify-center gap-1 leading-none py-[3px]">
+            <AlertTriangle size={9} className="text-snow shrink-0" />
+            <span className="text-[9px] font-bold uppercase tracking-wide text-snow">
               {t('calendario_conflicto_banner')}
             </span>
           </div>
         )}
 
-        <div className="flex items-stretch gap-3 px-3 py-2.5 lg:px-4 lg:py-3">
+        <div className="flex items-stretch gap-3 px-3 py-1.5 lg:px-4 lg:py-2">
           {/* Franja horaria y duración */}
           <div className="w-[76px] shrink-0">
             <p className="text-xs font-semibold text-snow leading-tight tabular-nums">
