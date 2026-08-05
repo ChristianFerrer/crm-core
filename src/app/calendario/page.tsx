@@ -479,12 +479,16 @@ export default function CalendarioPage() {
     return (['birthday', 'custodia', 'other'] as BookingType[]).filter(x => present.has(x))
   }
 
-  function renderCalendar(rows: Cell[][]) {
+  function renderCalendar(rows: Cell[][], compact = false) {
+    // `compact`: versión del panel de escritorio, ajustada para que quepan tres
+    // meses de alto sin scroll interno.
+    const cellH = compact ? 'h-8' : 'h-12'
+    const circle = compact ? 'w-7 h-7 text-[13px]' : 'w-9 h-9 text-sm'
     return (
       <>
         <div className="grid grid-cols-7">
           {DOW_LABELS.map(d => (
-            <div key={d} className="py-1.5 text-center text-[11px] font-medium text-mist">{d}</div>
+            <div key={d} className={`${compact ? 'py-0.5 text-[10px]' : 'py-1.5 text-[11px]'} text-center font-medium text-mist`}>{d}</div>
           ))}
         </div>
         {rows.map((week, wi) => (
@@ -498,9 +502,9 @@ export default function CalendarioPage() {
                 <button
                   key={dateStr}
                   onClick={() => goToDay(dateStr)}
-                  className="h-12 flex flex-col items-center justify-center gap-1"
+                  className={`${cellH} flex flex-col items-center justify-center gap-1`}
                 >
-                  <span className={`w-9 h-9 flex items-center justify-center rounded-full text-sm transition-colors ${
+                  <span className={`${circle} flex items-center justify-center rounded-full transition-colors ${
                     isSelected
                       ? 'bg-iris text-white font-bold'
                       : isToday
@@ -697,37 +701,37 @@ export default function CalendarioPage() {
       </div>
 
       {/* ── Escritorio: calendario del mes siempre desplegado, a la derecha ── */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-[340px] lg:shrink-0 lg:sticky lg:top-2 lg:max-h-[calc(100dvh-1.5rem)] lg:pt-2 gap-3">
-        {/* Navegación propia del panel: el mes de la agenda queda en el centro */}
-        <div className="flex items-center justify-between gap-2 shrink-0">
-          <button
-            onClick={() => setPanelOffset(o => o - 1)}
-            aria-label={t('calendario_mes_anterior')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <p className="text-xs font-semibold text-mist uppercase tracking-wide">{t('nav_agenda')}</p>
-          <button
-            onClick={() => setPanelOffset(o => o + 1)}
-            aria-label={t('calendario_mes_siguiente')}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-5 pr-1">
-          {[-1, 0, 1].map(rel => {
+      <aside className="hidden lg:block lg:w-[320px] lg:shrink-0 lg:sticky lg:top-2 lg:pt-2">
+        <div className="rounded-2xl border border-line bg-surface px-3 pb-3">
+          {[-1, 0, 1].map((rel, i) => {
             const d = new Date(year, month + panelOffset + rel, 1)
             return (
-              <div key={`${d.getFullYear()}-${d.getMonth()}`}>
-                <h2 className="font-display text-xl font-bold text-snow mb-2 capitalize">
-                  {MONTH_NAMES[d.getMonth()]}{d.getFullYear() !== year ? ` ${d.getFullYear()}` : ''}
-                </h2>
-                <div className="rounded-2xl border border-line bg-surface p-3">
-                  {renderCalendar(weeksOf(d.getFullYear(), d.getMonth()))}
+              <div key={`${d.getFullYear()}-${d.getMonth()}`} className={i > 0 ? 'mt-3 pt-3 border-t border-line/60' : 'pt-3'}>
+                {/* Las flechas viven dentro del panel, en la fila del mes */}
+                <div className="flex items-center justify-between gap-1 mb-1">
+                  <h2 className="font-display text-base font-bold text-snow capitalize truncate">
+                    {MONTH_NAMES[d.getMonth()]}{d.getFullYear() !== year ? ` ${d.getFullYear()}` : ''}
+                  </h2>
+                  {i === 0 && (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() => setPanelOffset(o => o - 1)}
+                        aria-label={t('calendario_mes_anterior')}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <button
+                        onClick={() => setPanelOffset(o => o + 1)}
+                        aria-label={t('calendario_mes_siguiente')}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
+                {renderCalendar(weeksOf(d.getFullYear(), d.getMonth()), true)}
               </div>
             )
           })}
