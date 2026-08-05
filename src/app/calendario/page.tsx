@@ -702,12 +702,86 @@ export default function CalendarioPage() {
       return afterPrev && beforeNext
     })
   }
+  // Escala de la línea de tiempo de escritorio: 1,25 px por minuto → 75 px/hora
+  const TIMELINE_PX_PER_MIN = 1.25
+
+  /**
+   * Línea de tiempo de un día: cada reserva ocupa el alto que le corresponde
+   * por su duración, y las que se pisan se reparten el ancho en columnas.
+   */
+  function renderDayTimeline(dateStr: string, dayBookings: Booking[], conflicts: Record<string, Booking[]>) {
+    const columns = layoutColumns(dayBookings)
+    const total = closeMins - openMins
+    const isPast = dateStr < todayStr
+
+    return (
+      <div className="relative flex" style={{ height: total * TIMELINE_PX_PER_MIN }}>
+        {/* Carril de horas */}
+        <div className="w-16 shrink-0 relative">
+          {hourSlots.map(h => (
+            <span key={h} className="absolute -translate-y-1/2 text-[11px] font-semibold text-mist tabular-nums"
+              style={{ top: (h - openMins) * TIMELINE_PX_PER_MIN }}>
+              {minutesToLabel(h)}
+            </span>
+          ))}
+        </div>
+
+        {/* Lienzo */}
+        <div className="relative flex-1 min-w-0">
+          {hourSlots.map(h => (
+            <span key={h} className="absolute left-0 right-0 h-px bg-line/60"
+              style={{ top: (h - openMins) * TIMELINE_PX_PER_MIN }} />
+          ))}
+
+          {/* Franjas vacías: crean una reserva a esa hora */}
+          {!isPast && hourSlots.map(h => (
+            <button
+              key={`slot-${h}`}
+              onClick={() => openNewAt(dateStr, h, h + 60)}
+              aria-label={`${minutesToLabel(h)} · ${t('calendario_libre')}`}
+              className="absolute left-0 right-0 group"
+              style={{ top: (h - openMins) * TIMELINE_PX_PER_MIN, height: 60 * TIMELINE_PX_PER_MIN }}
+            >
+              <span className="flex h-full w-full items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-mist">
+                <Plus size={12} /> 
+              </span>
+            </button>
+          ))}
+
+          {/* Reservas, a escala */}
+          {dayBookings.map(b => {
+            const r = bookingRange(b)
+            if (!r) return null
+            const lay = columns[b.id] ?? { col: 0, cols: 1 }
+            const widthPct = 100 / lay.cols
+            const top = (Math.max(r.start, openMins) - openMins) * TIMELINE_PX_PER_MIN
+            const height = Math.max(26, (Math.min(r.end, closeMins) - Math.max(r.start, openMins)) * TIMELINE_PX_PER_MIN - 3)
+            return (
+              <div
+                key={b.id}
+                className="absolute"
+                style={{
+                  top,
+                  height,
+                  left: `calc(${lay.col * widthPct}% + ${lay.col > 0 ? 3 : 0}px)`,
+                  width: `calc(${widthPct}% - ${lay.cols > 1 ? 6 : 0}px)`,
+                }}
+              >
+                {renderBookingCard(b, conflicts, dateStr, true)}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   /**
    * Tarjeta de una reserva. Muestra la franja y la duración a la izquierda y,
    * como mucho, dos líneas de detalle (una en móvil): lo demás vive en la
    * página de detalle y no se repite aquí.
    */
-  function renderBookingCard(b: Booking, conflicts: Record<string, Booking[]>, dateStr: string) {
+  function renderBookingCard(b: Booking, conflicts: Record<string, Booking[]>, dateStr: string, fill = false) {
     const st = bookingLiveStatus(b, todayStr)
     const r = bookingRange(b)
     const gA = b.guest_adults ?? 0
@@ -728,7 +802,7 @@ export default function CalendarioPage() {
     ].filter(Boolean).join(' · ')
 
     return (
-      <div className={`overflow-hidden rounded-xl border ${hasConflict ? 'border-rose' : 'border-line'} bg-surface ${st === 'pasado' ? 'opacity-50' : ''}`}>
+      <div className={`overflow-hidden rounded-xl border ${hasConflict ? 'border-rose' : 'border-line'} bg-surface ${st === 'pasado' ? 'opacity-50' : ''} ${fill ? 'h-full flex flex-col' : ''}`}>
         {/* Conflicto: banda con trama, centrada arriba */}
         {hasConflict && (
           <div className="hatch-rose flex items-center justify-center gap-1 leading-none py-[3px]">
@@ -739,7 +813,7 @@ export default function CalendarioPage() {
           </div>
         )}
 
-        <div className="flex items-stretch gap-3 px-3 py-1.5 lg:px-4 lg:py-2">
+        <div className={`flex items-stretch gap-3 px-3 py-1.5 lg:px-4 lg:py-2 ${fill ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
           {/* Franja horaria y duración */}
           <div className="w-[76px] shrink-0">
             <p className="text-xs font-semibold text-snow leading-tight tabular-nums">
@@ -1189,9 +1263,12 @@ export default function CalendarioPage() {
                     )}
                   </div>
                 ) : (
-                <div className="space-y-1">
-                  {/* Una sección por hora del horario del establecimiento: las
-                      vacías quedan a la vista para ver dónde hay sitio. */}
+                <>
+                {/* Escritorio: la reserva ocupa su franja real en la escala */}
+                <div className="hidden lg:block">{renderDayTimeline(dateStr, timed, conflicts)}</div>
+
+                <div className="space-y-1 lg:hidden">
+                  {/* Móvil: una sección por hora del horario del establecimiento */}
                   {hourSlots.map(hourStart => {
                     const inHour = clusters.filter(c => {
                       const st = bookingRange(c[0])?.start ?? 0
@@ -1243,8 +1320,9 @@ export default function CalendarioPage() {
                       </div>
                     )
                   })}
+                </div>
 
-                  {/* Canceladas: plegadas para que no compitan con las vivas */}
+                {/* Canceladas: plegadas para que no compitan con las vivas */}
                   {cancelled.length > 0 && (
                     <div className="pt-1">
                       <button
@@ -1261,7 +1339,7 @@ export default function CalendarioPage() {
                       )}
                     </div>
                   )}
-                </div>
+                </>
                 )}
               </div>
             )
