@@ -292,6 +292,25 @@ export default function CalendarioPage() {
   const weeks: Cell[][] = []
   for (let i = 0; i < monthCells.length; i += 7) weeks.push(monthCells.slice(i, i + 7))
 
+  /** Semanas completas de un mes cualquiera (para el panel de escritorio). */
+  function weeksOf(y: number, m: number): Cell[][] {
+    const fd = getFirstDayOfWeek(y, m)
+    const dim = getDaysInMonth(y, m)
+    const total = Math.ceil((fd + dim) / 7) * 7
+    const start = new Date(y, m, 1 - fd)
+    const cells: Cell[] = Array.from({ length: total }, (_, i) => {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      return {
+        date: toDateStr(d.getFullYear(), d.getMonth(), d.getDate()),
+        inMonth: d.getMonth() === m && d.getFullYear() === y,
+      }
+    })
+    const rows: Cell[][] = []
+    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7))
+    return rows
+  }
+
   const anchor = selectedDate ?? todayStr
   const weekOfAnchor = weeks.findIndex(w => w.some(c => c.date === anchor))
   const visibleWeeks = stripExpanded ? weeks : [weeks[weekOfAnchor >= 0 ? weekOfAnchor : 0] ?? []]
@@ -511,7 +530,10 @@ export default function CalendarioPage() {
       {/* ── Cabecera fija: mes + acciones + tira de calendario ── */}
       <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:mx-0 px-4 md:px-6 lg:px-0 pt-2 pb-[22px] border-b border-line relative">
         <div className="flex items-center justify-between gap-3 pb-2">
-          <div className="flex items-center gap-1 min-w-0">
+          <h1 className="hidden lg:block font-display text-3xl font-bold text-snow truncate">
+            {t('nav_agenda')}
+          </h1>
+          <div className="flex items-center gap-1 min-w-0 lg:hidden">
             <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
               {MONTH_NAMES[month]}
             </h1>
@@ -561,8 +583,10 @@ export default function CalendarioPage() {
             const isToday = dateStr === todayStr
             return (
               <div key={dateStr} ref={el => { dayRefs.current[dateStr] = el }} className="pt-6">
-                {/* Cabecera del día */}
-                <div className="flex items-baseline gap-2.5 mb-3">
+                {/* Cabecera del día — barra a todo el ancho en escritorio */}
+                <div className={`flex items-baseline gap-2.5 mb-3 lg:rounded-xl lg:px-4 lg:py-2 ${
+                  isToday ? 'lg:bg-iris/10' : 'lg:bg-surface2'
+                }`}>
                   <span className={`text-lg font-bold ${isToday ? 'text-iris' : 'text-snow'}`}>
                     {dayHeading(dateStr)}
                   </span>
@@ -593,7 +617,7 @@ export default function CalendarioPage() {
                 )}
 
                 {/* Reservas con hora */}
-                <div className="space-y-4">
+                <div className="space-y-4 lg:space-y-2">
                   {timed.map(b => {
                     const ts = TYPE_STYLE[b.type]
                     const st = bookingLiveStatus(b, todayStr)
@@ -605,7 +629,7 @@ export default function CalendarioPage() {
                     const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
                     const showPago = b.status !== 'cancelled' && (b.amount != null && b.amount > 0)
                     return (
-                      <div key={b.id} className={`flex items-stretch gap-3 ${st === 'pasado' || b.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                      <div key={b.id} className={`flex items-stretch gap-3 lg:items-center lg:rounded-xl lg:border lg:border-line lg:bg-surface lg:px-4 lg:py-3 ${st === 'pasado' || b.status === 'cancelled' ? 'opacity-50' : ''}`}>
                         {/* Hora + duración */}
                         <div className="w-16 shrink-0 pt-0.5">
                           <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5)}</p>
@@ -646,7 +670,7 @@ export default function CalendarioPage() {
                             type="button"
                             onClick={() => handleExecute(b)}
                             disabled={executingId === b.id}
-                            className="flex items-center gap-1 self-start text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                            className="flex items-center gap-1 self-start lg:self-center ml-auto text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 lg:px-3 lg:py-2 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                           >
                             <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
                           </button>
@@ -663,10 +687,20 @@ export default function CalendarioPage() {
       </div>
 
       {/* ── Escritorio: calendario del mes siempre desplegado, a la derecha ── */}
-      <aside className="hidden lg:block lg:w-[340px] lg:shrink-0 lg:sticky lg:top-2 lg:pt-2">
-        <div className="rounded-2xl border border-line bg-surface p-3">
-          {renderCalendar(weeks)}
-        </div>
+      <aside className="hidden lg:block lg:w-[340px] lg:shrink-0 lg:pt-2 space-y-6">
+        {[0, 1, 2].map(offset => {
+          const d = new Date(year, month + offset, 1)
+          return (
+            <div key={`${d.getFullYear()}-${d.getMonth()}`}>
+              <h2 className="font-display text-2xl font-bold text-snow mb-3 capitalize">
+                {MONTH_NAMES[d.getMonth()]}{d.getFullYear() !== year ? ` ${d.getFullYear()}` : ''}
+              </h2>
+              <div className="rounded-2xl border border-line bg-surface p-3">
+                {renderCalendar(weeksOf(d.getFullYear(), d.getMonth()))}
+              </div>
+            </div>
+          )
+        })}
       </aside>
 
       {/* ── Píldora «Hoy» cuando la agenda está lejos del día actual ── */}
