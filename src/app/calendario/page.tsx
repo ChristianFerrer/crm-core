@@ -109,6 +109,9 @@ export default function CalendarioPage() {
   const [executingId, setExecutingId] = useState<string | null>(null)
   // Tira de calendario plegable: contraída = solo la semana del día seleccionado
   const [stripExpanded, setStripExpanded] = useState(false)
+  // El panel de meses de escritorio navega por su cuenta: mueve sus flechas sin
+  // arrastrar la agenda, que sigue mandada por el scroll.
+  const [panelOffset, setPanelOffset] = useState(0)
   const pendingScroll = useRef<string | null>(null)
   const navAt = useRef(0)
   const agendaRef = useRef<HTMLDivElement>(null)
@@ -343,6 +346,9 @@ export default function CalendarioPage() {
     requestAnimationFrame(() => requestAnimationFrame(() => scrollToDay(target, 'instant')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
+
+  // Si la agenda cambia de mes, el panel vuelve a centrarse en él
+  useEffect(() => { setPanelOffset(0) }, [month, year])
 
   // Desplazamiento pendiente tras navegar (ver goToDay)
   useEffect(() => {
@@ -582,11 +588,15 @@ export default function CalendarioPage() {
             const timed = dayBookings.filter(b => b.start_time)
             const isToday = dateStr === todayStr
             return (
-              <div key={dateStr} ref={el => { dayRefs.current[dateStr] = el }} className="pt-6">
-                {/* Cabecera del día — barra a todo el ancho en escritorio */}
-                <div className={`flex items-baseline gap-2.5 mb-3 lg:rounded-xl lg:px-4 lg:py-2 ${
-                  isToday ? 'lg:bg-iris/10' : 'lg:bg-surface2'
-                }`}>
+              <div
+                key={dateStr}
+                ref={el => { dayRefs.current[dateStr] = el }}
+                className={`pt-6 lg:pt-0 lg:mt-4 lg:rounded-2xl lg:border lg:p-4 ${
+                  isToday ? 'lg:border-iris/40 lg:bg-iris/5' : 'lg:border-line lg:bg-surface2/40'
+                }`}
+              >
+                {/* Cabecera del día */}
+                <div className="flex items-baseline gap-2.5 mb-3">
                   <span className={`text-lg font-bold ${isToday ? 'text-iris' : 'text-snow'}`}>
                     {dayHeading(dateStr)}
                   </span>
@@ -629,7 +639,7 @@ export default function CalendarioPage() {
                     const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
                     const showPago = b.status !== 'cancelled' && (b.amount != null && b.amount > 0)
                     return (
-                      <div key={b.id} className={`flex items-stretch gap-3 lg:items-center lg:rounded-xl lg:border lg:border-line lg:bg-surface lg:px-4 lg:py-3 ${st === 'pasado' || b.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                      <div key={b.id} className={`flex items-stretch gap-3 lg:rounded-xl lg:border lg:border-line lg:bg-surface lg:px-4 lg:py-3 ${st === 'pasado' || b.status === 'cancelled' ? 'opacity-50' : ''}`}>
                         {/* Hora + duración */}
                         <div className="w-16 shrink-0 pt-0.5">
                           <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5)}</p>
@@ -670,7 +680,7 @@ export default function CalendarioPage() {
                             type="button"
                             onClick={() => handleExecute(b)}
                             disabled={executingId === b.id}
-                            className="flex items-center gap-1 self-start lg:self-center ml-auto text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 lg:px-3 lg:py-2 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                            className="flex items-center gap-1 self-start ml-auto text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 lg:px-3 lg:py-2 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
                           >
                             <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
                           </button>
@@ -687,20 +697,41 @@ export default function CalendarioPage() {
       </div>
 
       {/* ── Escritorio: calendario del mes siempre desplegado, a la derecha ── */}
-      <aside className="hidden lg:block lg:w-[340px] lg:shrink-0 lg:pt-2 space-y-6">
-        {[0, 1, 2].map(offset => {
-          const d = new Date(year, month + offset, 1)
-          return (
-            <div key={`${d.getFullYear()}-${d.getMonth()}`}>
-              <h2 className="font-display text-2xl font-bold text-snow mb-3 capitalize">
-                {MONTH_NAMES[d.getMonth()]}{d.getFullYear() !== year ? ` ${d.getFullYear()}` : ''}
-              </h2>
-              <div className="rounded-2xl border border-line bg-surface p-3">
-                {renderCalendar(weeksOf(d.getFullYear(), d.getMonth()))}
+      <aside className="hidden lg:flex lg:flex-col lg:w-[340px] lg:shrink-0 lg:sticky lg:top-2 lg:max-h-[calc(100dvh-1.5rem)] lg:pt-2 gap-3">
+        {/* Navegación propia del panel: el mes de la agenda queda en el centro */}
+        <div className="flex items-center justify-between gap-2 shrink-0">
+          <button
+            onClick={() => setPanelOffset(o => o - 1)}
+            aria-label={t('calendario_mes_anterior')}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <p className="text-xs font-semibold text-mist uppercase tracking-wide">{t('nav_agenda')}</p>
+          <button
+            onClick={() => setPanelOffset(o => o + 1)}
+            aria-label={t('calendario_mes_siguiente')}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-fog hover:text-snow hover:bg-surface2 transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-5 pr-1">
+          {[-1, 0, 1].map(rel => {
+            const d = new Date(year, month + panelOffset + rel, 1)
+            return (
+              <div key={`${d.getFullYear()}-${d.getMonth()}`}>
+                <h2 className="font-display text-xl font-bold text-snow mb-2 capitalize">
+                  {MONTH_NAMES[d.getMonth()]}{d.getFullYear() !== year ? ` ${d.getFullYear()}` : ''}
+                </h2>
+                <div className="rounded-2xl border border-line bg-surface p-3">
+                  {renderCalendar(weeksOf(d.getFullYear(), d.getMonth()))}
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </aside>
 
       {/* ── Píldora «Hoy» cuando la agenda está lejos del día actual ── */}
