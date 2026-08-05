@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown, AlertTriangle, Plus, List, LayoutGrid, MapPin, EyeOff, Eye, Search, Filter, Rows3, LayoutList, ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
@@ -103,6 +103,7 @@ function bookingLiveStatus(b: Booking, todayStr: string): 'ejecutado' | 'en_curs
 
 export default function CalendarioPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t } = useLanguage()
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
@@ -126,7 +127,6 @@ export default function CalendarioPage() {
   const [view, setView] = useState<'lista' | 'rejilla'>('lista')
   const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [detailId, setDetailId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   // Modo compacto: una línea por reserva para ver la jornada entera de un vistazo
   const [compact, setCompact] = useState(false)
@@ -339,6 +339,10 @@ export default function CalendarioPage() {
   }
 
   const { open: openMins, close: closeMins } = parseSchedule(tenantInfo.schedule_hours)
+  // Todas las horas del horario del establecimiento: la agenda las lista
+  // completas, tengan reservas o no.
+  const hourSlots: number[] = []
+  for (let m = Math.floor(openMins / 60) * 60; m < closeMins; m += 60) hourSlots.push(m)
 
   // Conflictos de todo el rango cargado: los usa la pantalla de detalle
   const conflictsAll: Record<string, Booking[]> = (() => {
@@ -444,6 +448,19 @@ export default function CalendarioPage() {
     requestAnimationFrame(() => requestAnimationFrame(() => scrollToDay(target, 'instant')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings])
+
+  // Volver del detalle con ?edit=<id> abre directamente el formulario
+  const editParam = searchParams.get('edit')
+  const editHandled = useRef<string | null>(null)
+  useEffect(() => {
+    if (!editParam || editHandled.current === editParam) return
+    const b = bookings.find(x => x.id === editParam)
+    if (!b) return
+    editHandled.current = editParam
+    openEditFlow(b)
+    router.replace('/calendario')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editParam, bookings])
 
   // Si la agenda cambia de mes, el panel vuelve a centrarse en él
   useEffect(() => { setPanelOffset(0) }, [month, year])
@@ -642,7 +659,7 @@ export default function CalendarioPage() {
               const lay = columns[b.id] ?? { col: 0, cols: 1 }
               const widthPct = 100 / lay.cols
               return (
-                <button key={b.id} onClick={() => setDetailId(b.id)}
+                <button key={b.id} onClick={() => router.push(`/calendario/${b.id}`)}
                   className={`absolute overflow-hidden rounded-lg border px-2 py-1 text-left transition-colors ${
                     clash ? 'border-rose bg-rose/10' : 'border-line bg-surface hover:bg-surface2'
                   }`}
@@ -726,7 +743,7 @@ export default function CalendarioPage() {
         {/* Contenido: lo básico siempre, el resto al desplegar */}
         <div className="flex-1 min-w-0">
           <button
-            onClick={() => setDetailId(b.id)}
+            onClick={() => router.push(`/calendario/${b.id}`)}
             className="w-full text-left"
           >
             <div className="flex items-center gap-2 flex-wrap">
@@ -817,7 +834,7 @@ export default function CalendarioPage() {
     return (
       <button
         key={b.id}
-        onClick={() => setDetailId(b.id)}
+        onClick={() => router.push(`/calendario/${b.id}`)}
         className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface2 ${
           isCancelled ? 'opacity-60' : st === 'pasado' ? 'opacity-50' : ''
         } ${hasConflict ? 'bg-rose/5' : ''}`}
@@ -1188,55 +1205,57 @@ export default function CalendarioPage() {
                     )}
                   </div>
                 ) : (
-                <div className="space-y-4 lg:space-y-2">
-                  {gapsBefore(gaps, null, clusters[0]?.[0] ?? null).map(g => renderGap(dateStr, g))}
-                  {clusters.map((cluster, ci) => {
-                    const last = cluster.reduce((acc, x) => (bookingRange(x)?.end ?? 0) > (bookingRange(acc)?.end ?? 0) ? x : acc, cluster[0])
-                    const clusterStart = bookingRange(cluster[0])?.start ?? 0
-                    const next = clusters[ci + 1]?.[0] ?? null
-                    // Carril de horas: se marca la hora al empezar cada franja
-                    const prevStart = ci > 0 ? (bookingRange(clusters[ci - 1][0])?.start ?? -1) : -1
-                    const newHour = Math.floor(clusterStart / 60) !== Math.floor(prevStart / 60)
+                <div className="space-y-1">
+                  {/* Una sección por hora del horario del establecimiento: las
+                      vacías quedan a la vista para ver dónde hay sitio. */}
+                  {hourSlots.map(hourStart => {
+                    const inHour = clusters.filter(c => {
+                      const st = bookingRange(c[0])?.start ?? 0
+                      const clamped = Math.min(Math.max(st, openMins), closeMins - 1)
+                      return Math.floor(clamped / 60) * 60 === hourStart
+                    })
+                    const isPast = dateStr < todayStr
                     return (
-                      <div key={cluster[0].id}>
-                        {newHour && (
-                          <div className="hidden lg:flex items-center gap-3 pt-1 pb-2">
-                            <span className="w-16 shrink-0 text-[11px] font-semibold text-mist tabular-nums">
-                              {minutesToLabel(Math.floor(clusterStart / 60) * 60)}
-                            </span>
-                            <span className="h-px flex-1 bg-line" />
-                          </div>
-                        )}
-                        {cluster.length === 1 ? (
-                          renderBookingCard(cluster[0], conflicts, dateStr)
-                        ) : (
-                          <div className="flex items-stretch gap-3">
-                            {/* Hora del bloque, una sola vez */}
-                            <div className="w-16 shrink-0 pt-0.5">
-                              <p className="text-xs text-snow leading-tight">{cluster[0].start_time?.slice(0, 5)}</p>
-                              <p className="text-[10px] text-mist leading-tight mt-0.5">
-                                {t('calendario_simultaneas', { n: cluster.length })}
-                              </p>
-                            </div>
-                            <div className="flex-1 min-w-0 flex flex-col lg:flex-row lg:items-start gap-2">
-                              {cluster.map(b => {
-                                // Escalonado: la que empieza más tarde arranca más abajo
-                                const startMin = bookingRange(b)?.start ?? clusterStart
-                                const offset = Math.min(96, Math.round((startMin - clusterStart) * 0.7))
-                                return (
-                                  <div
-                                    key={b.id}
-                                    className="stagger lg:flex-1 lg:min-w-0"
-                                    style={{ '--stagger': `${offset}px` } as React.CSSProperties}
-                                  >
-                                    {renderBookingCard(b, conflicts, dateStr, true)}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-                        {gapsBefore(gaps, last, next).map(g => renderGap(dateStr, g))}
+                      <div key={hourStart} className="flex items-start gap-3 border-t border-line/60 pt-2 pb-1">
+                        <span className="w-14 lg:w-16 shrink-0 text-[11px] font-semibold text-mist tabular-nums pt-1">
+                          {minutesToLabel(hourStart)}
+                        </span>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          {inHour.length === 0 ? (
+                            isPast ? (
+                              <div className="h-7" />
+                            ) : (
+                              <button
+                                onClick={() => openNewAt(dateStr, hourStart, hourStart + 60)}
+                                className="group flex w-full items-center gap-2 rounded-lg px-2 h-7 text-left text-[11px] text-mist hover:bg-surface2 hover:text-fog transition-colors"
+                              >
+                                <Plus size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                {t('calendario_libre')}
+                              </button>
+                            )
+                          ) : inHour.map(cluster => {
+                            const clusterStart = bookingRange(cluster[0])?.start ?? 0
+                            if (cluster.length === 1) return <div key={cluster[0].id}>{renderBookingCard(cluster[0], conflicts, dateStr, true)}</div>
+                            return (
+                              <div key={cluster[0].id} className="flex flex-col lg:flex-row lg:items-start gap-2">
+                                {cluster.map(b => {
+                                  // Escalonado: la que empieza más tarde arranca más abajo
+                                  const startMin = bookingRange(b)?.start ?? clusterStart
+                                  const offset = Math.min(96, Math.round((startMin - clusterStart) * 0.7))
+                                  return (
+                                    <div
+                                      key={b.id}
+                                      className="stagger lg:flex-1 lg:min-w-0"
+                                      style={{ '--stagger': `${offset}px` } as React.CSSProperties}
+                                    >
+                                      {renderBookingCard(b, conflicts, dateStr, true)}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     )
                   })}
@@ -1314,113 +1333,6 @@ export default function CalendarioPage() {
           <ArrowUp size={14} /> {t('calendario_ir_a_hoy')}
         </button>
       )}
-
-      {/* ── Detalle de reserva a pantalla completa ── */}
-      {(() => {
-        const b = detailId ? bookings.find(x => x.id === detailId) : null
-        if (!b) return null
-        const ts = TYPE_STYLE[b.type]
-        const st = bookingLiveStatus(b, todayStr)
-        const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
-        const gA = b.guest_adults ?? 0
-        const gC = b.guest_children ?? 0
-        const totalG = bookingGuestCount(b)
-        const sala = resourceOf(b)
-        const clash = conflictsAll[b.id] ?? []
-        const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
-        const row = (label: string, value: ReactNode) => (
-          <div className="flex items-start justify-between gap-4 py-2.5 border-b border-line/60">
-            <span className="text-xs text-fog shrink-0">{label}</span>
-            <span className="text-sm text-snow text-right min-w-0">{value}</span>
-          </div>
-        )
-        return (
-          <div className="fixed inset-0 z-[60] bg-carbon overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            <div className="sticky top-0 z-10 bg-carbon border-b border-line">
-              <div className="mx-auto max-w-3xl flex items-center gap-3 px-4 lg:px-8 py-4">
-                <button onClick={() => setDetailId(null)} aria-label={t('calendario_volver')} title={t('calendario_volver')}
-                  className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-snow transition-colors">
-                  <ArrowLeft size={18} />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold text-fog uppercase tracking-wide">{t('calendario_detalle_reserva')}</p>
-                  <h2 className="text-lg font-bold text-snow truncate">{b.title}</h2>
-                </div>
-                <span className="w-1.5 h-9 rounded-full shrink-0" style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])} />
-              </div>
-            </div>
-
-            <div className="mx-auto max-w-3xl px-4 lg:px-8 py-5 space-y-5">
-              {clash.length > 0 && (
-                <div className="flex items-start gap-2 rounded-xl border border-rose/40 bg-rose/10 px-3 py-2.5">
-                  <AlertTriangle size={14} className="text-rose shrink-0 mt-0.5" />
-                  <p className="text-xs text-rose">{t('calendario_conflicto')}: {clash.map(c => c.title).join(', ')}</p>
-                </div>
-              )}
-
-              <div className="rounded-2xl border border-line bg-surface px-4 py-1">
-                {row(t('calendario_estado'), (
-                  <span className="flex items-center gap-2 justify-end flex-wrap">
-                    <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
-                    {b.status === 'cancelled'
-                      ? <span className="text-xs font-semibold text-rose">{t('calendario_cancelada')}</span>
-                      : st === 'ejecutado' ? <span className="text-xs font-semibold text-mint">{t('calendario_ejecutado')}</span>
-                      : st === 'en_curso' ? <span className="text-xs font-semibold text-lime">{t('calendario_en_curso')}</span>
-                      : null}
-                  </span>
-                ))}
-                {row(t('calendario_titular'), b.members?.name ?? '—')}
-                {b.child_name && row(t('calendario_menores'), b.child_name)}
-                {row(t('calendario_horario'), `${dayHeading(b.date)} · ${b.start_time?.slice(0, 5) ?? '—'}${b.end_time ? `–${b.end_time.slice(0, 5)}` : ''}`)}
-                {(totalG > 0 || gA > 0 || gC > 0) && row(
-                  b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' }),
-                  b.type === 'custodia' ? String(totalG) : `${totalG} · ${gA} ${t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, ${gC} ${t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}`
-                )}
-                {b.services?.name && row(t('calendario_servicio'), b.services.name)}
-                {sala && row(t('calendario_sala'), sala)}
-              </div>
-
-              {b.amount != null && b.amount > 0 && (
-                <div className="rounded-2xl border border-line bg-surface px-4 py-1">
-                  {row(t('calendario_total'), `${b.amount.toFixed(2)}€`)}
-                  {row(t('calendario_adelanto'), `${(b.deposit_amount ?? 0).toFixed(2)}€`)}
-                  {row(t('calendario_pendiente_cobro'), (
-                    <span className={pendiente > 0 ? 'text-amber font-semibold' : 'text-mint font-semibold'}>
-                      {pendiente > 0 ? `${pendiente.toFixed(2)}€` : t('calendario_pagado')}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {b.notes && (
-                <div className="rounded-2xl border border-line bg-surface px-4 py-3">
-                  <p className="text-[11px] font-semibold text-fog uppercase tracking-wide mb-1">{t('calendario_notas_titulo')}</p>
-                  <p className="text-sm text-snow whitespace-pre-wrap">{b.notes}</p>
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button onClick={() => { setDetailId(null); openEditFlow(b) }}
-                  className="flex items-center gap-2 rounded-xl border border-line bg-surface2 px-4 py-2.5 text-sm font-semibold text-fog hover:text-snow transition-colors">
-                  <Pencil size={15} /> {t('calendario_editar')}
-                </button>
-                {canExecute && (
-                  <button onClick={() => { handleExecute(b); setDetailId(null) }} disabled={executingId === b.id}
-                    className="flex items-center gap-2 rounded-xl border border-lime bg-lime/10 px-4 py-2.5 text-sm font-semibold text-lime hover:bg-lime/20 transition-colors disabled:opacity-50">
-                    <Play size={15} fill="currentColor" /> {t('calendario_ejecutar')}
-                  </button>
-                )}
-                {b.status !== 'cancelled' && (
-                  <button onClick={() => { handleCancel(b.id); setDetailId(null) }}
-                    className="flex items-center gap-2 rounded-xl border border-rose/40 px-4 py-2.5 text-sm font-semibold text-rose hover:bg-rose/10 transition-colors">
-                    <Trash2 size={15} /> {t('calendario_cancelada')}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
 
       {/* ── Botón flotante de nueva reserva ── */}
       <button
