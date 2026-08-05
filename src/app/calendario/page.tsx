@@ -810,9 +810,9 @@ export default function CalendarioPage() {
       <div className={`overflow-hidden rounded-xl border ${hasConflict ? 'border-rose' : 'border-line'} bg-surface ${st === 'pasado' ? 'opacity-50' : ''} ${fill ? 'h-full flex flex-col' : ''}`}>
         {/* Conflicto: banda con trama, centrada arriba */}
         {hasConflict && (
-          <div className="hatch-rose flex items-center gap-1 leading-none py-[3px] px-2">
+          <div className="bg-rose flex items-center gap-1 leading-none py-[3px] px-2">
             <AlertTriangle size={9} className="text-white shrink-0" />
-            <span className="text-[9px] font-extrabold uppercase tracking-wide text-white">
+            <span className="text-[9px] uppercase tracking-wide text-white">
               {t('calendario_conflicto_banner')}
             </span>
           </div>
