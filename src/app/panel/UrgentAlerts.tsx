@@ -62,7 +62,7 @@ export function UrgentAlerts({ alerts: initial }: { alerts: Alert[] }) {
                     ? <Gift size={13} className="text-iris shrink-0" />
                     : <AlertTriangle size={13} className="text-amber shrink-0" />
                   }
-                  <p className={`flex-1 text-xs font-medium ${a.type === 'birthday' ? 'text-iris' : 'text-amber'}`}>
+                  <p className={`flex-1 text-xs font-medium ${a.type === 'birthday' ? 'text-grape' : 'text-amber'}`}>
                     {a.message}
                   </p>
                   <button

@@ -13,6 +13,8 @@
   --color-lime: #c6f24e;
   --color-lime-deep: #a9da2f;
   --color-iris: #8b8bff;
+  /* Cumpleaños: magenta, para no confundirse con el azul/celeste */
+  --color-grape: #e879f9;
   --color-amber: #f5b945;
   --color-mint: #34d399;
   --color-mint-soft: #112a23;
@@ -37,6 +39,7 @@
   --color-lime: #20bf6b;
   --color-lime-deep: #189656;
   --color-iris: #3867d6;
+  --color-grape: #c026d3;
   --color-amber: #fa8231;
   --color-mint: #22a6b3;
   --color-mint-soft: #dff7f5;
@@ -136,6 +139,18 @@
   border-color: #c62848 !important;
 }
 
+:root[data-theme="light"] button[class*="bg-grape/"],
+:root[data-theme="light"] a[class*="bg-grape/"],
+:root[data-theme="light"] button[class*="bg-grape/"] *,
+:root[data-theme="light"] a[class*="bg-grape/"] * {
+  color: #fff !important;
+}
+:root[data-theme="light"] button[class*="bg-grape/"],
+:root[data-theme="light"] a[class*="bg-grape/"] {
+  background-color: var(--color-grape) !important;
+  border-color: var(--color-grape) !important;
+}
+
 :root[data-theme="light"] button[class*="bg-cyan-300/"],
 :root[data-theme="light"] a[class*="bg-cyan-300/"],
 :root[data-theme="light"] button[class*="bg-cyan-300/"] *,
@@ -170,12 +185,16 @@
   color: var(--color-carbon) !important;
 }
 
+/* Los botones no muestran mano por defecto en el navegador; en una app de
+   gestión todo lo pulsable debe indicarlo. */
+button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+
 /* Banda de conflicto: trama diagonal en rose sobre la propia tarjeta. */
 .hatch-rose {
   background-image: repeating-linear-gradient(
     45deg,
-    color-mix(in srgb, var(--color-rose) 35%, transparent) 0 6px,
-    color-mix(in srgb, var(--color-rose) 12%, transparent) 6px 12px
+    color-mix(in srgb, var(--color-rose) 90%, transparent) 0 6px,
+    color-mix(in srgb, var(--color-rose) 60%, transparent) 6px 12px
   );
 }
 

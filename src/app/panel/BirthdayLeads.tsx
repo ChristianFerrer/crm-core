@@ -103,7 +103,7 @@ export function BirthdayLeads({ leads: initialLeads, tenantId }: { leads: Lead[]
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex flex-col items-center justify-center w-8 h-8 rounded-lg bg-iris/15 shrink-0">
-                      <span className="text-xs font-bold text-iris leading-none">{lead.birthday_day}</span>
+                      <span className="text-xs font-bold text-grape leading-none">{lead.birthday_day}</span>
                     </div>
                     <div className="text-left min-w-0">
                       <p className="text-sm font-medium text-snow truncate">{lead.child_name} · <span className="text-fog font-normal">{lead.age} años</span></p>

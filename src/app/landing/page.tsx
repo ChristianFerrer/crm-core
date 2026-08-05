@@ -114,9 +114,9 @@ function MockAgenda() {
       </div>
       {/* events */}
       {[
-        { time: '10:30', title: 'Cumpleaños Aina', type: 'birthday', guests: 12, color: 'border-iris/30 bg-iris/5', dot: 'bg-iris', badge: 'Confirmado', badgeColor: 'bg-lime text-white' },
+        { time: '10:30', title: 'Cumpleaños Aina', type: 'birthday', guests: 12, color: 'border-grape/30 bg-grape/5', dot: 'bg-grape', badge: 'Confirmado', badgeColor: 'bg-lime text-white' },
         { time: '16:00', title: 'Custodia · Marc Torres', type: 'custodia', guests: 1, color: 'border-mint/30 bg-mint/5', dot: 'bg-mint', badge: 'Pendiente', badgeColor: 'bg-amber text-white' },
-        { time: '18:30', title: 'Cumpleaños Leo', type: 'birthday', guests: 8, color: 'border-iris/30 bg-iris/5', dot: 'bg-iris', badge: 'Pendiente', badgeColor: 'bg-amber text-white' },
+        { time: '18:30', title: 'Cumpleaños Leo', type: 'birthday', guests: 8, color: 'border-grape/30 bg-grape/5', dot: 'bg-grape', badge: 'Pendiente', badgeColor: 'bg-amber text-white' },
       ].map(e => (
         <div key={e.title} className={`rounded-lg border ${e.color} px-2.5 py-2 flex items-center gap-2`}>
           <span className={`w-1.5 h-1.5 rounded-full ${e.dot} shrink-0`} />

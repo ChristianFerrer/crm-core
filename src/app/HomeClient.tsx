@@ -114,7 +114,7 @@ type TodayBooking = {
 // Se define aquí porque la Agenda ya importa de este módulo; así hay una
 // única fuente de verdad para el aspecto de una reserva en toda la app.
 export const BOOKING_TYPE_COLOR_VAR: Record<'birthday' | 'custodia' | 'other', string> = {
-  birthday: 'var(--color-iris)',
+  birthday: 'var(--color-grape)',
   custodia: 'var(--color-cyan-300)',
   other: 'var(--color-lime)',
 }
@@ -748,7 +748,7 @@ export function BookingSearchAndTypeModal({
   const [member, setMember] = useState<FullMember | null>(preselectedMember)
 
   const flowMeta = {
-    birthday: { Icon: Cake,     colorCls: 'text-iris',     activeCls: 'border-iris/40 bg-iris/10 hover:bg-iris/15',           desc: t('home_desc_cumpleanos') },
+    birthday: { Icon: Cake,     colorCls: 'text-grape',    activeCls: 'border-grape/40 bg-grape/10 hover:bg-grape/15',       desc: t('home_desc_cumpleanos') },
     custodia: { Icon: Clock,    colorCls: 'text-cyan-300', activeCls: 'border-cyan-300/40 bg-cyan-300/10 hover:bg-cyan-300/15', desc: t('home_desc_custodia') },
     other:    { Icon: Calendar, colorCls: 'text-lime',     activeCls: 'border-lime/40 bg-lime/10 hover:bg-lime/15',            desc: t('home_desc_otro') },
   } as const
@@ -989,7 +989,7 @@ export function BookingFormModal({
 
   const typeLabels  = { birthday: t('home_reserva_de_cumpleanos'), custodia: t('home_reserva_de_custodia'), other: t('home_otra_reserva') }
   const typeIcons   = { birthday: Cake, custodia: Clock, other: Calendar }
-  const typeColors  = { birthday: 'text-iris', custodia: 'text-cyan-300', other: 'text-lime' }
+  const typeColors  = { birthday: 'text-grape', custodia: 'text-cyan-300', other: 'text-lime' }
   const TypeIcon    = typeIcons[bookingType]
   const needsTitle = bookingType === 'other'
   const birthdayValid = bookingType !== 'birthday' || !!birthdayChild || member.children.length === 0
@@ -2251,7 +2251,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   })
 
   const bookingTypeStyle = {
-    birthday: { bar: 'bg-iris', badge: 'text-iris', label: t('home_cumpleanos') },
+    birthday: { bar: 'bg-grape', badge: 'text-grape', label: t('home_cumpleanos') },
     custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', label: t('home_custodia') },
     other:    { bar: 'bg-lime', badge: 'text-lime', label: t('home_otro') },
   }

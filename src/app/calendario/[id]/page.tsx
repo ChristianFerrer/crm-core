@@ -37,7 +37,7 @@ type Booking = {
 const SELECT = 'id, date, start_time, end_time, type, title, child_name, member_id, members(name), notes, status, guests, guest_adults, guest_children, payment_status, amount, deposit_amount, service_id, services(name, resource_name), executed_at'
 
 const TYPE_BADGE: Record<BookingType, { badge: string; key: 'calendario_tipo_cumpleanos' | 'calendario_tipo_custodia' | 'calendario_tipo_otro' }> = {
-  birthday: { badge: 'text-iris', key: 'calendario_tipo_cumpleanos' },
+  birthday: { badge: 'text-grape', key: 'calendario_tipo_cumpleanos' },
   custodia: { badge: 'text-cyan-300', key: 'calendario_tipo_custodia' },
   other: { badge: 'text-lime', key: 'calendario_tipo_otro' },
 }

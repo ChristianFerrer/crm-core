@@ -65,7 +65,7 @@ function calcAge(birth_date: string) {
 }
 
 // Custodia = cian en toda la app (coherente con Inicio y el detalle del día)
-function bookingColor(t: BookingType) { return t === 'birthday' ? 'bg-iris' : t === 'custodia' ? 'bg-cyan-300' : 'bg-lime' }
+function bookingColor(t: BookingType) { return t === 'birthday' ? 'bg-grape' : t === 'custodia' ? 'bg-cyan-300' : 'bg-lime' }
 function statusBadge(s: BookingStatus) { return s === 'confirmed' ? 'text-lime' : s === 'cancelled' ? 'text-rose' : 'text-fog' }
 function paymentBadge(p: PaymentStatus) { return p === 'paid' ? 'text-mint' : p === 'partial' ? 'text-cyan-300' : 'text-amber' }
 function paymentLabelKey(p: PaymentStatus): 'calendario_pagado' | 'calendario_senal' | 'calendario_pendiente' {
@@ -74,7 +74,7 @@ function paymentLabelKey(p: PaymentStatus): 'calendario_pagado' | 'calendario_se
 
 // Estilo por tipo alineado con la "Agenda de hoy" del inicio
 const TYPE_STYLE: Record<BookingType, { bar: string; badge: string; labelKey: 'calendario_tipo_cumpleanos' | 'calendario_tipo_custodia' | 'calendario_tipo_otro' }> = {
-  birthday: { bar: 'bg-iris',     badge: 'text-iris',     labelKey: 'calendario_tipo_cumpleanos' },
+  birthday: { bar: 'bg-grape',    badge: 'text-grape',    labelKey: 'calendario_tipo_cumpleanos' },
   custodia: { bar: 'bg-cyan-300', badge: 'text-cyan-300', labelKey: 'calendario_tipo_custodia' },
   other:    { bar: 'bg-lime',     badge: 'text-lime',     labelKey: 'calendario_tipo_otro' },
 }
@@ -732,8 +732,8 @@ export default function CalendarioPage() {
         {/* Conflicto: banda con trama, centrada arriba */}
         {hasConflict && (
           <div className="hatch-rose flex items-center justify-center gap-1 leading-none py-[3px]">
-            <AlertTriangle size={9} className="text-snow shrink-0" />
-            <span className="text-[9px] font-bold uppercase tracking-wide text-snow">
+            <AlertTriangle size={9} className="text-white shrink-0" />
+            <span className="text-[9px] font-extrabold uppercase tracking-wide text-white">
               {t('calendario_conflicto_banner')}
             </span>
           </div>
