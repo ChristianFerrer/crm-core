@@ -163,3 +163,48 @@ export function durationLabel(mins: number): string {
   if (m === 0) return `${h} h`
   return `${h} h ${m} min`
 }
+
+/**
+ * Reparte en columnas las reservas que se pisan, como hace Outlook: las que
+ * comparten franja se muestran una al lado de otra en vez de taparse.
+ *
+ * Devuelve por id la columna que ocupa y en cuántas se divide su grupo.
+ */
+export function layoutColumns<T extends TimedBooking>(
+  dayBookings: T[],
+): Record<string, { col: number; cols: number }> {
+  const items = dayBookings
+    .filter(b => b.status !== 'cancelled')
+    .map(b => ({ b, r: bookingRange(b) }))
+    .filter((x): x is { b: T; r: { start: number; end: number } } => !!x.r)
+    .sort((a, b) => a.r.start - b.r.start || a.r.end - b.r.end)
+
+  const out: Record<string, { col: number; cols: number }> = {}
+  let group: typeof items = []
+  let groupEnd = -1
+
+  const flush = () => {
+    if (group.length === 0) return
+    // Asignación voraz: cada reserva ocupa la primera columna libre
+    const colEnds: number[] = []
+    const assigned: { id: string; col: number }[] = []
+    for (const { b, r } of group) {
+      let col = colEnds.findIndex(end => end <= r.start)
+      if (col === -1) { col = colEnds.length; colEnds.push(r.end) }
+      else colEnds[col] = r.end
+      assigned.push({ id: b.id, col })
+    }
+    const cols = colEnds.length
+    for (const a of assigned) out[a.id] = { col: a.col, cols }
+    group = []
+    groupEnd = -1
+  }
+
+  for (const item of items) {
+    if (group.length > 0 && item.r.start >= groupEnd) flush()
+    group.push(item)
+    groupEnd = Math.max(groupEnd, item.r.end)
+  }
+  flush()
+  return out
+}

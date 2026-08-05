@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown, AlertTriangle, Plus, List, LayoutGrid, MapPin, EyeOff, Eye } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown, AlertTriangle, Plus, List, LayoutGrid, MapPin, EyeOff, Eye, Search, Filter } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
@@ -11,10 +11,9 @@ import { resolveRates } from '@/lib/pricing'
 import { BookingSearchAndTypeModal, BookingFormModal, bookingBarStyle, bookingDurationLabel, BOOKING_TYPE_COLOR_VAR, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 import { MemberForm, type CreatedMember } from '@/components/MemberForm'
 import { useLanguage } from '@/lib/i18n'
-import { TableFilterBar } from '@/components/TableFilterBar'
 import {
   conflictMap, daySummary, freeGaps, parseSchedule, isOpenOn,
-  toMinutes, minutesToLabel, durationLabel, bookingRange,
+  toMinutes, minutesToLabel, durationLabel, bookingRange, layoutColumns,
 } from '@/lib/agenda'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
@@ -125,6 +124,9 @@ export default function CalendarioPage() {
   const [filterPago, setFilterPago] = useState<'todos' | 'pendiente' | 'pagado'>('todos')
   const [showCancelled, setShowCancelled] = useState(false)
   const [view, setView] = useState<'lista' | 'rejilla'>('lista')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [tenantInfo, setTenantInfo] = useState<TenantInfo>({ capacity: null, schedule_days: null, schedule_hours: null })
   const pendingScroll = useRef<string | null>(null)
   const navAt = useRef(0)
@@ -402,7 +404,11 @@ export default function CalendarioPage() {
   // a partir de hoy), sin animación para que no se vea el salto.
   useEffect(() => {
     if (didInitialScroll.current || bookings.length === 0) return
-    const target = agendaDays.find(d => d >= todayStr) ?? agendaDays[agendaDays.length - 1]
+    // Siempre arranca en HOY: ahora el día seleccionado tiene sección propia
+    // aunque no tenga reservas, así que no hace falta buscar la más cercana.
+    const target = agendaDays.includes(todayStr)
+      ? todayStr
+      : (agendaDays.find(d => d >= todayStr) ?? agendaDays[agendaDays.length - 1])
     if (!target) return
     didInitialScroll.current = true
     setSelectedDate(target)
@@ -503,6 +509,19 @@ export default function CalendarioPage() {
     suppressSpy.current = true
   }
 
+  // Cambiar de vista devuelve siempre al día de hoy: es el contexto por defecto
+  // de trabajo y evita quedarse en un día lejano al conmutar.
+  function switchView(next: 'lista' | 'rejilla') {
+    setView(next)
+    setExpandedId(null)
+    const d = new Date()
+    setYear(d.getFullYear()); setMonth(d.getMonth())
+    setSelectedDate(todayStr)
+    pendingScroll.current = todayStr
+    navAt.current = Date.now()
+    suppressSpy.current = true
+  }
+
   function jumpToToday() {
     const d = new Date()
     setYear(d.getFullYear()); setMonth(d.getMonth())
@@ -551,6 +570,7 @@ export default function CalendarioPage() {
   function renderDayGrid(dateStr: string) {
     const dayBookings = (bookingsByDate[dateStr] ?? []).filter(b => b.status !== 'cancelled' && b.start_time)
     const conflicts = conflictMap(dayBookings, resourceByService)
+    const columns = layoutColumns(dayBookings)
     const total = closeMins - openMins
     const hours: number[] = []
     for (let m = openMins; m <= closeMins; m += 60) hours.push(m)
@@ -592,17 +612,24 @@ export default function CalendarioPage() {
               </button>
             ))}
 
-            {/* Reservas */}
+            {/* Reservas: las que se pisan se reparten en columnas, como Outlook */}
             {dayBookings.map(b => {
               const r = bookingRange(b)
               if (!r) return null
               const clash = !!conflicts[b.id]
+              const lay = columns[b.id] ?? { col: 0, cols: 1 }
+              const widthPct = 100 / lay.cols
               return (
                 <button key={b.id} onClick={() => openEditFlow(b)}
-                  className={`absolute left-0 right-0 overflow-hidden rounded-lg border px-2 py-1 text-left transition-colors ${
+                  className={`absolute overflow-hidden rounded-lg border px-2 py-1 text-left transition-colors ${
                     clash ? 'border-rose bg-rose/10' : 'border-line bg-surface hover:bg-surface2'
                   }`}
-                  style={{ top: (r.start - openMins) * GRID_PX_PER_MIN, height: (r.end - r.start) * GRID_PX_PER_MIN - 2 }}>
+                  style={{
+                    top: (r.start - openMins) * GRID_PX_PER_MIN,
+                    height: (r.end - r.start) * GRID_PX_PER_MIN - 2,
+                    left: `calc(${lay.col * widthPct}% + ${lay.col > 0 ? 2 : 0}px)`,
+                    width: `calc(${widthPct}% - ${lay.cols > 1 ? 4 : 0}px)`,
+                  }}>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1 h-3 rounded-full shrink-0" style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])} />
                     <span className="text-xs font-medium text-snow truncate">{b.title}</span>
@@ -758,21 +785,50 @@ export default function CalendarioPage() {
               <ChevronRight size={18} />
             </button>
           </div>
-        </div>
 
-        {/* ── Tira de calendario plegable (en escritorio vive en el panel derecho) ── */}
-        <div className="lg:hidden">{renderCalendar(visibleWeeks)}</div>
+          {/* Acciones a la altura del título */}
+          <div className="flex items-center gap-1 shrink-0 relative">
+            <button
+              onClick={() => setSearchOpen(o => !o)}
+              aria-label={t('calendario_buscar')}
+              title={t('calendario_buscar')}
+              className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                searchOpen || search ? 'border-iris text-iris' : 'border-line text-fog hover:text-snow'
+              }`}
+            >
+              <Search size={16} />
+            </button>
+            <button
+              onClick={() => setFiltersOpen(o => !o)}
+              aria-label={t('calendario_filtros')}
+              title={t('calendario_filtros')}
+              className={`relative w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                filtersActive > 0 ? 'border-iris text-iris' : 'border-line text-fog hover:text-snow'
+              }`}
+            >
+              <Filter size={16} />
+              {filtersActive > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-iris border-2 border-carbon text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                  {filtersActive}
+                </span>
+              )}
+            </button>
+            <div className="flex items-center rounded-lg border border-line bg-surface2 p-0.5">
+              <button onClick={() => switchView('lista')} aria-label={t('calendario_vista_lista')} title={t('calendario_vista_lista')}
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${view === 'lista' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
+                <List size={15} />
+              </button>
+              <button onClick={() => switchView('rejilla')} aria-label={t('calendario_vista_rejilla')} title={t('calendario_vista_rejilla')}
+                className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${view === 'rejilla' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
+                <LayoutGrid size={15} />
+              </button>
+            </div>
 
-        {/* ── Búsqueda, filtros y vista ── */}
-        <div className="flex items-center gap-2 pt-2">
-          <div className="flex-1 min-w-0">
-            <TableFilterBar
-              search={search}
-              onSearchChange={setSearch}
-              searchPlaceholder={t('calendario_buscar')}
-              activeFilterCount={filtersActive}
-              filters={
-                <div className="space-y-3">
+            {/* Desplegable de filtros */}
+            {filtersOpen && (
+              <>
+                <button className="fixed inset-0 z-30 cursor-default" aria-hidden onClick={() => setFiltersOpen(false)} />
+                <div className="absolute right-0 top-11 z-40 w-64 rounded-xl border border-line bg-surface p-3 shadow-2xl space-y-3">
                   <div>
                     <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{t('calendario_tipo')}</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -796,21 +852,34 @@ export default function CalendarioPage() {
                     </div>
                   </div>
                 </div>
-              }
-            />
-          </div>
-          {/* Lista o rejilla horaria del día seleccionado */}
-          <div className="flex items-center rounded-xl border border-line bg-surface2 p-0.5 shrink-0">
-            <button onClick={() => setView('lista')} aria-label={t('calendario_vista_lista')} title={t('calendario_vista_lista')}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${view === 'lista' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
-              <List size={15} />
-            </button>
-            <button onClick={() => setView('rejilla')} aria-label={t('calendario_vista_rejilla')} title={t('calendario_vista_rejilla')}
-              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${view === 'rejilla' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
-              <LayoutGrid size={15} />
-            </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* ── Tira de calendario plegable (en escritorio vive en el panel derecho) ── */}
+        <div className="lg:hidden">{renderCalendar(visibleWeeks)}</div>
+
+        {/* Buscador desplegable: en móvil no roba alto hasta que se usa */}
+        {searchOpen && (
+          <div className="pt-2">
+            <div className="relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mist" />
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t('calendario_buscar')}
+                className="w-full rounded-xl border border-line bg-surface2 py-2 pl-9 pr-9 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors"
+              />
+              <button onClick={() => { setSearch(''); setSearchOpen(false) }}
+                aria-label={t('calendario_cerrar')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-mist hover:text-snow transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Pestaña sobresaliente: cuelga por debajo del borde del panel */}
         <button
@@ -924,6 +993,7 @@ export default function CalendarioPage() {
                     const showPago = b.status !== 'cancelled' && pendiente > 0
                     const hasConflict = !!conflicts[b.id]
                     const sala = resourceOf(b)
+                    const isOpen = expandedId === b.id
                     return (
                       <div key={b.id}>
                         <div className={`flex items-stretch gap-3 rounded-xl border px-3 py-2.5 lg:px-4 lg:py-3 ${
@@ -941,50 +1011,78 @@ export default function CalendarioPage() {
                           style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])}
                         />
 
-                        {/* Contenido */}
-                        <button onClick={() => openEditFlow(b)} className="flex-1 min-w-0 text-left">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-snow">{b.title}</p>
-                            <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
-                            {st === 'ejecutado' && <span className="text-xs font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={10} />{t('calendario_ejecutado')}</span>}
-                            {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={10} />{t('calendario_en_curso')}</span>}
-                            {b.status === 'cancelled' && <span className="text-xs font-semibold text-rose">{t('calendario_cancelada')}</span>}
-                            {showPago && (
-                              <span className="text-xs font-semibold text-amber">
-                                {t('calendario_faltan')} {pendiente.toFixed(0)}€
-                              </span>
-                            )}
-                            {hasConflict && (
-                              <span className="text-xs font-semibold text-rose flex items-center gap-0.5" title={conflicts[b.id].map(c => c.title).join(', ')}>
-                                <AlertTriangle size={11} />{t('calendario_conflicto')}
-                              </span>
-                            )}
-                          </div>
-                          {b.members?.name && <p className="text-xs text-fog mt-0.5">{b.members.name}</p>}
-                          {(sala || b.notes) && (
-                            <p className="text-[11px] text-mist mt-0.5 flex items-center gap-2 flex-wrap">
-                              {sala && <span className="flex items-center gap-1"><MapPin size={10} />{sala}</span>}
-                              {b.notes && <span className="flex items-center gap-1" title={b.notes}><FileText size={10} />{t('calendario_notas')}</span>}
-                            </p>
-                          )}
-                          {(totalG > 0 || gA > 0 || gC > 0) && (
-                            <p className="text-xs text-mist mt-0.5">
-                              {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
-                              {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
-                            </p>
-                          )}
-                        </button>
-
-                        {canExecute && (
+                        {/* Contenido: lo básico siempre, el resto al desplegar */}
+                        <div className="flex-1 min-w-0">
                           <button
-                            type="button"
-                            onClick={() => handleExecute(b)}
-                            disabled={executingId === b.id}
-                            className="flex items-center gap-1 self-start ml-auto text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2 py-1 lg:px-3 lg:py-2 shrink-0 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50"
+                            onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
+                            aria-expanded={isOpen}
+                            className="w-full text-left"
                           >
-                            <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-medium text-snow">{b.title}</p>
+                              <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
+                              {st === 'ejecutado' && <span className="text-xs font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={10} />{t('calendario_ejecutado')}</span>}
+                              {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={10} />{t('calendario_en_curso')}</span>}
+                              {showPago && (
+                                <span className="text-xs font-semibold text-amber">
+                                  {t('calendario_faltan')} {pendiente.toFixed(0)}€
+                                </span>
+                              )}
+                              {hasConflict && (
+                                <span className="text-xs font-semibold text-rose flex items-center gap-0.5" title={conflicts[b.id].map(c => c.title).join(', ')}>
+                                  <AlertTriangle size={11} />{t('calendario_conflicto')}
+                                </span>
+                              )}
+                            </div>
+                            {b.members?.name && <p className="text-xs text-fog mt-0.5 truncate">{b.members.name}</p>}
                           </button>
-                        )}
+
+                          {isOpen && (
+                            <div className="mt-2 pt-2 border-t border-line/60 space-y-1">
+                              {(totalG > 0 || gA > 0 || gC > 0) && (
+                                <p className="text-xs text-mist">
+                                  {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
+                                  {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
+                                </p>
+                              )}
+                              {sala && <p className="text-[11px] text-mist flex items-center gap-1"><MapPin size={11} />{sala}</p>}
+                              {b.amount != null && b.amount > 0 && (
+                                <p className="text-[11px] text-mist flex items-center gap-1">
+                                  <Euro size={11} />{b.amount.toFixed(0)}€
+                                  {b.deposit_amount ? ` · ${t('calendario_senal')} ${b.deposit_amount.toFixed(0)}€` : ''}
+                                  {pendiente > 0 ? ` · ${t('calendario_faltan')} ${pendiente.toFixed(0)}€` : ` · ${t('calendario_pagado')}`}
+                                </p>
+                              )}
+                              {hasConflict && (
+                                <p className="text-[11px] text-rose flex items-center gap-1">
+                                  <AlertTriangle size={11} />{conflicts[b.id].map(c => c.title).join(', ')}
+                                </p>
+                              )}
+                              {b.notes && <p className="text-[11px] text-mist flex items-start gap-1"><FileText size={11} className="mt-0.5 shrink-0" />{b.notes}</p>}
+                              <div className="flex items-center gap-2 pt-1">
+                                <button onClick={() => openEditFlow(b)}
+                                  className="flex items-center gap-1 text-xs font-semibold text-fog border border-line rounded-lg px-2.5 py-1.5 hover:text-snow transition-colors">
+                                  <Pencil size={11} /> {t('calendario_editar')}
+                                </button>
+                                {canExecute && (
+                                  <button type="button" onClick={() => handleExecute(b)} disabled={executingId === b.id}
+                                    className="flex items-center gap-1 text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50">
+                                    <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
+                          aria-label={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
+                          title={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
+                          className="self-start ml-auto w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-snow transition-colors"
+                        >
+                          {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </button>
                         </div>
                         {gapsBefore(gaps, b, timed[bi + 1] ?? null).map(g => renderGap(dateStr, g))}
                       </div>
