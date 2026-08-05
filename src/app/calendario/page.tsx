@@ -494,6 +494,9 @@ export default function CalendarioPage() {
         {rows.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7">
             {week.map(({ date: dateStr, inMonth }) => {
+              // En el panel lateral cada mes muestra solo sus días: si el 1 de
+              // septiembre saliera también en agosto, se marcaría dos veces.
+              if (compact && !inMonth) return <span key={dateStr} className={cellH} />
               const day = Number(dateStr.slice(8, 10))
               const isToday = dateStr === todayStr
               const isSelected = dateStr === selectedDate
@@ -595,12 +598,12 @@ export default function CalendarioPage() {
               <div
                 key={dateStr}
                 ref={el => { dayRefs.current[dateStr] = el }}
-                className={`pt-6 lg:pt-0 lg:mt-4 lg:rounded-2xl lg:border lg:p-4 ${
-                  isToday ? 'lg:border-iris/40 lg:bg-iris/5' : 'lg:border-line lg:bg-surface2/40'
-                }`}
+                className="pt-6 lg:pt-8"
               >
-                {/* Cabecera del día */}
-                <div className="flex items-baseline gap-2.5 mb-3">
+                {/* Cabecera del día: banda que marca dónde empieza cada jornada */}
+                <div className={`flex items-baseline gap-2.5 mb-3 lg:rounded-xl lg:px-4 lg:py-2 lg:border-l-4 ${
+                  isToday ? 'lg:border-iris lg:bg-iris/10' : 'lg:border-line2 lg:bg-surface2'
+                }`}>
                   <span className={`text-lg font-bold ${isToday ? 'text-iris' : 'text-snow'}`}>
                     {dayHeading(dateStr)}
                   </span>
