@@ -447,10 +447,69 @@ export default function CalendarioPage() {
     return () => window.removeEventListener('scroll', onScroll, true)
   }, [agendaDays.join(','), selectedDate, month, year, anchor, todayStr])
 
+  // Un punto por TIPO de reserva del día (cumpleaños, custodia, otros), con su
+  // color: tres custodias siguen siendo un único punto celeste.
+  function dayTypes(dateStr: string): BookingType[] {
+    const present = new Set((bookingsByDate[dateStr] ?? []).filter(b => b.status !== 'cancelled').map(b => b.type))
+    return (['birthday', 'custodia', 'other'] as BookingType[]).filter(x => present.has(x))
+  }
+
+  function renderCalendar(rows: Cell[][]) {
+    return (
+      <>
+        <div className="grid grid-cols-7">
+          {DOW_LABELS.map(d => (
+            <div key={d} className="py-1.5 text-center text-[11px] font-medium text-mist">{d}</div>
+          ))}
+        </div>
+        {rows.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7">
+            {week.map(({ date: dateStr, inMonth }) => {
+              const day = Number(dateStr.slice(8, 10))
+              const isToday = dateStr === todayStr
+              const isSelected = dateStr === selectedDate
+              const types = dayTypes(dateStr)
+              return (
+                <button
+                  key={dateStr}
+                  onClick={() => goToDay(dateStr)}
+                  className="h-12 flex flex-col items-center justify-center gap-1"
+                >
+                  <span className={`w-9 h-9 flex items-center justify-center rounded-full text-sm transition-colors ${
+                    isSelected
+                      ? 'bg-iris text-white font-bold'
+                      : isToday
+                        ? 'text-iris font-bold'
+                        : inMonth
+                          ? 'text-snow font-medium hover:bg-surface2'
+                          : 'text-mist font-medium hover:bg-surface2'
+                  }`}>
+                    {day}
+                  </span>
+                  <span className="flex items-center gap-0.5 h-1">
+                    {types.map(ty => (
+                      <span
+                        key={ty}
+                        className="w-1 h-1 rounded-full"
+                        style={{ backgroundColor: BOOKING_TYPE_COLOR_VAR[ty], opacity: inMonth ? 1 : 0.4 }}
+                      />
+                    ))}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </>
+    )
+  }
+
   return (
-    <div className="bg-carbon text-snow">
+    <div className="bg-carbon text-snow lg:flex lg:items-start lg:gap-6">
+      {/* ── Columna izquierda: cabecera + agenda ── */}
+      <div className="lg:flex-1 lg:min-w-0">
       {/* ── Cabecera fija: mes + acciones + tira de calendario ── */}
-      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 pt-2 pb-[17px] border-b border-line relative">
+      <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:mx-0 px-4 md:px-6 lg:px-0 pt-2 pb-[22px] border-b border-line relative">
         <div className="flex items-center justify-between gap-3 pb-2">
           <div className="flex items-center gap-1 min-w-0">
             <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
@@ -471,61 +530,17 @@ export default function CalendarioPage() {
               <ChevronRight size={18} />
             </button>
           </div>
-          <button
-            onClick={openNewFlow}
-            className="hidden sm:flex items-center gap-2 border border-iris bg-iris/10 text-iris font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-iris/20 transition-colors shrink-0"
-          >
-            <CalendarPlus size={16} /> {t('calendario_nueva_reserva')}
-          </button>
         </div>
 
-        {/* ── Tira de calendario plegable ── */}
-        <div>
-        <div className="grid grid-cols-7">
-          {DOW_LABELS.map(d => (
-            <div key={d} className="py-1.5 text-center text-[11px] font-medium text-mist">{d}</div>
-          ))}
-        </div>
-
-        {visibleWeeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7">
-            {week.map(({ date: dateStr, inMonth }) => {
-              const day = Number(dateStr.slice(8, 10))
-              const isToday = dateStr === todayStr
-              const isSelected = dateStr === selectedDate
-              const hasBookings = (bookingsByDate[dateStr] ?? []).some(b => b.status !== 'cancelled')
-              return (
-                <button
-                  key={dateStr}
-                  onClick={() => goToDay(dateStr)}
-                  className="h-12 flex flex-col items-center justify-center gap-1"
-                >
-                  <span className={`w-9 h-9 flex items-center justify-center rounded-full text-sm transition-colors ${
-                    isSelected
-                      ? 'bg-iris text-white font-bold'
-                      : isToday
-                        ? 'text-iris font-bold'
-                        : inMonth
-                          ? 'text-snow font-medium hover:bg-surface2'
-                          : 'text-mist font-medium hover:bg-surface2'
-                  }`}>
-                    {day}
-                  </span>
-                  <span className={`w-1 h-1 rounded-full ${hasBookings && !isSelected ? (inMonth ? 'bg-iris' : 'bg-iris/40') : 'bg-transparent'}`} />
-                </button>
-              )
-            })}
-          </div>
-        ))}
-
-        </div>
+        {/* ── Tira de calendario plegable (en escritorio vive en el panel derecho) ── */}
+        <div className="lg:hidden">{renderCalendar(visibleWeeks)}</div>
 
         {/* Pestaña sobresaliente: cuelga por debajo del borde del panel */}
         <button
           onClick={() => setStripExpanded(o => !o)}
           aria-label={stripExpanded ? t('calendario_contraer_calendario') : t('calendario_expandir_calendario')}
           aria-expanded={stripExpanded}
-          className="absolute right-4 lg:right-8 -bottom-[26px] z-10 flex items-center justify-center w-12 h-[26px] rounded-b-xl border border-t-0 border-line bg-surface text-fog hover:text-snow hover:bg-surface2 transition-colors shadow-sm"
+          className="lg:hidden absolute right-4 -bottom-[26px] z-10 flex items-center justify-center w-12 h-[26px] rounded-b-xl border border-t-0 border-line bg-surface text-fog hover:text-snow hover:bg-surface2 transition-colors shadow-sm"
         >
           {stripExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
@@ -645,6 +660,14 @@ export default function CalendarioPage() {
           })
         )}
       </div>
+      </div>
+
+      {/* ── Escritorio: calendario del mes siempre desplegado, a la derecha ── */}
+      <aside className="hidden lg:block lg:w-[340px] lg:shrink-0 lg:sticky lg:top-2 lg:pt-2">
+        <div className="rounded-2xl border border-line bg-surface p-3">
+          {renderCalendar(weeks)}
+        </div>
+      </aside>
 
       {/* ── Píldora «Hoy» cuando la agenda está lejos del día actual ── */}
       {showJumpToday && (
@@ -656,11 +679,11 @@ export default function CalendarioPage() {
         </button>
       )}
 
-      {/* ── Botón flotante de nueva reserva (móvil) ── */}
+      {/* ── Botón flotante de nueva reserva ── */}
       <button
         onClick={openNewFlow}
         aria-label={t('calendario_nueva_reserva')}
-        className="sm:hidden fixed bottom-above-nav right-4 z-30 w-14 h-14 rounded-full bg-iris text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
+        className="fixed bottom-above-nav right-4 lg:right-8 z-30 w-14 h-14 rounded-full bg-iris text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
       >
         <CalendarPlus size={22} />
       </button>
