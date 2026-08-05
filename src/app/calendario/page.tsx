@@ -732,6 +732,11 @@ export default function CalendarioPage() {
             <span key={h} className="absolute left-0 right-0 h-px bg-line/60"
               style={{ top: (h - openMins) * TIMELINE_PX_PER_MIN }} />
           ))}
+          {/* Media hora: punteada fina, como referencia secundaria */}
+          {hourSlots.map(h => (
+            <span key={`half-${h}`} className="absolute left-0 right-0 border-t border-dotted border-line/50"
+              style={{ top: (h + 30 - openMins) * TIMELINE_PX_PER_MIN }} />
+          ))}
 
           {/* Franjas vacías: crean una reserva a esa hora */}
           {!isPast && hourSlots.map(h => (
@@ -982,10 +987,10 @@ export default function CalendarioPage() {
                   className={`${cellH} flex flex-col items-center justify-center gap-1`}
                 >
                   <span className={`${circle} flex items-center justify-center rounded-full transition-colors ${
-                    isSelected
-                      ? 'bg-iris text-white font-bold'
-                      : isToday
-                        ? 'text-iris font-bold'
+                    isToday
+                      ? `border-2 border-iris text-iris font-bold${isSelected ? ' bg-iris/15' : ''}`
+                      : isSelected
+                        ? 'bg-iris text-white font-bold'
                         : closed
                           ? 'text-mist/50 font-medium line-through hover:bg-surface2'
                           : inMonth
@@ -1350,6 +1355,9 @@ export default function CalendarioPage() {
 
       {/* ── Escritorio: calendario del mes siempre desplegado, a la derecha ── */}
       <aside className="hidden lg:flex lg:flex-col lg:w-[320px] lg:shrink-0 lg:sticky lg:top-0 lg:h-dvh lg:py-3">
+        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-2 px-1">
+          {t('calendario_titulo_panel')}
+        </p>
         <div className="flex-1 flex flex-col justify-between rounded-2xl border border-line bg-surface px-3 pb-3 overflow-hidden">
           {[-1, 0, 1].map((rel, i) => {
             const d = new Date(year, month + panelOffset + rel, 1)
