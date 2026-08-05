@@ -23,6 +23,7 @@ type Service = {
   included_guests: number | null
   applies_to: string[] | null
   reservable: boolean | null
+  resource_name: string | null
   tipo: string | null
   flujo: string | null
 }
@@ -88,6 +89,7 @@ type FormData = {
   included_guests: string
   applies_to: string[]
   reservable: boolean
+  resource_name: string
   tipo: string
   flujo: string
   // bono
@@ -138,7 +140,7 @@ const CAT_COLORS = [
 const PRICE_UNITS = ['hora', 'sesión', 'bono', 'mes', 'día']
 const INPUT_CLASS = 'w-full bg-surface2 border border-line rounded-xl px-4 py-2 text-sm text-snow placeholder:text-mist outline-none focus:border-line2 transition-colors'
 
-const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [], reservable: false, tipo: 'entrada', flujo: 'cumpleanos', sessions: '', validity_days: '', ilimitado: false }
+const EMPTY_FORM: FormData = { name: '', description: '', category: 'general', price: '', price_unit: 'sesión', duration_min: '', deposit_pct: '50', price_per_guest_adult: '', price_per_guest_child: '', included_guests: '', applies_to: [], reservable: false, resource_name: '', tipo: 'entrada', flujo: 'cumpleanos', sessions: '', validity_days: '', ilimitado: false }
 
 // Categorías que corresponden a paquetes reservables (muestran config de pagos)
 const BOOKING_CATEGORIES = ['cumpleanos', 'sala', 'custodia']
@@ -256,6 +258,7 @@ export default function ServiciosPage() {
       price_per_guest_child: s.price_per_guest_child ? String(s.price_per_guest_child) : '',
       included_guests: s.included_guests ? String(s.included_guests) : '',
       applies_to: s.applies_to ?? [],
+      resource_name: s.resource_name ?? '',
       reservable: s.reservable ?? false,
       tipo: s.tipo ?? 'entrada',
       flujo: s.flujo ?? 'cumpleanos',
@@ -295,6 +298,7 @@ export default function ServiciosPage() {
       price_unit: form.price_unit, duration_min: form.duration_min ? parseInt(form.duration_min) : null,
       tipo: form.tipo,
       flujo: isReservable ? form.flujo : null,
+      resource_name: isReservable ? (form.resource_name.trim() || null) : null,
       deposit_pct: isReservable ? (form.deposit_pct ? parseFloat(form.deposit_pct) : null) : null,
       price_per_guest_adult: isReservable && form.price_per_guest_adult ? parseFloat(form.price_per_guest_adult) : 0,
       price_per_guest_child: isReservable && form.price_per_guest_child ? parseFloat(form.price_per_guest_child) : 0,
@@ -738,6 +742,12 @@ export default function ServiciosPage() {
               {form.tipo === 'reservable' && (
                 <div className="rounded-xl border border-line bg-surface2/40 p-4 space-y-3">
                   <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">{t('panelcfg_config_reservas')}</p>
+                  <div>
+                    <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_sala_recurso')}</label>
+                    <input className={INPUT_CLASS} placeholder={t('panelcfg_sala_recurso_placeholder')}
+                      value={form.resource_name} onChange={e => setForm(f => ({ ...f, resource_name: e.target.value }))} />
+                    <p className="text-[10px] text-mist mt-1">{t('panelcfg_sala_recurso_desc')}</p>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-fog mb-1.5">{t('panelcfg_adelanto_sugerido')}</label>

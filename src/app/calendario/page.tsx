@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown, AlertTriangle, Plus, List, LayoutGrid, MapPin, EyeOff, Eye } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
@@ -11,10 +11,17 @@ import { resolveRates } from '@/lib/pricing'
 import { BookingSearchAndTypeModal, BookingFormModal, bookingBarStyle, bookingDurationLabel, BOOKING_TYPE_COLOR_VAR, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 import { MemberForm, type CreatedMember } from '@/components/MemberForm'
 import { useLanguage } from '@/lib/i18n'
+import { TableFilterBar } from '@/components/TableFilterBar'
+import {
+  conflictMap, daySummary, freeGaps, parseSchedule, isOpenOn,
+  toMinutes, minutesToLabel, durationLabel, bookingRange,
+} from '@/lib/agenda'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
 type BookingStatus = 'pending' | 'confirmed' | 'cancelled'
 type PaymentStatus = 'pending' | 'partial' | 'paid'
+
+interface TenantInfo { capacity: number | null; schedule_days: string | null; schedule_hours: string | null }
 
 interface Booking {
   id: string
@@ -112,6 +119,13 @@ export default function CalendarioPage() {
   // El panel de meses de escritorio navega por su cuenta: mueve sus flechas sin
   // arrastrar la agenda, que sigue mandada por el scroll.
   const [panelOffset, setPanelOffset] = useState(0)
+  // Operativa: búsqueda, filtros, canceladas y vista (lista o rejilla horaria)
+  const [search, setSearch] = useState('')
+  const [filterType, setFilterType] = useState<'todos' | BookingType>('todos')
+  const [filterPago, setFilterPago] = useState<'todos' | 'pendiente' | 'pagado'>('todos')
+  const [showCancelled, setShowCancelled] = useState(false)
+  const [view, setView] = useState<'lista' | 'rejilla'>('lista')
+  const [tenantInfo, setTenantInfo] = useState<TenantInfo>({ capacity: null, schedule_days: null, schedule_hours: null })
   const pendingScroll = useRef<string | null>(null)
   const navAt = useRef(0)
   const agendaRef = useRef<HTMLDivElement>(null)
@@ -133,6 +147,7 @@ export default function CalendarioPage() {
   const [flowQuery, setFlowQuery] = useState('')
   const [flowEditId, setFlowEditId] = useState<string | null>(null)
   const [flowInitial, setFlowInitial] = useState<BookingInitial | null>(null)
+  const [flowDate, setFlowDate] = useState<string | null>(null)
   const [bookingServices, setBookingServices] = useState<BookingService[]>([])
   const [rateAdult, setRateAdult] = useState(3)
   const [rateChild, setRateChild] = useState(7)
@@ -140,7 +155,7 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     supabase.from('services')
-      .select('id, name, description, category, price, price_unit, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')
+      .select('id, name, description, category, price, price_unit, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, resource_name, tipo, flujo')
       .eq('active', true).order('sort_order')
       .then(({ data }) => {
         if (!data) return
@@ -175,8 +190,25 @@ export default function CalendarioPage() {
     ? flowMembers.filter(m => memberMatchesQuery(flowQuery, m))
     : []
 
-  function closeFlow() { setFlowStep(null); setFlowMember(null); setFlowQuery(''); setFlowEditId(null); setFlowInitial(null); setFlowPreselectService(null) }
-  function openNewFlow() { setFlowEditId(null); setFlowInitial(null); setFlowMember(null); setFlowQuery(''); setFlowStep('pick') }
+  function closeFlow() { setFlowStep(null); setFlowMember(null); setFlowQuery(''); setFlowEditId(null); setFlowInitial(null); setFlowPreselectService(null); setFlowDate(null) }
+  function openNewFlow() { setFlowEditId(null); setFlowInitial(null); setFlowMember(null); setFlowQuery(''); setFlowDate(null); setFlowStep('pick') }
+
+  /**
+   * Nueva reserva con contexto: día y, si se pulsa un hueco, también la hora.
+   * Evita tener que volver a elegir lo que ya estabas mirando.
+   */
+  function openNewAt(dateStr: string, startMins?: number, endMins?: number) {
+    setFlowEditId(null)
+    setFlowMember(null)
+    setFlowQuery('')
+    setFlowDate(dateStr)
+    setFlowInitial(startMins != null ? {
+      date: dateStr,
+      start_time: minutesToLabel(startMins),
+      end_time: minutesToLabel(Math.min(endMins ?? startMins + 120, startMins + 120)),
+    } : { date: dateStr })
+    setFlowStep('pick')
+  }
   function openEditFlow(b: Booking) {
     // Las reservas sin titular (datos antiguos) también deben poder editarse
     const mem: FullMember = b.members
@@ -212,6 +244,15 @@ export default function CalendarioPage() {
       .gte('date', from).lte('date', to).order('start_time')
     setBookings((data ?? []) as unknown as Booking[])
   }, [year, month])
+
+  // Horario y aforo del establecimiento: los usan la rejilla, los huecos y el
+  // resumen de cada día.
+  useEffect(() => {
+    const id = getStoredTenant()?.id
+    if (!id) return
+    supabase.from('tenants').select('capacity, schedule_days, schedule_hours').eq('id', id).maybeSingle()
+      .then(({ data }) => { if (data) setTenantInfo(data as TenantInfo) })
+  }, [])
 
   const fetchMembers = useCallback(() => {
     supabase.from('members').select('id, name, phone, children').order('name').then(({ data }) => setMembers((data ?? []) as Member[]))
@@ -273,8 +314,36 @@ export default function CalendarioPage() {
   const DOW_LABELS = DOW_KEYS.map(k => t(k))
   const MONTH_NAMES = MONTH_KEYS.map(k => t(k))
 
+  // Sala de cada servicio: el criterio de solape es por sala, no global
+  const resourceByService: Record<string, string | null> = Object.fromEntries(
+    bookingServices.map(sv => [sv.id, sv.resource_name ?? null])
+  )
+  function resourceOf(b: Booking): string | null {
+    const r = b.service_id ? resourceByService[b.service_id] : null
+    return r && r.trim() ? r.trim() : null
+  }
+
+  const { open: openMins, close: closeMins } = parseSchedule(tenantInfo.schedule_hours)
+
+  // Búsqueda y filtros: los filtros no ocultan el día, solo sus reservas
+  const q = search.trim().toLowerCase()
+  const matchesFilters = (b: Booking) => {
+    if (filterType !== 'todos' && b.type !== filterType) return false
+    if (filterPago === 'pendiente' && b.payment_status === 'paid') return false
+    if (filterPago === 'pagado' && b.payment_status !== 'paid') return false
+    if (!q) return true
+    return [b.title, b.members?.name, b.services?.name, b.child_name]
+      .some(v => (v ?? '').toLowerCase().includes(q))
+  }
+  const filtersActive = (filterType !== 'todos' ? 1 : 0) + (filterPago !== 'todos' ? 1 : 0)
+
   const bookingsByDate: Record<string, Booking[]> = {}
-  bookings.forEach(b => { if (!bookingsByDate[b.date]) bookingsByDate[b.date] = []; bookingsByDate[b.date].push(b) })
+  bookings.filter(matchesFilters).forEach(b => { if (!bookingsByDate[b.date]) bookingsByDate[b.date] = []; bookingsByDate[b.date].push(b) })
+
+  // El resumen del día cuenta SIEMPRE todas las reservas: si contara solo las
+  // filtradas, el aforo y el pendiente de cobro mentirían al filtrar.
+  const allByDate: Record<string, Booking[]> = {}
+  bookings.forEach(b => { if (!allByDate[b.date]) allByDate[b.date] = []; allByDate[b.date].push(b) })
 
   // ── Tira de calendario ──────────────────────────────────────────────
   // Semanas completas (lunes→domingo). Los huecos de inicio y fin se rellenan
@@ -472,6 +541,123 @@ export default function CalendarioPage() {
     return () => window.removeEventListener('scroll', onScroll, true)
   }, [agendaDays.join(','), selectedDate, month, year, anchor, todayStr])
 
+  /**
+   * Vista de día en rejilla: cada reserva ocupa su duración real y los huecos
+   * son clicables para crear a esa hora. Es la vista para PROGRAMAR; la lista
+   * sigue siendo la de consultar.
+   */
+  const GRID_PX_PER_MIN = 1.1
+
+  function renderDayGrid(dateStr: string) {
+    const dayBookings = (bookingsByDate[dateStr] ?? []).filter(b => b.status !== 'cancelled' && b.start_time)
+    const conflicts = conflictMap(dayBookings, resourceByService)
+    const total = closeMins - openMins
+    const hours: number[] = []
+    for (let m = openMins; m <= closeMins; m += 60) hours.push(m)
+
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg font-bold text-snow">{dayHeading(dateStr)}</span>
+          <span className="text-sm text-mist">{relativeLabel(dateStr)}</span>
+          {!isOpenOn(dateStr, tenantInfo.schedule_days) && (
+            <span className="text-[11px] font-semibold text-amber">{t('calendario_cerrado')}</span>
+          )}
+        </div>
+
+        <div className="relative flex" style={{ height: total * GRID_PX_PER_MIN }}>
+          {/* Horas */}
+          <div className="w-14 shrink-0 relative">
+            {hours.map(h => (
+              <span key={h} className="absolute -translate-y-1/2 text-[11px] text-mist"
+                style={{ top: (h - openMins) * GRID_PX_PER_MIN }}>
+                {minutesToLabel(h)}
+              </span>
+            ))}
+          </div>
+
+          {/* Lienzo */}
+          <div className="relative flex-1 min-w-0">
+            {hours.map(h => (
+              <span key={h} className="absolute left-0 right-0 h-px bg-line"
+                style={{ top: (h - openMins) * GRID_PX_PER_MIN }} />
+            ))}
+
+            {/* Franjas libres: clicables */}
+            {freeGaps(dayBookings, openMins, closeMins, 30).map(g => (
+              <button key={`g-${g.start}`} onClick={() => openNewAt(dateStr, g.start, g.end)}
+                className="absolute left-0 right-0 rounded-lg border border-dashed border-line/70 text-[11px] text-mist hover:border-lime/50 hover:text-lime transition-colors flex items-center justify-center"
+                style={{ top: (g.start - openMins) * GRID_PX_PER_MIN + 2, height: (g.end - g.start) * GRID_PX_PER_MIN - 4 }}>
+                {(g.end - g.start) >= 45 ? `+ ${durationLabel(g.end - g.start)} ${t('calendario_libre')}` : '+'}
+              </button>
+            ))}
+
+            {/* Reservas */}
+            {dayBookings.map(b => {
+              const r = bookingRange(b)
+              if (!r) return null
+              const clash = !!conflicts[b.id]
+              return (
+                <button key={b.id} onClick={() => openEditFlow(b)}
+                  className={`absolute left-0 right-0 overflow-hidden rounded-lg border px-2 py-1 text-left transition-colors ${
+                    clash ? 'border-rose bg-rose/10' : 'border-line bg-surface hover:bg-surface2'
+                  }`}
+                  style={{ top: (r.start - openMins) * GRID_PX_PER_MIN, height: (r.end - r.start) * GRID_PX_PER_MIN - 2 }}>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1 h-3 rounded-full shrink-0" style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])} />
+                    <span className="text-xs font-medium text-snow truncate">{b.title}</span>
+                    {clash && <AlertTriangle size={11} className="text-rose shrink-0" />}
+                  </span>
+                  {(r.end - r.start) >= 45 && (
+                    <span className="block text-[11px] text-mist truncate">
+                      {minutesToLabel(r.start)}–{minutesToLabel(r.end)}{resourceOf(b) ? ` · ${resourceOf(b)}` : ''}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  type Gap = { start: number; end: number }
+
+  /** Huecos que van justo entre dos reservas consecutivas (o en los extremos). */
+  function gapsBefore(gaps: Gap[], prev: Booking | null, next: Booking | null): Gap[] {
+    const prevEnd = prev ? (bookingRange(prev)?.end ?? null) : null
+    const nextStart = next ? (bookingRange(next)?.start ?? null) : null
+    return gaps.filter(g => {
+      const afterPrev = prevEnd == null ? g.start <= (nextStart ?? Infinity) : g.start >= prevEnd
+      const beforeNext = nextStart == null ? true : g.end <= nextStart
+      if (prevEnd == null && nextStart == null) return true
+      if (prevEnd == null) return g.end <= nextStart!
+      return afterPrev && beforeNext
+    })
+  }
+
+  /** Hueco libre: clicable para crear una reserva ya con esa hora puesta. */
+  function renderGap(dateStr: string, g: Gap) {
+    return (
+      <button
+        key={`${dateStr}-${g.start}`}
+        onClick={() => openNewAt(dateStr, g.start, g.end)}
+        className="group flex w-full items-center gap-2 py-1.5 text-left"
+      >
+        <span className="w-16 shrink-0 text-[11px] text-mist">{minutesToLabel(g.start)}</span>
+        <span className="flex-1 flex items-center gap-2">
+          <span className="h-px flex-1 bg-line group-hover:bg-line2 transition-colors" />
+          <span className="text-[11px] text-mist group-hover:text-fog transition-colors whitespace-nowrap">
+            {durationLabel(g.end - g.start)} {t('calendario_libre')}
+          </span>
+          <Plus size={11} className="text-mist group-hover:text-lime transition-colors" />
+          <span className="h-px flex-1 bg-line group-hover:bg-line2 transition-colors" />
+        </span>
+      </button>
+    )
+  }
+
   // Un punto por TIPO de reserva del día (cumpleaños, custodia, otros), con su
   // color: tres custodias siguen siendo un único punto celeste.
   function dayTypes(dateStr: string): BookingType[] {
@@ -501,20 +687,27 @@ export default function CalendarioPage() {
               const isToday = dateStr === todayStr
               const isSelected = dateStr === selectedDate
               const types = dayTypes(dateStr)
+              const closed = !isOpenOn(dateStr, tenantInfo.schedule_days)
+              // Densidad: cuanto más lleno el día, más marcado el fondo
+              const load = (bookingsByDate[dateStr] ?? []).filter(b => b.status !== 'cancelled').length
+              const loadBg = isSelected || load === 0 ? '' : load >= 5 ? 'bg-iris/20' : load >= 3 ? 'bg-iris/10' : 'bg-surface2'
               return (
                 <button
                   key={dateStr}
                   onClick={() => goToDay(dateStr)}
+                  title={closed ? t('calendario_cerrado') : undefined}
                   className={`${cellH} flex flex-col items-center justify-center gap-1`}
                 >
-                  <span className={`${circle} flex items-center justify-center rounded-full transition-colors ${
+                  <span className={`${circle} flex items-center justify-center rounded-full transition-colors ${loadBg} ${
                     isSelected
                       ? 'bg-iris text-white font-bold'
                       : isToday
                         ? 'text-iris font-bold'
-                        : inMonth
-                          ? 'text-snow font-medium hover:bg-surface2'
-                          : 'text-mist font-medium hover:bg-surface2'
+                        : closed
+                          ? 'text-mist/50 font-medium line-through hover:bg-surface2'
+                          : inMonth
+                            ? 'text-snow font-medium hover:bg-surface2'
+                            : 'text-mist font-medium hover:bg-surface2'
                   }`}>
                     {day}
                   </span>
@@ -570,6 +763,55 @@ export default function CalendarioPage() {
         {/* ── Tira de calendario plegable (en escritorio vive en el panel derecho) ── */}
         <div className="lg:hidden">{renderCalendar(visibleWeeks)}</div>
 
+        {/* ── Búsqueda, filtros y vista ── */}
+        <div className="flex items-center gap-2 pt-2">
+          <div className="flex-1 min-w-0">
+            <TableFilterBar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder={t('calendario_buscar')}
+              activeFilterCount={filtersActive}
+              filters={
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{t('calendario_tipo')}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {([['todos', t('calendario_todos')], ['birthday', t('calendario_tipo_cumpleanos')], ['custodia', t('calendario_tipo_custodia')], ['other', t('calendario_tipo_otro')]] as const).map(([v, label]) => (
+                        <button key={v} onClick={() => setFilterType(v as typeof filterType)}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
+                            filterType === v ? 'border-iris bg-iris/10 text-iris' : 'border-line text-fog hover:text-snow'
+                          }`}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-fog uppercase tracking-wide mb-1.5">{t('calendario_pago')}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {([['todos', t('calendario_todos')], ['pendiente', t('calendario_solo_pendientes')], ['pagado', t('calendario_solo_pagadas')]] as const).map(([v, label]) => (
+                        <button key={v} onClick={() => setFilterPago(v as typeof filterPago)}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
+                            filterPago === v ? 'border-iris bg-iris/10 text-iris' : 'border-line text-fog hover:text-snow'
+                          }`}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              }
+            />
+          </div>
+          {/* Lista o rejilla horaria del día seleccionado */}
+          <div className="flex items-center rounded-xl border border-line bg-surface2 p-0.5 shrink-0">
+            <button onClick={() => setView('lista')} aria-label={t('calendario_vista_lista')} title={t('calendario_vista_lista')}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${view === 'lista' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
+              <List size={15} />
+            </button>
+            <button onClick={() => setView('rejilla')} aria-label={t('calendario_vista_rejilla')} title={t('calendario_vista_rejilla')}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${view === 'rejilla' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
+              <LayoutGrid size={15} />
+            </button>
+          </div>
+        </div>
+
         {/* Pestaña sobresaliente: cuelga por debajo del borde del panel */}
         <button
           onClick={() => setStripExpanded(o => !o)}
@@ -581,9 +823,14 @@ export default function CalendarioPage() {
         </button>
       </div>
 
+      {/* ── Rejilla horaria del día seleccionado ── */}
+      {view === 'rejilla' && (
+        <div className="pt-4 pb-28 lg:pb-8">{renderDayGrid(selectedDate ?? todayStr)}</div>
+      )}
+
       {/* ── Agenda continua ── */}
       {/* pt-4: deja aire para la pestaña que sobresale de la cabecera */}
-      <div ref={agendaRef} className="pt-4 pb-28 lg:pb-8 relative">
+      <div ref={agendaRef} className={`pt-4 pb-28 lg:pb-8 relative ${view === 'rejilla' ? 'hidden' : ''}`}>
         {agendaDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-mist">{t('calendario_sin_reservas_rango')}</div>
         ) : (
@@ -591,18 +838,24 @@ export default function CalendarioPage() {
             const dayBookings = [...(bookingsByDate[dateStr] ?? [])].sort(
               (a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '')
             )
-            const allDay = dayBookings.filter(b => !b.start_time)
-            const timed = dayBookings.filter(b => b.start_time)
+            const allDay = dayBookings.filter(b => !b.start_time && b.status !== 'cancelled')
+            const timedAll = dayBookings.filter(b => b.start_time)
+            const timed = timedAll.filter(b => b.status !== 'cancelled')
+            const cancelled = dayBookings.filter(b => b.status === 'cancelled')
             const isToday = dateStr === todayStr
+            const sum = daySummary(allByDate[dateStr] ?? [])
+            const aforoOver = !!tenantInfo.capacity && sum.people > tenantInfo.capacity
+            const conflicts = conflictMap(allByDate[dateStr] ?? [], resourceByService)
+            const gaps = dateStr >= todayStr ? freeGaps(allByDate[dateStr] ?? [], openMins, closeMins, 45) : []
             return (
               <div
                 key={dateStr}
                 ref={el => { dayRefs.current[dateStr] = el }}
                 className="pt-6 lg:pt-8"
               >
-                {/* Cabecera del día: banda que marca dónde empieza cada jornada */}
-                <div className={`flex items-baseline gap-2.5 mb-3 lg:rounded-xl lg:px-4 lg:py-2 lg:border-l-4 ${
-                  isToday ? 'lg:border-iris lg:bg-iris/10' : 'lg:border-line2 lg:bg-surface2'
+                {/* Cabecera del día: banda con el resumen operativo de la jornada */}
+                <div className={`flex flex-wrap items-center gap-x-2.5 gap-y-1 mb-3 rounded-xl px-3 py-2 border-l-4 ${
+                  isToday ? 'border-iris bg-iris/10' : 'border-line2 bg-surface2'
                 }`}>
                   <span className={`text-lg font-bold ${isToday ? 'text-iris' : 'text-snow'}`}>
                     {dayHeading(dateStr)}
@@ -610,6 +863,28 @@ export default function CalendarioPage() {
                   <span className={`text-sm ${isToday ? 'text-iris' : 'text-mist'}`}>
                     {relativeLabel(dateStr)}
                   </span>
+                  {!isOpenOn(dateStr, tenantInfo.schedule_days) && (
+                    <span className="text-[11px] font-semibold text-amber">{t('calendario_cerrado')}</span>
+                  )}
+                  <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-fog">
+                    <span>{t('calendario_n_reservas', { n: sum.count, s: sum.count !== 1 ? 's' : '' })}</span>
+                    {sum.people > 0 && (
+                      <span className={aforoOver ? 'text-rose font-semibold' : ''}>
+                        {sum.people}{tenantInfo.capacity ? `/${tenantInfo.capacity}` : ''} {t('calendario_personas')}
+                      </span>
+                    )}
+                    {sum.pending > 0 && (
+                      <span className="text-amber font-semibold">{t('calendario_por_cobrar')} {sum.pending.toFixed(0)}€</span>
+                    )}
+                  </span>
+                  <button
+                    onClick={() => openNewAt(dateStr)}
+                    aria-label={t('calendario_nueva_reserva')}
+                    title={t('calendario_nueva_reserva')}
+                    className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg border border-line bg-surface text-fog hover:text-snow transition-colors"
+                  >
+                    <Plus size={14} />
+                  </button>
                 </div>
 
                 {dayBookings.length === 0 && (
@@ -633,9 +908,10 @@ export default function CalendarioPage() {
                   </div>
                 )}
 
-                {/* Reservas con hora */}
+                {/* Reservas con hora, con los huecos libres intercalados */}
                 <div className="space-y-4 lg:space-y-2">
-                  {timed.map(b => {
+                  {gapsBefore(gaps, null, timed[0] ?? null).map(g => renderGap(dateStr, g))}
+                  {timed.map((b, bi) => {
                     const ts = TYPE_STYLE[b.type]
                     const st = bookingLiveStatus(b, todayStr)
                     const dur = bookingDurationLabel(b.start_time, b.end_time, t)
@@ -644,9 +920,15 @@ export default function CalendarioPage() {
                     const totalG = bookingGuestCount(b)
                     const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
                     const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
-                    const showPago = b.status !== 'cancelled' && (b.amount != null && b.amount > 0)
+                    // El badge de pago solo aparece cuando queda algo por cobrar
+                    const showPago = b.status !== 'cancelled' && pendiente > 0
+                    const hasConflict = !!conflicts[b.id]
+                    const sala = resourceOf(b)
                     return (
-                      <div key={b.id} className={`flex items-stretch gap-3 lg:rounded-xl lg:border lg:border-line lg:bg-surface lg:px-4 lg:py-3 ${st === 'pasado' || b.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                      <div key={b.id}>
+                        <div className={`flex items-stretch gap-3 rounded-xl border px-3 py-2.5 lg:px-4 lg:py-3 ${
+                          hasConflict ? 'border-rose/50 bg-rose/5' : 'border-line bg-surface'
+                        } ${st === 'pasado' ? 'opacity-50' : ''}`}>
                         {/* Hora + duración */}
                         <div className="w-16 shrink-0 pt-0.5">
                           <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5)}</p>
@@ -668,12 +950,23 @@ export default function CalendarioPage() {
                             {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={10} />{t('calendario_en_curso')}</span>}
                             {b.status === 'cancelled' && <span className="text-xs font-semibold text-rose">{t('calendario_cancelada')}</span>}
                             {showPago && (
-                              <span className={`text-xs font-semibold ${paymentBadge(b.payment_status)}`}>
-                                {t(paymentLabelKey(b.payment_status))}{b.payment_status !== 'paid' && pendiente > 0 ? ` · ${pendiente.toFixed(0)}€` : ''}
+                              <span className="text-xs font-semibold text-amber">
+                                {t('calendario_faltan')} {pendiente.toFixed(0)}€
+                              </span>
+                            )}
+                            {hasConflict && (
+                              <span className="text-xs font-semibold text-rose flex items-center gap-0.5" title={conflicts[b.id].map(c => c.title).join(', ')}>
+                                <AlertTriangle size={11} />{t('calendario_conflicto')}
                               </span>
                             )}
                           </div>
                           {b.members?.name && <p className="text-xs text-fog mt-0.5">{b.members.name}</p>}
+                          {(sala || b.notes) && (
+                            <p className="text-[11px] text-mist mt-0.5 flex items-center gap-2 flex-wrap">
+                              {sala && <span className="flex items-center gap-1"><MapPin size={10} />{sala}</span>}
+                              {b.notes && <span className="flex items-center gap-1" title={b.notes}><FileText size={10} />{t('calendario_notas')}</span>}
+                            </p>
+                          )}
                           {(totalG > 0 || gA > 0 || gC > 0) && (
                             <p className="text-xs text-mist mt-0.5">
                               {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
@@ -692,9 +985,36 @@ export default function CalendarioPage() {
                             <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
                           </button>
                         )}
+                        </div>
+                        {gapsBefore(gaps, b, timed[bi + 1] ?? null).map(g => renderGap(dateStr, g))}
                       </div>
                     )
                   })}
+
+                  {/* Canceladas: plegadas para que no compitan con las vivas */}
+                  {cancelled.length > 0 && (
+                    <div className="pt-1">
+                      <button
+                        onClick={() => setShowCancelled(v => !v)}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-mist hover:text-fog transition-colors"
+                      >
+                        {showCancelled ? <EyeOff size={12} /> : <Eye size={12} />}
+                        {showCancelled ? t('calendario_ocultar_canceladas') : `${t('calendario_ver_canceladas')} (${cancelled.length})`}
+                      </button>
+                      {showCancelled && (
+                        <div className="mt-2 space-y-1">
+                          {cancelled.map(c => (
+                            <button key={c.id} onClick={() => openEditFlow(c)}
+                              className="flex w-full items-center gap-2 text-left rounded-lg px-2 py-1.5 hover:bg-surface2 transition-colors">
+                              <span className="text-xs text-mist w-12 shrink-0">{c.start_time?.slice(0, 5) ?? '—'}</span>
+                              <span className="text-xs text-mist line-through truncate flex-1">{c.title}</span>
+                              <span className="text-[10px] font-semibold text-rose shrink-0">{t('calendario_cancelada')}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -800,7 +1120,7 @@ export default function CalendarioPage() {
           bookingType={flowType}
           serviceCategory={flowCategory}
           preselectServiceId={flowPreselectService}
-          selectedDate={selectedDate ?? todayStr}
+          selectedDate={flowDate ?? selectedDate ?? todayStr}
           services={bookingServices}
           rateAdult={rateAdult}
           rateChild={rateChild}

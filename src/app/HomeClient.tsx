@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant } from '@/lib/tenant'
 import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
 import { childKey } from '@/lib/children'
+import { findConflicts } from '@/lib/agenda'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { resolveRates } from '@/lib/pricing'
@@ -1003,17 +1004,21 @@ export function BookingFormModal({
   async function handleSave(force = false) {
     if (!isValid || saving) return
     setSaving(true); setError(null)
-    // Aviso de solape: otra reserva activa en la misma franja horaria y fecha.
-    // No bloquea (puede haber varias salas); pide una confirmación extra.
+    // Aviso de solape: otra reserva activa que ocupa la MISMA sala en esa franja.
+    // Con salas distintas ya no avisa, que era lo que enseñaba a ignorar el aviso.
     if (!force && startTime && endTime) {
       const { data: sameDay } = await supabase
         .from('bookings')
-        .select('id, start_time, end_time, title')
+        .select('id, start_time, end_time, title, status, service_id, date')
         .eq('date', date).neq('status', 'cancelled')
-      const clash = (sameDay ?? []).find(b =>
-        b.id !== editId && b.start_time && b.end_time &&
-        b.start_time < endTime && startTime < b.end_time
+      const resourceByService: Record<string, string | null> = Object.fromEntries(
+        services.map(sv => [sv.id, sv.resource_name ?? null])
       )
+      const candidate = {
+        id: editId ?? '__nueva__', date, start_time: startTime, end_time: endTime,
+        status: 'confirmed', service_id: serviceId || null, title: title.trim(),
+      }
+      const clash = findConflicts(candidate, (sameDay ?? []) as any[], resourceByService)[0]
       if (clash) {
         setOverlap(clash.title ?? t('home_otra_reserva_lc'))
         setSaving(false)
@@ -1430,6 +1435,7 @@ export type BookingService = {
   included_guests: number | null
   applies_to: string[] | null
   reservable: boolean | null
+  resource_name: string | null
   tipo: string | null
   flujo: string | null
 }
@@ -1847,7 +1853,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
         }
       })
     supabase.from('services')
-      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, tipo, flujo')
+      .select('id, name, description, category, price, deposit_pct, price_per_guest_adult, price_per_guest_child, included_guests, applies_to, reservable, resource_name, tipo, flujo')
       .eq('active', true).order('sort_order')
       .then(({ data }) => { if (data) setBookingServices(data as BookingService[]) })
   }, [])
