@@ -3,6 +3,7 @@ export const dictCalendario = {
   calendario_subtitulo: { es: 'Reservas y custodia', en: 'Bookings and childcare', ca: 'Reserves i custòdia', de: 'Buchungen und Kinderbetreuung' },
   calendario_nueva_reserva: { es: 'Nueva reserva', en: 'New booking', ca: 'Nova reserva', de: 'Neue Buchung' },
   calendario_hoy: { es: 'Hoy', en: 'Today', ca: 'Avui', de: 'Heute' },
+  calendario_simultaneas: { es: '{n} a la vez', en: '{n} at once', ca: '{n} alhora', de: '{n} gleichzeitig' },
   calendario_filtros: { es: 'Filtros', en: 'Filters', ca: 'Filtres', de: 'Filter' },
   calendario_mas_detalle: { es: 'Ver detalle', en: 'Show details', ca: 'Veure detall', de: 'Details anzeigen' },
   calendario_menos_detalle: { es: 'Ocultar detalle', en: 'Hide details', ca: 'Amagar detall', de: 'Details ausblenden' },

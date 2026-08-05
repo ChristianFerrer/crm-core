@@ -208,3 +208,26 @@ export function layoutColumns<T extends TimedBooking>(
   flush()
   return out
 }
+
+/**
+ * Agrupa las reservas de un día en bloques que se solapan entre sí.
+ * Cada bloque es un conjunto de reservas simultáneas, en orden de inicio; los
+ * bloques van ordenados y no se pisan entre ellos.
+ */
+export function overlapClusters<T extends TimedBooking>(dayBookings: T[]): T[][] {
+  const items = dayBookings
+    .map(b => ({ b, r: bookingRange(b) }))
+    .filter((x): x is { b: T; r: { start: number; end: number } } => !!x.r)
+    .sort((a, b) => a.r.start - b.r.start || a.r.end - b.r.end)
+
+  const clusters: T[][] = []
+  let current: T[] = []
+  let end = -1
+  for (const { b, r } of items) {
+    if (current.length > 0 && r.start >= end) { clusters.push(current); current = []; end = -1 }
+    current.push(b)
+    end = Math.max(end, r.end)
+  }
+  if (current.length > 0) clusters.push(current)
+  return clusters
+}

@@ -13,7 +13,7 @@ import { MemberForm, type CreatedMember } from '@/components/MemberForm'
 import { useLanguage } from '@/lib/i18n'
 import {
   conflictMap, daySummary, freeGaps, parseSchedule, isOpenOn,
-  toMinutes, minutesToLabel, durationLabel, bookingRange, layoutColumns,
+  toMinutes, minutesToLabel, durationLabel, bookingRange, layoutColumns, overlapClusters,
 } from '@/lib/agenda'
 
 type BookingType = 'birthday' | 'custodia' | 'other'
@@ -663,6 +663,124 @@ export default function CalendarioPage() {
     })
   }
 
+  /**
+   * Tarjeta de una reserva. `grouped` es la variante para bloques de reservas
+   * simultáneas: sin columna de hora propia (la lleva el bloque) y con la
+   * franja dentro de la tarjeta.
+   */
+  function renderBookingCard(b: Booking, conflicts: Record<string, Booking[]>, dateStr: string, grouped = false) {
+    const ts = TYPE_STYLE[b.type]
+    const st = bookingLiveStatus(b, todayStr)
+    const dur = bookingDurationLabel(b.start_time, b.end_time, t)
+    const gA = b.guest_adults ?? 0
+    const gC = b.guest_children ?? 0
+    const totalG = bookingGuestCount(b)
+    const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
+    const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
+    // El badge de pago solo aparece cuando queda algo por cobrar
+    const showPago = b.status !== 'cancelled' && pendiente > 0
+    const hasConflict = !!conflicts[b.id]
+    const sala = resourceOf(b)
+    const isOpen = expandedId === b.id
+    return (
+        <div className={`flex items-stretch gap-3 rounded-xl border px-3 py-2.5 lg:px-4 lg:py-3 ${
+          hasConflict ? 'border-rose/50 bg-rose/5' : 'border-line bg-surface'
+        } ${st === 'pasado' ? 'opacity-50' : ''}`}>
+        {/* Hora + duración (en bloque simultáneo la lleva el propio bloque) */}
+        {!grouped && (
+          <div className="w-16 shrink-0 pt-0.5">
+            <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5)}</p>
+            {dur && <p className="text-xs text-mist leading-tight mt-0.5">{dur}</p>}
+          </div>
+        )}
+
+        {/* Barra de color */}
+        <span
+          className="w-1 rounded-full shrink-0"
+          style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])}
+        />
+
+        {/* Contenido: lo básico siempre, el resto al desplegar */}
+        <div className="flex-1 min-w-0">
+          <button
+            onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
+            aria-expanded={isOpen}
+            className="w-full text-left"
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-medium text-snow">{b.title}</p>
+              <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
+              {st === 'ejecutado' && <span className="text-xs font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={10} />{t('calendario_ejecutado')}</span>}
+              {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={10} />{t('calendario_en_curso')}</span>}
+              {showPago && (
+                <span className="text-xs font-semibold text-amber">
+                  {t('calendario_faltan')} {pendiente.toFixed(0)}€
+                </span>
+              )}
+              {hasConflict && (
+                <span className="text-xs font-semibold text-rose flex items-center gap-0.5" title={conflicts[b.id].map(c => c.title).join(', ')}>
+                  <AlertTriangle size={11} />{t('calendario_conflicto')}
+                </span>
+              )}
+            </div>
+            {grouped && (
+              <p className="text-[11px] text-mist mt-0.5">
+                {b.start_time?.slice(0, 5)}{b.end_time ? `–${b.end_time.slice(0, 5)}` : ''}
+              </p>
+            )}
+            {b.members?.name && <p className="text-xs text-fog mt-0.5 truncate">{b.members.name}</p>}
+          </button>
+
+          {isOpen && (
+            <div className="mt-2 pt-2 border-t border-line/60 space-y-1">
+              {(totalG > 0 || gA > 0 || gC > 0) && (
+                <p className="text-xs text-mist">
+                  {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
+                  {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
+                </p>
+              )}
+              {sala && <p className="text-[11px] text-mist flex items-center gap-1"><MapPin size={11} />{sala}</p>}
+              {b.amount != null && b.amount > 0 && (
+                <p className="text-[11px] text-mist flex items-center gap-1">
+                  <Euro size={11} />{b.amount.toFixed(0)}€
+                  {b.deposit_amount ? ` · ${t('calendario_senal')} ${b.deposit_amount.toFixed(0)}€` : ''}
+                  {pendiente > 0 ? ` · ${t('calendario_faltan')} ${pendiente.toFixed(0)}€` : ` · ${t('calendario_pagado')}`}
+                </p>
+              )}
+              {hasConflict && (
+                <p className="text-[11px] text-rose flex items-center gap-1">
+                  <AlertTriangle size={11} />{conflicts[b.id].map(c => c.title).join(', ')}
+                </p>
+              )}
+              {b.notes && <p className="text-[11px] text-mist flex items-start gap-1"><FileText size={11} className="mt-0.5 shrink-0" />{b.notes}</p>}
+              <div className="flex items-center gap-2 pt-1">
+                <button onClick={() => openEditFlow(b)}
+                  className="flex items-center gap-1 text-xs font-semibold text-fog border border-line rounded-lg px-2.5 py-1.5 hover:text-snow transition-colors">
+                  <Pencil size={11} /> {t('calendario_editar')}
+                </button>
+                {canExecute && (
+                  <button type="button" onClick={() => handleExecute(b)} disabled={executingId === b.id}
+                    className="flex items-center gap-1 text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50">
+                    <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
+          aria-label={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
+          title={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
+          className="self-start ml-auto w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-snow transition-colors"
+        >
+          {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+        </button>
+        </div>
+    )
+  }
+
   /** Hueco libre: clicable para crear una reserva ya con esa hora puesta. */
   function renderGap(dateStr: string, g: Gap) {
     return (
@@ -812,7 +930,9 @@ export default function CalendarioPage() {
                 </span>
               )}
             </button>
-            <div className="flex items-center rounded-lg border border-line bg-surface2 p-0.5">
+            {/* En escritorio la lista ya muestra los solapes en paralelo, así que
+                el conmutador de vista solo aparece en móvil */}
+            <div className="lg:hidden flex items-center rounded-lg border border-line bg-surface2 p-0.5">
               <button onClick={() => switchView('lista')} aria-label={t('calendario_vista_lista')} title={t('calendario_vista_lista')}
                 className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${view === 'lista' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
                 <List size={15} />
@@ -893,12 +1013,12 @@ export default function CalendarioPage() {
 
       {/* ── Rejilla horaria del día seleccionado ── */}
       {view === 'rejilla' && (
-        <div className="pt-4 pb-28 lg:pb-8">{renderDayGrid(selectedDate ?? todayStr)}</div>
+        <div className="lg:hidden pt-4 pb-28">{renderDayGrid(selectedDate ?? todayStr)}</div>
       )}
 
       {/* ── Agenda continua ── */}
       {/* pt-4: deja aire para la pestaña que sobresale de la cabecera */}
-      <div ref={agendaRef} className={`pt-4 pb-28 lg:pb-8 relative ${view === 'rejilla' ? 'hidden' : ''}`}>
+      <div ref={agendaRef} className={`pt-4 pb-28 lg:pb-8 relative ${view === 'rejilla' ? 'hidden lg:block' : ''}`}>
         {agendaDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-mist">{t('calendario_sin_reservas_rango')}</div>
         ) : (
@@ -915,6 +1035,7 @@ export default function CalendarioPage() {
             const aforoOver = !!tenantInfo.capacity && sum.people > tenantInfo.capacity
             const conflicts = conflictMap(allByDate[dateStr] ?? [], resourceByService)
             const gaps = dateStr >= todayStr ? freeGaps(allByDate[dateStr] ?? [], openMins, closeMins, 45) : []
+            const clusters = overlapClusters(timed)
             return (
               <div
                 key={dateStr}
@@ -976,114 +1097,36 @@ export default function CalendarioPage() {
                   </div>
                 )}
 
-                {/* Reservas con hora, con los huecos libres intercalados */}
+                {/* Reservas con hora. Las simultáneas se muestran una al lado
+                    de otra en escritorio; en móvil se apilan con su aviso. */}
                 <div className="space-y-4 lg:space-y-2">
-                  {gapsBefore(gaps, null, timed[0] ?? null).map(g => renderGap(dateStr, g))}
-                  {timed.map((b, bi) => {
-                    const ts = TYPE_STYLE[b.type]
-                    const st = bookingLiveStatus(b, todayStr)
-                    const dur = bookingDurationLabel(b.start_time, b.end_time, t)
-                    const gA = b.guest_adults ?? 0
-                    const gC = b.guest_children ?? 0
-                    const totalG = bookingGuestCount(b)
-                    const canExecute = st !== 'ejecutado' && b.status !== 'cancelled' && !!b.member_id && b.date === todayStr
-                    const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
-                    // El badge de pago solo aparece cuando queda algo por cobrar
-                    const showPago = b.status !== 'cancelled' && pendiente > 0
-                    const hasConflict = !!conflicts[b.id]
-                    const sala = resourceOf(b)
-                    const isOpen = expandedId === b.id
+                  {gapsBefore(gaps, null, clusters[0]?.[0] ?? null).map(g => renderGap(dateStr, g))}
+                  {clusters.map((cluster, ci) => {
+                    const last = cluster.reduce((acc, x) => (bookingRange(x)?.end ?? 0) > (bookingRange(acc)?.end ?? 0) ? x : acc, cluster[0])
+                    const next = clusters[ci + 1]?.[0] ?? null
                     return (
-                      <div key={b.id}>
-                        <div className={`flex items-stretch gap-3 rounded-xl border px-3 py-2.5 lg:px-4 lg:py-3 ${
-                          hasConflict ? 'border-rose/50 bg-rose/5' : 'border-line bg-surface'
-                        } ${st === 'pasado' ? 'opacity-50' : ''}`}>
-                        {/* Hora + duración */}
-                        <div className="w-16 shrink-0 pt-0.5">
-                          <p className="text-xs text-snow leading-tight">{b.start_time?.slice(0, 5)}</p>
-                          {dur && <p className="text-xs text-mist leading-tight mt-0.5">{dur}</p>}
-                        </div>
-
-                        {/* Barra de color */}
-                        <span
-                          className="w-1 rounded-full shrink-0"
-                          style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])}
-                        />
-
-                        {/* Contenido: lo básico siempre, el resto al desplegar */}
-                        <div className="flex-1 min-w-0">
-                          <button
-                            onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
-                            aria-expanded={isOpen}
-                            className="w-full text-left"
-                          >
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-medium text-snow">{b.title}</p>
-                              <span className={`text-xs font-semibold ${ts.badge}`}>{t(ts.labelKey)}</span>
-                              {st === 'ejecutado' && <span className="text-xs font-semibold text-mint flex items-center gap-0.5"><CheckCircle size={10} />{t('calendario_ejecutado')}</span>}
-                              {st === 'en_curso' && <span className="text-xs font-semibold text-lime flex items-center gap-0.5"><Clock size={10} />{t('calendario_en_curso')}</span>}
-                              {showPago && (
-                                <span className="text-xs font-semibold text-amber">
-                                  {t('calendario_faltan')} {pendiente.toFixed(0)}€
-                                </span>
-                              )}
-                              {hasConflict && (
-                                <span className="text-xs font-semibold text-rose flex items-center gap-0.5" title={conflicts[b.id].map(c => c.title).join(', ')}>
-                                  <AlertTriangle size={11} />{t('calendario_conflicto')}
-                                </span>
-                              )}
+                      <div key={cluster[0].id}>
+                        {cluster.length === 1 ? (
+                          renderBookingCard(cluster[0], conflicts, dateStr)
+                        ) : (
+                          <div className="flex items-stretch gap-3">
+                            {/* Hora del bloque, una sola vez */}
+                            <div className="w-16 shrink-0 pt-0.5">
+                              <p className="text-xs text-snow leading-tight">{cluster[0].start_time?.slice(0, 5)}</p>
+                              <p className="text-[10px] text-mist leading-tight mt-0.5">
+                                {t('calendario_simultaneas', { n: cluster.length })}
+                              </p>
                             </div>
-                            {b.members?.name && <p className="text-xs text-fog mt-0.5 truncate">{b.members.name}</p>}
-                          </button>
-
-                          {isOpen && (
-                            <div className="mt-2 pt-2 border-t border-line/60 space-y-1">
-                              {(totalG > 0 || gA > 0 || gC > 0) && (
-                                <p className="text-xs text-mist">
-                                  {totalG} {b.type === 'custodia' ? t('calendario_ninos', { s: totalG !== 1 ? 's' : '' }) : t('calendario_invitados', { s: totalG !== 1 ? 's' : '' })}
-                                  {b.type !== 'custodia' && (gA > 0 || gC > 0) && <span> · {gA} {t('calendario_adultos', { s: gA !== 1 ? 's' : '' })}, {gC} {t('calendario_ninos', { s: gC !== 1 ? 's' : '' })}</span>}
-                                </p>
-                              )}
-                              {sala && <p className="text-[11px] text-mist flex items-center gap-1"><MapPin size={11} />{sala}</p>}
-                              {b.amount != null && b.amount > 0 && (
-                                <p className="text-[11px] text-mist flex items-center gap-1">
-                                  <Euro size={11} />{b.amount.toFixed(0)}€
-                                  {b.deposit_amount ? ` · ${t('calendario_senal')} ${b.deposit_amount.toFixed(0)}€` : ''}
-                                  {pendiente > 0 ? ` · ${t('calendario_faltan')} ${pendiente.toFixed(0)}€` : ` · ${t('calendario_pagado')}`}
-                                </p>
-                              )}
-                              {hasConflict && (
-                                <p className="text-[11px] text-rose flex items-center gap-1">
-                                  <AlertTriangle size={11} />{conflicts[b.id].map(c => c.title).join(', ')}
-                                </p>
-                              )}
-                              {b.notes && <p className="text-[11px] text-mist flex items-start gap-1"><FileText size={11} className="mt-0.5 shrink-0" />{b.notes}</p>}
-                              <div className="flex items-center gap-2 pt-1">
-                                <button onClick={() => openEditFlow(b)}
-                                  className="flex items-center gap-1 text-xs font-semibold text-fog border border-line rounded-lg px-2.5 py-1.5 hover:text-snow transition-colors">
-                                  <Pencil size={11} /> {t('calendario_editar')}
-                                </button>
-                                {canExecute && (
-                                  <button type="button" onClick={() => handleExecute(b)} disabled={executingId === b.id}
-                                    className="flex items-center gap-1 text-xs font-semibold text-lime border border-lime bg-lime/10 rounded-lg px-2.5 py-1.5 hover:bg-lime/20 active:scale-95 transition-all disabled:opacity-50">
-                                    <Play size={11} fill="currentColor" /> {executingId === b.id ? '...' : t('calendario_ejecutar')}
-                                  </button>
-                                )}
-                              </div>
+                            <div className="flex-1 min-w-0 flex flex-col lg:flex-row gap-2">
+                              {cluster.map(b => (
+                                <div key={b.id} className="lg:flex-1 lg:min-w-0">
+                                  {renderBookingCard(b, conflicts, dateStr, true)}
+                                </div>
+                              ))}
                             </div>
-                          )}
-                        </div>
-
-                        <button
-                          onClick={() => setExpandedId(id => id === b.id ? null : b.id)}
-                          aria-label={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
-                          title={isOpen ? t('calendario_menos_detalle') : t('calendario_mas_detalle')}
-                          className="self-start ml-auto w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-snow transition-colors"
-                        >
-                          {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                        </button>
-                        </div>
-                        {gapsBefore(gaps, b, timed[bi + 1] ?? null).map(g => renderGap(dateStr, g))}
+                          </div>
+                        )}
+                        {gapsBefore(gaps, last, next).map(g => renderGap(dateStr, g))}
                       </div>
                     )
                   })}
