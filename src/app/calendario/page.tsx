@@ -717,7 +717,7 @@ export default function CalendarioPage() {
     return (
       <div className="relative flex" style={{ height: total * TIMELINE_PX_PER_MIN }}>
         {/* Carril de horas */}
-        <div className="w-16 shrink-0 relative">
+        <div className="w-12 lg:w-16 shrink-0 relative">
           {hourSlots.map(h => (
             <span key={h} className="absolute -translate-y-1/2 text-[11px] font-semibold text-mist tabular-nums"
               style={{ top: (h - openMins) * TIMELINE_PX_PER_MIN }}>
@@ -810,7 +810,7 @@ export default function CalendarioPage() {
       <div className={`overflow-hidden rounded-xl border ${hasConflict ? 'border-rose' : 'border-line'} bg-surface ${st === 'pasado' ? 'opacity-50' : ''} ${fill ? 'h-full flex flex-col' : ''}`}>
         {/* Conflicto: banda con trama, centrada arriba */}
         {hasConflict && (
-          <div className="hatch-rose flex items-center justify-center gap-1 leading-none py-[3px]">
+          <div className="hatch-rose flex items-center gap-1 leading-none py-[3px] px-2">
             <AlertTriangle size={9} className="text-white shrink-0" />
             <span className="text-[9px] font-extrabold uppercase tracking-wide text-white">
               {t('calendario_conflicto_banner')}
@@ -1269,63 +1269,8 @@ export default function CalendarioPage() {
                   </div>
                 ) : (
                 <>
-                {/* Escritorio: la reserva ocupa su franja real en la escala */}
-                <div className="hidden lg:block">{renderDayTimeline(dateStr, timed, conflicts)}</div>
-
-                <div className="space-y-1 lg:hidden">
-                  {/* Móvil: una sección por hora del horario del establecimiento */}
-                  {hourSlots.map(hourStart => {
-                    const inHour = clusters.filter(c => {
-                      const st = bookingRange(c[0])?.start ?? 0
-                      const clamped = Math.min(Math.max(st, openMins), closeMins - 1)
-                      return Math.floor(clamped / 60) * 60 === hourStart
-                    })
-                    const isPast = dateStr < todayStr
-                    return (
-                      <div key={hourStart} className="flex items-start gap-3 border-t border-line/60 pt-2 pb-1">
-                        <span className="w-14 lg:w-16 shrink-0 text-[11px] font-semibold text-mist tabular-nums pt-1">
-                          {minutesToLabel(hourStart)}
-                        </span>
-                        <div className="flex-1 min-w-0 space-y-2">
-                          {inHour.length === 0 ? (
-                            isPast ? (
-                              <div className="h-7" />
-                            ) : (
-                              <button
-                                onClick={() => openNewAt(dateStr, hourStart, hourStart + 60)}
-                                className="group flex w-full items-center gap-2 rounded-lg px-2 h-7 text-left text-[11px] text-mist hover:bg-surface2 hover:text-fog transition-colors"
-                              >
-                                <Plus size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                {t('calendario_libre')}
-                              </button>
-                            )
-                          ) : inHour.map(cluster => {
-                            const clusterStart = bookingRange(cluster[0])?.start ?? 0
-                            if (cluster.length === 1) return <div key={cluster[0].id}>{renderBookingCard(cluster[0], conflicts, dateStr)}</div>
-                            return (
-                              <div key={cluster[0].id} className="flex flex-col lg:flex-row lg:items-start gap-2">
-                                {cluster.map(b => {
-                                  // Escalonado: la que empieza más tarde arranca más abajo
-                                  const startMin = bookingRange(b)?.start ?? clusterStart
-                                  const offset = Math.min(96, Math.round((startMin - clusterStart) * 0.7))
-                                  return (
-                                    <div
-                                      key={b.id}
-                                      className="stagger lg:flex-1 lg:min-w-0"
-                                      style={{ '--stagger': `${offset}px` } as React.CSSProperties}
-                                    >
-                                      {renderBookingCard(b, conflicts, dateStr)}
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                {/* La reserva ocupa su franja real de la escala, en móvil y en escritorio */}
+                {renderDayTimeline(dateStr, timed, conflicts)}
 
                 {/* Canceladas: plegadas para que no compitan con las vivas */}
                   {cancelled.length > 0 && (
