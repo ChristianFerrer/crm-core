@@ -1103,6 +1103,7 @@ export default function CalendarioPage() {
                   {gapsBefore(gaps, null, clusters[0]?.[0] ?? null).map(g => renderGap(dateStr, g))}
                   {clusters.map((cluster, ci) => {
                     const last = cluster.reduce((acc, x) => (bookingRange(x)?.end ?? 0) > (bookingRange(acc)?.end ?? 0) ? x : acc, cluster[0])
+                    const clusterStart = bookingRange(cluster[0])?.start ?? 0
                     const next = clusters[ci + 1]?.[0] ?? null
                     return (
                       <div key={cluster[0].id}>
@@ -1117,12 +1118,21 @@ export default function CalendarioPage() {
                                 {t('calendario_simultaneas', { n: cluster.length })}
                               </p>
                             </div>
-                            <div className="flex-1 min-w-0 flex flex-col lg:flex-row gap-2">
-                              {cluster.map(b => (
-                                <div key={b.id} className="lg:flex-1 lg:min-w-0">
-                                  {renderBookingCard(b, conflicts, dateStr, true)}
-                                </div>
-                              ))}
+                            <div className="flex-1 min-w-0 flex flex-col lg:flex-row lg:items-start gap-2">
+                              {cluster.map(b => {
+                                // Escalonado: la que empieza más tarde arranca más abajo
+                                const startMin = bookingRange(b)?.start ?? clusterStart
+                                const offset = Math.min(96, Math.round((startMin - clusterStart) * 0.7))
+                                return (
+                                  <div
+                                    key={b.id}
+                                    className="stagger lg:flex-1 lg:min-w-0"
+                                    style={{ '--stagger': `${offset}px` } as React.CSSProperties}
+                                  >
+                                    {renderBookingCard(b, conflicts, dateStr, true)}
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
                         )}

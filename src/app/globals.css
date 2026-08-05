@@ -170,6 +170,14 @@
   color: var(--color-carbon) !important;
 }
 
+/* Escalonado de las reservas simultáneas de la agenda: en escritorio cada
+   tarjeta baja en proporción a lo que empieza más tarde, como en Outlook.
+   En móvil se apilan, así que el desplazamiento se anula. */
+.stagger { margin-top: 0; }
+@media (min-width: 1024px) {
+  .stagger { margin-top: var(--stagger, 0px); }
+}
+
 /* `overflow-x: clip` en vez de `hidden`: recorta igual en horizontal pero no
    convierte html/body en contenedores de scroll, que es lo que rompía
    `position: sticky` (cabecera de la Agenda). */
