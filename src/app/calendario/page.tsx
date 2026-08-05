@@ -507,6 +507,9 @@ export default function CalendarioPage() {
     pendingScroll.current = dateStr
     navAt.current = Date.now()
     suppressSpy.current = true
+    // Red de seguridad: si el destino no llega a existir, el scroll-spy no se
+    // queda desactivado para siempre.
+    setTimeout(() => { suppressSpy.current = false; pendingScroll.current = null }, 1200)
   }
 
   // Cambiar de vista devuelve siempre al día de hoy: es el contexto por defecto
@@ -522,15 +525,11 @@ export default function CalendarioPage() {
     suppressSpy.current = true
   }
 
+  // Reutiliza goToDay: la sección de hoy puede no existir aún (si el día no
+  // tiene reservas se crea al seleccionarlo), y goToDay ya espera al repintado
+  // en vez de desplazar en el mismo tick, que era lo que dejaba el botón muerto.
   function jumpToToday() {
-    const d = new Date()
-    setYear(d.getFullYear()); setMonth(d.getMonth())
-    setSelectedDate(todayStr)
-    if (!scrollToDay(todayStr)) {
-      const scroller = getScroller()
-      if (scroller) scroller.scrollTo({ top: 0, behavior: 'instant' })
-      else window.scrollTo({ top: 0, behavior: 'instant' })
-    }
+    goToDay(todayStr)
   }
 
   // Scroll-spy: el primer día que queda bajo la cabecera fija manda sobre la
