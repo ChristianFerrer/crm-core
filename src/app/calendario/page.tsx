@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown, AlertTriangle, Plus, List, LayoutGrid, MapPin, EyeOff, Eye, Search, Filter } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Clock, User, FileText, Tag, Calendar, Users, Euro, Pencil, Trash2, CheckCircle, UserPlus, CalendarPlus, Play, ArrowUp, ChevronUp, ChevronDown, AlertTriangle, Plus, List, LayoutGrid, MapPin, EyeOff, Eye, Search, Filter, Rows3, LayoutList } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
@@ -127,6 +127,18 @@ export default function CalendarioPage() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Modo compacto: una línea por reserva para ver la jornada entera de un vistazo
+  const [compact, setCompact] = useState(false)
+  useEffect(() => {
+    try { setCompact(localStorage.getItem('wm_agenda_compact') === '1') } catch {}
+  }, [])
+  function toggleCompact() {
+    setCompact(v => {
+      const next = !v
+      try { localStorage.setItem('wm_agenda_compact', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
   const [tenantInfo, setTenantInfo] = useState<TenantInfo>({ capacity: null, schedule_days: null, schedule_hours: null })
   const pendingScroll = useRef<string | null>(null)
   const navAt = useRef(0)
@@ -781,6 +793,51 @@ export default function CalendarioPage() {
     )
   }
 
+  /**
+   * Fila compacta: una sola línea con el rango horario completo. Pensada para
+   * ver la jornada entera —y los huecos— sin desplazarse.
+   */
+  function renderCompactRow(b: Booking, conflicts: Record<string, Booking[]>, simultaneas: number) {
+    const ts = TYPE_STYLE[b.type]
+    const st = bookingLiveStatus(b, todayStr)
+    const isCancelled = b.status === 'cancelled'
+    const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
+    const hasConflict = !!conflicts[b.id]
+    const r = bookingRange(b)
+    return (
+      <button
+        key={b.id}
+        onClick={() => openEditFlow(b)}
+        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface2 ${
+          isCancelled ? 'opacity-60' : st === 'pasado' ? 'opacity-50' : ''
+        } ${hasConflict ? 'bg-rose/5' : ''}`}
+      >
+        <span className="w-[86px] shrink-0 text-[11px] text-fog tabular-nums">
+          {r ? `${minutesToLabel(r.start)}–${minutesToLabel(r.end)}` : '—'}
+        </span>
+        <span className="w-1 h-4 rounded-full shrink-0" style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])} />
+        <span className={`text-sm truncate ${isCancelled ? 'text-mist line-through' : 'text-snow'}`}>{b.title}</span>
+        {b.members?.name && <span className="text-xs text-mist truncate hidden sm:inline">· {b.members.name}</span>}
+        <span className="ml-auto flex items-center gap-2 shrink-0">
+          {simultaneas > 1 && !isCancelled && (
+            <span className="text-[10px] text-mist">{simultaneas} {t('calendario_a_la_vez')}</span>
+          )}
+          {hasConflict && <AlertTriangle size={12} className="text-rose" />}
+          {isCancelled
+            ? <span className="text-[10px] font-semibold text-rose">{t('calendario_cancelada')}</span>
+            : (
+              <>
+                {pendiente > 0 && <span className="text-[11px] font-semibold text-amber">{pendiente.toFixed(0)}€</span>}
+                {st === 'ejecutado' && <CheckCircle size={12} className="text-mint" />}
+                {st === 'en_curso' && <Clock size={12} className="text-lime" />}
+                <span className={`text-[10px] font-semibold ${ts.badge} hidden sm:inline`}>{t(ts.labelKey)}</span>
+              </>
+            )}
+        </span>
+      </button>
+    )
+  }
+
   /** Hueco libre: clicable para crear una reserva ya con esa hora puesta. */
   function renderGap(dateStr: string, g: Gap) {
     return (
@@ -932,6 +989,17 @@ export default function CalendarioPage() {
             </button>
             {/* En escritorio la lista ya muestra los solapes en paralelo, así que
                 el conmutador de vista solo aparece en móvil */}
+            <button
+              onClick={toggleCompact}
+              aria-pressed={compact}
+              aria-label={compact ? t('calendario_expandir_tarjetas') : t('calendario_compactar')}
+              title={compact ? t('calendario_expandir_tarjetas') : t('calendario_compactar')}
+              className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                compact ? 'border-iris text-iris' : 'border-line text-fog hover:text-snow'
+              }`}
+            >
+              {compact ? <LayoutList size={16} /> : <Rows3 size={16} />}
+            </button>
             <div className="lg:hidden flex items-center rounded-lg border border-line bg-surface2 p-0.5">
               <button onClick={() => switchView('lista')} aria-label={t('calendario_vista_lista')} title={t('calendario_vista_lista')}
                 className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${view === 'lista' ? 'bg-surface text-snow' : 'text-fog hover:text-snow'}`}>
@@ -1036,6 +1104,19 @@ export default function CalendarioPage() {
             const conflicts = conflictMap(allByDate[dateStr] ?? [], resourceByService)
             const gaps = dateStr >= todayStr ? freeGaps(allByDate[dateStr] ?? [], openMins, closeMins, 45) : []
             const clusters = overlapClusters(timed)
+            // Línea de tiempo del modo compacto: reservas (también canceladas)
+            // y huecos ordenados por hora de inicio.
+            const simulCount: Record<string, number> = {}
+            clusters.forEach(c => c.forEach(b => { simulCount[b.id] = c.length }))
+            const timeline: ({ kind: 'booking'; booking: Booking; simultaneas: number; at: number }
+                           | { kind: 'gap'; gap: { start: number; end: number }; at: number })[] = [
+              ...timedAll.map(b => ({
+                kind: 'booking' as const, booking: b,
+                simultaneas: simulCount[b.id] ?? 1,
+                at: bookingRange(b)?.start ?? 0,
+              })),
+              ...gaps.map(g => ({ kind: 'gap' as const, gap: g, at: g.start })),
+            ].sort((a, b) => a.at - b.at)
             return (
               <div
                 key={dateStr}
@@ -1097,8 +1178,17 @@ export default function CalendarioPage() {
                   </div>
                 )}
 
-                {/* Reservas con hora. Las simultáneas se muestran una al lado
-                    de otra en escritorio; en móvil se apilan con su aviso. */}
+                {/* Modo compacto: toda la jornada en una línea por reserva,
+                    canceladas incluidas y con los huecos en su sitio. */}
+                {compact ? (
+                  <div className="space-y-0.5">
+                    {timeline.map(item =>
+                      item.kind === 'gap'
+                        ? renderGap(dateStr, item.gap)
+                        : renderCompactRow(item.booking, conflicts, item.simultaneas)
+                    )}
+                  </div>
+                ) : (
                 <div className="space-y-4 lg:space-y-2">
                   {gapsBefore(gaps, null, clusters[0]?.[0] ?? null).map(g => renderGap(dateStr, g))}
                   {clusters.map((cluster, ci) => {
@@ -1153,19 +1243,13 @@ export default function CalendarioPage() {
                       </button>
                       {showCancelled && (
                         <div className="mt-2 space-y-1">
-                          {cancelled.map(c => (
-                            <button key={c.id} onClick={() => openEditFlow(c)}
-                              className="flex w-full items-center gap-2 text-left rounded-lg px-2 py-1.5 hover:bg-surface2 transition-colors">
-                              <span className="text-xs text-mist w-12 shrink-0">{c.start_time?.slice(0, 5) ?? '—'}</span>
-                              <span className="text-xs text-mist line-through truncate flex-1">{c.title}</span>
-                              <span className="text-[10px] font-semibold text-rose shrink-0">{t('calendario_cancelada')}</span>
-                            </button>
-                          ))}
+                          {cancelled.map(c => renderCompactRow(c, conflicts, 1))}
                         </div>
                       )}
                     </div>
                   )}
                 </div>
+                )}
               </div>
             )
           })
