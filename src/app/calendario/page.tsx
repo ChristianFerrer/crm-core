@@ -702,8 +702,8 @@ export default function CalendarioPage() {
       return afterPrev && beforeNext
     })
   }
-  // Escala de la línea de tiempo de escritorio: 1,25 px por minuto → 75 px/hora
-  const TIMELINE_PX_PER_MIN = 1.25
+  // Escala de la línea de tiempo de escritorio: 0,625 px por minuto → 37,5 px/hora
+  const TIMELINE_PX_PER_MIN = 0.625
 
   /**
    * Línea de tiempo de un día: cada reserva ocupa el alto que le corresponde
@@ -755,7 +755,7 @@ export default function CalendarioPage() {
             const lay = columns[b.id] ?? { col: 0, cols: 1 }
             const widthPct = 100 / lay.cols
             const top = (Math.max(r.start, openMins) - openMins) * TIMELINE_PX_PER_MIN
-            const height = Math.max(26, (Math.min(r.end, closeMins) - Math.max(r.start, openMins)) * TIMELINE_PX_PER_MIN - 3)
+            const height = Math.max(22, (Math.min(r.end, closeMins) - Math.max(r.start, openMins)) * TIMELINE_PX_PER_MIN - 3)
             return (
               <div
                 key={b.id}
