@@ -93,12 +93,37 @@ console.assert(msg === 'Hola Laura, el cumple de Aina y ', 'render mal: ' + msg)
 console.assert(C.waLink('600 111 222', 'hola').startsWith('https://wa.me/34600111222?text='), 'waLink mal')
 console.assert(C.waLink('123', 'x') === null, 'waLink debería rechazar móviles cortos')
 
-const acciones = C.suggestedActions(ctx, new Set())
+const acciones = C.suggestedActions(ctx, {}, now)
 console.log('acciones ->', acciones.map(a => `${a.titulo} (${a.valor.toFixed(0)}€)`))
 console.assert(acciones.length > 0 && acciones[0].valor >= acciones[acciones.length-1].valor, 'orden por valor mal')
+console.assert(acciones.every(a => !!a.horizonte), 'falta el horizonte en alguna acción')
 
-const yaHecho = new Set(['cumpleanos:b1'])
-const acciones2 = C.suggestedActions(ctx, yaHecho)
+// Contactada ayer: dentro de la ventana de reintento del cumpleaños (300 días)
+const acciones2 = C.suggestedActions(ctx, { 'cumpleanos:b1': d(1) }, now)
 console.assert(!acciones2.some(a => a.plantilla === 'cumpleanos'), 'lo contactado debería desaparecer')
 console.log('tras contactar ->', acciones2.map(a => a.plantilla))
+
+// Pasada la ventana vuelve a proponerse: es lo que evita que el bloque se vacíe para siempre
+const acciones3 = C.suggestedActions(ctx, { 'cumpleanos:b1': d(320) }, now)
+console.assert(acciones3.some(a => a.plantilla === 'cumpleanos'), 'pasada la ventana debería reaparecer')
+
+// El bono se puede repetir al mes, el cumpleaños no
+const tplBono = C.templateById('bono_bajo')
+const tplCumple = C.templateById('cumpleanos')
+console.assert(C.puedeReproponer(tplBono, 'riesgo', { 'bono_bajo:riesgo': d(40) }, now), 'bono a los 40 días debería reproponerse')
+console.assert(!C.puedeReproponer(tplBono, 'riesgo', { 'bono_bajo:riesgo': d(10) }, now), 'bono a los 10 días no debería reproponerse')
+console.assert(!C.puedeReproponer(tplCumple, 'b1', { 'cumpleanos:b1': d(100) }, now), 'cumpleaños a los 100 días no debería reproponerse')
+
+// ── cadencia semanal ──
+const lunes = C.inicioSemana(now)           // 6 ago 2026 es jueves -> lunes 3
+console.assert(lunes.getDay() === 1, 'inicioSemana debería caer en lunes')
+console.assert(lunes.getDate() === 3 && lunes.getMonth() === 7, 'inicioSemana mal: ' + lunes.toDateString())
+const prox = C.proximaRevision(now)
+console.assert(prox.getDay() === 1 && prox.getDate() === 10, 'proximaRevision mal: ' + prox.toDateString())
+// Un lunes es su propio inicio de semana
+console.assert(C.inicioSemana(new Date(2026, 7, 10, 9)).getDate() === 10, 'lunes debería ser su propio inicio')
+// Y un domingo pertenece a la semana que empezó el lunes anterior
+console.assert(C.inicioSemana(new Date(2026, 7, 9, 9)).getDate() === 3, 'domingo debería colgar del lunes anterior')
+console.log('semana ->', lunes.toDateString(), '→ revisión', prox.toDateString())
+
 console.log('\nOK fase 3')

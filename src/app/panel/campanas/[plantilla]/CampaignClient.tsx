@@ -35,12 +35,15 @@ const ACCENT: Record<string, { text: string; border: string; bg: string }> = {
  */
 export function CampaignClient({
   template, recipients, existingSends, campaignId: initialCampaignId, sinConsentimiento,
+  horizonte, reintentoDias,
 }: {
   template: CampaignTemplate
   recipients: Recipient[]
   existingSends: ExistingSend[]
   campaignId: string | null
   sinConsentimiento: number
+  horizonte: string
+  reintentoDias: number
 }) {
   const c = ACCENT[template.accent] ?? ACCENT.lime
   const [mensaje, setMensaje] = useState(template.mensaje)
@@ -113,9 +116,13 @@ export function CampaignClient({
         </div>
       </div>
 
-      <p className={`rounded-xl border ${c.border} ${c.bg} px-4 py-2.5 text-xs ${c.text}`}>
-        {template.porque}
-      </p>
+      <div className={`rounded-xl border ${c.border} ${c.bg} px-4 py-2.5`}>
+        <p className={`text-xs ${c.text}`}>{template.porque}</p>
+        <p className="text-[11px] text-fog mt-1">
+          Plazo: {horizonte} · no se vuelve a proponer a la misma familia hasta
+          pasados {reintentoDias} días
+        </p>
+      </div>
 
       {/* Resumen de la campaña */}
       <div className="grid grid-cols-3 gap-2.5">

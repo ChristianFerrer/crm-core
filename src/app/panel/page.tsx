@@ -10,7 +10,7 @@ import { ActionsSection } from './ActionsSection'
 import { getT } from '@/lib/i18n-server'
 import { revenue, delta, repeatRate, bonoRenewalRate, pendingRevenue, monthPeriod, lastYearPeriod } from '@/lib/metrics'
 import { buildMemberStats, countBySegment, avgLtv } from '@/lib/segments'
-import { suggestedActions, type BirthdayLead, type BonoLead } from '@/lib/campaigns'
+import { suggestedActions, inicioSemana, proximaRevision, type BirthdayLead, type BonoLead, type ContactLog } from '@/lib/campaigns'
 
 export const revalidate = 0
 
@@ -85,7 +85,8 @@ export default async function PanelPage() {
     supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
     supabase.from('members').select('id, name, phone, created_at, families(name)').limit(5000),
     // Fase 3: lo ya contactado, para no volver a proponerlo
-    supabase.from('campaign_sends').select('member_id, estado, campaign_id, campaigns(plantilla)')
+    supabase.from('campaign_sends')
+      .select('member_id, estado, enviado_at, created_at, campaigns(plantilla)')
       .neq('estado', 'pendiente').limit(5000),
   ])
 
@@ -152,11 +153,15 @@ export default async function PanelPage() {
       expires_at: b.expires_at,
     }))
 
-  // Clave plantilla:miembro de lo ya contactado, para no repetir la propuesta
-  const yaContactados = new Set(
-    ((doneSends ?? []) as any[])
-      .map(s2 => `${s2.campaigns?.plantilla ?? ''}:${s2.member_id}`)
-  )
+  // Fecha del último contacto por plantilla y familia: cada campaña tiene su
+  // ventana de reintento, así que no basta con saber SI se contactó.
+  const contactLog: ContactLog = {}
+  for (const s2 of ((doneSends ?? []) as any[])) {
+    const key = `${s2.campaigns?.plantilla ?? ''}:${s2.member_id}`
+    const fecha = s2.enviado_at ?? s2.created_at
+    if (!fecha) continue
+    if (!contactLog[key] || fecha > contactLog[key]) contactLog[key] = fecha
+  }
 
   const acciones = suggestedActions({
     stats: memberStats,
@@ -164,7 +169,14 @@ export default async function PanelPage() {
     bonos: accionBonos,
     ticketMedio: revActual.ticketMedio || 12,
     precioCumple: 130,
-  }, yaContactados)
+  }, contactLog, now)
+
+  // Contexto de la revisión semanal
+  const desdeLunes = inicioSemana(now)
+  const contactadosEstaSemana = ((doneSends ?? []) as any[]).filter(s2 => {
+    const f = s2.enviado_at ?? s2.created_at
+    return f && new Date(f) >= desdeLunes
+  }).length
 
   const pulse = {
     ingresos: revActual.total,
@@ -351,7 +363,11 @@ export default async function PanelPage() {
       <PulseSection data={pulse} />
 
       {/* Fase 3: de aquí se sale contactando */}
-      <ActionsSection actions={acciones} />
+      <ActionsSection
+        actions={acciones}
+        contactadosEstaSemana={contactadosEstaSemana}
+        proximaRevision={proximaRevision(now).toISOString()}
+      />
 
       {/* Fase 2: a quién tienes y qué hacer con cada grupo */}
       <SegmentMap stats={memberStats} avgLtv={ltvMedio} />

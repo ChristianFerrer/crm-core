@@ -15,18 +15,38 @@ const ACCENT: Record<string, { text: string; border: string; bg: string }> = {
   grape:      { text: 'text-grape',     border: 'border-grape/40',     bg: 'bg-grape/10' },
 }
 
+function fechaCorta(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
 /**
- * «Hoy deberías…»: como mucho tres acciones, ordenadas por euros en juego.
+ * «Esta semana»: como mucho tres acciones, ordenadas por euros en juego.
  * Cada una lleva su botón: de aquí se sale contactando, no anotando.
+ *
+ * La cadencia es semanal a propósito. Diaria se queda vacía casi siempre y se
+ * deja de mirar; mensual llega tarde para un bono que caduca el viernes o para
+ * una familia que acaba de romper su ritmo.
  */
-export function ActionsSection({ actions }: { actions: ActionSuggestion[] }) {
+export function ActionsSection({
+  actions, contactadosEstaSemana, proximaRevision,
+}: {
+  actions: ActionSuggestion[]
+  contactadosEstaSemana: number
+  proximaRevision: string
+}) {
   if (actions.length === 0) {
     return (
-      <section className="rounded-2xl border border-line bg-surface p-4 flex items-center gap-3">
-        <CheckCircle2 size={16} className="text-mint shrink-0" />
-        <p className="text-sm text-fog">
-          Nada pendiente por hoy: has contactado a todo el mundo que lo necesitaba.
-        </p>
+      <section className="rounded-2xl border border-line bg-surface p-4 flex items-start gap-3">
+        <CheckCircle2 size={16} className="text-mint shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm text-fog">
+            Semana cerrada: no queda nadie a quien escribir.
+            {contactadosEstaSemana > 0 && ` Has contactado a ${contactadosEstaSemana} ${contactadosEstaSemana === 1 ? 'familia' : 'familias'}.`}
+          </p>
+          <p className="text-[11px] text-mist mt-0.5">
+            Próxima revisión: {fechaCorta(proximaRevision)}
+          </p>
+        </div>
       </section>
     )
   }
@@ -35,9 +55,13 @@ export function ActionsSection({ actions }: { actions: ActionSuggestion[] }) {
     <section>
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-          <Zap size={12} className="text-amber" /> Hoy deberías…
+          <Zap size={12} className="text-amber" /> Esta semana
         </p>
-        <p className="text-[11px] text-mist">Ordenado por dinero en juego</p>
+        <p className="text-[11px] text-mist">
+          {contactadosEstaSemana > 0
+            ? `${contactadosEstaSemana} contactada${contactadosEstaSemana === 1 ? '' : 's'} · por dinero en juego`
+            : 'Ordenado por dinero en juego'}
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -51,7 +75,9 @@ export function ActionsSection({ actions }: { actions: ActionSuggestion[] }) {
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-snow truncate">{a.titulo}</p>
-                <p className="text-[11px] text-fog truncate">{a.detalle}</p>
+                <p className="text-[11px] text-fog truncate">
+                  <span className={`font-semibold ${c.text}`}>{a.horizonte}</span> · {a.detalle}
+                </p>
               </div>
               <div className="text-right shrink-0">
                 <p className={`text-sm font-bold ${c.text} tabular-nums`}>~{formatEur(a.valor)}</p>

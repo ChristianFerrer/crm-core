@@ -25,11 +25,19 @@ export type CampaignTemplate = {
   id: PlantillaId
   nombre: string
   descripcion: string
+  /** Plazo del que habla la campaña, para que se vea la urgencia real */
+  horizonte: string
   /** Por qué esta campaña existe: qué mueve */
   porque: string
   mensaje: string
   incentivo: string
   accent: 'lime' | 'iris' | 'cyan-300' | 'amber' | 'rose' | 'mint' | 'grape'
+  /**
+   * Días que deben pasar para volver a proponer a la MISMA familia por el
+   * mismo motivo. Sin esto, quien fue contactado una vez desaparecía para
+   * siempre de las sugerencias y el bloque se vaciaba solo.
+   */
+  reintentoDias: number
 }
 
 /**
@@ -41,46 +49,56 @@ export const TEMPLATES: CampaignTemplate[] = [
     id: 'cumpleanos',
     nombre: 'Cumpleaños',
     descripcion: 'Familias con un cumpleaños en los próximos 45 días',
+    horizonte: 'Próximos 45 días',
     porque: 'Ticket alto y decisión anticipada: es la campaña de mayor retorno',
     mensaje: '¡Hola {nombre}! 🎂 Se acerca el cumple de {niño} y nos encantaría celebrarlo con vosotros. Tenemos fechas libres — ¿te reservo una?',
     incentivo: 'Tarta de regalo reservando con 3 semanas de antelación',
     accent: 'grape',
+    reintentoDias: 300,
   },
   {
     id: 'bono_bajo',
     nombre: 'Bono a punto de agotarse',
     descripcion: 'Bonos con 2 sesiones o menos, o que caducan esta semana',
+    horizonte: 'Esta semana',
     porque: 'Renovar antes de agotarlo evita el hueco en el que se pierde al cliente',
     mensaje: '¡Hola {nombre}! Te quedan {sesiones} sesiones del bono. Si lo renuevas antes de que se acabe, te mantenemos el precio actual. ¿Te lo preparo?',
     incentivo: 'Mismo precio al renovar antes de agotarlo',
     accent: 'amber',
+    reintentoDias: 30,
   },
   {
     id: 'reactivacion',
     nombre: 'Reactivación',
     descripcion: 'Familias que llevan sin venir más del doble de su ritmo',
+    horizonte: 'Cuanto antes',
     porque: 'Actuar en la primera señal de fuga cuesta mucho menos que recuperarlas después',
     mensaje: '¡Hola {nombre}! Hace {dias} días que no os vemos y os echamos de menos. Esta semana tenemos hueco por las tardes — ¿os venís?',
     incentivo: 'Segunda entrada a mitad de precio',
     accent: 'cyan-300',
+    reintentoDias: 60,
   },
   {
     id: 'valle',
     nombre: 'Llenar el valle',
     descripcion: 'Familias activas, para una franja con poca ocupación',
+    horizonte: 'Esta semana',
     porque: 'La sala vacía cuesta lo mismo que la llena: cualquier ingreso ahí es margen',
     mensaje: '¡Hola {nombre}! Esta semana tenemos las tardes de martes más tranquilas y hemos preparado una oferta para esas horas. ¿Os apetece?',
     incentivo: 'Descuento en la franja de menos ocupación',
     accent: 'iris',
+    reintentoDias: 21,
   },
   {
     id: 'segunda_visita',
     nombre: 'Segunda visita',
     descripcion: 'Familias con una sola visita, hace más de 21 días',
+    horizonte: 'Este mes',
     porque: 'Ya te conocen: convertir la primera visita en la segunda es lo más barato que puedes hacer',
     mensaje: '¡Hola {nombre}! Nos alegró mucho teneros por aquí. Si os apetece repetir, os invitamos a un batido en la próxima visita 🥤',
     incentivo: 'Consumición de regalo en la segunda visita',
     accent: 'mint',
+    reintentoDias: 45,
   },
 ]
 
@@ -201,31 +219,59 @@ export type ActionSuggestion = {
   plantilla: PlantillaId
   titulo: string
   detalle: string
+  horizonte: string
   destinatarios: number
   valor: number
   accent: CampaignTemplate['accent']
 }
 
+/** Fecha del último contacto por plantilla y familia: `plantilla:memberId`. */
+export type ContactLog = Record<string, string>
+
 /**
- * Las tres acciones del día, ordenadas por EUROS EN JUEGO y no por urgencia:
+ * ¿Se puede volver a proponer a esta familia por este motivo?
+ *
+ * Cada plantilla tiene su ventana: un cumpleaños es anual, un bono a punto de
+ * agotarse se puede repetir al mes. Sin esta comprobación, contactar una vez
+ * excluía a la familia para siempre.
+ */
+export function puedeReproponer(
+  tpl: CampaignTemplate,
+  memberId: string,
+  log: ContactLog,
+  now: Date,
+): boolean {
+  const last = log[`${tpl.id}:${memberId}`]
+  if (!last) return true
+  const dias = (now.getTime() - new Date(last).getTime()) / 86_400_000
+  return dias >= tpl.reintentoDias
+}
+
+/**
+ * Las acciones de la semana, ordenadas por EUROS EN JUEGO y no por urgencia:
  * si hay cuarenta cosas que hacer no se hace ninguna.
+ *
+ * La revisión es semanal a propósito: diaria se queda vacía casi siempre y
+ * mensual llega tarde para los bonos que caducan y para quien está fugándose.
  */
 export function suggestedActions(
   ctx: Parameters<typeof resolveRecipients>[1],
-  yaContactados: Set<string>,
+  contactLog: ContactLog,
+  now = new Date(),
   max = 3,
 ): ActionSuggestion[] {
   const out: ActionSuggestion[] = []
 
   for (const tpl of TEMPLATES) {
     const pendientes = resolveRecipients(tpl.id, ctx)
-      .filter(r => !yaContactados.has(`${tpl.id}:${r.memberId}`))
+      .filter(r => puedeReproponer(tpl, r.memberId, contactLog, now))
     if (pendientes.length === 0) continue
 
     out.push({
       plantilla: tpl.id,
       titulo: tituloAccion(tpl.id, pendientes.length),
       detalle: tpl.descripcion,
+      horizonte: tpl.horizonte,
       destinatarios: pendientes.length,
       valor: pendientes.reduce((s, r) => s + r.valor, 0),
       accent: tpl.accent,
@@ -233,6 +279,21 @@ export function suggestedActions(
   }
 
   return out.sort((a, b) => b.valor - a.valor).slice(0, max)
+}
+
+/** Lunes de la semana en curso: ancla de la revisión semanal. */
+export function inicioSemana(now = new Date()): Date {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const dow = (d.getDay() + 6) % 7
+  d.setDate(d.getDate() - dow)
+  return d
+}
+
+/** Próximo lunes, para decir cuándo toca la siguiente revisión. */
+export function proximaRevision(now = new Date()): Date {
+  const d = inicioSemana(now)
+  d.setDate(d.getDate() + 7)
+  return d
 }
 
 function tituloAccion(id: PlantillaId, n: number): string {

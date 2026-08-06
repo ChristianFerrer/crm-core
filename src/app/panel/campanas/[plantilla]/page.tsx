@@ -111,21 +111,52 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
   const recipients = esPublicidad ? todos.filter(r => consentById.get(r.memberId)) : todos
   const sinConsentimiento = esPublicidad ? todos.length - recipients.length : 0
 
-  // Envíos ya registrados de la campaña activa de esta plantilla
-  let existingSends: ExistingSend[] = []
+  // Envíos de esta plantilla, con su fecha. Se usan para dos cosas: marcar en
+  // la lista a quien ya fue contactado y respetar la ventana de reintento, que
+  // es lo que evita escribir dos veces por el mismo motivo.
   const campaignId = (campaign as any)?.id ?? null
-  if (campaignId) {
-    const { data } = await supabase
-      .from('campaign_sends')
-      .select('member_id, estado, enviado_at')
-      .eq('campaign_id', campaignId)
-    existingSends = (data ?? []) as ExistingSend[]
+  const { data: sendRows } = await supabase
+    .from('campaign_sends')
+    .select('member_id, estado, enviado_at, created_at, campaigns!inner(plantilla)')
+    .eq('campaigns.plantilla', plantilla)
+    .neq('estado', 'pendiente')
+    .limit(5000)
+
+  const ultimoContacto = new Map<string, string>()
+  for (const r of ((sendRows ?? []) as any[])) {
+    const f = r.enviado_at ?? r.created_at
+    if (!f) continue
+    const prev = ultimoContacto.get(r.member_id)
+    if (!prev || f > prev) ultimoContacto.set(r.member_id, f)
   }
+
+  // Fuera de la lista quien fue contactado hace menos de la ventana del motivo
+  const recipientesVigentes = recipients.filter(r => {
+    const last = ultimoContacto.get(r.memberId)
+    if (!last) return true
+    const dias = (now.getTime() - new Date(last).getTime()) / 86_400_000
+    return dias >= template.reintentoDias
+  })
+
+  // Los contactados DENTRO de la ventana se muestran igualmente, marcados,
+  // para que se vea que ya están hechos y no parezca que faltan.
+  const existingSends: ExistingSend[] = ((sendRows ?? []) as any[])
+    .filter(r => recipients.some(x => x.memberId === r.member_id))
+    .map(r => ({ member_id: r.member_id, estado: r.estado, enviado_at: r.enviado_at ?? r.created_at }))
+
+  const recientes = recipients.filter(r => !recipientesVigentes.includes(r))
 
   return (
     <CampaignClient
       template={template}
-      recipients={recipients.sort((a, b) => b.valor - a.valor)}
+      recipients={[...recipientesVigentes, ...recientes].sort((a, b) => {
+        // Primero los pendientes, y dentro de cada grupo por dinero en juego
+        const aHecho = ultimoContacto.has(a.memberId) ? 1 : 0
+        const bHecho = ultimoContacto.has(b.memberId) ? 1 : 0
+        return aHecho - bHecho || b.valor - a.valor
+      })}
+      horizonte={template.horizonte}
+      reintentoDias={template.reintentoDias}
       existingSends={existingSends}
       campaignId={campaignId}
       sinConsentimiento={sinConsentimiento}
