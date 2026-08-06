@@ -6,7 +6,11 @@ import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
 import { CustomizableDashboard } from './CustomizableDashboard'
+import { PulseSection } from './PulseSection'
+import { SegmentMap } from './SegmentMap'
 import { getT } from '@/lib/i18n-server'
+import { revenue, delta, repeatRate, bonoRenewalRate, pendingRevenue, monthPeriod, lastYearPeriod } from '@/lib/metrics'
+import { buildMemberStats, countBySegment, avgLtv } from '@/lib/segments'
 
 export const revalidate = 0
 
@@ -47,6 +51,12 @@ export default async function PanelPage() {
     { data: bonosSemanaRaw },
     { data: visitTimes },
     { data: yearVisits },
+    { data: paidVisits },
+    { data: allBookings },
+    { data: allMemberships },
+    { data: membershipTypes },
+    { data: closedChecks },
+    { data: membersForStats },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
@@ -68,6 +78,23 @@ export default async function PanelPage() {
     supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').gte('expires_at', todayStr).lte('expires_at', weekFromNow).limit(20),
     supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(5000),
     supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getFullYear(), 0, 1).toISOString()).limit(20000),
+    // ── Fase 1 y 2: dinero y segmentación ──
+    // Historial de cobros y visitas de los últimos 14 meses: da para comparar
+    // con el mismo mes del año pasado y para calcular el ritmo de cada familia.
+    supabase.from('visits')
+      .select('id, member_id, checked_in_at, paid_at, paid_amount, adults_count, children_count')
+      .gte('checked_in_at', new Date(now.getFullYear() - 1, now.getMonth() - 1, 1).toISOString())
+      .limit(20000),
+    supabase.from('bookings')
+      .select('id, date, status, amount, deposit_amount, deposit_paid_at, payment_status')
+      .gte('date', new Date(now.getFullYear() - 1, now.getMonth() - 1, 1).toISOString().split('T')[0])
+      .limit(5000),
+    supabase.from('memberships')
+      .select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id')
+      .limit(5000),
+    supabase.from('membership_types').select('id, price'),
+    supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
+    supabase.from('members').select('id, name, phone, created_at, families(name)').limit(5000),
   ])
 
   // ── Visitas por mes (todo el año) ──────────────────────────────────────────
@@ -145,6 +172,54 @@ export default async function PanelPage() {
   let withFullBono = 0, withLowBono = 0
   bonoByMember.forEach(s => { if (s === null || s > 2) withFullBono++; else if (s > 0) withLowBono++ })
   const withoutBono = Math.max(0, (totalMembers ?? 0) - withFullBono - withLowBono)
+
+  // ── Fase 1: pulso económico del mes ───────────────────────────────────────
+  const mesActual = monthPeriod(now)
+  const mesAnterior = monthPeriod(now, -1)
+  const mesAnoPasado = lastYearPeriod(now)
+
+  const typePrices: Record<string, number> = Object.fromEntries(
+    ((membershipTypes ?? []) as any[]).map(t => [t.id, Number(t.price ?? 0)])
+  )
+  const vRows = (paidVisits ?? []) as any[]
+  const bRows = (allBookings ?? []) as any[]
+  const mRows = (allMemberships ?? []) as any[]
+  const cRows = (closedChecks ?? []) as any[]
+
+  const revActual = revenue(vRows, bRows, mRows, cRows, typePrices, mesActual)
+  const revAnterior = revenue(vRows, bRows, mRows, cRows, typePrices, mesAnterior)
+  const revAnoPasado = revenue(vRows, bRows, mRows, cRows, typePrices, mesAnoPasado)
+
+  const repeticion = repeatRate(vRows, now, 30)
+  const renovacion = bonoRenewalRate(mRows, now, 30)
+  const pendiente = pendingRevenue(bRows, mesActual)
+
+  // ── Fase 2: segmentación por ritmo propio ─────────────────────────────────
+  const memberStats = buildMemberStats((membersForStats ?? []) as any[], vRows, now)
+  const segCounts = countBySegment(memberStats)
+  const ltvMedio = avgLtv(memberStats)
+  const familiasActivas = memberStats.filter(
+    s => s.diasDesdeUltima != null && s.diasDesdeUltima <= 60
+  ).length
+
+  const pulse = {
+    ingresos: revActual.total,
+    ingresosDeltaMes: delta(revActual.total, revAnterior.total),
+    ingresosDeltaAno: delta(revActual.total, revAnoPasado.total),
+    desglose: {
+      visitas: revActual.visitas,
+      consumos: revActual.consumos,
+      adelantos: revActual.adelantos,
+      bonos: revActual.bonos,
+    },
+    ticketMedio: revActual.ticketMedio,
+    numVisitas: revActual.numVisitas,
+    repeticion: { rate: repeticion.rate, base: repeticion.base },
+    renovacion: { rate: renovacion.rate, base: renovacion.base },
+    pendiente,
+    familiasActivas,
+    enRiesgo: segCounts.en_riesgo,
+  }
 
   const tenantId = tenant?.id ?? ''
   const capacity: number | null = (tenant as any)?.capacity ?? null
@@ -292,7 +367,13 @@ export default async function PanelPage() {
       </div>
 
 
-      {/* Dashboard personalizable (mover / redimensionar / añadir / quitar) */}
+      {/* Fase 1: el dinero primero */}
+      <PulseSection data={pulse} />
+
+      {/* Fase 2: a quién tienes y qué hacer con cada grupo */}
+      <SegmentMap stats={memberStats} avgLtv={ltvMedio} />
+
+      {/* Tendencias: para explorar, no para decidir; van después */}
       <CustomizableDashboard
         data={{
           stats: { totalMembers: totalMembers ?? 0, todayCount: todayCount ?? 0, monthCount: monthCount ?? 0 },

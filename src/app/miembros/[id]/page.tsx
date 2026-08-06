@@ -6,6 +6,8 @@ import { MemberQr } from '@/components/MemberQr'
 import { AssignMembership } from '@/components/AssignMembership'
 import { DeleteMemberButton } from './DeleteMemberButton'
 import { getT } from '@/lib/i18n-server'
+import { buildMemberStats, SEGMENTS } from '@/lib/segments'
+import { formatEur } from '@/lib/metrics'
 
 export const revalidate = 0
 
@@ -33,10 +35,10 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       .single(),
     supabase
       .from('visits')
-      .select('id, checked_in_at')
+      .select('id, member_id, checked_in_at, paid_amount')
       .eq('member_id', id)
       .order('checked_in_at', { ascending: false })
-      .limit(20),
+      .limit(500),
     supabase
       .from('visits')
       .select('id', { count: 'exact', head: true })
@@ -72,6 +74,19 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       .eq('family_id', m.families.id)
       .neq('id', id)
     familyAdults = (data as any[]) ?? []
+  }
+
+  // ── Ficha 360: comportamiento de esta familia ─────────────────────────────
+  // Se calcula con el mismo módulo que el panel, así el segmento que se ve aquí
+  // y el del mapa de segmentos no pueden discrepar.
+  const stat = buildMemberStats(
+    [{ id: m.id, name: m.name, phone: m.phone, created_at: m.created_at, families: m.families }],
+    (visits as any[]) ?? [],
+  )[0]
+  const segDef = SEGMENTS.find(x => x.id === stat.segmento)!
+  const SEG_TEXT: Record<string, string> = {
+    lime: 'text-lime', mint: 'text-mint', 'cyan-300': 'text-cyan-300',
+    amber: 'text-amber', rose: 'text-rose', iris: 'text-iris',
   }
 
   type Child = { name: string; sex: 'M' | 'F' | ''; birth_date: string }
@@ -116,6 +131,40 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         >
           <LogIn size={14} />
         </Link>
+      </div>
+
+      {/* ── Comportamiento: segmento, ritmo y valor ── */}
+      <div className="rounded-2xl border border-line bg-surface p-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Comportamiento</p>
+          <span className={`text-xs font-semibold ${SEG_TEXT[segDef.accent]}`}>{segDef.label}</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <p className="text-[10px] text-mist uppercase tracking-wide">Visitas</p>
+            <p className="text-lg font-bold text-snow tabular-nums">{stat.visitas}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-mist uppercase tracking-wide">Ritmo</p>
+            <p className="text-lg font-bold text-snow tabular-nums">
+              {stat.ritmoDias != null ? `${Math.round(stat.ritmoDias)} d` : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-mist uppercase tracking-wide">Última</p>
+            <p className="text-lg font-bold text-snow tabular-nums">
+              {stat.diasDesdeUltima != null ? `${Math.round(stat.diasDesdeUltima)} d` : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-mist uppercase tracking-wide">Valor</p>
+            <p className="text-lg font-bold text-lime tabular-nums">{formatEur(stat.ltv)}</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-mist mt-3">
+          {segDef.accion}
+          {stat.ticketMedio > 0 && ` · ticket medio ${stat.ticketMedio.toFixed(2)}€`}
+        </p>
       </div>
 
       {/* Contact info — teléfono + alta + email + notas */}
@@ -322,7 +371,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </div>
         ) : (
           <div className="space-y-1">
-            {(visits as any[]).map((v) => (
+            {/* Se cargan todas para las estadísticas, pero solo se listan las 20 últimas */}
+            {(visits as any[]).slice(0, 20).map((v) => (
               <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex justify-between gap-2 text-sm">
                 <span className="text-fog truncate min-w-0">
                   {new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
