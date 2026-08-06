@@ -2,9 +2,18 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, MessageCircle, Phone } from 'lucide-react'
+import {
+  ChevronRight, MessageCircle, Phone, Crown, Heart, Sparkles, TrendingDown,
+  Moon, UserPlus, Users,
+} from 'lucide-react'
 import { SEGMENTS, type MemberStat, type SegmentId } from '@/lib/segments'
 import { formatEur } from '@/lib/metrics'
+import { waLink, firstName } from '@/lib/campaigns'
+
+/** El dominio guarda el nombre del icono; aquí se resuelve al componente. */
+const ICONOS: Record<string, React.ElementType> = {
+  Crown, Heart, Sparkles, TrendingDown, Moon, UserPlus,
+}
 
 const ACCENT: Record<string, { text: string; border: string; bg: string }> = {
   lime:       { text: 'text-lime',      border: 'border-lime/40',      bg: 'bg-lime/10' },
@@ -13,14 +22,6 @@ const ACCENT: Record<string, { text: string; border: string; bg: string }> = {
   amber:      { text: 'text-amber',     border: 'border-amber/40',     bg: 'bg-amber/10' },
   rose:       { text: 'text-rose',      border: 'border-rose/40',      bg: 'bg-rose/10' },
   iris:       { text: 'text-iris',      border: 'border-iris/40',      bg: 'bg-iris/10' },
-}
-
-function waLink(phone: string | null, text: string): string | null {
-  if (!phone) return null
-  const clean = phone.replace(/[^0-9]/g, '')
-  if (clean.length < 9) return null
-  const intl = clean.length === 9 ? `34${clean}` : clean
-  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`
 }
 
 function dias(n: number | null): string {
@@ -51,6 +52,7 @@ export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: num
           const list = stats.filter(s => s.segmento === seg.id)
           const a = ACCENT[seg.accent]
           const isOpen = open === seg.id
+          const SegIcon = ICONOS[seg.icono] ?? Users
           return (
             <button
               key={seg.id}
@@ -60,6 +62,9 @@ export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: num
                 isOpen ? `${a.border} ${a.bg}` : 'border-line bg-surface hover:border-line2'
               }`}
             >
+              <div className={`w-11 h-11 mb-2 rounded-xl flex items-center justify-center ${a.bg}`}>
+                <SegIcon size={22} className={a.text} />
+              </div>
               <p className={`text-[10px] font-semibold uppercase tracking-wide truncate ${a.text}`}>{seg.label}</p>
               <p className="font-display text-2xl font-bold text-snow leading-none mt-1.5 tabular-nums">{list.length}</p>
               <p className="text-[11px] text-mist mt-1">
@@ -79,7 +84,10 @@ export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: num
         return (
           <div className={`mt-2.5 rounded-2xl border ${a.border} bg-surface overflow-hidden`}>
             <div className={`px-4 py-2.5 ${a.bg} flex items-center justify-between gap-3 flex-wrap`}>
-              <p className={`text-xs font-semibold ${a.text}`}>{seg.label} · {list.length}</p>
+              <p className={`text-xs font-semibold ${a.text} flex items-center gap-2`}>
+                {(() => { const I = ICONOS[seg.icono] ?? Users; return <I size={16} /> })()}
+                {seg.label} · {list.length}
+              </p>
               <p className="text-[11px] text-fog">{seg.accion}</p>
             </div>
 
@@ -88,7 +96,7 @@ export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: num
             ) : (
               <div className="max-h-[22rem] overflow-y-auto divide-y divide-line/60">
                 {list.map(s => {
-                  const wa = waLink(s.phone, `Hola ${s.name.split(' ')[0]}, `)
+                  const wa = waLink(s.phone, `¡Hola ${firstName(s.name)}! `)
                   return (
                     <div key={s.memberId} className="flex items-center gap-3 px-4 py-2.5">
                       <Link href={`/miembros/${s.memberId}`} className="min-w-0 flex-1 group">

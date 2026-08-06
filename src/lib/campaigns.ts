@@ -5,7 +5,7 @@
  * la resolución de destinatarios y el armado del mensaje; la pantalla solo
  * pinta y guarda.
  *
- * Decisión de canal: se abre WhatsApp con el mensaje ya escrito (`wa.me`).
+ * Decisión de canal: se abre WhatsApp con el mensaje ya escrito.
  * Es manual y de uno en uno, pero es gratis, inmediato y no depende de que
  * Meta apruebe plantillas. Para 50-75 clientes es suficiente; el envío masivo
  * automatizado exigiría WhatsApp Business API, con coste por conversación.

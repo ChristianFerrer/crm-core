@@ -42,15 +42,20 @@ export type SegmentDef = {
   accent: 'lime' | 'iris' | 'cyan-300' | 'amber' | 'rose' | 'mint'
   /** Qué hacer con este grupo — la razón de que el segmento exista */
   accion: string
+  /**
+   * Nombre del icono de lucide-react. Como texto y no como componente: este
+   * módulo es dominio puro y no debe importar React.
+   */
+  icono: string
 }
 
 export const SEGMENTS: SegmentDef[] = [
-  { id: 'campeones',          label: 'Campeones',      sub: 'vienen mucho y gastan', accent: 'lime',     accion: 'Pídeles reseñas y referidos' },
-  { id: 'fieles',             label: 'Fieles',         sub: 'ritmo estable',         accent: 'mint',     accion: 'Sube el ticket: bono mayor o consumos' },
-  { id: 'prometedores',       label: 'Prometedores',   sub: 'nuevos que repiten',    accent: 'cyan-300', accion: 'Conviértelos a bono' },
-  { id: 'en_riesgo',          label: 'En riesgo',      sub: 'rompieron su ritmo',    accent: 'amber',    accion: 'Reactiva con un incentivo pequeño' },
-  { id: 'dormidos',           label: 'Dormidos',       sub: '+90 días sin venir',    accent: 'rose',     accion: 'Campaña de vuelta con oferta fuerte' },
-  { id: 'nuevos_sin_repetir', label: 'Sin repetir',    sub: '1 visita, +21 días',    accent: 'iris',     accion: 'Lo más rentable: ya te conocen' },
+  { id: 'campeones',          label: 'Campeones',      sub: 'vienen mucho y gastan', accent: 'lime',     accion: 'Pídeles reseñas y referidos',           icono: 'Crown' },
+  { id: 'fieles',             label: 'Fieles',         sub: 'ritmo estable',         accent: 'mint',     accion: 'Sube el ticket: bono mayor o consumos', icono: 'Heart' },
+  { id: 'prometedores',       label: 'Prometedores',   sub: 'nuevos que repiten',    accent: 'cyan-300', accion: 'Conviértelos a bono',                   icono: 'Sparkles' },
+  { id: 'en_riesgo',          label: 'En riesgo',      sub: 'rompieron su ritmo',    accent: 'amber',    accion: 'Reactiva con un incentivo pequeño',     icono: 'TrendingDown' },
+  { id: 'dormidos',           label: 'Dormidos',       sub: '+90 días sin venir',    accent: 'rose',     accion: 'Campaña de vuelta con oferta fuerte',   icono: 'Moon' },
+  { id: 'nuevos_sin_repetir', label: 'Sin repetir',    sub: '1 visita, +21 días',    accent: 'iris',     accion: 'Lo más rentable: ya te conocen',        icono: 'UserPlus' },
 ]
 
 export type VisitInput = {
