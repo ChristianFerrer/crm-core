@@ -82,10 +82,10 @@ export function ActionsSection({
                   : `${c.border} ${c.bg} hover:brightness-110`
               }`}
             >
-              <div className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center ${
+              <div className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${
                 vacia ? 'bg-surface2' : c.bg
               }`}>
-                <Icon size={15} className={vacia ? 'text-mist' : c.text} />
+                <Icon size={22} className={vacia ? 'text-mist' : c.text} />
               </div>
 
               <div className="min-w-0 flex-1">

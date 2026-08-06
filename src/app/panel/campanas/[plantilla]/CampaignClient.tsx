@@ -154,8 +154,8 @@ export function CampaignClient({
           className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-snow transition-colors">
           <ArrowLeft size={18} />
         </Link>
-        <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ${c.bg}`}>
-          <TemplateIcon size={18} className={c.text} />
+        <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center ${c.bg}`}>
+          <TemplateIcon size={24} className={c.text} />
         </div>
         <div className="min-w-0">
           <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Campaña</p>
