@@ -267,7 +267,7 @@ export default function CalendarioPage() {
   }, [])
 
   const fetchMembers = useCallback(() => {
-    supabase.from('members').select('id, name, phone, children').order('name').then(({ data }) => setMembers((data ?? []) as Member[]))
+    supabase.from('members').select('id, name, phone, children').is('deleted_at', null).order('name').then(({ data }) => setMembers((data ?? []) as Member[]))
   }, [])
 
   async function handleExecute(b: Booking) {

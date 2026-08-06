@@ -35,7 +35,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
     { data: checks },
     { data: campaign },
   ] = await Promise.all([
-    supabase.from('members').select('id, name, phone, created_at, children, marketing_consent_at, marketing_consent_revoked_at, families(name)').limit(5000),
+    supabase.from('members').select('id, name, phone, created_at, children, marketing_consent_at, marketing_consent_revoked_at, families(name)').is('deleted_at', null).limit(5000),
     supabase.from('visits').select('id, member_id, checked_in_at, paid_at, paid_amount, adults_count, children_count')
       .gte('checked_in_at', new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString()).limit(20000),
     supabase.from('memberships').select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id').limit(5000),

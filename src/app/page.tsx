@@ -50,7 +50,8 @@ export default async function DashboardPage({
       .limit(1),
     supabase
       .from('members')
-      .select('id, name, phone, family_id, families(name), children'),
+      .select('id, name, phone, family_id, families(name), children')
+      .is('deleted_at', null),
     supabase
       .from('bookings')
       .select('id, title, start_time, end_time, guests, member_id, members(name)')

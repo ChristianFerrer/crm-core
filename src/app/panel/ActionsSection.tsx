@@ -55,7 +55,7 @@ export function ActionsSection({
     <section>
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-          <Zap size={12} className="text-amber" /> Esta semana
+          <Zap size={12} className="text-amber" /> Campañas de esta semana
         </p>
         <p className="text-[11px] text-mist">
           {contactadosEstaSemana > 0
@@ -63,6 +63,12 @@ export function ActionsSection({
             : 'Ordenado por dinero en juego'}
         </p>
       </div>
+
+      {/* «Esta semana» es cuándo te toca revisarlo, no el plazo de cada campaña:
+          un cumpleaños se prepara con 45 días y un bono caduca el viernes. */}
+      <p className="text-[11px] text-mist -mt-1 mb-2">
+        Lo que toca mover esta semana. Cada campaña lleva su propio plazo.
+      </p>
 
       <div className="space-y-2">
         {actions.map(a => {

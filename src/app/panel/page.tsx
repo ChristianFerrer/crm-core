@@ -33,7 +33,7 @@ export default async function PanelPage() {
     { data: membersForStats },
     { data: doneSends },
   ] = await Promise.all([
-    supabase.from('members').select('id, name, created_at, children'),
+    supabase.from('members').select('id, name, created_at, children').is('deleted_at', null),
     // ── Fase 1 y 2: dinero y segmentación ──
     // Historial de cobros y visitas de los últimos 14 meses: da para comparar
     // con el mismo mes del año pasado y para calcular el ritmo de cada familia.
@@ -50,7 +50,7 @@ export default async function PanelPage() {
       .limit(5000),
     supabase.from('membership_types').select('id, price'),
     supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
-    supabase.from('members').select('id, name, phone, created_at, families(name)').limit(5000),
+    supabase.from('members').select('id, name, phone, created_at, families(name)').is('deleted_at', null).limit(5000),
     // Fase 3: lo ya contactado, para no volver a proponerlo
     supabase.from('campaign_sends')
       .select('member_id, estado, enviado_at, created_at, campaigns(plantilla)')
@@ -227,8 +227,9 @@ export default async function PanelPage() {
     }
   }
 
+  // pb-6: las tarjetas de abajo no deben quedar pegadas al borde de la app
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('panelres_titulo')}</h1>

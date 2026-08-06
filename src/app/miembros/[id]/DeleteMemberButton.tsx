@@ -28,6 +28,7 @@ export function DeleteMemberButton({ memberId }: { memberId: string }) {
         notes: null,
         qr_code: null,
         family_id: null,
+        deleted_at: new Date().toISOString(),
       })
       .eq('id', memberId)
 

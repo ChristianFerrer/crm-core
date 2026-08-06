@@ -374,13 +374,23 @@ export function renderMessage(mensaje: string, vars: Record<string, string>): st
   return mensaje.replace(/\{([\p{L}\p{N}_]+)\}/gu, (_, key: string) => vars[key] ?? '')
 }
 
-/** Enlace de WhatsApp con el mensaje ya escrito. Null si el móvil no sirve. */
+/**
+ * Enlace de WhatsApp con el mensaje ya escrito. Null si el móvil no sirve.
+ *
+ * Se usa `api.whatsapp.com/send`, no `wa.me`. Los dos abren el chat, pero
+ * wa.me, cuando hay WhatsApp de escritorio instalado, redirige a
+ * `whatsapp://send?phone=…` y por el camino se pierde el texto: se abría la
+ * conversación con el mensaje en blanco. El endpoint /send lo conserva.
+ *
+ * encodeURIComponent deja pasar ' ! * ( ) sin escapar; WhatsApp los interpreta
+ * bien, pero los saltos de línea sí hay que codificarlos, y eso ya lo hace.
+ */
 export function waLink(phone: string | null, text: string): string | null {
   if (!phone) return null
   const clean = phone.replace(/[^0-9]/g, '')
   if (clean.length < 9) return null
   const intl = clean.length === 9 ? `34${clean}` : clean
-  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`
+  return `https://api.whatsapp.com/send?phone=${intl}&text=${encodeURIComponent(text)}`
 }
 
 export type ActionSuggestion = {

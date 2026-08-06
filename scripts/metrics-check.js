@@ -152,8 +152,12 @@ const msg = C.renderMessage('Hola {nombre}, el cumple de {niño} y {noexiste}', 
 console.log('mensaje ->', msg)
 console.assert(msg === 'Hola Laura, el cumple de Aina y ', 'render mal: ' + msg)
 
-console.assert(C.waLink('600 111 222', 'hola').startsWith('https://wa.me/34600111222?text='), 'waLink mal')
+// api.whatsapp.com/send y no wa.me: wa.me pierde el texto al saltar a la app de escritorio
+console.assert(C.waLink('600 111 222', 'hola').startsWith('https://api.whatsapp.com/send?phone=34600111222&text='), 'waLink mal')
 console.assert(C.waLink('123', 'x') === null, 'waLink debería rechazar móviles cortos')
+// El texto debe sobrevivir entero, saltos de línea y emojis incluidos
+const wl = C.waLink('600111222', 'Hola María 🎂\n¿te reservo?')
+console.assert(decodeURIComponent(wl.split('&text=')[1]) === 'Hola María 🎂\n¿te reservo?', 'el texto no sobrevive al enlace')
 
 const acciones = C.suggestedActions(ctx, {}, now)
 console.log('acciones ->', acciones.map(a => `${a.titulo} (${a.valor.toFixed(0)}€)`))

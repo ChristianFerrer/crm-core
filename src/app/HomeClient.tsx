@@ -1865,6 +1865,7 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     if ((!checkinModal && !bookingModal) || checkinMembers.length > 0) return
     supabase.from('members')
       .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
+      .is('deleted_at', null)
       .order('name')
       .then(({ data }) => { if (data) setCheckinMembers(data as unknown as FullMember[]) })
   }, [checkinModal, bookingModal])

@@ -85,6 +85,7 @@ export default function MiembrosPage() {
       supabase
         .from('members')
         .select('id, name, phone, email, birth_date, created_at, families(name), memberships(sessions_remaining, created_at, expires_at, membership_types(name))')
+        .is('deleted_at', null)
         .order('name'),
       supabase
         .from('families')
