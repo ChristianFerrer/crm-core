@@ -189,6 +189,20 @@
    gestión todo lo pulsable debe indicarlo. */
 button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
 
+/* ── Auto-zoom de iOS ────────────────────────────────────────────────
+   Safari en iOS amplía la página al enfocar un campo cuya letra mide menos
+   de 16px, y luego NO deshace el zoom: la app queda cortada y el usuario
+   tiene que apartarla a mano. Forzando 16px en los campos deja de pasar.
+   Solo por debajo de `lg`: en escritorio no hay auto-zoom y se conservan
+   los tamaños del sistema de diseño. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* ── Tablas de datos ──────────────────────────────────────────────────
    Mismo tamaño de letra en toda la app (el de la tabla de Miembros) y
    cabecera con fondo propio que se queda fija al desplazar el cuerpo.
