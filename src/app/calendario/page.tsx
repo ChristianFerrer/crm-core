@@ -690,6 +690,11 @@ export default function CalendarioPage() {
     const pendiente = Math.max(0, (b.amount ?? 0) - (b.deposit_amount ?? 0))
     const hasConflict = !!conflicts[b.id]
     const sala = resourceOf(b)
+    // En la escala, una reserva corta no da alto para dos líneas: se queda solo
+    // con el título en vez de recortar la segunda a media altura.
+    const r = bookingRange(b)
+    const boxH = r ? (r.end - r.start) * TIMELINE_PX_PER_MIN : 999
+    const showLinea2 = !fill || boxH >= 34
 
     const linea2 = [
       b.members?.name ?? null,
@@ -704,19 +709,21 @@ export default function CalendarioPage() {
       <button
         onClick={() => router.push(`/calendario/${b.id}`)}
         title={hasConflict ? `${t('calendario_conflicto')}: ${conflicts[b.id].map(c => c.title).join(', ')}` : undefined}
-        className={`w-full text-left overflow-hidden rounded-xl border px-2.5 py-1 ${
+        className={`w-full text-left overflow-hidden rounded-xl border px-2 py-[3px] ${
           hasConflict ? 'border-rose' : 'border-line'
-        } bg-surface hover:bg-surface2 transition-colors ${st === 'pasado' ? 'opacity-50' : ''} ${fill ? 'h-full flex items-stretch gap-2' : 'flex items-stretch gap-2'}`}
+        } bg-surface hover:bg-surface2 transition-colors ${st === 'pasado' ? 'opacity-50' : ''} ${fill ? 'h-full flex items-start gap-1.5' : 'flex items-start gap-1.5'}`}
       >
-        <span className="w-1 rounded-full shrink-0" style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])} />
-        <span className="flex-1 min-w-0 py-0.5">
+        <span className="w-1 self-stretch rounded-full shrink-0" style={bookingBarStyle(b.status, BOOKING_TYPE_COLOR_VAR[b.type])} />
+        <span className="flex-1 min-w-0">
           <span className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm font-medium text-snow truncate">{b.title}</span>
-            {hasConflict && <AlertTriangle size={12} className="text-rose shrink-0" />}
-            {st === 'ejecutado' && <CheckCircle size={12} className="text-mint shrink-0" />}
-            {st === 'en_curso' && <Clock size={12} className="text-lime shrink-0" />}
+            <span className="text-[13px] font-medium text-snow truncate leading-[1.15]">{b.title}</span>
+            {hasConflict && <AlertTriangle size={11} className="text-rose shrink-0" />}
+            {st === 'ejecutado' && <CheckCircle size={11} className="text-mint shrink-0" />}
+            {st === 'en_curso' && <Clock size={11} className="text-lime shrink-0" />}
           </span>
-          {linea2 && <span className="block text-[11px] text-fog truncate leading-tight mt-0.5">{linea2}</span>}
+          {linea2 && showLinea2 && (
+            <span className="block text-[10px] text-fog truncate leading-[1.2]">{linea2}</span>
+          )}
         </span>
       </button>
     )
