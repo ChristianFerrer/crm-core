@@ -2301,7 +2301,9 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             <span className={`w-full flex-none h-[40%] flex items-center justify-center text-[8px] font-bold text-white uppercase leading-none ${isToday ? 'bg-rose' : 'bg-lime-deep'}`}>
               {monthAbbrev}
             </span>
-            <span className="w-full flex-1 bg-white flex items-center justify-center text-sm font-bold text-ink leading-none">
+            {/* Cuerpo con tokens del tema: en claro sigue viéndose como la hoja
+                blanca de un calendario y en oscuro no deslumbra */}
+            <span className="w-full flex-1 bg-surface2 flex items-center justify-center text-sm font-bold text-snow leading-none">
               {dayNum}
             </span>
           </button>
