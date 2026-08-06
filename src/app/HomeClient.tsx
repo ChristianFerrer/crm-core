@@ -1786,11 +1786,14 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
     return items
   })()
 
-  // Reloj de minuto: sirve para que las custodias programadas entren en sala solas
-  const [nowMs, setNowMs] = useState(0)
+  // Reloj: solo sirve para volver a pintar cada 30s y que las custodias
+  // programadas entren en sala solas. El corte se calcula con Date.now() en el
+  // propio render; si se usara este estado, una visita recién creada podía
+  // tardar hasta 30s en aparecer en el aforo.
+  const [tick, setTick] = useState(0)
   useEffect(() => {
-    setNowMs(Date.now())
-    const id = setInterval(() => setNowMs(Date.now()), 30_000)
+    setTick(1)
+    const id = setInterval(() => setTick(n => n + 1), 30_000)
     return () => clearInterval(id)
   }, [])
 
@@ -1798,11 +1801,11 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
   // Visitas sin salida: incluye las custodias programadas para más tarde
   const openVisits = todayVisits.filter(v => !v.checked_out_at)
   // En sala AHORA: una custodia con hora de entrada futura aún no ha entrado.
-  // `nowMs` arranca a 0 para que el primer render coincida con el del servidor
-  // (hidratación) y luego avanza cada minuto, así entra sola al llegar la hora.
-  const activeVisits = nowMs === 0
+  // Con `tick === 0` (primer render, también el del servidor) no se filtra, para
+  // que la hidratación coincida; ya en el cliente se compara con la hora real.
+  const activeVisits = tick === 0
     ? openVisits
-    : openVisits.filter(v => new Date(v.checked_in_at).getTime() <= nowMs)
+    : openVisits.filter(v => new Date(v.checked_in_at).getTime() <= Date.now())
 
   const filteredVisits = activeVisits.filter(v => {
     if (filterBono === 'con_bono' && !v.membership_id) return false
