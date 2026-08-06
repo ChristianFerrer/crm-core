@@ -97,6 +97,8 @@ const acciones = C.suggestedActions(ctx, {}, now)
 console.log('acciones ->', acciones.map(a => `${a.titulo} (${a.valor.toFixed(0)}€)`))
 console.assert(acciones.length > 0 && acciones[0].valor >= acciones[acciones.length-1].valor, 'orden por valor mal')
 console.assert(acciones.every(a => !!a.horizonte), 'falta el horizonte en alguna acción')
+// Una campaña con pocos destinatarios pero valiosa no debe quedar fuera de corte
+console.assert(acciones.some(a => a.plantilla === 'cumpleanos'), 'el cumpleaños no debería recortarse')
 
 // Contactada ayer: dentro de la ventana de reintento del cumpleaños (300 días)
 const acciones2 = C.suggestedActions(ctx, { 'cumpleanos:b1': d(1) }, now)

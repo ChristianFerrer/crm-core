@@ -253,12 +253,17 @@ export function puedeReproponer(
  *
  * La revisión es semanal a propósito: diaria se queda vacía casi siempre y
  * mensual llega tarde para los bonos que caducan y para quien está fugándose.
+ *
+ * Se muestran TODAS las plantillas con gente pendiente, no un top 3. Solo hay
+ * cinco, así que el bloque sigue siendo corto, y recortar escondía justo la
+ * campaña de más margen: un cumpleaños suma pocos euros totales porque son dos
+ * familias, pero convierte muchísimo mejor que veinte contactos de relleno.
  */
 export function suggestedActions(
   ctx: Parameters<typeof resolveRecipients>[1],
   contactLog: ContactLog,
   now = new Date(),
-  max = 3,
+  max = TEMPLATES.length,
 ): ActionSuggestion[] {
   const out: ActionSuggestion[] = []
 
