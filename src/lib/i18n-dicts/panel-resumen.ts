@@ -6,4 +6,6 @@ export const dictPanelResumen = {
   panelres_alerta_bono_caduca_hoy: { es: '{name} — el bono caduca hoy', en: "{name} — pass expires today", ca: '{name} — el bo caduca avui', de: '{name} — das Guthaben läuft heute ab' },
   panelres_alerta_bono_caduca_manana: { es: '{name} — el bono caduca mañana', en: '{name} — pass expires tomorrow', ca: '{name} — el bo caduca demà', de: '{name} — das Guthaben läuft morgen ab' },
   panelres_alerta_cumple: { es: '{child} cumple {age} años el día {day} — miembro: {member}', en: '{child} turns {age} on day {day} — member: {member}', ca: '{child} fa {age} anys el dia {day} — membre: {member}', de: '{child} wird am {day} {age} Jahre alt — Mitglied: {member}' },
+  tendencias_subtitulo: { es: 'Cómo ha evolucionado el negocio', en: 'How the business has evolved', ca: 'Com ha evolucionat el negoci', de: 'Wie sich das Geschäft entwickelt hat' },
+  panelres_ver_tendencias: { es: 'Ver tendencias', en: 'View trends', ca: 'Veure tendències', de: 'Trends ansehen' },
 } as const

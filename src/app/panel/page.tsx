@@ -1,11 +1,9 @@
 import { createServerSupabase } from '@/lib/supabase-server'
 import Link from 'next/link'
-import { Users, TrendingUp, BarChart2, Tag, Building2 } from 'lucide-react'
-import { MemberGrowthChart, BonoDistChart, VisitMiniChart, PeakHoursChart, VisitsPerMonthChart } from './PanelCharts'
+import { Users, TrendingUp, BarChart2, Tag, Building2, LineChart } from 'lucide-react'
 import { FollowUpItem } from './FollowUpSection'
 import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
-import { CustomizableDashboard } from './CustomizableDashboard'
 import { PulseSection } from './PulseSection'
 import { SegmentMap } from './SegmentMap'
 import { getT } from '@/lib/i18n-server'
@@ -34,23 +32,17 @@ export default async function PanelPage() {
 
   const [
     { count: totalMembers },
-    { count: todayCount },
-    { count: monthCount },
     { count: expiringCount },
-    { data: recentVisits },
     { data: atRiskMembers },
     { data: topVisits },
     { data: lowBonoMembers },
     { data: allMembers },
-    { data: activeBonoMembers },
     { data: tenant },
     { data: birthdayLeadsData },
     { data: expiredBonos },
     { data: followUpLeadsData },
     { data: monthVisits },
     { data: bonosSemanaRaw },
-    { data: visitTimes },
-    { data: yearVisits },
     { data: paidVisits },
     { data: allBookings },
     { data: allMemberships },
@@ -59,25 +51,19 @@ export default async function PanelPage() {
     { data: membersForStats },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
-    supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
-    supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfMonth),
     supabase.from('memberships').select('id', { count: 'exact', head: true }).lte('sessions_remaining', 2).not('sessions_remaining', 'is', null),
-    supabase.from('visits').select('checked_in_at, children_present').gte('checked_in_at', since7.toISOString()),
     recentVisitedIds.length > 0
       ? supabase.from('members').select('id, name, families(name)').not('id', 'in', `(${recentVisitedIds.map(id => `"${id}"`).join(',')})`).limit(5)
       : supabase.from('members').select('id, name, families(name)').limit(5),
     supabase.from('visits').select('member_id, members(name)').gte('checked_in_at', startOfMonth).limit(200),
     supabase.from('memberships').select('id, sessions_remaining, membership_types(name), members(id, name, families(name))').lte('sessions_remaining', 2).not('sessions_remaining', 'is', null).limit(10),
     supabase.from('members').select('id, name, created_at, children'),
-    supabase.from('memberships').select('member_id, sessions_remaining').or('sessions_remaining.is.null,sessions_remaining.gt.0').gte('expires_at', todayStr),
     supabase.from('tenants').select('id, capacity').limit(1).single(),
     supabase.from('birthday_leads').select('*').eq('year', now.getFullYear()),
     supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').lt('expires_at', todayStr).gte('expires_at', thirtyDaysAgo).limit(20),
     supabase.from('follow_up_leads').select('*').eq('period', currentPeriod),
     supabase.from('visits').select('member_id').gte('checked_in_at', startOfMonth).limit(500),
     supabase.from('memberships').select('member_id, expires_at, membership_types(name), members(id, name)').gte('expires_at', todayStr).lte('expires_at', weekFromNow).limit(20),
-    supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(5000),
-    supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getFullYear(), 0, 1).toISOString()).limit(20000),
     // ── Fase 1 y 2: dinero y segmentación ──
     // Historial de cobros y visitas de los últimos 14 meses: da para comparar
     // con el mismo mes del año pasado y para calcular el ritmo de cada familia.
@@ -96,82 +82,6 @@ export default async function PanelPage() {
     supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
     supabase.from('members').select('id, name, phone, created_at, families(name)').limit(5000),
   ])
-
-  // ── Visitas por mes (todo el año) ──────────────────────────────────────────
-  const visitsByMonth = Array(12).fill(0)
-  ;(yearVisits ?? []).forEach((v: any) => {
-    const d = new Date(v.checked_in_at)
-    if (d.getFullYear() === now.getFullYear()) visitsByMonth[d.getMonth()]++
-  })
-
-  // ── Horas pico de visitas (últimos 30 días, hora local España) ─────────────
-  const hourCounts = Array(24).fill(0)
-  ;(visitTimes ?? []).forEach((v: any) => {
-    const h = parseInt(new Date(v.checked_in_at).toLocaleString('en-US', { hour: '2-digit', hour12: false, timeZone: 'Europe/Madrid' }))
-    if (h >= 0 && h < 24) hourCounts[h % 24]++
-  })
-  const anyHour = hourCounts.findIndex(c => c > 0)
-  let firstH = anyHour === -1 ? 8 : anyHour
-  let lastH = anyHour === -1 ? 21 : (23 - [...hourCounts].reverse().findIndex(c => c > 0))
-  firstH = Math.min(firstH, 8)
-  lastH = Math.max(lastH, 21)
-  const peakHourBuckets = Array.from({ length: lastH - firstH + 1 }, (_, i) => ({
-    hour: `${firstH + i}h`,
-    visitas: hourCounts[firstH + i],
-  }))
-
-  // ── 7-day visit chart ──────────────────────────────────────────────────────
-  const DAY = ['D','L','M','X','J','V','S']
-  const buckets = [...Array(7)].map((_, i) => {
-    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (6 - i))
-    return { label: i === 6 ? 'Hoy' : DAY[d.getDay()], adultos: 0, ninos: 0, date: d.getTime() }
-  })
-  ;(recentVisits ?? []).forEach((row: any) => {
-    const t = new Date(row.checked_in_at); t.setHours(0,0,0,0)
-    const b = buckets.find(x => x.date === t.getTime())
-    if (b) {
-      b.adultos++
-      b.ninos += (row.children_present as any[])?.length ?? 0
-    }
-  })
-
-  // ── Member growth chart (flujo de todo el año, acumulado por mes) ───────────
-  const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-  const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString()
-  const membersBeforeYear = (allMembers ?? []).filter((m: any) => m.created_at < startOfYear)
-  const lastMonthAdults = membersBeforeYear.length
-  const lastMonthChildren = membersBeforeYear.reduce((s: number, m: any) => s + ((m.children as any[])?.length ?? 0), 0)
-  const newThisMonth = (allMembers ?? []).filter((m: any) => m.created_at >= startOfYear).length
-  const monthlyAdults = Array(12).fill(0)
-  const monthlyChildren = Array(12).fill(0)
-  ;(allMembers ?? []).forEach((m: any) => {
-    const d = new Date(m.created_at)
-    if (d.getFullYear() === now.getFullYear()) {
-      monthlyAdults[d.getMonth()]++
-      monthlyChildren[d.getMonth()] += (m.children as any[])?.length ?? 0
-    }
-  })
-  const currentMonth = now.getMonth()
-  let runAdults = lastMonthAdults, runChildren = lastMonthChildren
-  const growthBuckets = MONTHS.map((label, i) => {
-    runAdults += monthlyAdults[i]; runChildren += monthlyChildren[i]
-    return i <= currentMonth
-      ? { label, adultos: runAdults, ninos: runChildren }
-      : { label, adultos: null, ninos: null }
-  })
-  const visitsMonthBuckets = MONTHS.map((label, i) => ({ label, visitas: i <= currentMonth ? visitsByMonth[i] : null }))
-
-  // ── Bono distribution ──────────────────────────────────────────────────────
-  const bonoByMember = new Map<string, number | null>()
-  ;(activeBonoMembers ?? []).forEach((m: any) => {
-    const existing = bonoByMember.get(m.member_id)
-    const sessions: number | null = m.sessions_remaining
-    if (existing === undefined) { bonoByMember.set(m.member_id, sessions) }
-    else if (existing !== null && (sessions === null || sessions > existing)) { bonoByMember.set(m.member_id, sessions) }
-  })
-  let withFullBono = 0, withLowBono = 0
-  bonoByMember.forEach(s => { if (s === null || s > 2) withFullBono++; else if (s > 0) withLowBono++ })
-  const withoutBono = Math.max(0, (totalMembers ?? 0) - withFullBono - withLowBono)
 
   // ── Fase 1: pulso económico del mes ───────────────────────────────────────
   const mesActual = monthPeriod(now)
@@ -277,7 +187,13 @@ export default async function PanelPage() {
   )
 
   // ── 3. Bonos caducados (últimos 30 días, sin renovación) ──────────────────
-  const activeMemberIds = new Set((activeBonoMembers ?? []).map((m: any) => m.member_id))
+  // Bonos vigentes, a partir de las membresías ya cargadas para las métricas
+  const activeMemberIds = new Set(
+    ((allMemberships ?? []) as any[])
+      .filter(m => (m.sessions_remaining == null || m.sessions_remaining > 0)
+        && (!m.expires_at || m.expires_at >= todayStr))
+      .map(m => m.member_id)
+  )
   const expiredBonosItems: FollowUpItem[] = (expiredBonos as any[] ?? [])
     .filter((b: any) => !activeMemberIds.has(b.member_id))
     .map((b: any) => {
@@ -366,6 +282,16 @@ export default async function PanelPage() {
         <UrgentAlerts alerts={urgentAlerts} />
       </div>
 
+      {/* Los gráficos viven en Tendencias: aquí se decide, allí se explora */}
+      <div className="flex justify-end -mt-2">
+        <Link
+          href="/panel/tendencias"
+          className="flex items-center gap-1.5 text-xs font-semibold text-fog hover:text-snow transition-colors"
+        >
+          <LineChart size={13} /> {t('panelres_ver_tendencias')} →
+        </Link>
+      </div>
+
 
       {/* Fase 1: el dinero primero */}
       <PulseSection data={pulse} />
@@ -373,17 +299,6 @@ export default async function PanelPage() {
       {/* Fase 2: a quién tienes y qué hacer con cada grupo */}
       <SegmentMap stats={memberStats} avgLtv={ltvMedio} />
 
-      {/* Tendencias: para explorar, no para decidir; van después */}
-      <CustomizableDashboard
-        data={{
-          stats: { totalMembers: totalMembers ?? 0, todayCount: todayCount ?? 0, monthCount: monthCount ?? 0 },
-          growth: { data: growthBuckets, lastMonthAdults, lastMonthChildren, newThisMonth },
-          bono: { withFullBono, withLowBono, withoutBono },
-          visit7: { data: buckets, capacity },
-          peak: { data: peakHourBuckets },
-          visitsYear: { data: visitsMonthBuckets },
-        }}
-      />
 
       {/* Opportunity indicators */}
       <OpportunityDashboard

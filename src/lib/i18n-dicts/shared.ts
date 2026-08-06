@@ -5,6 +5,7 @@ export const dictShared = {
   shared_mostrar_contrasena: { es: 'Mostrar contraseña', en: 'Show password', ca: 'Mostra la contrasenya', de: 'Passwort anzeigen' },
   shared_ocultar_contrasena: { es: 'Ocultar contraseña', en: 'Hide password', ca: 'Amaga la contrasenya', de: 'Passwort verbergen' },
   shared_nav_resumen: { es: 'Resumen', en: 'Overview', ca: 'Resum', de: 'Übersicht' },
+  shared_nav_tendencias: { es: 'Tendencias', en: 'Trends', ca: 'Tendències', de: 'Trends' },
   shared_nav_servicios: { es: 'Servicios', en: 'Services', ca: 'Serveis', de: 'Leistungen' },
   shared_nav_tienda: { es: 'Tienda', en: 'Store', ca: 'Botiga', de: 'Shop' },
   shared_nav_perfil: { es: 'Perfil', en: 'Profile', ca: 'Perfil', de: 'Profil' },

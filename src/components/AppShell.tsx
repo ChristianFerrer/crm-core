@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Shapes, Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check, ChevronLeft, ChevronRight, Settings, Tag, Store } from 'lucide-react'
+import { Shapes, LineChart, Home, Users, BarChart2, CalendarDays, LogOut, User, Building2, ShieldCheck, Check, ChevronLeft, ChevronRight, Settings, Tag, Store } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
@@ -179,6 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { href: '/calendario', label: t('nav_agenda'),   icon: CalendarDays,badge: badges.agenda },
             { href: '/miembros',   label: t('nav_miembros'), icon: Users,       badge: 0 },
             { href: '/panel',      label: t('nav_panel'),    icon: BarChart2,   badge: badges.panel },
+            { href: '/panel/tendencias',    label: t('shared_nav_tendencias'),    icon: LineChart,   badge: 0 },
             { href: '/panel/servicios',     label: t('shared_nav_servicios'),     icon: Tag,         badge: 0 },
             { href: '/panel/tienda',        label: t('shared_nav_tienda'),        icon: Store, badge: 0 },
             { href: '/panel/configuracion', label: t('shared_nav_configuracion'), icon: Settings,    badge: 0 },
