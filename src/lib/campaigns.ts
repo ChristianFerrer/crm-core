@@ -259,6 +259,14 @@ export type Recipient = {
   vars: Record<string, string>
   /** Euros que hay en juego con esta familia, para priorizar */
   valor: number
+  /**
+   * Por qué está en esta lista, en una línea. Va en la tarjeta del tablero:
+   * sin esto hay que abrir la ficha para saber a quién estás escribiendo.
+   */
+  contexto: string
+  /** Historial, para juzgar de un vistazo. Null si la familia no tiene visitas. */
+  visitas: number | null
+  diasDesdeUltima: number | null
 }
 
 /** Primer nombre: en un mensaje corto el nombre completo suena a circular. */
@@ -286,6 +294,14 @@ export function resolveRecipients(
 ): Recipient[] {
   const statById = new Map(ctx.stats.map(s => [s.memberId, s]))
 
+  const historial = (id: string) => {
+    const st = statById.get(id)
+    return {
+      visitas: st ? st.visitas : null,
+      diasDesdeUltima: st?.diasDesdeUltima != null ? Math.round(st.diasDesdeUltima) : null,
+    }
+  }
+
   switch (plantilla) {
     case 'cumpleanos':
       return ctx.birthdays.map(b => ({
@@ -294,6 +310,8 @@ export function resolveRecipients(
         phone: statById.get(b.member_id)?.phone ?? null,
         vars: { nombre: firstName(b.member_name), niño: b.child_name, dia: String(b.birthday_day) },
         valor: ctx.precioCumple,
+        contexto: `${b.child_name} cumple el día ${b.birthday_day}`,
+        ...historial(b.member_id),
       }))
 
     case 'bono_bajo':
@@ -307,6 +325,10 @@ export function resolveRecipients(
           caduca: b.expires_at ?? '',
         },
         valor: ctx.ticketMedio * 8,
+        contexto: b.sessions != null && b.sessions > 0
+          ? `${b.sessions} sesión${b.sessions === 1 ? '' : 'es'} restante${b.sessions === 1 ? '' : 's'}`
+          : 'Caduca esta semana',
+        ...historial(b.member_id),
       }))
 
     case 'renovacion_caducada':
@@ -320,6 +342,10 @@ export function resolveRecipients(
           dias: String(c.dias),
         },
         valor: ctx.precioBono,
+        contexto: c.motivo === 'agotado'
+          ? 'Bono agotado, sin sesiones'
+          : `Caducó hace ${c.dias} día${c.dias === 1 ? '' : 's'}`,
+        ...historial(c.member_id),
       }))
 
     case 'upsell_bono':
@@ -329,17 +355,26 @@ export function resolveRecipients(
         phone: statById.get(s.member_id)?.phone ?? null,
         vars: { nombre: firstName(s.member_name), visitas: String(s.visitas) },
         valor: ctx.precioBono,
+        contexto: `${s.visitas} visitas en 60 días, pagando suelto`,
+        ...historial(s.member_id),
       }))
 
     case 'reactivacion':
-      return bySegment(ctx.stats, 'en_riesgo').map(s => toRecipient(s, ctx.ticketMedio))
+      return bySegment(ctx.stats, 'en_riesgo')
+        .map(s => toRecipient(s, ctx.ticketMedio, s.diasDesdeUltima != null
+          ? `Sin venir desde hace ${Math.round(s.diasDesdeUltima)} días`
+          : 'Sin visitas registradas'))
 
     case 'segunda_visita':
-      return bySegment(ctx.stats, 'nuevos_sin_repetir').map(s => toRecipient(s, ctx.ticketMedio))
+      return bySegment(ctx.stats, 'nuevos_sin_repetir')
+        .map(s => toRecipient(s, ctx.ticketMedio, s.diasDesdeUltima != null
+          ? `Una sola visita, hace ${Math.round(s.diasDesdeUltima)} días`
+          : 'Una sola visita'))
 
     case 'valle':
       return [...bySegment(ctx.stats, 'fieles'), ...bySegment(ctx.stats, 'campeones')]
-        .map(s => toRecipient(s, ctx.ticketMedio))
+        .map(s => toRecipient(s, ctx.ticketMedio,
+          `Cliente habitual · ${s.visitas} visita${s.visitas === 1 ? '' : 's'}`))
 
     default:
       return []
@@ -350,7 +385,7 @@ function bySegment(stats: MemberStat[], seg: SegmentId): MemberStat[] {
   return stats.filter(s => s.segmento === seg)
 }
 
-function toRecipient(s: MemberStat, ticketMedio: number): Recipient {
+function toRecipient(s: MemberStat, ticketMedio: number, contexto: string): Recipient {
   return {
     memberId: s.memberId,
     name: s.name,
@@ -361,6 +396,9 @@ function toRecipient(s: MemberStat, ticketMedio: number): Recipient {
       visitas: String(s.visitas),
     },
     valor: s.ticketMedio > 0 ? s.ticketMedio : ticketMedio,
+    contexto,
+    visitas: s.visitas,
+    diasDesdeUltima: s.diasDesdeUltima != null ? Math.round(s.diasDesdeUltima) : null,
   }
 }
 

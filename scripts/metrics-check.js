@@ -135,6 +135,14 @@ const ctx = {
   precioBono: 90,
 }
 
+// Toda tarjeta del tablero necesita saber por qué esa familia está ahí
+for (const p of ['cumpleanos','bono_bajo','renovacion_caducada','upsell_bono','reactivacion','valle','segunda_visita']) {
+  for (const r of C.resolveRecipients(p, ctx)) {
+    console.assert(!!r.contexto, `sin contexto en ${p}: ${r.name}`)
+    console.assert('visitas' in r && 'diasDesdeUltima' in r, `sin historial en ${p}`)
+  }
+}
+
 const renov = C.resolveRecipients('renovacion_caducada', ctx)
 console.assert(renov.length === 1 && renov[0].valor === 90, 'renovación debería valorarse al precio del bono')
 console.assert(renov[0].vars.motivo === 'se agotó', 'variable motivo mal')
