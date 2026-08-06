@@ -2,7 +2,10 @@ import { createServerSupabase } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import { buildMemberStats } from '@/lib/segments'
 import { revenue, monthPeriod } from '@/lib/metrics'
-import { resolveRecipients, templateById, type BirthdayLead, type BonoLead, type PlantillaId } from '@/lib/campaigns'
+import {
+  resolveRecipients, templateById, buildCaducados, buildSinBono, requiereConsentimiento,
+  type BirthdayLead, type BonoLead, type PlantillaId,
+} from '@/lib/campaigns'
 import { CampaignClient, type ExistingSend } from './CampaignClient'
 
 export const revalidate = 0
@@ -94,17 +97,22 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
     ((bookings ?? []) as any[]).filter(b => b.amount).reduce((s, b, _i, arr) => s + Number(b.amount) / arr.length, 0),
   )
 
+  const precioBono = precioMedioBono((types ?? []) as any[])
+
   const todos = resolveRecipients(template.id as PlantillaId, {
     stats, birthdays, bonos,
+    caducados: buildCaducados(membershipRows, memberRows, now),
+    sinBono: buildSinBono(membershipRows, visitRows, memberRows, now),
     ticketMedio: rev.ticketMedio || 12,
     precioCumple,
+    precioBono,
   })
 
   // ── Consentimiento de marketing ────────────────────────────────────────
   // Un contacto sobre SU reserva o SU bono es gestión del servicio; mandar una
   // promoción necesita permiso explícito. Solo se filtra en las campañas que
   // son publicidad.
-  const esPublicidad = template.id === 'valle' || template.id === 'segunda_visita'
+  const esPublicidad = requiereConsentimiento(template.id)
   const consentById = new Map(
     memberRows.map(m => [m.id, !!m.marketing_consent_at && !m.marketing_consent_revoked_at])
   )
@@ -162,4 +170,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
       sinConsentimiento={sinConsentimiento}
     />
   )
+}
+
+/** Precio medio de los tipos de bono, para valorar lo que hay en juego. */
+function precioMedioBono(types: any[]): number {
+  const precios = types.map(t => Number(t.price ?? 0)).filter(p => p > 0)
+  if (precios.length === 0) return 0
+  return precios.reduce((s, p) => s + p, 0) / precios.length
 }

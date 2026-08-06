@@ -16,6 +16,8 @@ import type { MemberStat, SegmentId } from './segments'
 export type PlantillaId =
   | 'cumpleanos'
   | 'bono_bajo'
+  | 'renovacion_caducada'
+  | 'upsell_bono'
   | 'reactivacion'
   | 'valle'
   | 'segunda_visita'
@@ -68,6 +70,28 @@ export const TEMPLATES: CampaignTemplate[] = [
     reintentoDias: 30,
   },
   {
+    id: 'renovacion_caducada',
+    nombre: 'Renovar bono',
+    descripcion: 'Bonos agotados o caducados hace menos de 30 días, sin renovar',
+    horizonte: 'Este mes',
+    porque: 'Quien se queda sin bono deja de venir a las pocas semanas: el hueco es donde se pierde al cliente',
+    mensaje: '¡Hola {nombre}! Se os ha terminado el bono. ¿Os preparo uno nuevo para que no perdáis el ritmo?',
+    incentivo: 'Renovación sin cambio de precio',
+    accent: 'rose',
+    reintentoDias: 45,
+  },
+  {
+    id: 'upsell_bono',
+    nombre: 'Pasar a bono',
+    descripcion: 'Familias que vienen a menudo y pagan cada entrada suelta',
+    horizonte: 'Este mes',
+    porque: 'Ya vienen lo suficiente para que el bono les salga a cuenta: asegura ingresos por adelantado',
+    mensaje: '¡Hola {nombre}! Como venís a menudo, con un bono os saldría cada visita bastante más barato. ¿Os cuento cómo funciona?',
+    incentivo: 'Primera sesión de regalo al contratar el bono',
+    accent: 'lime',
+    reintentoDias: 60,
+  },
+  {
     id: 'reactivacion',
     nombre: 'Reactivación',
     descripcion: 'Familias que llevan sin venir más del doble de su ritmo',
@@ -106,8 +130,126 @@ export function templateById(id: string): CampaignTemplate | undefined {
   return TEMPLATES.find(t => t.id === id)
 }
 
+/**
+ * Campañas que son publicidad y por tanto exigen consentimiento de marketing.
+ *
+ * La línea está en de qué habla el mensaje: escribir por SU bono o SU reserva
+ * es gestión del servicio contratado; ofrecer un producto o un descuento es
+ * publicidad. Renovar un bono agotado es lo primero; proponer contratar uno
+ * nuevo a quien nunca lo tuvo es lo segundo.
+ */
+const PUBLICIDAD: PlantillaId[] = ['valle', 'segunda_visita', 'upsell_bono']
+
+export function requiereConsentimiento(id: PlantillaId): boolean {
+  return PUBLICIDAD.includes(id)
+}
+
 export type BirthdayLead = { member_id: string; member_name: string; child_name: string; birthday_day: number }
 export type BonoLead = { member_id: string; member_name: string; sessions: number | null; expires_at: string | null }
+
+/** Bono que ya no sirve: agotado (0 sesiones) o con la fecha pasada. */
+export type CaducadoLead = {
+  member_id: string
+  member_name: string
+  motivo: 'agotado' | 'caducado'
+  /** Días desde que dejó de servir, para ordenar por frescura */
+  dias: number
+}
+
+/** Familia que viene a menudo y paga cada entrada suelta. */
+export type SinBonoLead = { member_id: string; member_name: string; visitas: number }
+
+/** Fila mínima de `memberships` que necesitan los constructores. */
+type MembershipRow = { member_id: string; sessions_remaining: number | null; expires_at: string | null }
+type MemberRow = { id: string; name: string }
+type VisitRow = { member_id: string; checked_in_at: string }
+
+const DIA = 86_400_000
+
+/** ¿Este bono sigue sirviendo hoy? Ni agotado ni con la fecha pasada. */
+function bonoVigente(m: MembershipRow, hoy: string): boolean {
+  const quedanSesiones = m.sessions_remaining == null || m.sessions_remaining > 0
+  const enFecha = !m.expires_at || m.expires_at >= hoy
+  return quedanSesiones && enFecha
+}
+
+/**
+ * Familias sin ningún bono vigente cuyo último bono murió hace poco.
+ *
+ * Cuenta tanto el que caducó por fecha como el que se quedó a cero sesiones.
+ * Mirar solo `expires_at`, como hacía el panel viejo, dejaba fuera los bonos
+ * agotados con fecha futura, que son justo los más fáciles de renovar.
+ */
+export function buildCaducados(
+  memberships: MembershipRow[],
+  members: MemberRow[],
+  now = new Date(),
+  ventanaDias = 30,
+): CaducadoLead[] {
+  const hoy = now.toISOString().split('T')[0]
+  const nombrePorId = new Map(members.map(m => [m.id, m.name]))
+  const conVigente = new Set(memberships.filter(m => bonoVigente(m, hoy)).map(m => m.member_id))
+
+  const mejorPorMiembro = new Map<string, CaducadoLead>()
+  for (const m of memberships) {
+    if (conVigente.has(m.member_id)) continue
+    if (bonoVigente(m, hoy)) continue
+    const nombre = nombrePorId.get(m.member_id)
+    if (!nombre) continue
+
+    // El agotado no tiene fecha de muerte: se cuenta como reciente, porque lo
+    // que importa es que hoy no puede entrar.
+    const agotado = m.sessions_remaining != null && m.sessions_remaining <= 0
+    const dias = agotado || !m.expires_at
+      ? 0
+      : Math.floor((now.getTime() - new Date(m.expires_at + 'T00:00:00').getTime()) / DIA)
+    if (dias < 0 || dias > ventanaDias) continue
+
+    const lead: CaducadoLead = {
+      member_id: m.member_id,
+      member_name: nombre,
+      motivo: agotado ? 'agotado' : 'caducado',
+      dias,
+    }
+    // Si tiene varios bonos muertos, vale el más reciente
+    const prev = mejorPorMiembro.get(m.member_id)
+    if (!prev || lead.dias < prev.dias) mejorPorMiembro.set(m.member_id, lead)
+  }
+  return [...mejorPorMiembro.values()].sort((a, b) => a.dias - b.dias)
+}
+
+/**
+ * Familias que vienen a menudo pero pagan suelto: candidatas a bono.
+ *
+ * El mínimo de visitas importa. El panel viejo listaba a cualquiera que hubiera
+ * pasado una vez en el mes, y con una sola visita no hay hábito que convertir.
+ */
+export function buildSinBono(
+  memberships: MembershipRow[],
+  visits: VisitRow[],
+  members: MemberRow[],
+  now = new Date(),
+  ventanaDias = 60,
+  minVisitas = 2,
+): SinBonoLead[] {
+  const hoy = now.toISOString().split('T')[0]
+  const desde = now.getTime() - ventanaDias * DIA
+  const conVigente = new Set(memberships.filter(m => bonoVigente(m, hoy)).map(m => m.member_id))
+  const nombrePorId = new Map(members.map(m => [m.id, m.name]))
+
+  const cuenta = new Map<string, number>()
+  for (const v of visits) {
+    if (!v.checked_in_at || new Date(v.checked_in_at).getTime() < desde) continue
+    if (conVigente.has(v.member_id)) continue
+    if (!nombrePorId.has(v.member_id)) continue
+    cuenta.set(v.member_id, (cuenta.get(v.member_id) ?? 0) + 1)
+  }
+
+  return [...cuenta.entries()]
+    .filter(([, n]) => n >= minVisitas)
+    .map(([id, n]) => ({ member_id: id, member_name: nombrePorId.get(id)!, visitas: n }))
+    .sort((a, b) => b.visitas - a.visitas)
+}
 
 export type Recipient = {
   memberId: string
@@ -134,8 +276,12 @@ export function resolveRecipients(
     stats: MemberStat[]
     birthdays: BirthdayLead[]
     bonos: BonoLead[]
+    caducados: CaducadoLead[]
+    sinBono: SinBonoLead[]
     ticketMedio: number
     precioCumple: number
+    /** Precio medio real de los bonos: mejor estimación que inventar múltiplos */
+    precioBono: number
   },
 ): Recipient[] {
   const statById = new Map(ctx.stats.map(s => [s.memberId, s]))
@@ -161,6 +307,28 @@ export function resolveRecipients(
           caduca: b.expires_at ?? '',
         },
         valor: ctx.ticketMedio * 8,
+      }))
+
+    case 'renovacion_caducada':
+      return ctx.caducados.map(c => ({
+        memberId: c.member_id,
+        name: c.member_name,
+        phone: statById.get(c.member_id)?.phone ?? null,
+        vars: {
+          nombre: firstName(c.member_name),
+          motivo: c.motivo === 'agotado' ? 'se agotó' : 'caducó',
+          dias: String(c.dias),
+        },
+        valor: ctx.precioBono,
+      }))
+
+    case 'upsell_bono':
+      return ctx.sinBono.map(s => ({
+        memberId: s.member_id,
+        name: s.member_name,
+        phone: statById.get(s.member_id)?.phone ?? null,
+        vars: { nombre: firstName(s.member_name), visitas: String(s.visitas) },
+        valor: ctx.precioBono,
       }))
 
     case 'reactivacion':
@@ -306,6 +474,8 @@ function tituloAccion(id: PlantillaId, n: number): string {
   switch (id) {
     case 'cumpleanos':     return `${n} cumpleaños en los próximos 45 días`
     case 'bono_bajo':      return `${n} bono${plural ? 's' : ''} a punto de agotarse`
+    case 'renovacion_caducada': return `${n} bono${plural ? 's' : ''} sin renovar`
+    case 'upsell_bono':    return `${n} familia${plural ? 's' : ''} ${plural ? 'vienen' : 'viene'} sin bono`
     case 'reactivacion':   return `${n} familia${plural ? 's' : ''} rompió su ritmo`
     case 'segunda_visita': return `${n} familia${plural ? 's' : ''} sin repetir visita`
     case 'valle':          return `${n} familia${plural ? 's' : ''} para llenar el valle`

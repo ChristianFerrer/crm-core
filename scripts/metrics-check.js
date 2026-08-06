@@ -71,13 +71,75 @@ console.log('\nOK')
 
 // ── Fase 3: campañas ──
 const C = require('../.tmp/campaigns.js')
+
+// ── buildCaducados: agotado y caducado, nunca quien tiene bono vigente ──
+const hoyStr = now.toISOString().split('T')[0]
+const dStr = (n) => new Date(now.getTime() - n*86400000).toISOString().split('T')[0]
+const memsCad = [
+  { member_id: 'agotado',  sessions_remaining: 0,    expires_at: dStr(-60) }, // fecha futura, sin sesiones
+  { member_id: 'caducado', sessions_remaining: 5,    expires_at: dStr(10)  },
+  { member_id: 'viejo',    sessions_remaining: 0,    expires_at: dStr(200) }, // agotado también cuenta
+  { member_id: 'vigente',  sessions_remaining: 4,    expires_at: dStr(-30) },
+  { member_id: 'mixto',    sessions_remaining: 0,    expires_at: dStr(5)   }, // tiene otro vigente
+  { member_id: 'mixto',    sessions_remaining: 6,    expires_at: dStr(-40) },
+]
+const membersCad = ['agotado','caducado','viejo','vigente','mixto'].map(id => ({ id, name: id }))
+const cads = C.buildCaducados(memsCad, membersCad, now)
+console.log('\ncaducados ->', cads.map(c => `${c.member_id}:${c.motivo}`))
+const cadIds = cads.map(c => c.member_id)
+console.assert(cadIds.includes('agotado'), 'el bono agotado con fecha futura debería contar')
+console.assert(cadIds.includes('caducado'), 'el bono con fecha pasada debería contar')
+console.assert(!cadIds.includes('vigente'), 'un bono vigente no es un caducado')
+console.assert(!cadIds.includes('mixto'), 'quien tiene otro bono vigente no se persigue')
+console.assert(cads.find(c => c.member_id === 'agotado').motivo === 'agotado', 'motivo mal')
+// El caducado hace 200 días queda fuera de la ventana... salvo que esté agotado
+console.assert(cadIds.includes('viejo'), 'agotado cuenta como reciente aunque la fecha sea vieja')
+console.assert(C.buildCaducados(
+  [{ member_id: 'x', sessions_remaining: 3, expires_at: dStr(200) }],
+  [{ id: 'x', name: 'X' }], now,
+).length === 0, 'caducado hace 200 días debería quedar fuera de la ventana')
+
+// ── buildSinBono: hace falta hábito, no una visita suelta ──
+const visSinBono = [
+  { member_id: 'habitual', checked_in_at: d(5) },
+  { member_id: 'habitual', checked_in_at: d(20) },
+  { member_id: 'habitual', checked_in_at: d(40) },
+  { member_id: 'suelto',   checked_in_at: d(10) },
+  { member_id: 'antiguo',  checked_in_at: d(90) },
+  { member_id: 'antiguo',  checked_in_at: d(95) },
+  { member_id: 'conbono',  checked_in_at: d(3) },
+  { member_id: 'conbono',  checked_in_at: d(9) },
+]
+const membersSB = ['habitual','suelto','antiguo','conbono'].map(id => ({ id, name: id }))
+const sb = C.buildSinBono([{ member_id: 'conbono', sessions_remaining: 5, expires_at: dStr(-90) }], visSinBono, membersSB, now)
+console.log('sin bono ->', sb.map(s => `${s.member_id}(${s.visitas})`))
+const sbIds = sb.map(s => s.member_id)
+console.assert(sbIds.includes('habitual') && sb[0].visitas === 3, 'el habitual debería salir con 3 visitas')
+console.assert(!sbIds.includes('suelto'), 'una sola visita no es hábito')
+console.assert(!sbIds.includes('antiguo'), 'visitas de hace 90 días quedan fuera de la ventana')
+console.assert(!sbIds.includes('conbono'), 'quien ya tiene bono no es candidato a bono')
+
+// ── consentimiento: publicidad sí, gestión del servicio no ──
+console.assert(C.requiereConsentimiento('upsell_bono'), 'ofrecer un bono es publicidad')
+console.assert(!C.requiereConsentimiento('renovacion_caducada'), 'renovar SU bono es gestión, no publicidad')
+console.assert(!C.requiereConsentimiento('bono_bajo'), 'avisar de SU bono es gestión')
+
 const ctx = {
   stats,
   birthdays: [{ member_id: 'b1', member_name: 'Laura Mas', child_name: 'Aina', birthday_day: 22 }],
   bonos: [{ member_id: 'riesgo', member_name: 'Riesgo', sessions: 2, expires_at: null }],
+  caducados: [{ member_id: 'dormido', member_name: 'Dormido', motivo: 'agotado', dias: 0 }],
+  sinBono: [{ member_id: 'camp', member_name: 'Campeona', visitas: 5 }],
   ticketMedio: 14,
   precioCumple: 130,
+  precioBono: 90,
 }
+
+const renov = C.resolveRecipients('renovacion_caducada', ctx)
+console.assert(renov.length === 1 && renov[0].valor === 90, 'renovación debería valorarse al precio del bono')
+console.assert(renov[0].vars.motivo === 'se agotó', 'variable motivo mal')
+const upsell = C.resolveRecipients('upsell_bono', ctx)
+console.assert(upsell.length === 1 && upsell[0].vars.visitas === '5', 'upsell mal')
 const cumple = C.resolveRecipients('cumpleanos', ctx)
 console.log('\ncumpleaños ->', JSON.stringify(cumple))
 console.assert(cumple.length === 1 && cumple[0].vars.niño === 'Aina', 'destinatarios cumpleaños mal')
