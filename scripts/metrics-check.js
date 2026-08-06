@@ -68,3 +68,37 @@ console.assert(by.dormido === 'dormidos', 'dormido mal: ' + by.dormido)
 console.log('counts', JSON.stringify(S.countBySegment(stats)))
 console.log('avgLtv', S.avgLtv(stats).toFixed(2))
 console.log('\nOK')
+
+// ── Fase 3: campañas ──
+const C = require('../.tmp/campaigns.js')
+const ctx = {
+  stats,
+  birthdays: [{ member_id: 'b1', member_name: 'Laura Mas', child_name: 'Aina', birthday_day: 22 }],
+  bonos: [{ member_id: 'riesgo', member_name: 'Riesgo', sessions: 2, expires_at: null }],
+  ticketMedio: 14,
+  precioCumple: 130,
+}
+const cumple = C.resolveRecipients('cumpleanos', ctx)
+console.log('\ncumpleaños ->', JSON.stringify(cumple))
+console.assert(cumple.length === 1 && cumple[0].vars.niño === 'Aina', 'destinatarios cumpleaños mal')
+console.assert(cumple[0].valor === 130, 'valor cumpleaños mal')
+
+const react = C.resolveRecipients('reactivacion', ctx)
+console.assert(react.length === 1 && react[0].memberId === 'riesgo', 'reactivación mal')
+
+const msg = C.renderMessage('Hola {nombre}, el cumple de {niño} y {noexiste}', cumple[0].vars)
+console.log('mensaje ->', msg)
+console.assert(msg === 'Hola Laura, el cumple de Aina y ', 'render mal: ' + msg)
+
+console.assert(C.waLink('600 111 222', 'hola').startsWith('https://wa.me/34600111222?text='), 'waLink mal')
+console.assert(C.waLink('123', 'x') === null, 'waLink debería rechazar móviles cortos')
+
+const acciones = C.suggestedActions(ctx, new Set())
+console.log('acciones ->', acciones.map(a => `${a.titulo} (${a.valor.toFixed(0)}€)`))
+console.assert(acciones.length > 0 && acciones[0].valor >= acciones[acciones.length-1].valor, 'orden por valor mal')
+
+const yaHecho = new Set(['cumpleanos:b1'])
+const acciones2 = C.suggestedActions(ctx, yaHecho)
+console.assert(!acciones2.some(a => a.plantilla === 'cumpleanos'), 'lo contactado debería desaparecer')
+console.log('tras contactar ->', acciones2.map(a => a.plantilla))
+console.log('\nOK fase 3')

@@ -44,6 +44,9 @@ export function MemberForm({ onCreated, submitLabel }: {
   const [birthDate, setBirthDate] = useState('')
   const [children, setChildren] = useState<Child[]>([])
   const [consentAccepted, setConsentAccepted] = useState(false)
+  // Consentimiento de marketing: SEPARADO del anterior y opcional. El del RGPD
+  // permite tratar los datos; este permite mandar promociones.
+  const [marketingAccepted, setMarketingAccepted] = useState(false)
 
   const [showPartner, setShowPartner] = useState(false)
   const [partnerPhone, setPartnerPhone] = useState('')
@@ -114,6 +117,7 @@ export function MemberForm({ onCreated, submitLabel }: {
           children_count: cleanChildren.length,
           consent_accepted_at: new Date().toISOString(),
           consent_version: 'v1.0',
+          marketing_consent_at: marketingAccepted ? new Date().toISOString() : null,
         })
         .select('id, name, phone, family_id, memberships(id, sessions_remaining, expires_at, membership_types(name)), children')
         .single()
@@ -311,6 +315,25 @@ export function MemberForm({ onCreated, submitLabel }: {
             <AlertTriangle size={11} /> {t('miembros_consentimiento_obligatorio')}
           </p>
         )}
+
+        {/* Marketing: opcional y aparte. Sin esto no se le pueden enviar
+            promociones, aunque sí avisos sobre sus propias reservas o bonos. */}
+        <label className="flex items-start gap-3 cursor-pointer group pt-1 border-t border-line/60 mt-1">
+          <div className="relative mt-2.5 shrink-0">
+            <input
+              type="checkbox"
+              checked={marketingAccepted}
+              onChange={e => setMarketingAccepted(e.target.checked)}
+              className="sr-only"
+            />
+            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${marketingAccepted ? 'bg-lime border-lime' : 'bg-surface2 border-line group-hover:border-line2'}`}>
+              {marketingAccepted && <Check size={12} className="text-ink" strokeWidth={3} />}
+            </div>
+          </div>
+          <p className="text-xs text-fog leading-relaxed pt-2">
+            {t('miembros_consentimiento_marketing')}
+          </p>
+        </label>
       </div>
 
       {error && <p className="text-sm text-rose text-center">{error}</p>}

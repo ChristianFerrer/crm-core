@@ -6,9 +6,11 @@ import { OpportunityDashboard } from './OpportunityDashboard'
 import { UrgentAlerts } from './UrgentAlerts'
 import { PulseSection } from './PulseSection'
 import { SegmentMap } from './SegmentMap'
+import { ActionsSection } from './ActionsSection'
 import { getT } from '@/lib/i18n-server'
 import { revenue, delta, repeatRate, bonoRenewalRate, pendingRevenue, monthPeriod, lastYearPeriod } from '@/lib/metrics'
 import { buildMemberStats, countBySegment, avgLtv } from '@/lib/segments'
+import { suggestedActions, type BirthdayLead, type BonoLead } from '@/lib/campaigns'
 
 export const revalidate = 0
 
@@ -49,6 +51,7 @@ export default async function PanelPage() {
     { data: membershipTypes },
     { data: closedChecks },
     { data: membersForStats },
+    { data: doneSends },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('memberships').select('id', { count: 'exact', head: true }).lte('sessions_remaining', 2).not('sessions_remaining', 'is', null),
@@ -81,6 +84,9 @@ export default async function PanelPage() {
     supabase.from('membership_types').select('id, price'),
     supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
     supabase.from('members').select('id, name, phone, created_at, families(name)').limit(5000),
+    // Fase 3: lo ya contactado, para no volver a proponerlo
+    supabase.from('campaign_sends').select('member_id, estado, campaign_id, campaigns(plantilla)')
+      .neq('estado', 'pendiente').limit(5000),
   ])
 
   // ── Fase 1: pulso económico del mes ───────────────────────────────────────
@@ -111,6 +117,54 @@ export default async function PanelPage() {
   const familiasActivas = memberStats.filter(
     s => s.diasDesdeUltima != null && s.diasDesdeUltima <= 60
   ).length
+
+  // ── Fase 3: qué hacer hoy ─────────────────────────────────────────────────
+  const in45 = new Date(now.getTime() + 45 * 86_400_000)
+  const accionBirthdays: BirthdayLead[] = []
+  const vistosCumple = new Set<string>()
+  ;((membersForStats ?? []) as any[]).forEach(() => {})
+  ;((allMembers ?? []) as any[]).forEach((m: any) => {
+    ;((m.children as any[]) ?? []).forEach((c: any) => {
+      if (!c.birth_date) return
+      const dob = new Date(c.birth_date)
+      const next = new Date(now.getFullYear(), dob.getUTCMonth(), dob.getUTCDate())
+      if (next < now) next.setFullYear(next.getFullYear() + 1)
+      if (next > in45) return
+      const key = `${m.id}-${c.name}`
+      if (vistosCumple.has(key)) return
+      vistosCumple.add(key)
+      accionBirthdays.push({ member_id: m.id, member_name: m.name, child_name: c.name, birthday_day: dob.getUTCDate() })
+    })
+  })
+
+  const nombrePorId = new Map(((membersForStats ?? []) as any[]).map(m => [m.id, m.name]))
+  const weekAhead = new Date(now.getTime() + 7 * 86_400_000).toISOString().split('T')[0]
+  const accionBonos: BonoLead[] = mRows
+    .filter(b => {
+      const pocas = b.sessions_remaining != null && b.sessions_remaining <= 2 && b.sessions_remaining > 0
+      const caduca = !!b.expires_at && b.expires_at >= todayStr && b.expires_at <= weekAhead
+      return pocas || caduca
+    })
+    .map(b => ({
+      member_id: b.member_id,
+      member_name: nombrePorId.get(b.member_id) ?? '—',
+      sessions: b.sessions_remaining,
+      expires_at: b.expires_at,
+    }))
+
+  // Clave plantilla:miembro de lo ya contactado, para no repetir la propuesta
+  const yaContactados = new Set(
+    ((doneSends ?? []) as any[])
+      .map(s2 => `${s2.campaigns?.plantilla ?? ''}:${s2.member_id}`)
+  )
+
+  const acciones = suggestedActions({
+    stats: memberStats,
+    birthdays: accionBirthdays,
+    bonos: accionBonos,
+    ticketMedio: revActual.ticketMedio || 12,
+    precioCumple: 130,
+  }, yaContactados)
 
   const pulse = {
     ingresos: revActual.total,
@@ -295,6 +349,9 @@ export default async function PanelPage() {
 
       {/* Fase 1: el dinero primero */}
       <PulseSection data={pulse} />
+
+      {/* Fase 3: de aquí se sale contactando */}
+      <ActionsSection actions={acciones} />
 
       {/* Fase 2: a quién tienes y qué hacer con cada grupo */}
       <SegmentMap stats={memberStats} avgLtv={ltvMedio} />
