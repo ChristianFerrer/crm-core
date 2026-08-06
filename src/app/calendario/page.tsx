@@ -517,7 +517,9 @@ export default function CalendarioPage() {
     const target = nearestAgendaDay(dateStr)
     const el = target ? dayRefs.current[target] : null
     if (!el) return false
-    const offset = (headerRef.current?.offsetHeight ?? 0) + 8
+    // 2px de más: si el día queda justo en el umbral del scroll-spy, el
+    // redondeo puede dejarlo "por encima" y la píldora de «Hoy» no se apaga.
+    const offset = (headerRef.current?.offsetHeight ?? 0) + 8 - 2
     const scroller = getScroller()
     suppressSpy.current = true
     if (scroller) {
@@ -568,7 +570,8 @@ export default function CalendarioPage() {
       for (const d of agendaDays) {
         const el = dayRefs.current[d]
         if (!el) continue
-        if (el.getBoundingClientRect().top - offset <= 0) current = d
+        // Tolerancia de 1px: evita que un decimal deje el día sin marcar
+        if (el.getBoundingClientRect().top - offset <= 1) current = d
       }
       if (current && current !== selectedDate) {
         setSelectedDate(current)
