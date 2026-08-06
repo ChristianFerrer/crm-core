@@ -239,8 +239,8 @@ function HistorialTab({ rates }: { rates: ServiceRates }) {
 
           {/* ── ESCRITORIO: tabla (lg+) ── */}
           <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-auto max-h-[65dvh]">
+              <table className="w-full text-left border-collapse data-table">
                 <thead>
                   <tr className="border-b border-line">
                     {[t('panelcfg_th_fecha'), t('panelcfg_th_titular'), t('panelcfg_th_telefono'), t('panelcfg_tipo_label'), t('panelcfg_th_adultos'), t('panelcfg_th_ninos'), t('panelcfg_th_entrada'), t('panelcfg_th_salida'), t('panelcfg_th_duracion'), t('panelcfg_bono_label'), 'Importe', t('panelcfg_th_metodo'), t('panelcfg_th_estado')].map(col => (

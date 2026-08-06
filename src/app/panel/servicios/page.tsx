@@ -545,9 +545,9 @@ export default function ServiciosPage() {
 
           {/* ── ESCRITORIO: tabla con scroll interno (lg+) ── */}
           <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
-          <div className="overflow-auto max-h-[60dvh]">
-            <table className="w-full text-sm whitespace-nowrap">
-              <thead className="sticky top-0 z-10 bg-surface">
+          <div className="overflow-auto max-h-[65dvh]">
+            <table className="w-full whitespace-nowrap data-table">
+              <thead>
                 <tr className="text-left text-[10px] font-semibold text-mist uppercase tracking-wide border-b border-line">
                   <th className="px-4 py-3">{t('panelcfg_th_servicio')}</th>
                   <th className="px-3 py-3">{t('panelcfg_tipo_label')}</th>

@@ -282,8 +282,8 @@ export default function MiembrosPage() {
 
               {/* ── ESCRITORIO: tabla (lg+) ── */}
               <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="overflow-auto max-h-[65dvh]">
+                  <table className="w-full text-left border-collapse data-table">
                     <thead>
                       <tr className="border-b border-line">
                         {[t('miembros_col_nombre'), t('miembros_col_telefono'), t('miembros_col_familia'), t('miembros_col_edad'), t('miembros_col_bono'), t('miembros_col_estado')].map(col => (
@@ -384,8 +384,8 @@ export default function MiembrosPage() {
 
               {/* ── ESCRITORIO: tabla (lg+) ── */}
               <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="overflow-auto max-h-[65dvh]">
+                  <table className="w-full text-left border-collapse data-table">
                     <thead>
                       <tr className="border-b border-line">
                         {[t('miembros_col_familia'), t('miembros_col_titulares'), t('miembros_col_hijos'), t('miembros_col_visitas'), t('miembros_col_miembros'), t('miembros_col_bono_bajo')].map(col => (

@@ -331,9 +331,9 @@ export default function TiendaPage() {
 
         {/* ── ESCRITORIO: tabla con scroll interno (lg+) ── */}
         <div className="hidden lg:block rounded-2xl border border-line bg-surface overflow-hidden">
-          <div className="overflow-auto max-h-[60dvh]">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-surface">
+          <div className="overflow-auto max-h-[65dvh]">
+            <table className="w-full data-table">
+              <thead>
                 <tr className="border-b border-line">
                   <th className="text-center px-3 py-3 text-xs font-semibold text-fog uppercase tracking-wide w-8">#</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-fog uppercase tracking-wide">{t('panelcfg_th_producto')}</th>

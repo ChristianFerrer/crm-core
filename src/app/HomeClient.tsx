@@ -2507,8 +2507,8 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
             </div>
 
             {/* ── DESKTOP: table (md+) ─────────────────────────────────── */}
-            <div className="hidden xl:block overflow-x-auto">
-              <table className="w-full min-w-[820px] text-left border-collapse">
+            <div className="hidden xl:block overflow-auto max-h-[65dvh]">
+              <table className="w-full min-w-[820px] text-left border-collapse data-table">
                 <thead>
                   <tr className="border-b border-line">
                     {([

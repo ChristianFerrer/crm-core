@@ -189,6 +189,29 @@
    gestión todo lo pulsable debe indicarlo. */
 button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
 
+/* ── Tablas de datos ──────────────────────────────────────────────────
+   Mismo tamaño de letra en toda la app (el de la tabla de Miembros) y
+   cabecera con fondo propio que se queda fija al desplazar el cuerpo.
+   Va aquí, fuera de las utilidades, para no repetirlo en cada pantalla. */
+table.data-table { font-size: .75rem; line-height: 1.1rem; }
+
+table.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-surface2);
+  color: var(--color-fog);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+/* Línea inferior de la cabecera: con `sticky` el borde de la fila se pierde
+   al desplazar, así que se dibuja con una sombra sobre cada celda. */
+table.data-table thead th { box-shadow: inset 0 -1px 0 var(--color-line); }
+
 /* Escalonado de las reservas simultáneas de la agenda: en escritorio cada
    tarjeta baja en proporción a lo que empieza más tarde, como en Outlook.
    En móvil se apilan, así que el desplazamiento se anula. */
