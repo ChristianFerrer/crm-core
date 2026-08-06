@@ -903,6 +903,20 @@ export default function CalendarioPage() {
                 </span>
               )}
             </button>
+
+            {/* Compactar: una línea por reserva */}
+            <button
+              onClick={toggleCompact}
+              aria-pressed={compact}
+              aria-label={compact ? t('calendario_expandir_tarjetas') : t('calendario_compactar')}
+              title={compact ? t('calendario_expandir_tarjetas') : t('calendario_compactar')}
+              className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-colors ${
+                compact ? 'border-iris text-iris' : 'border-line text-fog hover:text-snow'
+              }`}
+            >
+              {compact ? <LayoutList size={16} /> : <Rows3 size={16} />}
+            </button>
+
             {/* Desplegable de filtros */}
             {filtersOpen && (
               <>
