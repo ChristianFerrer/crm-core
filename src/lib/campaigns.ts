@@ -35,6 +35,11 @@ export type CampaignTemplate = {
   incentivo: string
   accent: 'lime' | 'iris' | 'cyan-300' | 'amber' | 'rose' | 'mint' | 'grape'
   /**
+   * Nombre del icono de lucide-react. Va como texto y no como componente
+   * porque este módulo es dominio puro y no debe importar React.
+   */
+  icono: string
+  /**
    * Días que deben pasar para volver a proponer a la MISMA familia por el
    * mismo motivo. Sin esto, quien fue contactado una vez desaparecía para
    * siempre de las sugerencias y el bloque se vaciaba solo.
@@ -57,6 +62,7 @@ export const TEMPLATES: CampaignTemplate[] = [
     incentivo: 'Tarta de regalo reservando con 3 semanas de antelación',
     accent: 'grape',
     reintentoDias: 300,
+    icono: 'Cake',
   },
   {
     id: 'bono_bajo',
@@ -68,6 +74,7 @@ export const TEMPLATES: CampaignTemplate[] = [
     incentivo: 'Mismo precio al renovar antes de agotarlo',
     accent: 'amber',
     reintentoDias: 30,
+    icono: 'AlertTriangle',
   },
   {
     id: 'renovacion_caducada',
@@ -79,6 +86,7 @@ export const TEMPLATES: CampaignTemplate[] = [
     incentivo: 'Renovación sin cambio de precio',
     accent: 'rose',
     reintentoDias: 45,
+    icono: 'RefreshCw',
   },
   {
     id: 'upsell_bono',
@@ -90,6 +98,7 @@ export const TEMPLATES: CampaignTemplate[] = [
     incentivo: 'Primera sesión de regalo al contratar el bono',
     accent: 'lime',
     reintentoDias: 60,
+    icono: 'Ticket',
   },
   {
     id: 'reactivacion',
@@ -101,6 +110,7 @@ export const TEMPLATES: CampaignTemplate[] = [
     incentivo: 'Segunda entrada a mitad de precio',
     accent: 'cyan-300',
     reintentoDias: 60,
+    icono: 'HeartPulse',
   },
   {
     id: 'valle',
@@ -112,6 +122,7 @@ export const TEMPLATES: CampaignTemplate[] = [
     incentivo: 'Descuento en la franja de menos ocupación',
     accent: 'iris',
     reintentoDias: 21,
+    icono: 'CalendarClock',
   },
   {
     id: 'segunda_visita',
@@ -123,6 +134,7 @@ export const TEMPLATES: CampaignTemplate[] = [
     incentivo: 'Consumición de regalo en la segunda visita',
     accent: 'mint',
     reintentoDias: 45,
+    icono: 'Repeat',
   },
 ]
 
@@ -439,6 +451,7 @@ export type ActionSuggestion = {
   destinatarios: number
   valor: number
   accent: CampaignTemplate['accent']
+  icono: string
 }
 
 /** Fecha del último contacto por plantilla y familia: `plantilla:memberId`. */
@@ -470,10 +483,14 @@ export function puedeReproponer(
  * La revisión es semanal a propósito: diaria se queda vacía casi siempre y
  * mensual llega tarde para los bonos que caducan y para quien está fugándose.
  *
- * Se muestran TODAS las plantillas con gente pendiente, no un top 3. Solo hay
- * cinco, así que el bloque sigue siendo corto, y recortar escondía justo la
- * campaña de más margen: un cumpleaños suma pocos euros totales porque son dos
- * familias, pero convierte muchísimo mejor que veinte contactos de relleno.
+ * Se devuelven SIEMPRE las siete, incluidas las que no tienen a nadie. Una
+ * campaña que desaparece del bloque no se lee como «hoy no toca» sino como
+ * «esto ya no existe», y además impide ver que el criterio funciona: un cero
+ * en «bonos sin renovar» es información, no ausencia de información.
+ *
+ * Tampoco se recorta a las tres de más euros: eso escondía justo la campaña de
+ * más margen, porque un cumpleaños suma poco total al ser una o dos familias
+ * pero convierte mucho mejor que veinte contactos de relleno.
  */
 export function suggestedActions(
   ctx: Parameters<typeof resolveRecipients>[1],
@@ -481,14 +498,11 @@ export function suggestedActions(
   now = new Date(),
   max = TEMPLATES.length,
 ): ActionSuggestion[] {
-  const out: ActionSuggestion[] = []
-
-  for (const tpl of TEMPLATES) {
+  const out: ActionSuggestion[] = TEMPLATES.map(tpl => {
     const pendientes = resolveRecipients(tpl.id, ctx)
       .filter(r => puedeReproponer(tpl, r.memberId, contactLog, now))
-    if (pendientes.length === 0) continue
 
-    out.push({
+    return {
       plantilla: tpl.id,
       titulo: tituloAccion(tpl.id, pendientes.length),
       detalle: tpl.descripcion,
@@ -496,10 +510,14 @@ export function suggestedActions(
       destinatarios: pendientes.length,
       valor: pendientes.reduce((s, r) => s + r.valor, 0),
       accent: tpl.accent,
-    })
-  }
+      icono: tpl.icono,
+    }
+  })
 
-  return out.sort((a, b) => b.valor - a.valor).slice(0, max)
+  // Las vacías al final: siguen visibles, pero no se comen el sitio de arriba
+  return out
+    .sort((a, b) => (b.destinatarios > 0 ? 1 : 0) - (a.destinatarios > 0 ? 1 : 0) || b.valor - a.valor)
+    .slice(0, max)
 }
 
 /** Lunes de la semana en curso: ancla de la revisión semanal. */
@@ -519,6 +537,7 @@ export function proximaRevision(now = new Date()): Date {
 
 function tituloAccion(id: PlantillaId, n: number): string {
   const plural = n !== 1
+  if (n === 0) return tituloVacio(id)
   switch (id) {
     case 'cumpleanos':     return `${n} cumpleaños en los próximos 45 días`
     case 'bono_bajo':      return `${n} bono${plural ? 's' : ''} a punto de agotarse`
@@ -528,5 +547,19 @@ function tituloAccion(id: PlantillaId, n: number): string {
     case 'segunda_visita': return `${n} familia${plural ? 's' : ''} sin repetir visita`
     case 'valle':          return `${n} familia${plural ? 's' : ''} para llenar el valle`
     default:               return `${n} contacto${plural ? 's' : ''}`
+  }
+}
+
+/** Con cero destinatarios el título contando en plural sonaba a error. */
+function tituloVacio(id: PlantillaId): string {
+  switch (id) {
+    case 'cumpleanos':          return 'Sin cumpleaños a la vista'
+    case 'bono_bajo':           return 'Ningún bono a punto de agotarse'
+    case 'renovacion_caducada': return 'Ningún bono sin renovar'
+    case 'upsell_bono':         return 'Nadie viniendo sin bono'
+    case 'reactivacion':        return 'Nadie ha roto su ritmo'
+    case 'segunda_visita':      return 'Todas las nuevas han repetido'
+    case 'valle':               return 'Sin familias para el valle'
+    default:                    return 'Sin contactos'
   }
 }

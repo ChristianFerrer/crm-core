@@ -12,6 +12,7 @@ import { formatEur } from '@/lib/metrics'
 import {
   renderMessage, waLink, type CampaignTemplate, type Recipient,
 } from '@/lib/campaigns'
+import { ICONOS } from '../../ActionsSection'
 
 type SendState = 'pendiente' | 'enviado' | 'respondido' | 'convertido' | 'descartado'
 
@@ -66,6 +67,7 @@ export function CampaignClient({
   reintentoDias: number
 }) {
   const c = ACCENT[template.accent] ?? ACCENT.lime
+  const TemplateIcon = ICONOS[template.icono] ?? MessageCircle
   const [mensaje, setMensaje] = useState(template.mensaje)
   const [editando, setEditando] = useState(false)
   const [campaignId, setCampaignId] = useState<string | null>(initialCampaignId)
@@ -152,6 +154,9 @@ export function CampaignClient({
           className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-snow transition-colors">
           <ArrowLeft size={18} />
         </Link>
+        <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ${c.bg}`}>
+          <TemplateIcon size={18} className={c.text} />
+        </div>
         <div className="min-w-0">
           <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Campaña</p>
           <h1 className="font-display text-2xl font-semibold text-snow truncate">{template.nombre}</h1>

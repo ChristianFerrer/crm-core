@@ -169,19 +169,33 @@ console.assert(decodeURIComponent(wl.split('&text=')[1]) === 'Hola María 🎂\n
 
 const acciones = C.suggestedActions(ctx, {}, now)
 console.log('acciones ->', acciones.map(a => `${a.titulo} (${a.valor.toFixed(0)}€)`))
-console.assert(acciones.length > 0 && acciones[0].valor >= acciones[acciones.length-1].valor, 'orden por valor mal')
 console.assert(acciones.every(a => !!a.horizonte), 'falta el horizonte en alguna acción')
-// Una campaña con pocos destinatarios pero valiosa no debe quedar fuera de corte
+console.assert(acciones.every(a => !!a.icono), 'falta el icono en alguna acción')
+// Las siete siempre presentes: un cero es información, no ausencia de campaña
+console.assert(acciones.length === 7, 'deberían salir las 7 campañas, salieron ' + acciones.length)
 console.assert(acciones.some(a => a.plantilla === 'cumpleanos'), 'el cumpleaños no debería recortarse')
+// Las que tienen gente van primero, y dentro de cada grupo por dinero
+const conGente = acciones.filter(a => a.destinatarios > 0)
+console.assert(acciones.slice(0, conGente.length).every(a => a.destinatarios > 0), 'las vacías deberían ir al final')
+console.assert(conGente[0].valor >= conGente[conGente.length-1].valor, 'orden por valor mal')
 
-// Contactada ayer: dentro de la ventana de reintento del cumpleaños (300 días)
+// Sin destinatarios el título no debe contar en plural («0 familias rompió su ritmo»)
+const vacio = C.suggestedActions({ ...ctx, birthdays: [], bonos: [], caducados: [], sinBono: [], stats: [] }, {}, now)
+console.assert(vacio.length === 7, 'sin datos deberían seguir saliendo las 7')
+console.assert(vacio.every(a => a.destinatarios === 0 && !/^\d/.test(a.titulo)), 'título vacío mal: ' + vacio.map(a=>a.titulo))
+console.log('vacías ->', vacio.map(a => a.titulo))
+
+// Contactada ayer: dentro de la ventana de reintento del cumpleaños (300 días).
+// La campaña sigue en la lista, pero sin nadie a quien escribir.
 const acciones2 = C.suggestedActions(ctx, { 'cumpleanos:b1': d(1) }, now)
-console.assert(!acciones2.some(a => a.plantilla === 'cumpleanos'), 'lo contactado debería desaparecer')
-console.log('tras contactar ->', acciones2.map(a => a.plantilla))
+const cumple2 = acciones2.find(a => a.plantilla === 'cumpleanos')
+console.assert(cumple2 && cumple2.destinatarios === 0, 'lo contactado debería dejar la campaña a cero')
+console.assert(acciones2[acciones2.length-1].destinatarios === 0, 'la vacía debería caer al final')
+console.log('tras contactar ->', acciones2.map(a => `${a.plantilla}:${a.destinatarios}`))
 
-// Pasada la ventana vuelve a proponerse: es lo que evita que el bloque se vacíe para siempre
+// Pasada la ventana vuelve a proponerse: es lo que evita que se quede a cero para siempre
 const acciones3 = C.suggestedActions(ctx, { 'cumpleanos:b1': d(320) }, now)
-console.assert(acciones3.some(a => a.plantilla === 'cumpleanos'), 'pasada la ventana debería reaparecer')
+console.assert(acciones3.find(a => a.plantilla === 'cumpleanos').destinatarios === 1, 'pasada la ventana debería reaparecer')
 
 // El bono se puede repetir al mes, el cumpleaños no
 const tplBono = C.templateById('bono_bajo')

@@ -1,7 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { Zap, ChevronRight, CheckCircle2 } from 'lucide-react'
+import {
+  Zap, ChevronRight, Cake, AlertTriangle, RefreshCw, Ticket, HeartPulse,
+  CalendarClock, Repeat, Megaphone,
+} from 'lucide-react'
 import type { ActionSuggestion } from '@/lib/campaigns'
 import { formatEur } from '@/lib/metrics'
 
@@ -15,13 +18,21 @@ const ACCENT: Record<string, { text: string; border: string; bg: string }> = {
   grape:      { text: 'text-grape',     border: 'border-grape/40',     bg: 'bg-grape/10' },
 }
 
+/** El dominio guarda el nombre del icono; aquí se resuelve al componente. */
+export const ICONOS: Record<string, React.ElementType> = {
+  Cake, AlertTriangle, RefreshCw, Ticket, HeartPulse, CalendarClock, Repeat,
+}
+
 function fechaCorta(iso: string): string {
   return new Date(iso).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 /**
- * «Esta semana»: como mucho tres acciones, ordenadas por euros en juego.
- * Cada una lleva su botón: de aquí se sale contactando, no anotando.
+ * Campañas de esta semana, ordenadas por euros en juego.
+ *
+ * Están las siete siempre, también las que no tienen a nadie. Una campaña que
+ * desaparece se lee como «esto ya no existe» y no como «hoy no toca», y además
+ * el cero es información: dice que el criterio se ha revisado y está limpio.
  *
  * La cadencia es semanal a propósito. Diaria se queda vacía casi siempre y se
  * deja de mirar; mensual llega tarde para un bono que caduca el viernes o para
@@ -34,22 +45,7 @@ export function ActionsSection({
   contactadosEstaSemana: number
   proximaRevision: string
 }) {
-  if (actions.length === 0) {
-    return (
-      <section className="rounded-2xl border border-line bg-surface p-4 flex items-start gap-3">
-        <CheckCircle2 size={16} className="text-mint shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm text-fog">
-            Semana cerrada: no queda nadie a quien escribir.
-            {contactadosEstaSemana > 0 && ` Has contactado a ${contactadosEstaSemana} ${contactadosEstaSemana === 1 ? 'familia' : 'familias'}.`}
-          </p>
-          <p className="text-[11px] text-mist mt-0.5">
-            Próxima revisión: {fechaCorta(proximaRevision)}
-          </p>
-        </div>
-      </section>
-    )
-  }
+  const conTrabajo = actions.filter(a => a.destinatarios > 0).length
 
   return (
     <section>
@@ -73,27 +69,58 @@ export function ActionsSection({
       <div className="space-y-2">
         {actions.map(a => {
           const c = ACCENT[a.accent] ?? ACCENT.lime
+          const Icon = ICONOS[a.icono] ?? Megaphone
+          const vacia = a.destinatarios === 0
+
           return (
             <Link
               key={a.plantilla}
               href={`/panel/campanas/${a.plantilla}`}
-              className={`flex items-center gap-3 rounded-2xl border ${c.border} ${c.bg} px-4 py-3 hover:brightness-110 transition-all`}
+              className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all ${
+                vacia
+                  ? 'border-line bg-surface hover:border-line2'
+                  : `${c.border} ${c.bg} hover:brightness-110`
+              }`}
             >
+              <div className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center ${
+                vacia ? 'bg-surface2' : c.bg
+              }`}>
+                <Icon size={15} className={vacia ? 'text-mist' : c.text} />
+              </div>
+
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-snow truncate">{a.titulo}</p>
+                <p className={`text-sm font-semibold truncate ${vacia ? 'text-fog' : 'text-snow'}`}>
+                  {a.titulo}
+                </p>
                 <p className="text-[11px] text-fog truncate">
-                  <span className={`font-semibold ${c.text}`}>{a.horizonte}</span> · {a.detalle}
+                  <span className={`font-semibold ${vacia ? 'text-mist' : c.text}`}>{a.horizonte}</span>
+                  {' · '}{a.detalle}
                 </p>
               </div>
+
               <div className="text-right shrink-0">
-                <p className={`text-sm font-bold ${c.text} tabular-nums`}>~{formatEur(a.valor)}</p>
-                <p className="text-[10px] text-mist">en juego</p>
+                {vacia ? (
+                  <p className="text-sm font-bold text-mist tabular-nums">0</p>
+                ) : (
+                  <>
+                    <p className={`text-sm font-bold ${c.text} tabular-nums`}>~{formatEur(a.valor)}</p>
+                    <p className="text-[10px] text-mist">en juego</p>
+                  </>
+                )}
               </div>
-              <ChevronRight size={16} className="text-fog shrink-0" />
+              <ChevronRight size={16} className={vacia ? 'text-mist shrink-0' : 'text-fog shrink-0'} />
             </Link>
           )
         })}
       </div>
+
+      {conTrabajo === 0 && (
+        <p className="text-[11px] text-mist mt-2">
+          Semana cerrada: no queda nadie a quien escribir.
+          {contactadosEstaSemana > 0 && ` Has contactado a ${contactadosEstaSemana} ${contactadosEstaSemana === 1 ? 'familia' : 'familias'}.`}
+          {' '}Próxima revisión: {fechaCorta(proximaRevision)}
+        </p>
+      )}
     </section>
   )
 }

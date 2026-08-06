@@ -52,7 +52,9 @@ delete from memberships;
 delete from bookings where id not in (
   select booking_id from visits where booking_id is not null
 );
-delete from members where name like 'DEMO %';
+-- La marca va en `notes`, no en el nombre: un prefijo DEMO se ve en pantalla
+-- y ensucia la demo, que es justo lo contrario de lo que busca.
+delete from members where notes like '%seed:demo%';
 
 -- ── 1. Familias ─────────────────────────────────────────────────────────────
 create temp table nom on commit drop as select * from (values
@@ -90,14 +92,14 @@ select e.tenant_id, e.nombre, e.phone, e.created_at,
   -- consentimiento de las campañas de publicidad no se vería nunca.
   case when e.h1 < 0.66 then e.created_at else null end,
   e.created_at,
-  case when e.pct <= 8  then 'perfil:campeon'
-       when e.pct <= 30 then 'perfil:fiel'
-       when e.pct <= 60 then 'perfil:ocasional'
-       when e.pct <= 72 then 'perfil:riesgo'
-       when e.pct <= 88 then 'perfil:dormido'
-       else                  'perfil:nuevo' end
+  (case when e.pct <= 8  then 'perfil:campeon'
+        when e.pct <= 30 then 'perfil:fiel'
+        when e.pct <= 60 then 'perfil:ocasional'
+        when e.pct <= 72 then 'perfil:riesgo'
+        when e.pct <= 88 then 'perfil:dormido'
+        else                  'perfil:nuevo' end) || ' seed:demo'
 from (
-  select c.tenant_id, 'DEMO ' || n.x || ' ' || g.x as nombre,
+  select c.tenant_id, n.x || ' ' || g.x as nombre,
     '6' || lpad((10000000 + (abs(hashtext(n.x||g.x||c.tenant_id::text)) % 89999999))::text, 8, '0') as phone,
     -- Antigüedad con más peso en lo reciente: la ludoteca ha ido creciendo
     (date '2026-08-06' - ((abs(hashtext(n.x||g.x)) % 1000)/1000.0 ^ 1.6 * 700)::int)::timestamptz as created_at,
@@ -145,7 +147,7 @@ from (
     1 + (abs(hashtext(m.id::text||'t')) % 3) as t_idx
   from members m
   where m.deleted_at is null
-    and m.notes in ('perfil:campeon','perfil:fiel','perfil:ocasional','perfil:riesgo')
+    and m.notes like any (array['perfil:campeon%','perfil:fiel%','perfil:ocasional%','perfil:riesgo%'])
     and (abs(hashtext(m.id::text||'z')) % 100) < 55
 ) b
 join (select id, tenant_id, sessions,
@@ -183,14 +185,14 @@ from members m
 join (values
   ('perfil:campeon', 6), ('perfil:fiel', 11), ('perfil:ocasional', 22),
   ('perfil:riesgo', 10), ('perfil:dormido', 18)
-) as p(perfil, ritmo) on p.perfil = m.notes
+) as p(perfil, ritmo) on m.notes like p.perfil || '%'
 cross join lateral generate_series(
   greatest(m.created_at::date, date '2025-06-01'),
-  case m.notes
+  case
     -- En riesgo: venía seguido y lleva casi tres ritmos sin aparecer
-    when 'perfil:riesgo'  then date '2026-08-06' - (p.ritmo * 2.8)::int
-    when 'perfil:dormido' then date '2026-08-06' - 130
-    else                       date '2026-08-06' end,
+    when m.notes like 'perfil:riesgo%'  then date '2026-08-06' - (p.ritmo * 2.8)::int
+    when m.notes like 'perfil:dormido%' then date '2026-08-06' - 130
+    else                                     date '2026-08-06' end,
   interval '1 day') as d
 where m.deleted_at is null
   and random() < (1.0 / p.ritmo) * (case when extract(isodow from d) >= 6 then 2.4 else 0.85 end);
@@ -199,7 +201,7 @@ where m.deleted_at is null
 insert into dv
 select m.id, m.tenant_id,
   greatest(m.created_at::date, date '2026-08-06' - (5 + random() * 45)::int), 3
-from members m where m.deleted_at is null and m.notes = 'perfil:nuevo';
+from members m where m.deleted_at is null and m.notes like 'perfil:nuevo%';
 
 insert into visits (tenant_id, member_id, checked_in_at, checked_out_at, visit_type,
                     adults_count, children_count, paid_at, paid_amount, payment_method, children_present)
