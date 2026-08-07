@@ -221,7 +221,7 @@ function TarjetaDestacada({ a }: { a: ActionSuggestion }) {
   const Icon = iconoDe(a.icono)
 
   return (
-    <div className={`rounded-2xl border border-line bg-surface overflow-hidden border-l-4 ${c.border.replace('/40', '')}`}>
+    <div className="rounded-2xl border border-line bg-surface overflow-hidden">
       <div className="p-4">
         <div className="flex items-start gap-3">
           <div className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${c.bg}`}>
@@ -277,7 +277,7 @@ function TarjetaNormal({ a }: { a: ActionSuggestion }) {
   return (
     <Link
       href={`/panel/campanas/${a.plantilla}`}
-      className={`flex items-start gap-3 rounded-2xl border border-line bg-surface p-3.5 border-l-4 hover:border-line2 transition-colors ${c.border.replace('/40', '')}`}
+      className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-3.5 hover:border-line2 transition-colors"
     >
       <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${c.bg}`}>
         <Icon size={20} className={c.text} />
