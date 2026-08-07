@@ -190,6 +190,15 @@ test.describe('Ficha de miembro', () => {
     await expect(ritmo).toHaveAttribute('data-flipped', 'true')
   })
 
+  test('las pestañas llevan su cifra y su detalle', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/miembros')
+    // El rótulo ya está en el menú: el tile tiene que aportar algo más
+    await expect(page.getByText('con bono activo', { exact: false })).toBeVisible()
+    await expect(page.getByText('adultos por familia', { exact: false })).toBeVisible()
+    await expect(page.getByText('visitas este mes', { exact: false })).toBeVisible()
+  })
+
   test('el listado ya no lleva leyenda ni puntos de color', async ({ page }) => {
     await page.goto('/miembros')
     await expect(page.getByText('Estados de bono')).toHaveCount(0)

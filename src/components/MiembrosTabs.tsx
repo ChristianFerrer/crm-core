@@ -2,37 +2,145 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { User, Users, History } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useLanguage, type TranslationKey } from '@/lib/i18n'
 
 type Tab = 'miembros' | 'familias' | 'historico'
 
-// Cada tile lleva su acento propio, como las tarjetas del Panel.
-const TILES: { id: Tab; href: string; labelKey: TranslationKey; icon: typeof User; accent: string; activeBorder: string }[] = [
-  { id: 'miembros',  href: '/miembros',                  labelKey: 'miembros_tab_miembros',      icon: User,    accent: 'text-lime', activeBorder: 'border-lime' },
-  { id: 'familias',  href: '/miembros?view=familias',    labelKey: 'miembros_tab_familias',      icon: Users,   accent: 'text-iris', activeBorder: 'border-iris' },
-  { id: 'historico', href: '/miembros/historico',        labelKey: 'shared_nav_historico_visitas', icon: History, accent: 'text-mint', activeBorder: 'border-mint' },
+/**
+ * Cifras que acompañan a cada pestaña.
+ *
+ * Los tiles ocupaban 68 px de alto para no decir más que su nombre, y el nombre
+ * ya está en el menú. Con el recuento y una segunda línea, el espacio pasa a
+ * responder lo que uno se pregunta antes de entrar: cuántos hay y cuántos están
+ * en condiciones de venir.
+ */
+type Cifras = {
+  miembros: number
+  conBono: number
+  familias: number
+  ninos: number
+  visitasMes: number
+  visitasHoy: number
+}
+
+const TILES: {
+  id: Tab
+  href: string
+  labelKey: TranslationKey
+  icon: typeof User
+  accent: string
+  activeBorder: string
+}[] = [
+  { id: 'miembros',  href: '/miembros',               labelKey: 'miembros_tab_miembros',        icon: User,    accent: 'text-lime', activeBorder: 'border-lime' },
+  { id: 'familias',  href: '/miembros?view=familias', labelKey: 'miembros_tab_familias',        icon: Users,   accent: 'text-iris', activeBorder: 'border-iris' },
+  { id: 'historico', href: '/miembros/historico',     labelKey: 'shared_nav_historico_visitas', icon: History, accent: 'text-mint', activeBorder: 'border-mint' },
 ]
+
+/** Un bono sirve si le quedan sesiones y no ha caducado. */
+function bonoVigente(m: { sessions_remaining: number | null; expires_at: string | null }, hoy: string) {
+  const quedan = m.sessions_remaining == null || m.sessions_remaining > 0
+  const enFecha = !m.expires_at || m.expires_at >= hoy
+  return quedan && enFecha
+}
 
 export function MiembrosTabs({ active }: { active: Tab }) {
   const { t } = useLanguage()
   const router = useRouter()
+  const [c, setC] = useState<Cifras | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const ahora = new Date()
+      const hoy = ahora.toISOString().split('T')[0]
+      const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
+      const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString()
+
+      const [miembros, familias, bonos, visitasMes, visitasHoy] = await Promise.all([
+        supabase.from('members').select('children_count').is('deleted_at', null),
+        supabase.from('families').select('id', { count: 'exact', head: true }),
+        supabase.from('memberships').select('member_id, sessions_remaining, expires_at'),
+        supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', inicioMes),
+        supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', inicioDia),
+      ])
+      if (cancelled) return
+
+      const filas = (miembros.data ?? []) as { children_count: number | null }[]
+      // Una familia puede tener varios bonos; cuenta la persona, no el bono
+      const conBono = new Set(
+        ((bonos.data ?? []) as any[]).filter(b => bonoVigente(b, hoy)).map(b => b.member_id)
+      ).size
+
+      setC({
+        miembros: filas.length,
+        conBono,
+        familias: familias.count ?? 0,
+        ninos: filas.reduce((s, m) => s + (m.children_count ?? 0), 0),
+        visitasMes: visitasMes.count ?? 0,
+        visitasHoy: visitasHoy.count ?? 0,
+      })
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  function contenido(id: Tab): { cifra: string; detalle: string } {
+    if (!c) return { cifra: '—', detalle: '' }
+    switch (id) {
+      case 'miembros':
+        return {
+          cifra: String(c.miembros),
+          detalle: c.miembros > 0
+            ? `${c.conBono} con bono activo · ${c.miembros - c.conBono} sin bono`
+            : 'Aún no hay nadie dado de alta',
+        }
+      case 'familias':
+        return {
+          cifra: String(c.familias),
+          detalle: c.familias > 0
+            ? `${c.ninos} niño${c.ninos === 1 ? '' : 's'} · ${(c.miembros / c.familias).toFixed(1)} adultos por familia`
+            : `${c.ninos} niño${c.ninos === 1 ? '' : 's'} registrados`,
+        }
+      case 'historico':
+        return {
+          cifra: String(c.visitasMes),
+          detalle: c.visitasHoy > 0
+            ? `visitas este mes · ${c.visitasHoy} hoy`
+            : 'visitas este mes · ninguna hoy todavía',
+        }
+    }
+  }
 
   return (
     <div className="grid grid-cols-3 gap-2 shrink-0">
       {TILES.map(tile => {
         const Icon = tile.icon
         const isActive = tile.id === active
-        const cls = `h-[68px] rounded-xl border bg-surface px-2 py-2 flex flex-col items-center justify-center transition-colors ${
-          isActive ? `${tile.activeBorder}` : 'border-line hover:border-line2'
+        const { cifra, detalle } = contenido(tile.id)
+
+        const cls = `rounded-xl border bg-surface px-2 lg:px-4 py-2.5 transition-colors text-center lg:text-left ${
+          isActive ? tile.activeBorder : 'border-line hover:border-line2'
         }`
+
         const inner = (
-          <>
-            <Icon size={20} strokeWidth={1.8} className={`${tile.accent} shrink-0`} />
-            <span className={`h-6 mt-[5px] flex items-start justify-center text-center text-[10px] leading-tight ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
-              {t(tile.labelKey)}
-            </span>
-          </>
+          <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-3">
+            <Icon size={20} strokeWidth={1.8} className={`${tile.accent} shrink-0 mx-auto lg:mx-0`} />
+            <div className="min-w-0 lg:flex-1">
+              <p className={`text-[10px] leading-tight truncate ${isActive ? `${tile.accent} font-semibold` : 'text-fog'}`}>
+                {t(tile.labelKey)}
+              </p>
+              {/* La cifra en móvil va debajo del rótulo; en escritorio, al lado
+                  del detalle, que es donde hay sitio para explicarla. */}
+              <p className="flex items-baseline justify-center lg:justify-start gap-2 mt-0.5">
+                <span className="font-display text-lg lg:text-xl font-bold text-snow leading-none tabular-nums">
+                  {cifra}
+                </span>
+                <span className="hidden lg:block text-[11px] text-mist truncate">{detalle}</span>
+              </p>
+            </div>
+          </div>
         )
 
         // Miembros y Familias comparten ruta (query param), así que navegan por router
