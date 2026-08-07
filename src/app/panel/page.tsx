@@ -1,6 +1,4 @@
 import { createServerSupabase } from '@/lib/supabase-server'
-import Link from 'next/link'
-import { LineChart } from 'lucide-react'
 import { UrgentAlerts } from './UrgentAlerts'
 import { PulseSection } from './PulseSection'
 import { SegmentMap } from './SegmentMap'
@@ -255,17 +253,6 @@ export default async function PanelPage() {
         </div>
         <UrgentAlerts alerts={urgentAlerts} />
       </div>
-
-      {/* Los gráficos viven en Tendencias: aquí se decide, allí se explora */}
-      <div className="flex justify-end -mt-2">
-        <Link
-          href="/panel/tendencias"
-          className="flex items-center gap-1.5 text-xs font-semibold text-fog hover:text-snow transition-colors"
-        >
-          <LineChart size={13} /> {t('panelres_ver_tendencias')} →
-        </Link>
-      </div>
-
 
       {/* Fase 1: el dinero primero */}
       <PulseSection data={pulse} />

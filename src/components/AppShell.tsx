@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { getStoredTenant, loadAndStoreTenant, clearStoredTenant } from '@/lib/tenant'
 import { useEffect, useState } from 'react'
 import { useNavBadges } from '@/lib/useNavBadges'
+import { useUiPrefs } from '@/lib/uiPrefs'
 import { useLanguage } from '@/lib/i18n'
 
 function Badge({ count }: { count: number }) {
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [termsAccepting, setTermsAccepting] = useState(false)
   const badges = useNavBadges()
   const { t } = useLanguage()
+  const { prefs: uiPrefs } = useUiPrefs()
 
   useEffect(() => {
     async function load(email: string) {
@@ -183,7 +185,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             { href: '/panel/servicios',     label: t('shared_nav_servicios'),     icon: Tag,         badge: 0 },
             { href: '/panel/tienda',        label: t('shared_nav_tienda'),        icon: Store, badge: 0 },
             { href: '/panel/configuracion', label: t('shared_nav_configuracion'), icon: Settings,    badge: 0 },
-            { href: '/panel/iconos',         label: 'Iconos',                      icon: Shapes,      badge: 0 },
+            // El catálogo de iconos es una herramienta de diseño: se activa
+            // desde Configuración y por defecto no se ve.
+            ...(uiPrefs.mostrarIconos
+              ? [{ href: '/panel/iconos', label: 'Iconos', icon: Shapes, badge: 0 }]
+              : []),
           ].map(({ href, label, icon: Icon, badge }) => {
             const isActive = href === '/'
               ? pathname === '/'
@@ -253,13 +259,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Content
-          El tope de ancho es de legibilidad, no de estética: a 1900 px una fila
-          deja el título en un extremo y la cifra en el otro, y el ojo tiene que
-          cruzar la pantalla para juntar los dos datos. */}
+          Sin tope de ancho: se probó limitarlo a 1400 px por legibilidad y el
+          resultado fue peor — en monitores grandes desaprovechaba media
+          pantalla, que es justo lo que se gana teniendo sitio. */}
       <div className="flex-1 min-w-0 lg:h-screen lg:overflow-y-auto">
-        <div className="mx-auto w-full max-w-[1400px]">
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   )

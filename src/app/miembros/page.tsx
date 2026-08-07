@@ -8,6 +8,7 @@ import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { UserPlus, ChevronRight, User, Users } from 'lucide-react'
 import Link from 'next/link'
 import { TableFilterBar } from '@/components/TableFilterBar'
+import { LeyendaBonos } from './LeyendaBonos'
 import { MiembrosTabs } from '@/components/MiembrosTabs'
 import { useLanguage } from '@/lib/i18n'
 
@@ -230,6 +231,13 @@ export default function MiembrosPage() {
           }
         />
       </div>
+
+      {/* Leyenda del código de color de la columna «Estado» */}
+      {view === 'miembros' && (
+        <div className="shrink-0 mb-2.5">
+          <LeyendaBonos />
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-2 overflow-y-auto">

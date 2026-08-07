@@ -49,7 +49,7 @@ function FlipCard({
 }) {
   const [flipped, setFlipped] = useState(false)
   return (
-    <div className="flip-card" data-flipped={flipped}>
+    <div className="flip-card h-full" data-flipped={flipped}>
       <div className="flip-inner">
         {/* Frente */}
         <button
@@ -57,7 +57,7 @@ function FlipCard({
           aria-hidden={flipped}
           tabIndex={flipped ? -1 : 0}
           aria-label={`${label}: ${value}. Ver explicación`}
-          className="flip-face w-full rounded-2xl border border-line bg-surface p-4 text-left hover:border-line2 transition-colors"
+          className="flip-face w-full h-full flex flex-col rounded-2xl border border-line bg-surface p-4 text-left hover:border-line2 transition-colors"
         >
           <div className="flex items-center gap-1.5 mb-2">
             <Icon size={13} className={accent} />
@@ -65,8 +65,10 @@ function FlipCard({
             <Info size={11} className="text-mist shrink-0" />
           </div>
           <p className="font-display text-2xl font-bold text-snow leading-none tabular-nums">{value}</p>
-          {sub && <div className="mt-1.5 flex items-center gap-2 flex-wrap">{sub}</div>}
-          {foot && <p className="mt-1.5 text-[11px] text-mist leading-tight">{foot}</p>}
+          {/* Alto mínimo reservado aunque no haya subtítulo: así la cifra y el
+              pie quedan a la misma altura en las seis tarjetas. */}
+          <div className="mt-1.5 min-h-[18px] flex items-center gap-2 flex-wrap">{sub}</div>
+          <p className="mt-auto pt-1.5 text-[11px] text-mist leading-tight">{foot}</p>
         </button>
 
         {/* Dorso */}
@@ -75,7 +77,7 @@ function FlipCard({
           aria-hidden={!flipped}
           tabIndex={flipped ? 0 : -1}
           aria-label={`${label}. Volver a la cifra`}
-          className="flip-face flip-face--back w-full rounded-2xl border border-line2 bg-surface2 p-4 text-left"
+          className="flip-face flip-face--back w-full h-full rounded-2xl border border-line2 bg-surface2 p-4 text-left"
         >
           <p className={`text-[10px] font-semibold uppercase tracking-wide mb-1.5 ${accent}`}>{label}</p>
           <p className="text-[11px] text-fog leading-snug">{desc}</p>
@@ -103,7 +105,9 @@ export function PulseSection({ data }: { data: PulseData }) {
         <p className="text-[11px] text-mist">Toca una tarjeta para ver qué mide</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
+      {/* `items-stretch` (por defecto) + `h-full` en la tarjeta: las seis miden
+          lo mismo, y la altura la marca la que más contenido tenga. */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5 items-stretch">
         <FlipCard
           icon={Euro}
           label="Ingresos"

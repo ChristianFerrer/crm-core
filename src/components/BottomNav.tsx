@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Shapes, Home, Users, BarChart2, CalendarDays, MoreHorizontal, Settings, Tag, Store, LineChart } from 'lucide-react'
 import { useNavBadges } from '@/lib/useNavBadges'
+import { useUiPrefs } from '@/lib/uiPrefs'
 import { useLanguage } from '@/lib/i18n'
 
 function Badge({ count }: { count: number }) {
@@ -19,6 +20,7 @@ function Badge({ count }: { count: number }) {
 export function BottomNav() {
   const pathname = usePathname()
   const badges = useNavBadges()
+  const { prefs: uiPrefs } = useUiPrefs()
   const { t } = useLanguage()
   const [moreOpen, setMoreOpen] = useState(false)
 
@@ -38,7 +40,10 @@ export function BottomNav() {
     { href: '/panel/servicios',    label: t('shared_nav_servicios'),    icon: Tag,         accent: 'text-lime', activeBorder: 'border-lime' },
     { href: '/panel/tienda',       label: t('shared_nav_tienda'),       icon: Store, accent: 'text-iris', activeBorder: 'border-iris' },
     { href: '/panel/configuracion',label: t('shared_nav_configuracion'),icon: Settings,    accent: 'text-mint', activeBorder: 'border-mint' },
-    { href: '/panel/iconos',       label: 'Iconos',                     icon: Shapes,      accent: 'text-amber', activeBorder: 'border-amber' },
+    // Ver AppShell: el catálogo de iconos se activa desde Configuración
+    ...(uiPrefs.mostrarIconos
+      ? [{ href: '/panel/iconos', label: 'Iconos', icon: Shapes, accent: 'text-amber', activeBorder: 'border-amber' }]
+      : []),
   ]
 
   const moreActive = moreItems.some(i => pathname.startsWith(i.href))

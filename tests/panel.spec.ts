@@ -115,3 +115,20 @@ test.describe('Pantallas de trabajo diario', () => {
     })
   }
 })
+
+test.describe('Ancho de pantalla', () => {
+  test('el contenido usa todo el ancho disponible', async ({ page }) => {
+    // Se probó limitarlo a 1400 px en AppShell por legibilidad y el resultado
+    // fue peor: en monitores grandes desaprovechaba media pantalla. Esta
+    // prueba está para que no vuelva a colarse un tope por descuido.
+    await page.setViewportSize({ width: 1800, height: 950 })
+    await page.goto('/panel')
+    const ancho = await page.evaluate(() => {
+      const h1 = document.querySelector('h1')
+      const cont = h1?.closest('div.space-y-6') as HTMLElement | null
+      return cont ? cont.getBoundingClientRect().width : 0
+    })
+    // 1800 menos la barra lateral (224 px) y los márgenes
+    expect(ancho).toBeGreaterThan(1400)
+  })
+})
