@@ -433,3 +433,39 @@ console.assert(
 )
 console.log('flujo de campaña ->', JSON.stringify(fl))
 console.log('flujo de campaña -> OK')
+
+// ── seguimiento de la campaña ──
+// La conversión no se declara, se mide: si la familia aparece después de que se
+// le escriba, la campaña funcionó aunque nadie se acordara de marcarlo.
+const hoy = now.getTime()
+const dias = n => new Date(hoy - n * 86400000).toISOString()
+const segui = C.seguimientoCampana(
+  [{ memberId: 'muda' }, { memberId: 'vino' }, { memberId: 'contesto' }, { memberId: 'antes' }, { memberId: 'nueva' }],
+  [
+    { member_id: 'muda',     estado: 'enviado',    enviado_at: dias(9) },
+    { member_id: 'vino',     estado: 'enviado',    enviado_at: dias(6) },
+    { member_id: 'contesto', estado: 'respondido', enviado_at: dias(8) },
+    { member_id: 'antes',    estado: 'enviado',    enviado_at: dias(2) },
+  ],
+  [
+    { member_id: 'vino',  fecha: dias(4) },  // después de escribirle
+    { member_id: 'antes', fecha: dias(20) }, // ANTES: no la provocó el mensaje
+  ],
+  now,
+)
+console.assert(segui.muda.tocaInsistir, 'nueve días en silencio es insistir')
+console.assert(segui.muda.diasDesdeContacto === 9, 'días mal contados: ' + segui.muda.diasDesdeContacto)
+console.assert(segui.vino.conversionSinMarcar, 'vino tras el mensaje y sigue en contactadas')
+console.assert(!segui.vino.tocaInsistir, 'a quien ya ha venido no se le insiste')
+console.assert(segui.contesto.respondio && !segui.contesto.tocaInsistir, 'quien contesta no está en silencio')
+console.assert(!segui.antes.vinoEl, 'una visita anterior al mensaje no cuenta como conversión')
+console.assert(!segui.antes.tocaInsistir, 'dos días aún no es silencio')
+console.assert(segui.nueva.columna === 'pendiente' && segui.nueva.diasDesdeContacto === null, 'sin contacto no hay reloj')
+
+const resSeg = C.resumenSeguimiento(segui)
+console.assert(
+  resSeg.tocaInsistir === 1 && resSeg.sinMarcar === 1 && resSeg.respondieron === 1 && resSeg.vinieron === 1,
+  'resumen del seguimiento mal agregado: ' + JSON.stringify(resSeg),
+)
+console.log('seguimiento ->', JSON.stringify(resSeg))
+console.log('seguimiento -> OK')

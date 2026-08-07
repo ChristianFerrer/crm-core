@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, MessageCircle, Check, Phone, ShieldAlert, Pencil, RotateCcw,
-  CheckCheck, X, Clock, Calendar,
+  CheckCheck, X, Clock, Calendar, BellRing, Reply, Sparkles,
 } from 'lucide-react'
 import { marcarEnvio, type SendState } from '@/lib/campaign-sends'
 import {
-  renderMessage, waLink, columnaDeEstado,
-  type CampaignTemplate, type Recipient, type ColumnaCampana,
+  renderMessage, waLink, columnaDeEstado, resumenSeguimiento, DIAS_ESPERA_RESPUESTA,
+  type CampaignTemplate, type Recipient, type ColumnaCampana, type SeguimientoFamilia,
 } from '@/lib/campaigns'
 import { ICONOS } from '../../ActionsSection'
 
@@ -83,12 +83,14 @@ const ACCENT: Record<string, { text: string; border: string; bg: string; barra: 
  * se puede arrastrar — los botones siguen ahí, el arrastre es un atajo.
  */
 export function CampaignClient({
-  template, recipients, existingSends, sinConsentimiento,
+  template, recipients, existingSends, seguimiento, sinConsentimiento,
   horizonte, reintentoDias,
 }: {
   template: CampaignTemplate
   recipients: Recipient[]
   existingSends: ExistingSend[]
+  /** Calculado en el servidor: quién no contesta y quién ya ha venido */
+  seguimiento: Record<string, SeguimientoFamilia>
   sinConsentimiento: number
   horizonte: string
   reintentoDias: number
@@ -125,6 +127,31 @@ export function CampaignClient({
   const hechas = porColumna.convertido.length + porColumna.descartado.length + porColumna.contactada.length
   const pctTocadas = total ? (hechas / total) * 100 : 0
   const pctGanado = total ? (porColumna.convertido.length / total) * 100 : 0
+
+  // El seguimiento viene del servidor; al marcar en local se recalcula la parte
+  // que depende del estado, para que los avisos no se queden colgados.
+  const res = useMemo(() => {
+    const vivo: Record<string, SeguimientoFamilia> = {}
+    for (const [id, f] of Object.entries(seguimiento)) {
+      const columna = columnaDe(sends[id] ?? 'pendiente')
+      vivo[id] = {
+        ...f,
+        columna,
+        respondio: sends[id] === 'respondido',
+        tocaInsistir: f.tocaInsistir && columna === 'contactada' && sends[id] !== 'respondido',
+        conversionSinMarcar: !!f.vinoEl && columna === 'contactada',
+      }
+    }
+    return resumenSeguimiento(vivo)
+  }, [seguimiento, sends])
+
+  /** Cierra de golpe las que ya vinieron: el dato ya estaba, solo faltaba anotarlo. */
+  async function marcarLasQueVinieron() {
+    const pendientes = recipients.filter(
+      r => seguimiento[r.memberId]?.vinoEl && columnaDe(sends[r.memberId] ?? 'pendiente') === 'contactada'
+    )
+    for (const r of pendientes) await marcar(r, 'convertido')
+  }
 
   async function marcar(r: Recipient, estado: SendState) {
     setSaving(r.memberId)
@@ -194,6 +221,54 @@ export function CampaignClient({
             : 'Todas contactadas'}
         </p>
       </div>
+
+      {/* ── Lo que hay que hacer HOY con esta campaña ──────────────────────
+          Una campaña no se muere porque las familias digan que no; se muere
+          porque nadie vuelve a mirar a quien no contestó, y porque quien sí
+          vino nunca se marca. Las dos cosas se avisan aquí, con su botón. */}
+      {(res.sinMarcar > 0 || res.tocaInsistir > 0) && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {res.sinMarcar > 0 && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-mint/40 bg-mint/10 px-3 py-2.5">
+              <Sparkles size={15} className="text-mint shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-mint">
+                  {res.sinMarcar} {res.sinMarcar === 1 ? 'familia ha venido' : 'familias han venido'} después de escribirles
+                </p>
+                <p className="text-[11px] text-fog leading-snug mt-0.5">
+                  La visita está registrada, pero la campaña sigue contándolas como pendientes de respuesta.
+                </p>
+                <button
+                  onClick={marcarLasQueVinieron}
+                  className="mt-1.5 rounded-md border border-mint/40 bg-mint/10 px-2 py-1 text-[11px] font-semibold text-mint hover:bg-mint/20 transition-colors"
+                >
+                  Marcar como reservaron
+                </button>
+              </div>
+            </div>
+          )}
+
+          {res.tocaInsistir > 0 && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber/40 bg-amber/10 px-3 py-2.5">
+              <BellRing size={15} className="text-amber shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-amber">
+                  {res.tocaInsistir} sin contestar hace más de {DIAS_ESPERA_RESPUESTA} días
+                </p>
+                <p className="text-[11px] text-fog leading-snug mt-0.5">
+                  Un segundo mensaje recupera parte de esto. Están marcadas en «Contactadas».
+                </p>
+                <button
+                  onClick={() => setTab('contactada')}
+                  className="mt-1.5 rounded-md border border-amber/40 bg-amber/10 px-2 py-1 text-[11px] font-semibold text-amber hover:bg-amber/20 transition-colors lg:hidden"
+                >
+                  Ver quiénes
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Mensaje, con vista previa en burbuja */}
       <div className="rounded-2xl border border-line bg-surface p-4">
@@ -281,6 +356,7 @@ export function CampaignClient({
             ) : porColumna[tab].map(r => (
               <TarjetaFamilia
                 key={r.memberId} r={r} estado={sends[r.memberId] ?? 'pendiente'}
+                seg={seguimiento[r.memberId]}
                 mensaje={mensaje} guardando={saving === r.memberId} onMarcar={marcar}
               />
             ))}
@@ -327,6 +403,7 @@ export function CampaignClient({
                     ) : lista.map(r => (
                       <TarjetaFamilia
                         key={r.memberId} r={r} estado={sends[r.memberId] ?? 'pendiente'}
+                        seg={seguimiento[r.memberId]}
                         mensaje={mensaje} guardando={saving === r.memberId} onMarcar={marcar} compacta
                         arrastrable
                       />
@@ -351,10 +428,12 @@ export function CampaignClient({
  * entre pestañas no existe y porque «WhatsApp» tiene que abrir WhatsApp.
  */
 function TarjetaFamilia({
-  r, estado, mensaje, guardando, onMarcar, compacta = false, arrastrable = false,
+  r, estado, seg, mensaje, guardando, onMarcar, compacta = false, arrastrable = false,
 }: {
   r: Recipient
   estado: SendState
+  /** Cuánto lleva esperando y si ya ha aparecido por la ludoteca */
+  seg?: SeguimientoFamilia
   mensaje: string
   guardando: boolean
   onMarcar: (r: Recipient, estado: SendState) => void
@@ -392,6 +471,31 @@ function TarjetaFamilia({
         </p>
       )}
 
+      {/* ── Seguimiento: el tiempo que lleva ahí y qué ha pasado desde ──
+          Sin esto, «contactada» es un cajón donde todo parece igual: la que
+          respondió ayer y la que lleva nueve días en silencio. */}
+      {col === 'contactada' && seg && (
+        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+          {seg.vinoEl ? (
+            <span className="flex items-center gap-1 rounded-md bg-mint/15 px-1.5 py-0.5 text-[10px] font-semibold text-mint">
+              <Sparkles size={9} /> Vino el {new Date(seg.vinoEl).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+            </span>
+          ) : seg.respondio ? (
+            <span className="flex items-center gap-1 rounded-md bg-iris/15 px-1.5 py-0.5 text-[10px] font-semibold text-iris">
+              <Reply size={9} /> Respondió
+            </span>
+          ) : seg.tocaInsistir ? (
+            <span className="flex items-center gap-1 rounded-md bg-amber/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber">
+              <BellRing size={9} /> Sin contestar · {seg.diasDesdeContacto} d
+            </span>
+          ) : (
+            <span className="text-[10px] text-mist">
+              Escrita hace {seg.diasDesdeContacto ?? 0} d
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Fila de acciones compacta: los botones eran de 32 px de alto en una
           tarjeta de tres líneas, y en la columna de escritorio eso hacía que la
           acción pesara más que el nombre de la familia. */}
@@ -425,6 +529,17 @@ function TarjetaFamilia({
             >
               <Check size={11} /> Reservó
             </button>
+            {/* «Respondió» no cambia de columna: cambia lo que sabes de ella.
+                Estaba en los datos desde el principio y no se podía marcar. */}
+            {!seg?.respondio && (
+              <button
+                onClick={() => onMarcar(r, 'respondido')}
+                title="Ha contestado al mensaje"
+                className="flex items-center justify-center gap-1 rounded-md border border-iris/40 px-2 py-1 text-[11px] font-semibold text-iris hover:bg-iris/10 transition-colors"
+              >
+                <Reply size={11} /> Respondió
+              </button>
+            )}
             <BotonDescartar r={r} onMarcar={onMarcar} />
             <button
               onClick={() => onMarcar(r, 'pendiente')}

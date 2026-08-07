@@ -747,3 +747,115 @@ export function flujoDeCampana(
   for (const r of destinatarios) out[columnaDeEstado(estadoPorMiembro[r.memberId])]++
   return out
 }
+
+/**
+ * Días sin contestar tras los que se considera que la familia no ha respondido
+ * y toca insistir. Tres es lo que tarda una madre en leer un WhatsApp que no
+ * era urgente; menos de eso es agobiar.
+ */
+export const DIAS_ESPERA_RESPUESTA = 3
+
+/**
+ * Ventana de atribución: si la familia aparece por la ludoteca dentro de estos
+ * días desde que se le escribió, se da la campaña por buena.
+ *
+ * Es una convención, como en cualquier herramienta de marketing —nadie puede
+ * demostrar que vino POR el mensaje—, pero es una convención medida. Catorce
+ * días cubre el fin de semana siguiente y el otro, que es cuando se decide una
+ * visita a una ludoteca.
+ */
+export const DIAS_ATRIBUCION = 14
+
+export type SeguimientoFamilia = {
+  memberId: string
+  columna: ColumnaCampana
+  /** Días desde que se le escribió; null si aún no se ha hecho */
+  diasDesdeContacto: number | null
+  respondio: boolean
+  /** Fecha de la visita o reserva posterior al contacto, si la hay */
+  vinoEl: string | null
+  /** Contactada, sin respuesta y pasada la espera: toca insistir */
+  tocaInsistir: boolean
+  /**
+   * Vino después de escribirle, pero nadie lo ha marcado como reserva. Es la
+   * conversión que se pierde en toda campaña manual: se escribe, la familia
+   * aparece, y el resultado nunca se anota, así que la campaña parece que no
+   * funciona.
+   */
+  conversionSinMarcar: boolean
+}
+
+/**
+ * Estado de seguimiento de cada familia de una campaña.
+ *
+ * La diferencia con `flujoDeCampana` es el tiempo: aquel dice en qué columna
+ * está cada una, este dice si esa columna se ha quedado quieta. Una campaña no
+ * se muere porque las familias digan que no; se muere porque nadie vuelve a
+ * mirar a quien no contestó.
+ */
+export function seguimientoCampana(
+  destinatarios: { memberId: string }[],
+  contactos: { member_id: string; estado: string; enviado_at: string | null }[],
+  /** Visitas y reservas posteriores, para medir la conversión de verdad */
+  apariciones: { member_id: string | null; fecha: string }[],
+  now = new Date(),
+): Record<string, SeguimientoFamilia> {
+  const porMiembro = new Map<string, { estado: string; enviado: number | null }>()
+  for (const c of contactos) {
+    const enviado = c.enviado_at ? new Date(c.enviado_at).getTime() : null
+    const prev = porMiembro.get(c.member_id)
+    // El contacto más reciente es el que manda
+    if (!prev || (enviado ?? 0) >= (prev.enviado ?? 0)) {
+      porMiembro.set(c.member_id, { estado: c.estado, enviado })
+    }
+  }
+
+  const visitasPorMiembro = new Map<string, number[]>()
+  for (const a of apariciones) {
+    if (!a.member_id) continue
+    const list = visitasPorMiembro.get(a.member_id) ?? []
+    list.push(new Date(a.fecha).getTime())
+    visitasPorMiembro.set(a.member_id, list)
+  }
+
+  const out: Record<string, SeguimientoFamilia> = {}
+  for (const d of destinatarios) {
+    const c = porMiembro.get(d.memberId)
+    const columna = columnaDeEstado(c?.estado)
+    const dias = c?.enviado != null ? (now.getTime() - c.enviado) / 86_400_000 : null
+
+    // Solo cuenta lo que pasó DESPUÉS de escribirle: una visita anterior no la
+    // provocó el mensaje.
+    let vinoEl: string | null = null
+    if (c?.enviado != null) {
+      const posterior = (visitasPorMiembro.get(d.memberId) ?? [])
+        .filter(t => t > c.enviado! && t <= c.enviado! + DIAS_ATRIBUCION * 86_400_000)
+        .sort((a, b) => a - b)[0]
+      if (posterior) vinoEl = new Date(posterior).toISOString()
+    }
+
+    out[d.memberId] = {
+      memberId: d.memberId,
+      columna,
+      diasDesdeContacto: dias != null ? Math.floor(dias) : null,
+      respondio: c?.estado === 'respondido',
+      vinoEl,
+      tocaInsistir:
+        columna === 'contactada' && c?.estado !== 'respondido' &&
+        dias != null && dias >= DIAS_ESPERA_RESPUESTA && !vinoEl,
+      conversionSinMarcar: !!vinoEl && columna === 'contactada',
+    }
+  }
+  return out
+}
+
+/** Resumen del seguimiento, para la cabecera de la campaña. */
+export function resumenSeguimiento(s: Record<string, SeguimientoFamilia>) {
+  const filas = Object.values(s)
+  return {
+    tocaInsistir: filas.filter(f => f.tocaInsistir).length,
+    sinMarcar: filas.filter(f => f.conversionSinMarcar).length,
+    respondieron: filas.filter(f => f.respondio).length,
+    vinieron: filas.filter(f => f.vinoEl).length,
+  }
+}

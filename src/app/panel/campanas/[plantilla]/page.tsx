@@ -4,7 +4,7 @@ import { buildMemberStats, hogaresPorMiembro } from '@/lib/segments'
 import { revenue, monthPeriod } from '@/lib/metrics'
 import {
   resolveRecipients, templateById, buildCaducados, buildSinBono, requiereConsentimiento,
-  type BirthdayLead, type BonoLead, type PlantillaId,
+  seguimientoCampana, type BirthdayLead, type BonoLead, type PlantillaId,
 } from '@/lib/campaigns'
 import { CampaignClient, type ExistingSend } from './CampaignClient'
 
@@ -39,7 +39,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
       .gte('checked_in_at', new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString()).limit(20000),
     supabase.from('memberships').select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id').limit(5000),
     supabase.from('membership_types').select('id, price'),
-    supabase.from('bookings').select('id, date, status, amount, deposit_amount, deposit_paid_at, payment_status').limit(5000),
+    supabase.from('bookings').select('id, member_id, date, status, amount, deposit_amount, deposit_paid_at, payment_status').limit(5000),
     supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
   ])
 
@@ -151,6 +151,26 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
 
   const recientes = recipients.filter(r => !recipientesVigentes.includes(r))
 
+  // ── Seguimiento ────────────────────────────────────────────────────────────
+  // Aquí es donde la campaña deja de ser una lista y pasa a tener resultado. La
+  // conversión no se declara: se mide. Si la familia apareció por la ludoteca
+  // —visita o reserva— después de que se le escribiera, el CRM ya lo sabe, y no
+  // hace falta que nadie se acuerde de volver a marcarlo.
+  const apariciones = [
+    ...visitRows.map(v => ({ member_id: v.member_id, fecha: v.checked_in_at })),
+    ...((bookings ?? []) as any[])
+      .filter(b => b.status !== 'cancelled' && b.member_id)
+      .map(b => ({ member_id: b.member_id, fecha: b.date + 'T12:00:00' })),
+  ]
+  const seguimiento = seguimientoCampana(
+    recipients,
+    ((sendRows ?? []) as any[]).map(r => ({
+      member_id: r.member_id, estado: r.estado, enviado_at: r.enviado_at ?? r.created_at,
+    })),
+    apariciones,
+    now,
+  )
+
   return (
     <CampaignClient
       template={template}
@@ -163,6 +183,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
       horizonte={template.horizonte}
       reintentoDias={template.reintentoDias}
       existingSends={existingSends}
+      seguimiento={seguimiento}
       sinConsentimiento={sinConsentimiento}
     />
   )
