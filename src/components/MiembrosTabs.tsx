@@ -25,8 +25,11 @@ type Cifras = {
   /**
    * Miembros que pertenecen a alguna familia. Es distinto del total: una
    * familia agrupa a los adultos de una misma casa, y la mayoría de altas no
-   * están agrupadas. Dividir el total entre las familias daba disparates —
-   * 117 miembros entre 8 familias, «14,6 adultos por familia».
+   * están agrupadas — en L'Esbarjo, 13 de 117.
+   *
+   * Se muestra en crudo y no como media. La media («1,6 por familia») hablaba
+   * de cuánto se usa la función de agrupar, no de los clientes, y no llevaba a
+   * ninguna decisión.
    */
   agrupados: number
   visitasMes: number
@@ -98,22 +101,24 @@ export function MiembrosTabs({ active }: { active: Tab }) {
     if (!c) return { cifra: '—', detalle: '' }
     switch (id) {
       case 'miembros':
+        // Adultos y niños: es el tamaño real de la base. Y los que no tienen
+        // bono, que es de lo poco aquí que lleva directo a una acción.
         return {
           cifra: String(c.miembros),
           detalle: c.miembros > 0
-            ? `${c.ninos} niño${c.ninos === 1 ? '' : 's'} · ${c.conBono} con bono · ${c.miembros - c.conBono} sin bono`
+            ? `adultos · ${c.ninos} niño${c.ninos === 1 ? '' : 's'} · ${c.miembros - c.conBono} sin bono`
             : 'Aún no hay nadie dado de alta',
         }
-      case 'familias': {
-        // La media se calcula sobre los miembros AGRUPADOS, no sobre el total
-        const media = c.familias > 0 ? c.agrupados / c.familias : 0
+      case 'familias':
+        // Cuántas altas están agrupadas, no una media. La media («1,6 por
+        // familia») describía el uso de la función, no a los clientes, y no
+        // llevaba a ninguna decisión.
         return {
           cifra: String(c.familias),
           detalle: c.familias === 0
             ? 'Ninguna familia agrupada todavía'
-            : `${c.agrupados} miembro${c.agrupados === 1 ? '' : 's'} agrupado${c.agrupados === 1 ? '' : 's'} · ${media.toFixed(1)} por familia`,
+            : `${c.agrupados} de ${c.miembros} miembros agrupados`,
         }
-      }
       case 'historico':
         return {
           cifra: String(c.visitasMes),

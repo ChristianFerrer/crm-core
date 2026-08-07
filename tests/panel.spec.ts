@@ -194,20 +194,19 @@ test.describe('Ficha de miembro', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/miembros')
     // El rótulo ya está en el menú: el tile tiene que aportar algo más
-    await expect(page.getByText('con bono', { exact: false })).toBeVisible()
-    await expect(page.getByText('por familia', { exact: false })).toBeVisible()
+    await expect(page.getByText('sin bono', { exact: false })).toBeVisible()
+    await expect(page.getByText('miembros agrupados', { exact: false })).toBeVisible()
     await expect(page.getByText('visitas este mes', { exact: false })).toBeVisible()
   })
 
-  test('la media por familia es plausible', async ({ page }) => {
+  test('los agrupados nunca superan el total de miembros', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/miembros')
-    const texto = await page.getByText('por familia', { exact: false }).first().innerText()
-    const media = parseFloat(texto.match(/([\d,.]+) por familia/)?.[1]?.replace(',', '.') ?? '0')
-    // Salían 14,6 por dividir TODOS los miembros entre las familias, cuando
-    // solo una minoría pertenece a alguna. Una casa no tiene 14 adultos.
-    expect(media).toBeGreaterThan(0)
-    expect(media).toBeLessThanOrEqual(4)
+    const texto = await page.getByText('miembros agrupados', { exact: false }).first().innerText()
+    const [agrupados, total] = (texto.match(/(\d+) de (\d+)/) ?? []).slice(1).map(Number)
+    // Mezclar universos —contar unas cosas sobre otras— fue lo que produjo el
+    // «14,6 adultos por familia». Un subconjunto no puede ser mayor que el todo.
+    expect(agrupados).toBeLessThanOrEqual(total)
   })
 
   test('el listado ya no lleva leyenda ni puntos de color', async ({ page }) => {
