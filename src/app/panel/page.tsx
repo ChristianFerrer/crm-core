@@ -4,7 +4,8 @@ import { PulseSection } from './PulseSection'
 import { SegmentMap } from './SegmentMap'
 import { ActionsSection } from './ActionsSection'
 import { getT } from '@/lib/i18n-server'
-import { actividad, delta, repeatRate, bonoRenewalRate, occupancyBySlot, franjaPunta, franjaValle, mediaPrevia, monthPeriod } from '@/lib/metrics'
+import { actividad, delta, repeatRate, bonoRenewalRate, occupancyBySlot, franjaPunta, franjaValle, mediaPrevia, monthPeriod,
+  serieVisitas, serieTasa, serieBonosVivos, serieActivas, perfilHorario } from '@/lib/metrics'
 import { buildMemberStats, countBySegment, topVisitantes, hogaresPorMiembro } from '@/lib/segments'
 import {
   suggestedActions, inicioSemana, proximaRevision, buildCaducados, buildSinBono,
@@ -236,6 +237,15 @@ export default async function PanelPage() {
     valle: valle
       ? { dia: DIAS[valle.dow] ?? '', hora: valle.hour, personas: valle.avgPeople, pct: valle.pct }
       : null,
+    serie: {
+      visitas: serieVisitas(vRows, now, 12),
+      bonos: serieBonosVivos(mRows, hogarDe, now, 6),
+      repeticion: serieTasa(ref => repeatRate(vRows, ref, 30), now, 6),
+      renovacion: serieTasa(ref => bonoRenewalRate(mRows, ref, 30), now, 6),
+      activas: serieActivas(vRows, hogarDe, now, 6),
+      // Perfil del día entero, no solo del día punta: es lo que enseña el hueco
+      horas: perfilHorario(franjas),
+    },
   }
 
   // ── Alertas urgentes ───────────────────────────────────────────────────────

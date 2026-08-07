@@ -330,6 +330,119 @@ export function mediaPrevia(
   return base >= MIN_SAMPLE ? hits / base : null
 }
 
+/**
+ * Series para los gráficos del pulso.
+ *
+ * Cada tarjeta enseña una cifra del mes; sola, no dice si eso es lo normal. La
+ * serie contesta esa pregunta sin ocupar sitio: la forma se lee de un vistazo y
+ * el número sigue siendo el protagonista.
+ *
+ * Todas devuelven el punto más ANTIGUO primero, que es como se dibuja.
+ */
+
+/** Visitas por semana, terminando en la semana en curso. */
+export function serieVisitas(visits: VisitRow[], now: Date, semanas = 12): number[] {
+  const out = new Array(semanas).fill(0)
+  const finSemana = now.getTime()
+  for (const v of visits) {
+    const t = new Date(v.checked_in_at).getTime()
+    if (t > finSemana) continue
+    const idx = semanas - 1 - Math.floor((finSemana - t) / (7 * 86_400_000))
+    if (idx >= 0 && idx < semanas) out[idx]++
+  }
+  return out
+}
+
+/**
+ * La misma tasa, mes a mes. `null` en los meses sin muestra suficiente: se
+ * dibuja el hueco en vez de una caída inventada.
+ */
+export function serieTasa(
+  calc: (ref: Date) => RateResult,
+  now: Date,
+  meses = 6,
+): (number | null)[] {
+  const out: (number | null)[] = []
+  for (let i = meses - 1; i >= 0; i--) {
+    const r = calc(new Date(now.getTime() - i * 30 * 86_400_000))
+    out.push(isReliable(r.base) ? r.rate : null)
+  }
+  return out
+}
+
+/**
+ * Hogares con bono en pie al final de cada mes.
+ *
+ * Las sesiones consumidas no tienen fecha, así que hacia atrás solo se puede
+ * mirar la vigencia (alta y caducidad): el histórico es el número de bonos que
+ * estaban en vigor, no los que además tenían sesiones. El punto de hoy, que es
+ * el que se enseña como cifra, sí descuenta los agotados.
+ */
+export function serieBonosVivos(
+  memberships: MembershipRow[],
+  hogarDe: Record<string, string>,
+  now: Date,
+  meses = 6,
+): number[] {
+  const out: number[] = []
+  for (let i = meses - 1; i >= 0; i--) {
+    const corte = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
+    const ref = corte > now ? now : corte
+    const hogares = new Set<string>()
+    for (const m of memberships) {
+      if (!m.member_id) continue
+      if (new Date(m.created_at) > ref) continue
+      if (m.expires_at && new Date(m.expires_at) < ref) continue
+      hogares.add(hogarDe[m.member_id] ?? m.member_id)
+    }
+    out.push(hogares.size)
+  }
+  return out
+}
+
+/** Hogares que habían venido en los 60 días previos a cada fin de mes. */
+export function serieActivas(
+  visits: VisitRow[],
+  hogarDe: Record<string, string>,
+  now: Date,
+  meses = 6,
+): number[] {
+  const out: number[] = []
+  for (let i = meses - 1; i >= 0; i--) {
+    const corte = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
+    const ref = corte > now ? now : corte
+    const desde = ref.getTime() - 60 * 86_400_000
+    const hogares = new Set<string>()
+    for (const v of visits) {
+      if (!v.member_id) continue
+      const t = new Date(v.checked_in_at).getTime()
+      if (t > ref.getTime() || t < desde) continue
+      hogares.add(hogarDe[v.member_id] ?? v.member_id)
+    }
+    out.push(hogares.size)
+  }
+  return out
+}
+
+/**
+ * Perfil de un día: gente media por hora, juntando todos los días del mes.
+ *
+ * Es el gráfico que convierte «punta 18h» en una decisión: se ve de un vistazo
+ * dónde está el pico y cuánto hueco queda a los lados.
+ */
+export function perfilHorario(slots: OccupancySlot[]): { hora: number; personas: number }[] {
+  const acc = new Map<number, { total: number; n: number }>()
+  for (const s of slots) {
+    const cur = acc.get(s.hour) ?? { total: 0, n: 0 }
+    cur.total += s.avgPeople
+    cur.n++
+    acc.set(s.hour, cur)
+  }
+  return [...acc.entries()]
+    .map(([hora, v]) => ({ hora, personas: v.total / v.n }))
+    .sort((a, b) => a.hora - b.hora)
+}
+
 export const MIN_SAMPLE = 8
 
 export function isReliable(base: number): boolean {

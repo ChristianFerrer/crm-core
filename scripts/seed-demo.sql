@@ -408,4 +408,70 @@ update bookings set guests = coalesce(guest_children, 0) + coalesce(guest_adults
 update bookings set deposit_amount =
   case when type = 'birthday' then round(amount * 0.5, 2) else 0 end;
 
+-- ── 7. Acompañantes de cada visita ────────────────────────────────────────
+-- Sin esto, `children_present` viene vacío y el historial de la ficha solo
+-- puede decir «3 invitados»: los nombres existen en `members.children`, pero no
+-- quedan atados a la visita. Se rellenan tantos hijos como `children_count`, y
+-- la pareja co-titular cuando la visita trajo más de un adulto.
+with v as (
+  select v.id, v.adults_count, v.children_count, m.children, m.family_id,
+         (select jsonb_agg(jsonb_build_object('name', o.name, 'is_adult', true))
+            from members o
+           where o.family_id = m.family_id and o.id <> m.id
+             and m.family_id is not null and o.deleted_at is null) as pareja
+    from visits v join members m on m.id = v.member_id
+   where (v.children_present is null or jsonb_array_length(v.children_present) = 0)
+     and jsonb_array_length(coalesce(m.children, '[]'::jsonb)) > 0
+)
+update visits t set children_present =
+  case when v.adults_count > 1 and v.pareja is not null
+       then jsonb_build_array(v.pareja->0) else '[]'::jsonb end
+  || coalesce((
+       select jsonb_agg(jsonb_build_object('name', c->>'name', 'birth_date', c->>'birth_date'))
+         from (select c from jsonb_array_elements(v.children) c
+                limit greatest(0, least(v.children_count, jsonb_array_length(v.children)))) s(c)
+     ), '[]'::jsonb)
+from v where v.id = t.id;
+
+-- ── 8. Historial de campañas ──────────────────────────────────────────────
+-- El «Seguimiento» de la tabla de campañas salía a cero en las siete filas, así
+-- que no se veía para qué sirven las cajas. Una campaña activa por plantilla,
+-- con los envíos repartidos por el embudo de forma determinista (por `i`), para
+-- que la siembra se pueda repetir y dé lo mismo.
+do $$
+declare tid uuid; cid uuid; p text; m record; i int; n int; est text;
+begin
+  select id into tid from tenants limit 1;
+  foreach p in array array['cumpleanos','bono_bajo','renovacion_caducada',
+                           'upsell_bono','reactivacion','valle','segunda_visita']
+  loop
+    select id into cid from campaigns
+     where tenant_id = tid and plantilla = p and estado = 'activa' limit 1;
+    if cid is null then
+      insert into campaigns (tenant_id, nombre, plantilla, mensaje, canal, estado, enviada_at)
+      values (tid, p, p, 'Mensaje de la campaña', 'whatsapp', 'activa', now() - interval '20 days')
+      returning id into cid;
+    end if;
+
+    n := 6 + (abs(hashtext(p)) % 9);
+    i := 0;
+    for m in select id from members where deleted_at is null and phone is not null
+              order by md5(id::text || p) limit n
+    loop
+      i := i + 1;
+      est := case when i % 5 = 0 then 'convertido'
+                  when i % 7 = 0 then 'descartado'
+                  when i % 3 = 0 then 'respondido'
+                  else 'enviado' end;
+      insert into campaign_sends (tenant_id, campaign_id, member_id, estado, enviado_at,
+                                  respondido_at, convertido_at, created_at)
+      values (tid, cid, m.id, est, now() - (i || ' days')::interval,
+              case when est in ('respondido','convertido') then now() - ((i-1) || ' days')::interval end,
+              case when est = 'convertido' then now() - ((i-1) || ' days')::interval end,
+              now() - (i || ' days')::interval)
+      on conflict do nothing;
+    end loop;
+  end loop;
+end $$;
+
 commit;

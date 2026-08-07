@@ -7,6 +7,7 @@ import {
   Info, Activity,
 } from 'lucide-react'
 import { isReliable, MIN_SAMPLE } from '@/lib/metrics'
+import { SparkLine, SparkBars } from '@/components/Spark'
 import { SectionHeader } from './SectionHeader'
 
 /**
@@ -40,6 +41,19 @@ export type PulseData = {
   punta: Franja | null
   /** La de menos: es la que se puede llenar con una oferta */
   valle: Franja | null
+  /**
+   * Series de los gráficos. Una cifra sola no dice si el mes es normal; la
+   * forma de los últimos meses sí, y cabe debajo del número.
+   */
+  serie: {
+    visitas: number[]
+    bonos: number[]
+    repeticion: (number | null)[]
+    renovacion: (number | null)[]
+    activas: number[]
+    /** Gente media por hora del día, y cuál es la punta */
+    horas: { hora: number; personas: number }[]
+  }
 }
 
 function Delta({ value }: { value: number | null }) {
@@ -66,7 +80,7 @@ function Delta({ value }: { value: number | null }) {
  * tarjetas de una misma fila se igualan solas porque la rejilla las estira.
  */
 function FlipCard({
-  icon: Icon, label, value, sub, foot, accent = 'text-fog', desc, href, accion,
+  icon: Icon, label, value, sub, foot, accent = 'text-fog', desc, href, accion, grafico,
 }: {
   icon: React.ElementType
   label: string
@@ -79,6 +93,8 @@ function FlipCard({
   href: string
   /** Qué se va a encontrar allí; se dice en el dorso */
   accion: string
+  /** Miniatura de la evolución; va entre la cifra y el pie */
+  grafico?: React.ReactNode
 }) {
   const [flipped, setFlipped] = useState(false)
   return (
@@ -101,6 +117,9 @@ function FlipCard({
             {/* Alto mínimo reservado aunque no haya subtítulo: así la cifra y el
                 pie quedan a la misma altura en las seis tarjetas. */}
             <div className="mt-1.5 min-h-[18px] flex items-center gap-2 flex-wrap">{sub}</div>
+            {/* El gráfico va pegado al pie y con alto fijo: así las seis
+                tarjetas siguen alineadas aunque una serie esté vacía. */}
+            <div className="mt-2 opacity-80 group-hover:opacity-100 transition-opacity">{grafico}</div>
             <p className="mt-auto pt-1.5 text-[11px] text-mist leading-tight group-hover:text-fog transition-colors">
               {foot}
             </p>
@@ -186,6 +205,7 @@ export function PulseSection({ data }: { data: PulseData }) {
           foot={<>{d.familias} familias · {d.porVisita.toFixed(1)} personas por visita</>}
           desc="Entradas registradas este mes. Es la cifra más fiable del panel: una visita queda registrada siempre, porque es la que abre la puerta. Se compara con el mismo tramo del mes anterior. Si «personas por visita» sube, los grupos vienen más grandes."
           accion="Lleva a Tendencias, con la serie de los últimos meses."
+          grafico={<SparkBars datos={d.serie.visitas} resaltar={d.serie.visitas.length - 1} className="text-lime" />}
         />
 
         <FlipCard
@@ -198,6 +218,7 @@ export function PulseSection({ data }: { data: PulseData }) {
           foot="Ocupación ya comprada"
           desc="Familias con un bono en pie: sesiones sin gastar y sin caducar. Es la parte del mes que no depende de que entre nadie nuevo, así que cuanto más alta, más predecible es la ocupación. Se cuenta por casa: dos padres con bono son un cliente, no dos."
           accion="Lleva a la campaña de bonos, para proponerlo a quien viene sin él."
+          grafico={<SparkLine datos={d.serie.bonos} className="text-grape" />}
         />
 
         <FlipCard
@@ -212,6 +233,7 @@ export function PulseSection({ data }: { data: PulseData }) {
           foot={isReliable(d.repeticion.base) ? `Sobre ${d.repeticion.base} familias nuevas` : 'Familias nuevas que volvieron'}
           desc="De las familias que vinieron por primera vez, cuántas volvieron en los 30 días siguientes. Es el mejor indicador de si la experiencia gusta: si cae, el problema está dentro, no en la captación. Se compara con su propia media de los 3 meses anteriores."
           accion="Lleva a la campaña de segunda visita, que es la que la sube."
+          grafico={<SparkLine datos={d.serie.repeticion} className="text-cyan-300" />}
         />
 
         <FlipCard
@@ -226,6 +248,7 @@ export function PulseSection({ data }: { data: PulseData }) {
           foot={isReliable(d.renovacion.base) ? `Sobre ${d.renovacion.base} bonos agotados` : 'Bonos agotados que se renovaron'}
           desc="De los bonos que se agotaron o caducaron, cuántos titulares contrataron otro en el mes siguiente. Mide la retención de quien ya se comprometió, que es la que sostiene la ocupación de los días flojos."
           accion="Lleva a la campaña de renovación, con los bonos caducados sin reponer."
+          grafico={<SparkLine datos={d.serie.renovacion} className="text-iris" />}
         />
 
         <FlipCard
@@ -242,6 +265,10 @@ export function PulseSection({ data }: { data: PulseData }) {
             : 'Momento de más ocupación'}
           desc="La franja con más gente en sala y la que menos, de media este mes. La punta dice cuándo hace falta más personal. El valle es el que mueve dinero: en la punta ya no cabe nadie, así que lo que se puede ganar está en llenar el hueco."
           accion="Lleva a la campaña de valle, para ofrecer esa franja a quien puede venir."
+          grafico={<SparkBars
+            datos={d.serie.horas.map(h => h.personas)}
+            resaltar={d.punta ? d.serie.horas.findIndex(h => h.hora === d.punta!.hora) : undefined}
+          />}
         />
 
         <FlipCard
@@ -255,6 +282,7 @@ export function PulseSection({ data }: { data: PulseData }) {
             : <span className="text-[11px] text-mist">ninguna en riesgo</span>}
           foot="Han venido en los últimos 60 días"
           desc="Familias que han venido en los últimos 60 días. «En riesgo» son las que llevan sin aparecer más del doble de su ritmo habitual: para una que viene cada semana, dos semanas; para una mensual, dos meses."
+          grafico={<SparkLine datos={d.serie.activas} className="text-mint" />}
           accion={d.enRiesgo > 0
             ? 'Lleva a la campaña de reactivación, con las que han roto su ritmo.'
             : 'Lleva a la lista de miembros.'}

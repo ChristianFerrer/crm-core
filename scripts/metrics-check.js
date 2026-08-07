@@ -386,3 +386,31 @@ console.assert(
   'sin casos suficientes no hay referencia',
 )
 console.log('franjas y referencia -> OK')
+
+// ── series de los gráficos ──
+const vSerie = [
+  { id:'a', member_id:'x', checked_in_at: new Date(now - 2*86400000).toISOString(), paid_amount:0, adults_count:1, children_count:1 },
+  { id:'b', member_id:'y', checked_in_at: new Date(now - 9*86400000).toISOString(), paid_amount:0, adults_count:1, children_count:1 },
+  { id:'c', member_id:'x', checked_in_at: new Date(now - 40*86400000).toISOString(), paid_amount:0, adults_count:1, children_count:1 },
+]
+const sv = M.serieVisitas(vSerie, now, 12)
+console.assert(sv.length === 12, 'la serie tiene una casilla por semana')
+console.assert(sv[11] === 1 && sv[10] === 1, 'cada visita cae en su semana: ' + sv.join(','))
+console.assert(sv.reduce((a, b) => a + b, 0) === 3, 'no se pierde ninguna visita')
+
+// Los meses sin muestra quedan en null: se dibuja el hueco, no una caída falsa
+const st = M.serieTasa(() => ({ rate: .4, base: 20, hits: 8 }), now, 3)
+console.assert(st.every(x => x === .4), 'serie de tasa mal montada: ' + JSON.stringify(st))
+console.assert(
+  M.serieTasa(() => ({ rate: 1, base: 2, hits: 2 }), now, 3).every(x => x === null),
+  'sin base suficiente el punto es null, no cero',
+)
+
+const perfil = M.perfilHorario([
+  { dow: 0, hour: 17, avgPeople: 4, pct: 0, samples: 3 },
+  { dow: 3, hour: 17, avgPeople: 6, pct: 0, samples: 3 },
+  { dow: 3, hour: 11, avgPeople: 2, pct: 0, samples: 3 },
+])
+console.assert(perfil[0].hora === 11 && perfil[1].personas === 5, 'perfil horario mal promediado: ' + JSON.stringify(perfil))
+console.log('series ->', sv.join(','), '| perfil', JSON.stringify(perfil))
+console.log('series -> OK')
