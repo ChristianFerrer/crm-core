@@ -217,3 +217,14 @@ console.assert(C.inicioSemana(new Date(2026, 7, 9, 9)).getDate() === 3, 'domingo
 console.log('semana ->', lunes.toDateString(), '→ revisión', prox.toDateString())
 
 console.log('\nOK fase 3')
+
+// ── Mensajes de los segmentos ──
+// Todos deben sustituir {nombre} y no dejar llaves sin resolver
+for (const seg of S.SEGMENTS) {
+  console.assert(!!seg.mensaje && !!seg.icono, 'segmento sin mensaje o icono: ' + seg.id)
+  const txt = C.renderMessage(seg.mensaje, { nombre: 'Marc' })
+  console.assert(txt.includes('Marc'), 'no sustituye {nombre} en ' + seg.id)
+  console.assert(!/[{}]/.test(txt), 'llaves sin resolver en ' + seg.id + ': ' + txt)
+  console.assert(txt.length > 40, 'el mensaje de ' + seg.id + ' es demasiado corto para ser un mensaje')
+}
+console.log('\nmensajes de segmento ->', S.SEGMENTS.map(s => s.id).join(', '), 'OK')

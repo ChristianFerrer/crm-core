@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { SEGMENTS, type MemberStat, type SegmentId } from '@/lib/segments'
 import { formatEur } from '@/lib/metrics'
-import { waLink, firstName } from '@/lib/campaigns'
+import { waLink, firstName, renderMessage } from '@/lib/campaigns'
 
 /** El dominio guarda el nombre del icono; aquí se resuelve al componente. */
 const ICONOS: Record<string, React.ElementType> = {
@@ -106,7 +106,9 @@ export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: num
             ) : (
               <div className="max-h-[22rem] overflow-y-auto divide-y divide-line/60">
                 {list.map(s => {
-                  const wa = waLink(s.phone, `¡Hola ${firstName(s.name)}! `)
+                  // El mensaje sale del segmento: a un campeón se le pide una
+                  // reseña y a un dormido se le ofrece volver, no el mismo hola.
+                  const wa = waLink(s.phone, renderMessage(seg.mensaje, { nombre: firstName(s.name) }))
                   return (
                     <div key={s.memberId} className="flex items-center gap-3 px-4 py-2.5">
                       <Link href={`/miembros/${s.memberId}`} className="min-w-0 flex-1 group">

@@ -47,15 +47,48 @@ export type SegmentDef = {
    * módulo es dominio puro y no debe importar React.
    */
   icono: string
+  /**
+   * Mensaje que se precarga en WhatsApp, con {nombre} como variable.
+   *
+   * Antes solo se mandaba el saludo, y eso no es un mensaje: obligaba a
+   * escribirlo entero desde el móvil, que es justo el trabajo que el botón
+   * decía ahorrar. Cada segmento pide una cosa distinta, así que el texto
+   * sale de la acción del propio segmento.
+   */
+  mensaje: string
 }
 
 export const SEGMENTS: SegmentDef[] = [
-  { id: 'campeones',          label: 'Campeones',      sub: 'vienen mucho y gastan', accent: 'lime',     accion: 'Pídeles reseñas y referidos',           icono: 'Crown' },
-  { id: 'fieles',             label: 'Fieles',         sub: 'ritmo estable',         accent: 'mint',     accion: 'Sube el ticket: bono mayor o consumos', icono: 'Heart' },
-  { id: 'prometedores',       label: 'Prometedores',   sub: 'nuevos que repiten',    accent: 'cyan-300', accion: 'Conviértelos a bono',                   icono: 'Sparkles' },
-  { id: 'en_riesgo',          label: 'En riesgo',      sub: 'rompieron su ritmo',    accent: 'amber',    accion: 'Reactiva con un incentivo pequeño',     icono: 'TrendingDown' },
-  { id: 'dormidos',           label: 'Dormidos',       sub: '+90 días sin venir',    accent: 'rose',     accion: 'Campaña de vuelta con oferta fuerte',   icono: 'Moon' },
-  { id: 'nuevos_sin_repetir', label: 'Sin repetir',    sub: '1 visita, +21 días',    accent: 'iris',     accion: 'Lo más rentable: ya te conocen',        icono: 'UserPlus' },
+  {
+    id: 'campeones', label: 'Campeones', sub: 'vienen mucho y gastan', accent: 'lime',
+    accion: 'Pídeles reseñas y referidos', icono: 'Crown',
+    mensaje: '¡Hola {nombre}! Sois de la casa y se nota 😊 ¿Nos harías el favor de dejarnos una reseña? Nos ayuda muchísimo a que otras familias nos encuentren.',
+  },
+  {
+    id: 'fieles', label: 'Fieles', sub: 'ritmo estable', accent: 'mint',
+    accion: 'Sube el ticket: bono mayor o consumos', icono: 'Heart',
+    mensaje: '¡Hola {nombre}! Como venís a menudo, con el bono grande cada visita os sale bastante más barata. ¿Te lo preparo para la próxima?',
+  },
+  {
+    id: 'prometedores', label: 'Prometedores', sub: 'nuevos que repiten', accent: 'cyan-300',
+    accion: 'Conviértelos a bono', icono: 'Sparkles',
+    mensaje: '¡Hola {nombre}! Nos alegra mucho que hayáis repetido 😊 Si os va bien venir, con un bono cada entrada os sale más a cuenta. ¿Os lo explico?',
+  },
+  {
+    id: 'en_riesgo', label: 'En riesgo', sub: 'rompieron su ritmo', accent: 'amber',
+    accion: 'Reactiva con un incentivo pequeño', icono: 'TrendingDown',
+    mensaje: '¡Hola {nombre}! Hace unos días que no os vemos y os echamos de menos. Esta semana tenemos hueco por las tardes, ¿os venís?',
+  },
+  {
+    id: 'dormidos', label: 'Dormidos', sub: '+90 días sin venir', accent: 'rose',
+    accion: 'Campaña de vuelta con oferta fuerte', icono: 'Moon',
+    mensaje: '¡Hola {nombre}! Hace tiempo que no os vemos por aquí. Hemos cambiado unas cuantas cosas y nos encantaría enseñároslas: la próxima entrada os la invitamos.',
+  },
+  {
+    id: 'nuevos_sin_repetir', label: 'Sin repetir', sub: '1 visita, +21 días', accent: 'iris',
+    accion: 'Lo más rentable: ya te conocen', icono: 'UserPlus',
+    mensaje: '¡Hola {nombre}! Nos alegró mucho teneros por aquí. Si os apetece repetir, os invitamos a un batido en la próxima visita 🥤',
+  },
 ]
 
 export type VisitInput = {
