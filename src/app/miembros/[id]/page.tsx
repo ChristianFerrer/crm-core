@@ -30,7 +30,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const [{ data: member }, { data: visits }, { count: monthVisitsCount }] = await Promise.all([
     supabase
       .from('members')
-      .select('id, name, phone, email, birth_date, notes, qr_code, created_at, consent_accepted_at, children, children_count, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
+      .select('id, name, phone, email, birth_date, notes, qr_code, created_at, consent_accepted_at, children, children_count, family_id, families(id, name), memberships(id, sessions_remaining, expires_at, created_at, membership_types(name))')
       .eq('id', id)
       .single(),
     supabase
@@ -65,23 +65,40 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   // Un bono caducado o sin sesiones es inservible, aunque queden sesiones
   const isDepleted = s === 0 || isExpired
 
-  // Other adult members in the same family (papá + mamá)
+  // Otros adultos de la misma casa (papá + mamá)
   let familyAdults: any[] = []
   if (m.families?.id) {
     const { data } = await supabase
       .from('members')
-      .select('id, name')
+      .select('id, name, phone, created_at')
       .eq('family_id', m.families.id)
       .neq('id', id)
     familyAdults = (data as any[]) ?? []
   }
 
-  // ── Ficha 360: comportamiento de esta familia ─────────────────────────────
-  // Se calcula con el mismo módulo que el panel, así el segmento que se ve aquí
-  // y el del mapa de segmentos no pueden discrepar.
+  // ── Ficha 360: comportamiento de LA CASA ──────────────────────────────────
+  // Se calcula con el mismo módulo que el panel, así que el segmento que se ve
+  // aquí y el del mapa no pueden discrepar. Y se cuenta el hogar entero: si los
+  // dos padres se turnan para traer al niño, mirar solo a uno da la mitad de
+  // las visitas y el doble de ritmo.
+  const idsCasa = [m.id, ...familyAdults.map(a => a.id)]
+  const { data: visitasCasa } = idsCasa.length > 1
+    ? await supabase
+        .from('visits')
+        .select('id, member_id, checked_in_at, paid_amount')
+        .in('member_id', idsCasa)
+        .limit(2000)
+    : { data: visits }
+
   const stat = buildMemberStats(
-    [{ id: m.id, name: m.name, phone: m.phone, created_at: m.created_at, families: m.families }],
-    (visits as any[]) ?? [],
+    [
+      { id: m.id, name: m.name, phone: m.phone, created_at: m.created_at, family_id: m.family_id, families: m.families },
+      ...familyAdults.map(a => ({
+        id: a.id, name: a.name, phone: a.phone ?? null,
+        created_at: a.created_at ?? m.created_at, family_id: m.family_id, families: m.families,
+      })),
+    ],
+    (visitasCasa as any[]) ?? [],
   )[0]
   const segDef = SEGMENTS.find(x => x.id === stat.segmento)!
   const SEG_TEXT: Record<string, string> = {

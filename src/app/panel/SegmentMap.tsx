@@ -77,7 +77,7 @@ export function SegmentMap({
         title="Tus clientes"
         right={
           <p className="text-[11px] text-mist">
-            {stats.length} familia{stats.length === 1 ? '' : 's'} con historial
+            {stats.length} familia{stats.length === 1 ? '' : 's'}
           </p>
         }
       />
@@ -150,6 +150,8 @@ export function SegmentMap({
                     <p className="text-[11px] text-mist truncate">
                       {s.visitas} visita{s.visitas !== 1 ? 's' : ''} · última {dias(s.diasDesdeUltima)}
                       {s.ritmoDias != null && ` · ritmo ${Math.round(s.ritmoDias)} d`}
+                      {/* Con dos adultos, a cuál se le escribe */}
+                      {s.miembros.length > 1 && ` · escribir a ${firstName(s.titularNombre)}`}
                     </p>
                   </Link>
                   {wa ? (

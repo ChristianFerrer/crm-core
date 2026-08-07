@@ -302,9 +302,21 @@ export function resolveRecipients(
     precioCumple: number
     /** Precio medio real de los bonos: mejor estimación que inventar múltiplos */
     precioBono: number
+    /**
+     * A qué hogar pertenece cada adulto (`hogaresPorMiembro`). Sin esto, una
+     * casa con dos padres aparece dos veces en la misma campaña y se le escribe
+     * dos veces por el mismo motivo.
+     */
+    hogares?: Record<string, string>
   },
 ): Recipient[] {
-  const statById = new Map(ctx.stats.map(s => [s.memberId, s]))
+  // Cualquier adulto de la casa lleva a la ficha del hogar: los bonos y los
+  // cumpleaños vienen por miembro, pero se contacta al titular.
+  const statById = new Map<string, MemberStat>()
+  for (const s of ctx.stats) {
+    statById.set(s.memberId, s)
+    for (const m of s.miembros) statById.set(m.id, s)
+  }
 
   const historial = (id: string) => {
     const st = statById.get(id)
@@ -314,6 +326,9 @@ export function resolveRecipients(
     }
   }
 
+  return porHogar(resolver(), ctx)
+
+  function resolver(): Recipient[] {
   switch (plantilla) {
     case 'cumpleanos':
       return ctx.birthdays.map(b => ({
@@ -391,6 +406,27 @@ export function resolveRecipients(
     default:
       return []
   }
+  }
+}
+
+/**
+ * Una fila por hogar. Cuando el motivo viene por miembro —un bono, un
+ * cumpleaños— dos adultos de la misma casa producen dos candidatos; aquí se
+ * quedan en uno, el del titular con teléfono.
+ */
+function porHogar(rs: Recipient[], ctx: { stats: MemberStat[]; hogares?: Record<string, string> }): Recipient[] {
+  const hogarDe = new Map<string, string>()
+  for (const s of ctx.stats) for (const m of s.miembros) hogarDe.set(m.id, s.hogarId)
+
+  const vistos = new Set<string>()
+  const out: Recipient[] = []
+  for (const r of rs) {
+    const hogar = hogarDe.get(r.memberId) ?? ctx.hogares?.[r.memberId] ?? r.memberId
+    if (vistos.has(hogar)) continue
+    vistos.add(hogar)
+    out.push(r)
+  }
+  return out
 }
 
 function bySegment(stats: MemberStat[], seg: SegmentId): MemberStat[] {
@@ -403,7 +439,9 @@ function toRecipient(s: MemberStat, ticketMedio: number, contexto: string): Reci
     name: s.name,
     phone: s.phone,
     vars: {
-      nombre: firstName(s.name),
+      // El saludo va al adulto, no a la casa: «¡Hola Familia García!» no lo
+      // escribe nadie.
+      nombre: firstName(s.titularNombre),
       dias: s.diasDesdeUltima != null ? String(Math.round(s.diasDesdeUltima)) : '',
       visitas: String(s.visitas),
     },

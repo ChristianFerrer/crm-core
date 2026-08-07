@@ -143,6 +143,30 @@ Borrado de miembros: **anonimiza, no elimina** — obligación fiscal de conserv
 el histórico 5 años. La marca es `members.deleted_at`, y todas las consultas de
 listado filtran por `is('deleted_at', null)`.
 
+## El cliente es el HOGAR, no el adulto
+
+`buildMemberStats` devuelve **una fila por casa**, agrupando por `family_id`;
+quien no está agrupado es su propio hogar.
+
+El motivo, con el caso que lo destapó: Laia y Pau García son matrimonio y
+comparten a Martina. Contándolos por separado, el panel decía que Laia era
+«campeona» (43 visitas, la última hace 5 días) y Pau «en riesgo» (24 visitas, la
+última hace 46) — la misma puerta en dos grupos opuestos. Y la campaña de
+reactivación proponía escribirle a Pau «hace 46 días que no os vemos» con la
+niña habiendo venido el domingo.
+
+Consecuencias del cambio:
+
+- Las visitas del hogar son las de todos sus adultos, juntas. Si los padres se
+  turnan, el ritmo real solo se ve al unirlas.
+- Se contacta al adulto **con teléfono**; si ninguno lo tiene, al más antiguo.
+  `MemberStat.memberId` es ese adulto y `titularNombre` su nombre, que es el que
+  va en el saludo: «¡Hola Familia García!» no lo escribe nadie.
+- `name` es el nombre de la casa cuando está agrupada, y el del adulto cuando
+  no: «Familia Puig» para un alta suelta sonaría a que hay más gente.
+- `resolveRecipients` deduplica por hogar. Los motivos que vienen por miembro
+  —un bono, un cumpleaños— generaban un candidato por cada padre.
+
 ## Dinero en el panel
 
 El Resumen **no muestra ninguna cifra en euros**. La razón no es de diseño: los

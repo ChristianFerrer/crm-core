@@ -10,6 +10,7 @@
  */
 const M = require('../.tmp/metrics.js')
 const S = require('../.tmp/segments.js')
+const C = require('../.tmp/campaigns.js')
 
 const now = new Date('2026-08-06T12:00:00Z')
 
@@ -59,6 +60,58 @@ vs.push({ member_id:'nuevo', checked_in_at:d(25), paid_amount:12 })
 for (let i=0;i<5;i++) vs.push({ member_id:'dormido', checked_in_at:d(120+i*10), paid_amount:9 })
 
 const stats = S.buildMemberStats(members, vs, now)
+
+// ── Hogares: el caso García ────────────────────────────────────────────────
+// Laia y Pau son matrimonio y comparten a Martina. Contados por separado, el
+// panel decía que Laia era campeona y Pau «en riesgo» — la misma puerta en dos
+// grupos opuestos, y a Pau se le proponía escribirle «hace 46 días que no os
+// vemos» con la niña habiendo venido el domingo.
+const casa = [
+  { id: 'laia', name: 'Laia García', phone: '600111000', created_at: d(400), family_id: 'garcia', families: { name: 'Familia García' } },
+  { id: 'pau',  name: 'Pau García',  phone: null,        created_at: d(380), family_id: 'garcia', families: { name: 'Familia García' } },
+  { id: 'solo', name: 'Ana Sola',    phone: '600222000', created_at: d(300), family_id: null,     families: null },
+]
+const visitasCasa = []
+// Se turnan: Pau traía a la niña hasta hace 46 días, Laia la trae desde entonces
+for (let i = 0; i < 12; i++) visitasCasa.push({ member_id: 'pau',  checked_in_at: d(46 + i * 7), paid_amount: 10 })
+for (let i = 0; i < 6;  i++) visitasCasa.push({ member_id: 'laia', checked_in_at: d(5 + i * 7),  paid_amount: 10 })
+for (let i = 0; i < 4;  i++) visitasCasa.push({ member_id: 'solo', checked_in_at: d(3 + i * 9),  paid_amount: 10 })
+
+const hogares = S.buildMemberStats(casa, visitasCasa, now)
+console.log('\nhogares ->', hogares.map(h => `${h.name}: ${h.visitas} visitas, últ. ${Math.round(h.diasDesdeUltima)} d, ${h.segmento}`))
+
+console.assert(hogares.length === 2, 'la casa debería ser UNA fila, no dos: ' + hogares.length)
+const garcia = hogares.find(h => h.hogarId === 'garcia')
+console.assert(garcia.visitas === 18, 'la casa suma las visitas de los dos: ' + garcia.visitas)
+console.assert(Math.round(garcia.diasDesdeUltima) === 5, 'la última visita es la más reciente de la casa')
+console.assert(garcia.segmento !== 'en_riesgo', 'la casa NO está en riesgo: vino hace 5 días')
+// El ritmo real es semanal; mirando solo a Pau saldría el doble
+console.assert(Math.abs(garcia.ritmoDias - 7) < 1.5, 'ritmo del hogar mal: ' + garcia.ritmoDias)
+// Se contacta a quien tiene teléfono, aunque no sea el más antiguo
+console.assert(garcia.memberId === 'laia', 'el contacto debe ser quien tiene teléfono')
+console.assert(garcia.name === 'Familia García', 'el nombre visible es el de la casa')
+console.assert(garcia.titularNombre === 'Laia García', 'el saludo usa el nombre del adulto')
+console.assert(garcia.miembros.length === 2, 'la casa lista a sus dos adultos')
+// Quien no está agrupado sigue siendo su propio hogar, con su propio nombre
+const sola = hogares.find(h => h.hogarId === 'solo')
+console.assert(sola.name === 'Ana Sola' && sola.miembros.length === 1, 'un alta suelta es su propio hogar')
+
+// Y una campaña no puede proponer dos veces la misma casa
+const ctxCasa = {
+  stats: hogares,
+  hogares: S.hogaresPorMiembro(casa),
+  birthdays: [
+    { member_id: 'laia', member_name: 'Laia García', child_name: 'Martina', birthday_day: 4 },
+    { member_id: 'pau',  member_name: 'Pau García',  child_name: 'Martina', birthday_day: 4 },
+  ],
+  bonos: [], caducados: [], sinBono: [],
+  ticketMedio: 10, precioCumple: 180, precioBono: 80,
+}
+const cumples = C.resolveRecipients('cumpleanos', ctxCasa)
+console.assert(cumples.length === 1, 'la misma casa no puede salir dos veces: ' + cumples.length)
+console.assert(cumples[0].vars.nombre === 'Laia', 'el saludo va al adulto, no a «Familia»: ' + cumples[0].vars.nombre)
+console.log('hogares -> OK')
+
 for (const s of stats) console.log(s.name.padEnd(10), s.segmento.padEnd(20), 'ritmo', s.ritmoDias, 'ult', Math.round(s.diasDesdeUltima), 'ltv', s.ltv)
 const by = Object.fromEntries(stats.map(s => [s.memberId, s.segmento]))
 console.assert(by.camp === 'campeones', 'campeon mal: ' + by.camp)
@@ -70,7 +123,6 @@ console.log('avgLtv', S.avgLtv(stats).toFixed(2))
 console.log('\nOK')
 
 // ── Fase 3: campañas ──
-const C = require('../.tmp/campaigns.js')
 
 // ── buildCaducados: agotado y caducado, nunca quien tiene bono vigente ──
 const hoyStr = now.toISOString().split('T')[0]

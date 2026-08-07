@@ -16,11 +16,32 @@ export type SegmentId =
   | 'dormidos'
   | 'nuevos_sin_repetir'
 
+/**
+ * Una fila = UN HOGAR, no un adulto.
+ *
+ * Laia y Pau García son matrimonio y comparten a Martina. Contándolos por
+ * separado, el panel decía que Laia era «campeona» (43 visitas, la última hace
+ * 5 días) y Pau «en riesgo» (24 visitas, la última hace 46) — siendo la misma
+ * puerta. Peor: Pau salía en la campaña de reactivación, así que el sistema
+ * proponía escribirle «hace 46 días que no os vemos» a un padre cuya hija había
+ * estado el domingo.
+ *
+ * El cliente de una ludoteca es la casa. Se agrupa por `family_id`; quien no
+ * está agrupado es su propio hogar.
+ */
 export type MemberStat = {
+  /** Id del adulto con el que se contacta (el que tiene teléfono) */
   memberId: string
+  /** `family_id` si está agrupado, o el propio id del miembro si no */
+  hogarId: string
+  /** Nombre de la familia, o del adulto si no está agrupado */
   name: string
   phone: string | null
   familyName: string | null
+  /** Adultos de la casa. Uno solo cuando el alta no está agrupada. */
+  miembros: { id: string; name: string }[]
+  /** Nombre del adulto de contacto, para el saludo de los mensajes */
+  titularNombre: string
   primeraVisita: string | null
   ultimaVisita: string | null
   visitas: number
@@ -102,7 +123,19 @@ export type MemberInput = {
   name: string
   phone: string | null
   created_at: string
+  /** Hogar al que pertenece. Null = adulto sin agrupar, que es su propio hogar. */
+  family_id?: string | null
   families?: { name: string } | null
+}
+
+/**
+ * A qué hogar pertenece cada adulto. Lo usan las campañas para no proponer dos
+ * veces la misma casa, una por cada padre.
+ */
+export function hogaresPorMiembro(members: MemberInput[]): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const m of members) out[m.id] = m.family_id ?? m.id
+  return out
 }
 
 const DAY = 86_400_000
@@ -155,7 +188,7 @@ function classify(s: Omit<MemberStat, 'segmento'>, refs: SegmentRefs): SegmentId
   return 'fieles'
 }
 
-/** Estadísticas y segmento de cada familia a partir de sus visitas. */
+/** Estadísticas y segmento de cada HOGAR a partir de las visitas de sus adultos. */
 export function buildMemberStats(members: MemberInput[], visits: VisitInput[], now = new Date()): MemberStat[] {
   const byMember = new Map<string, VisitInput[]>()
   for (const v of visits) {
@@ -165,23 +198,48 @@ export function buildMemberStats(members: MemberInput[], visits: VisitInput[], n
     byMember.set(v.member_id, list)
   }
 
-  const partial = members.map(m => {
-    const vs = (byMember.get(m.id) ?? []).sort(
-      (a, b) => +new Date(a.checked_in_at) - +new Date(b.checked_in_at)
-    )
+  // Adultos agrupados por hogar. Sin `family_id`, cada uno es su propio hogar.
+  const hogares = new Map<string, MemberInput[]>()
+  for (const m of members) {
+    const id = m.family_id ?? m.id
+    const list = hogares.get(id) ?? []
+    list.push(m)
+    hogares.set(id, list)
+  }
+
+  const partial = [...hogares.entries()].map(([hogarId, adultos]) => {
+    // Se contacta a quien tenga teléfono; si ninguno lo tiene, al más antiguo.
+    const orden = [...adultos].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))
+    const titular = orden.find(m => m.phone) ?? orden[0]
+
+    // Las visitas del hogar son las de TODOS sus adultos, juntas y ordenadas:
+    // si los padres se turnan, el ritmo real solo se ve al unirlas.
+    const vs = adultos
+      .flatMap(m => byMember.get(m.id) ?? [])
+      .sort((a, b) => +new Date(a.checked_in_at) - +new Date(b.checked_in_at))
+
     const times = vs.map(v => +new Date(v.checked_in_at))
     const gaps: number[] = []
     for (let i = 1; i < times.length; i++) gaps.push((times[i] - times[i - 1]) / DAY)
 
     const gastoTotal = vs.reduce((s, v) => s + Number(v.paid_amount ?? 0), 0)
-    const alta = +new Date(m.created_at)
+    // El alta del hogar es la del adulto que llegó primero
+    const alta = +new Date(orden[0].created_at)
     const mesesAntiguedad = Math.max(1, Math.round((now.getTime() - alta) / (30 * DAY)))
 
+    const familyName = adultos.find(m => m.families?.name)?.families?.name ?? null
+    const agrupado = adultos.length > 1 || !!titular.family_id
+
     return {
-      memberId: m.id,
-      name: m.name,
-      phone: m.phone,
-      familyName: m.families?.name ?? null,
+      memberId: titular.id,
+      hogarId,
+      // Con dos adultos, el nombre de la casa; con uno, el suyo — «Familia
+      // Puig» para un alta suelta sonaría a que hay más gente de la que hay.
+      name: agrupado && familyName ? familyName : titular.name,
+      phone: titular.phone,
+      familyName,
+      miembros: orden.map(m => ({ id: m.id, name: m.name })),
+      titularNombre: titular.name,
       primeraVisita: times.length ? new Date(times[0]).toISOString() : null,
       ultimaVisita: times.length ? new Date(times[times.length - 1]).toISOString() : null,
       visitas: vs.length,
@@ -228,16 +286,26 @@ export function topVisitantes(
   max = 5,
 ): { memberId: string; name: string; visitas: number }[] {
   const desde = now.getTime() - dias * DAY
+  // Cada adulto apunta a su hogar: si los dos padres traen al niño, las visitas
+  // suman en la misma fila en vez de partirse en dos.
+  const hogarDe = new Map<string, MemberStat>()
+  for (const s of stats) for (const m of s.miembros) hogarDe.set(m.id, s)
+
   const cuenta = new Map<string, number>()
   for (const v of visits) {
     if (!v.member_id || !v.checked_in_at) continue
     if (new Date(v.checked_in_at).getTime() < desde) continue
-    cuenta.set(v.member_id, (cuenta.get(v.member_id) ?? 0) + 1)
+    const hogar = hogarDe.get(v.member_id)
+    if (!hogar) continue
+    cuenta.set(hogar.hogarId, (cuenta.get(hogar.hogarId) ?? 0) + 1)
   }
-  const nombre = new Map(stats.map(s => [s.memberId, s.name]))
+
+  const porHogar = new Map(stats.map(s => [s.hogarId, s]))
   return [...cuenta.entries()]
-    .filter(([id]) => nombre.has(id))
-    .map(([memberId, visitas]) => ({ memberId, name: nombre.get(memberId)!, visitas }))
+    .map(([hogarId, visitas]) => {
+      const s = porHogar.get(hogarId)!
+      return { memberId: s.memberId, name: s.name, visitas }
+    })
     .sort((a, b) => b.visitas - a.visitas || a.name.localeCompare(b.name))
     .slice(0, max)
 }

@@ -1,6 +1,6 @@
 import { createServerSupabase } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
-import { buildMemberStats } from '@/lib/segments'
+import { buildMemberStats, hogaresPorMiembro } from '@/lib/segments'
 import { revenue, monthPeriod } from '@/lib/metrics'
 import {
   resolveRecipients, templateById, buildCaducados, buildSinBono, requiereConsentimiento,
@@ -34,7 +34,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
     { data: bookings },
     { data: checks },
   ] = await Promise.all([
-    supabase.from('members').select('id, name, phone, created_at, children, marketing_consent_at, marketing_consent_revoked_at, families(name)').is('deleted_at', null).limit(5000),
+    supabase.from('members').select('id, name, phone, created_at, children, family_id, marketing_consent_at, marketing_consent_revoked_at, families(name)').is('deleted_at', null).limit(5000),
     supabase.from('visits').select('id, member_id, checked_in_at, paid_at, paid_amount, adults_count, children_count')
       .gte('checked_in_at', new Date(now.getFullYear() - 1, now.getMonth(), 1).toISOString()).limit(20000),
     supabase.from('memberships').select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id').limit(5000),
@@ -98,6 +98,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
 
   const todos = resolveRecipients(template.id as PlantillaId, {
     stats, birthdays, bonos,
+    hogares: hogaresPorMiembro(memberRows),
     caducados: buildCaducados(membershipRows, memberRows, now),
     sinBono: buildSinBono(membershipRows, visitRows, memberRows, now),
     ticketMedio: rev.ticketMedio || 12,

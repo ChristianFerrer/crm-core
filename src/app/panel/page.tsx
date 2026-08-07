@@ -5,7 +5,7 @@ import { SegmentMap } from './SegmentMap'
 import { ActionsSection } from './ActionsSection'
 import { getT } from '@/lib/i18n-server'
 import { actividad, delta, repeatRate, bonoRenewalRate, occupancyBySlot, franjaPunta, monthPeriod } from '@/lib/metrics'
-import { buildMemberStats, countBySegment, topVisitantes } from '@/lib/segments'
+import { buildMemberStats, countBySegment, topVisitantes, hogaresPorMiembro } from '@/lib/segments'
 import {
   suggestedActions, inicioSemana, proximaRevision, buildCaducados, buildSinBono,
   buildQueue, type BirthdayLead, type BonoLead, type ContactLog,
@@ -44,7 +44,7 @@ export default async function PanelPage() {
       .select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id')
       .limit(5000),
     supabase.from('membership_types').select('id, price'),
-    supabase.from('members').select('id, name, phone, created_at, families(name)').is('deleted_at', null).limit(5000),
+    supabase.from('members').select('id, name, phone, created_at, family_id, families(name)').is('deleted_at', null).limit(5000),
     // Fase 3: lo ya contactado, para no volver a proponerlo
     supabase.from('campaign_sends')
       .select('member_id, estado, enviado_at, created_at, campaigns(plantilla)')
@@ -154,6 +154,7 @@ export default async function PanelPage() {
 
   const ctxCampanas = {
     stats: memberStats,
+    hogares: hogaresPorMiembro((membersForStats ?? []) as any[]),
     birthdays: accionBirthdays,
     bonos: accionBonos,
     caducados: buildCaducados(mRows, miembrosBasicos, now),
