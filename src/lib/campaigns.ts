@@ -452,6 +452,11 @@ export type ActionSuggestion = {
   valor: number
   accent: CampaignTemplate['accent']
   icono: string
+  /**
+   * Las tres familias de más valor, para poder empezar a trabajar desde el
+   * resumen sin entrar en la campaña.
+   */
+  top: { memberId: string; name: string; contexto: string; valor: number }[]
 }
 
 /** Fecha del último contacto por plantilla y familia: `plantilla:memberId`. */
@@ -511,6 +516,10 @@ export function suggestedActions(
       valor: pendientes.reduce((s, r) => s + r.valor, 0),
       accent: tpl.accent,
       icono: tpl.icono,
+      top: [...pendientes]
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 3)
+        .map(r => ({ memberId: r.memberId, name: r.name, contexto: r.contexto, valor: r.valor })),
     }
   })
 

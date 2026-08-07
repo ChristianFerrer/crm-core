@@ -228,3 +228,14 @@ for (const seg of S.SEGMENTS) {
   console.assert(txt.length > 40, 'el mensaje de ' + seg.id + ' es demasiado corto para ser un mensaje')
 }
 console.log('\nmensajes de segmento ->', S.SEGMENTS.map(s => s.id).join(', '), 'OK')
+
+// ── top de cada acción: alimenta la tarjeta destacada del escritorio ──
+for (const a of acciones) {
+  console.assert(Array.isArray(a.top) && a.top.length <= 3, 'top mal en ' + a.plantilla)
+  console.assert(a.top.length === Math.min(3, a.destinatarios), 'top no cuadra con destinatarios en ' + a.plantilla)
+  console.assert(a.top.every(f => f.name && f.contexto), 'falta nombre o contexto en el top de ' + a.plantilla)
+  for (let i = 1; i < a.top.length; i++) {
+    console.assert(a.top[i-1].valor >= a.top[i].valor, 'el top debería ir por valor en ' + a.plantilla)
+  }
+}
+console.log('top de acciones -> OK')
