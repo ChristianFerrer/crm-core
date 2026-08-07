@@ -1,6 +1,4 @@
 import { createServerSupabase } from '@/lib/supabase-server'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { CustomizableDashboard } from '../CustomizableDashboard'
 import { IngresosDelMes } from './IngresosDelMes'
 import { revenue, delta, pendingRevenue, monthPeriod, lastYearPeriod } from '@/lib/metrics'
@@ -178,18 +176,11 @@ export default async function TendenciasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/panel"
-          aria-label={t('panelres_titulo')}
-          className="w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border border-line bg-surface2 text-fog hover:text-snow transition-colors"
-        >
-          <ArrowLeft size={18} />
-        </Link>
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('shared_nav_tendencias')}</h1>
-          <p className="text-sm text-fog mt-0.5">{t('tendencias_subtitulo')}</p>
-        </div>
+      {/* Sin flecha de volver: Tendencias es una sección de la navegación, no
+          un detalle al que se entra desde otra pantalla. */}
+      <div>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow">{t('shared_nav_tendencias')}</h1>
+        <p className="text-sm text-fog mt-0.5">{t('tendencias_subtitulo')}</p>
       </div>
 
       <IngresosDelMes data={ingresos} />
