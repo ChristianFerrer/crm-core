@@ -148,3 +148,26 @@ test.describe('Ancho de pantalla', () => {
     expect(ancho).toBeGreaterThan(1400)
   })
 })
+
+test.describe('Cabeceras de pantalla', () => {
+  test('Inicio lleva una línea de contexto bajo el título', async ({ page }) => {
+    await page.goto('/')
+    const h1 = page.locator('h1').first()
+    await expect(h1).toBeVisible()
+    // Debajo del nombre del centro: qué día se mira y quién hay dentro
+    const sub = h1.locator('xpath=following-sibling::p[1]')
+    await expect(sub).toBeVisible()
+    expect((await sub.innerText()).length).toBeGreaterThan(8)
+  })
+
+  test('Agenda lleva una línea de contexto bajo el título', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/calendario')
+    const h1 = page.getByRole('heading', { level: 1 }).first()
+    await expect(h1).toBeVisible()
+    const sub = h1.locator('xpath=following-sibling::p[1]')
+    await expect(sub).toBeVisible()
+    // Mes, año y el estado de las reservas de hoy
+    expect(await sub.innerText()).toMatch(/20\d\d/)
+  })
+})

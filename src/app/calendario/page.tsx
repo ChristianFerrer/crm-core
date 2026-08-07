@@ -8,6 +8,7 @@ import { getStoredTenant } from '@/lib/tenant'
 import { executeBooking, bookingGuestCount } from '@/lib/bookingExecution'
 import { memberMatchesQuery } from '@/lib/searchMembers'
 import { resolveRates } from '@/lib/pricing'
+import { formatEur } from '@/lib/metrics'
 import { BookingSearchAndTypeModal, BookingFormModal, bookingBarStyle, bookingDurationLabel, BOOKING_TYPE_COLOR_VAR, type FullMember, type BookingService, type BookingInitial } from '@/app/HomeClient'
 import { MemberForm, type CreatedMember } from '@/components/MemberForm'
 import { useLanguage } from '@/lib/i18n'
@@ -370,6 +371,10 @@ export default function CalendarioPage() {
   // filtradas, el aforo y el pendiente de cobro mentirían al filtrar.
   const allByDate: Record<string, Booking[]> = {}
   bookings.forEach(b => { if (!allByDate[b.date]) allByDate[b.date] = []; allByDate[b.date].push(b) })
+
+  // Para la línea bajo el título: cuántas reservas hay hoy y cuánto queda por
+  // cobrar de ellas. Sale de lo ya cargado, sin consultas extra.
+  const resumenHoy = daySummary(allByDate[todayStr] ?? [])
 
   // ── Tira de calendario ──────────────────────────────────────────────
   // Semanas completas (lunes→domingo). Los huecos de inicio y fin se rellenan
@@ -873,9 +878,21 @@ export default function CalendarioPage() {
       {/* ── Cabecera fija: mes + acciones + tira de calendario ── */}
       <div ref={headerRef} className="sticky top-0 z-20 bg-carbon -mx-4 md:-mx-6 lg:mx-0 px-4 md:px-6 lg:px-0 pt-2 pb-[22px] border-b border-line relative">
         <div className="flex items-center justify-between gap-3 pb-2">
-          <h1 className="hidden lg:block font-display text-3xl font-bold text-snow truncate">
-            {t('nav_agenda')}
-          </h1>
+          {/* Solo en escritorio: en móvil el título es el mes y lleva las
+              flechas al lado, así que no cabe una línea más. */}
+          <div className="hidden lg:block min-w-0">
+            <h1 className="font-display text-3xl font-bold text-snow truncate">
+              {t('nav_agenda')}
+            </h1>
+            <p className="text-sm text-fog mt-0.5 truncate">
+              <span className="capitalize">{MONTH_NAMES[month]} {year}</span>
+              {' · '}
+              {resumenHoy.count === 0
+                ? t('calendario_sin_reservas_hoy')
+                : t('calendario_reservas_hoy', { n: resumenHoy.count })}
+              {resumenHoy.pending > 0 && ` · ${formatEur(resumenHoy.pending)} ${t('calendario_por_cobrar').toLowerCase()}`}
+            </p>
+          </div>
           <div className="flex items-center gap-1 min-w-0 lg:hidden">
             <h1 className="font-display text-3xl font-bold text-snow lowercase truncate">
               {MONTH_NAMES[month]}

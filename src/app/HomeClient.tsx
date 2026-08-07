@@ -2290,6 +2290,17 @@ export default function HomeClient({ todayVisits, monthCount, dateLabel, capacit
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-snow truncate">{tenantName ?? t('home_mi_establecimiento')}</h1>
+          {/* Bajo el título: qué día se está mirando y, si es hoy, cuánta
+              gente hay dentro. Es lo primero que se pregunta quien abre esta
+              pantalla desde el mostrador. */}
+          <p className="text-sm text-fog mt-0.5 truncate">
+            <span className="capitalize">{dateLabel}</span>
+            {isToday && (
+              <> · {activeTotal === 0
+                ? t('home_sala_vacia')
+                : `${activeTotal} ${activeTotal === 1 ? t('home_persona_en_sala') : t('home_personas_en_sala_min')}`}</>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Date navigation — esquina superior derecha, junto al nombre */}
