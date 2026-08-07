@@ -252,9 +252,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </aside>
 
-      {/* Content */}
+      {/* Content
+          El tope de ancho es de legibilidad, no de estética: a 1900 px una fila
+          deja el título en un extremo y la cifra en el otro, y el ojo tiene que
+          cruzar la pantalla para juntar los dos datos. */}
       <div className="flex-1 min-w-0 lg:h-screen lg:overflow-y-auto">
-        {children}
+        <div className="mx-auto w-full max-w-[1400px]">
+          {children}
+        </div>
       </div>
     </div>
   )

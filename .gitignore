@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 .claude/worktrees/
 .tmp/
+
+# Pruebas
+/test-results/
+/playwright-report/
+/blob-report/
+/.tmp/

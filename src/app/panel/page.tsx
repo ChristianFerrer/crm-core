@@ -7,7 +7,7 @@ import { SegmentMap } from './SegmentMap'
 import { ActionsSection } from './ActionsSection'
 import { getT } from '@/lib/i18n-server'
 import { revenue, delta, repeatRate, bonoRenewalRate, pendingRevenue, monthPeriod, lastYearPeriod } from '@/lib/metrics'
-import { buildMemberStats, countBySegment, avgLtv } from '@/lib/segments'
+import { buildMemberStats, countBySegment, avgLtv, topVisitantes } from '@/lib/segments'
 import {
   suggestedActions, inicioSemana, proximaRevision, buildCaducados, buildSinBono,
   buildQueue, type BirthdayLead, type BonoLead, type ContactLog,
@@ -83,6 +83,7 @@ export default async function PanelPage() {
   const memberStats = buildMemberStats((membersForStats ?? []) as any[], vRows, now)
   const segCounts = countBySegment(memberStats)
   const ltvMedio = avgLtv(memberStats)
+  const top5 = topVisitantes(memberStats, vRows, now)
   const familiasActivas = memberStats.filter(
     s => s.diasDesdeUltima != null && s.diasDesdeUltima <= 60
   ).length
@@ -279,7 +280,7 @@ export default async function PanelPage() {
       />
 
       {/* Fase 2: a quién tienes y qué hacer con cada grupo */}
-      <SegmentMap stats={memberStats} avgLtv={ltvMedio} />
+      <SegmentMap stats={memberStats} avgLtv={ltvMedio} top={top5} />
     </div>
   )
 }

@@ -133,9 +133,33 @@ applies_to jsonb            -- (subservicios) tipos a los que aplica
 
 Config de servicios en `/panel/servicios` (CRUD + categorías en localStorage `wm_service_categories`, eliminadas en `wm_service_categories_deleted`).
 
-## ⚠️ Seguridad pendiente
+## Seguridad
 
-RLS **desactivado** en 11 tablas (bookings, members, services, etc.) — expuestas con la anon key. Pendiente definir políticas por `tenant_id`.
+RLS **activado con políticas en las 20 tablas** (verificado 2026-08-07). El
+aislamiento entre ludotecas es por `tenant_id` a nivel de base de datos, no de
+aplicación.
+
+Borrado de miembros: **anonimiza, no elimina** — obligación fiscal de conservar
+el histórico 5 años. La marca es `members.deleted_at`, y todas las consultas de
+listado filtran por `is('deleted_at', null)`.
+
+## Pruebas
+
+```
+npm test              # dominio + pantallas
+npm run test:dominio  # cálculos: ingresos, segmentos, campañas
+npm run test:pantallas
+```
+
+Las pruebas de pantalla usan Playwright contra el build de producción. La parte
+autenticada se salta sin credenciales:
+
+```
+E2E_EMAIL=... E2E_PASSWORD=... npm test
+```
+
+Que la suite pase en verde sin credenciales **no** significa que el panel
+funcione: solo se habrá comprobado la parte pública y la puerta de acceso.
 
 ## Contexto de sesiones anteriores
 

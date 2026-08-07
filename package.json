@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npm run test:dominio && npm run test:pantallas",
+    "test:dominio": "esbuild src/lib/metrics.ts src/lib/segments.ts src/lib/campaigns.ts --outdir=.tmp --format=cjs --platform=node --log-level=error && node scripts/metrics-check.js",
+    "test:pantallas": "playwright test",
+    "test:pantallas:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
@@ -27,10 +31,12 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.28.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",

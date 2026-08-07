@@ -213,6 +213,35 @@ export function countBySegment(stats: MemberStat[]): Record<SegmentId, number> {
 }
 
 /** Valor medio de vida por familia con al menos una visita. */
+/**
+ * Las familias que más han venido en los últimos N días.
+ *
+ * Es un ranking, no un segmento: «campeones» dice quién se comporta como
+ * cliente fiel, esto dice quién ha pisado más la ludoteca este mes. Sirve para
+ * reconocerlas por su nombre en el mostrador.
+ */
+export function topVisitantes(
+  stats: MemberStat[],
+  visits: VisitInput[],
+  now = new Date(),
+  dias = 30,
+  max = 5,
+): { memberId: string; name: string; visitas: number }[] {
+  const desde = now.getTime() - dias * DAY
+  const cuenta = new Map<string, number>()
+  for (const v of visits) {
+    if (!v.member_id || !v.checked_in_at) continue
+    if (new Date(v.checked_in_at).getTime() < desde) continue
+    cuenta.set(v.member_id, (cuenta.get(v.member_id) ?? 0) + 1)
+  }
+  const nombre = new Map(stats.map(s => [s.memberId, s.name]))
+  return [...cuenta.entries()]
+    .filter(([id]) => nombre.has(id))
+    .map(([memberId, visitas]) => ({ memberId, name: nombre.get(memberId)!, visitas }))
+    .sort((a, b) => b.visitas - a.visitas || a.name.localeCompare(b.name))
+    .slice(0, max)
+}
+
 export function avgLtv(stats: MemberStat[]): number {
   const activos = stats.filter(s => s.visitas > 0)
   if (activos.length === 0) return 0

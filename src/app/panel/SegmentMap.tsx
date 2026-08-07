@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   ChevronRight, MessageCircle, Phone, Crown, Heart, Sparkles, TrendingDown,
-  Moon, UserPlus, Users,
+  Moon, UserPlus, Users, Trophy,
 } from 'lucide-react'
 import { SEGMENTS, type MemberStat, type SegmentId } from '@/lib/segments'
 import { formatEur } from '@/lib/metrics'
@@ -50,7 +50,14 @@ function dias(n: number | null): string {
  * aparecer y desaparecer empujaba el resto de la página, que es lo que hace que
  * acabes pulsando donde no querías.
  */
-export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: number }) {
+export function SegmentMap({
+  stats, avgLtv, top,
+}: {
+  stats: MemberStat[]
+  avgLtv: number
+  /** Ranking de quién más ha venido este mes; ver `topVisitantes` */
+  top: { memberId: string; name: string; visitas: number }[]
+}) {
   const [abierto, setAbierto] = useState<SegmentId>('campeones')
   const total = stats.length || 1
 
@@ -162,6 +169,38 @@ export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: num
           </div>
         )}
       </div>
+
+      {/* Ranking del mes. No es un segmento: «campeones» dice quién se comporta
+          como cliente fiel, esto dice quién ha pisado más la ludoteca, que es
+          lo que sirve para reconocerlas por su nombre en el mostrador. */}
+      {top.length > 0 && (
+        <div className="mt-2.5 rounded-2xl border border-line bg-surface p-4">
+          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5 mb-2.5">
+            <Trophy size={12} className="text-lime" /> Más activos · últimos 30 días
+          </p>
+          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+            {top.map((m, i) => (
+              <Link
+                key={m.memberId}
+                href={`/miembros/${m.memberId}`}
+                className="flex items-center gap-2.5 rounded-xl bg-surface2 px-3 py-2 hover:brightness-110 transition-all group"
+              >
+                <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                  i === 0 ? 'bg-lime text-carbon' : 'bg-line2 text-snow'
+                }`}>
+                  {i + 1}
+                </span>
+                <span className="flex-1 min-w-0 text-sm text-snow truncate group-hover:text-lime transition-colors">
+                  {m.name}
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-fog tabular-nums">
+                  {m.visitas} vis.
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

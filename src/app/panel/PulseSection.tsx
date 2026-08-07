@@ -32,6 +32,9 @@ function Delta({ value }: { value: number | null }) {
 /**
  * Tarjeta con dos caras: delante la cifra, detrás qué significa y de dónde
  * sale. Se voltea al pulsar, así la explicación está a mano sin ocupar sitio.
+ *
+ * El alto sale de la cara más alta (ver `.flip-inner` en globals.css). Las
+ * tarjetas de una misma fila se igualan solas porque la rejilla las estira.
  */
 function FlipCard({
   icon: Icon, label, value, sub, foot, accent = 'text-fog', desc,
@@ -46,7 +49,7 @@ function FlipCard({
 }) {
   const [flipped, setFlipped] = useState(false)
   return (
-    <div className="flip-card h-[124px]" data-flipped={flipped}>
+    <div className="flip-card" data-flipped={flipped}>
       <div className="flip-inner">
         {/* Frente */}
         <button
