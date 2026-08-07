@@ -55,8 +55,12 @@ delete from bookings where id not in (
 -- La marca va en `notes`, no en el nombre: un prefijo DEMO se ve en pantalla
 -- y ensucia la demo, que es justo lo contrario de lo que busca.
 delete from members where notes like '%seed:demo%';
+-- Familias que se quedan sin nadie tras borrar las altas generadas
+delete from families f where not exists (
+  select 1 from members m where m.family_id = f.id
+);
 
--- ── 1. Familias ─────────────────────────────────────────────────────────────
+-- ── 1. Altas ────────────────────────────────────────────────────────────────
 create temp table nom on commit drop as select * from (values
  ('Anna'),('Marc'),('Laia'),('Pau'),('Núria'),('Jordi'),('Clara'),('Oriol'),('Marta'),('Pere'),
  ('Sílvia'),('Albert'),('Gemma'),('Xavier'),('Elena'),('Sergi'),('Rosa'),('Ramon'),('Judit'),('Ivan'),
@@ -248,7 +252,59 @@ from visits v join members m on m.id = v.member_id
 where v.checked_out_at is not null
   and (abs(hashtext(v.id::text || 'c')) % 100) < 32;
 
--- ── 5. Reservas ─────────────────────────────────────────────────────────────
+-- ── 5. Familias ─────────────────────────────────────────────────────────────
+-- Poco menos de la mitad de las altas se agrupan en parejas de la misma casa;
+-- el resto son familias que solo registran a un adulto, que es lo habitual.
+--
+-- Los dos adultos comparten los MISMOS hijos, con los mismos identificadores.
+-- Eso es lo que da sentido a la familia y lo que permite que el check-in impida
+-- que el mismo niño entre dos veces con padres distintos.
+create temp table parejas on commit drop as
+with candidatos as (
+  select m.id, m.tenant_id, m.name, m.children,
+    row_number() over (partition by m.tenant_id order by hashtext(m.id::text)) as rn,
+    count(*) over (partition by m.tenant_id) as n
+  from members m
+  where m.deleted_at is null and m.family_id is null and m.notes like '%seed:demo%'
+),
+elegidos as (
+  select *, ((rn - 1) / 2) as pareja from candidatos where rn <= (n * 0.46)::int
+)
+select tenant_id, pareja,
+  (array_agg(id       order by rn) filter (where rn % 2 = 1))[1] as titular,
+  (array_agg(id       order by rn) filter (where rn % 2 = 0))[1] as acompanante,
+  (array_agg(name     order by rn) filter (where rn % 2 = 1))[1] as nombre_titular,
+  (array_agg(children order by rn) filter (where rn % 2 = 1))[1] as hijos
+from elegidos
+group by tenant_id, pareja
+having count(*) = 2;
+
+alter table parejas add column family_id uuid;
+
+-- Una familia por pareja. Ojo: `insert ... returning` no garantiza el orden de
+-- las filas devueltas, así que reasociar por row_number() mezcla los nombres —
+-- pasó, y salieron familias con el apellido de otra. Se inserta una a una.
+do $$
+declare p record; nueva uuid;
+begin
+  for p in select * from parejas loop
+    insert into families (tenant_id, name)
+    values (p.tenant_id, 'Familia ' || split_part(p.nombre_titular, ' ', 2))
+    returning id into nueva;
+    update parejas set family_id = nueva
+    where tenant_id = p.tenant_id and pareja = p.pareja;
+  end loop;
+end $$;
+
+update members m set family_id = p.family_id
+from parejas p where m.id in (p.titular, p.acompanante);
+
+-- El acompañante hereda los hijos del titular: son los mismos niños
+update members m
+set children = p.hijos, children_count = jsonb_array_length(p.hijos)
+from parejas p where m.id = p.acompanante;
+
+-- ── 6. Reservas ─────────────────────────────────────────────────────────────
 -- Cumpleaños de viernes a domingo, custodia entre semana, algún taller suelto.
 -- Unas 90 por ludoteca y cuatrimestre, no 320.
 create temp table dias on commit drop as
