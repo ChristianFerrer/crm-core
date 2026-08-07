@@ -20,8 +20,15 @@ type Tab = 'miembros' | 'familias' | 'historico'
 type Cifras = {
   miembros: number
   conBono: number
-  familias: number
   ninos: number
+  familias: number
+  /**
+   * Miembros que pertenecen a alguna familia. Es distinto del total: una
+   * familia agrupa a los adultos de una misma casa, y la mayoría de altas no
+   * están agrupadas. Dividir el total entre las familias daba disparates —
+   * 117 miembros entre 8 familias, «14,6 adultos por familia».
+   */
+  agrupados: number
   visitasMes: number
   visitasHoy: number
 }
@@ -60,7 +67,7 @@ export function MiembrosTabs({ active }: { active: Tab }) {
       const inicioDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString()
 
       const [miembros, familias, bonos, visitasMes, visitasHoy] = await Promise.all([
-        supabase.from('members').select('children_count').is('deleted_at', null),
+        supabase.from('members').select('children_count, family_id').is('deleted_at', null),
         supabase.from('families').select('id', { count: 'exact', head: true }),
         supabase.from('memberships').select('member_id, sessions_remaining, expires_at'),
         supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', inicioMes),
@@ -68,7 +75,7 @@ export function MiembrosTabs({ active }: { active: Tab }) {
       ])
       if (cancelled) return
 
-      const filas = (miembros.data ?? []) as { children_count: number | null }[]
+      const filas = (miembros.data ?? []) as { children_count: number | null; family_id: string | null }[]
       // Una familia puede tener varios bonos; cuenta la persona, no el bono
       const conBono = new Set(
         ((bonos.data ?? []) as any[]).filter(b => bonoVigente(b, hoy)).map(b => b.member_id)
@@ -78,6 +85,7 @@ export function MiembrosTabs({ active }: { active: Tab }) {
         miembros: filas.length,
         conBono,
         familias: familias.count ?? 0,
+        agrupados: filas.filter(m => m.family_id).length,
         ninos: filas.reduce((s, m) => s + (m.children_count ?? 0), 0),
         visitasMes: visitasMes.count ?? 0,
         visitasHoy: visitasHoy.count ?? 0,
@@ -93,16 +101,19 @@ export function MiembrosTabs({ active }: { active: Tab }) {
         return {
           cifra: String(c.miembros),
           detalle: c.miembros > 0
-            ? `${c.conBono} con bono activo · ${c.miembros - c.conBono} sin bono`
+            ? `${c.ninos} niño${c.ninos === 1 ? '' : 's'} · ${c.conBono} con bono · ${c.miembros - c.conBono} sin bono`
             : 'Aún no hay nadie dado de alta',
         }
-      case 'familias':
+      case 'familias': {
+        // La media se calcula sobre los miembros AGRUPADOS, no sobre el total
+        const media = c.familias > 0 ? c.agrupados / c.familias : 0
         return {
           cifra: String(c.familias),
-          detalle: c.familias > 0
-            ? `${c.ninos} niño${c.ninos === 1 ? '' : 's'} · ${(c.miembros / c.familias).toFixed(1)} adultos por familia`
-            : `${c.ninos} niño${c.ninos === 1 ? '' : 's'} registrados`,
+          detalle: c.familias === 0
+            ? 'Ninguna familia agrupada todavía'
+            : `${c.agrupados} miembro${c.agrupados === 1 ? '' : 's'} agrupado${c.agrupados === 1 ? '' : 's'} · ${media.toFixed(1)} por familia`,
         }
+      }
       case 'historico':
         return {
           cifra: String(c.visitasMes),
