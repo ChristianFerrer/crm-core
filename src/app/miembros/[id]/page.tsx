@@ -8,7 +8,6 @@ import { DeleteMemberButton } from './DeleteMemberButton'
 import { getT } from '@/lib/i18n-server'
 import { buildMemberStats, SEGMENTS } from '@/lib/segments'
 import { Comportamiento } from './Comportamiento'
-import { formatEur } from '@/lib/metrics'
 
 export const revalidate = 0
 

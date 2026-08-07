@@ -243,6 +243,53 @@ export function occupancyBySlot(visits: VisitRow[], capacity: number | null, p: 
  * Con pocos datos un porcentaje engaña más de lo que informa: por debajo de
  * este umbral la pantalla lo dice en vez de mostrar la cifra.
  */
+/** Actividad de un periodo, sin una sola cifra económica. */
+export type Actividad = {
+  visitas: number
+  /** Familias distintas que han venido */
+  familias: number
+  /** Personas que han pisado la sala, adultos y niños */
+  personas: number
+  ninos: number
+  /** Media de personas por visita */
+  porVisita: number
+}
+
+/**
+ * Lo que el CRM sí sabe con certeza: quién ha entrado y cuándo.
+ *
+ * A diferencia de `revenue()`, esto no depende de que el cobro se haya
+ * registrado en la aplicación. Un cumpleaños cobrado por Bizum y no anotado
+ * falsea los ingresos; la visita, en cambio, queda registrada siempre porque
+ * es la que abre la puerta.
+ */
+export function actividad(visits: VisitRow[], p: Period): Actividad {
+  const familias = new Set<string>()
+  let visitas = 0, adultos = 0, ninos = 0
+  for (const v of visits) {
+    if (!inRange(v.checked_in_at, p)) continue
+    visitas++
+    if (v.member_id) familias.add(v.member_id)
+    adultos += v.adults_count ?? 0
+    ninos += v.children_count ?? 0
+  }
+  const personas = adultos + ninos
+  return {
+    visitas,
+    familias: familias.size,
+    personas,
+    ninos,
+    porVisita: visitas > 0 ? personas / visitas : 0,
+  }
+}
+
+/** Franja con más ocupación media del periodo. Null si no hay datos. */
+export function franjaPunta(slots: OccupancySlot[]): OccupancySlot | null {
+  const conMuestra = slots.filter(s => s.samples >= 2)
+  if (conMuestra.length === 0) return null
+  return conMuestra.reduce((a, b) => (b.avgPeople > a.avgPeople ? b : a))
+}
+
 export const MIN_SAMPLE = 8
 
 export function isReliable(base: number): boolean {

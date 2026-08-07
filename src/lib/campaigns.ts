@@ -453,6 +453,15 @@ export type ActionSuggestion = {
   accent: CampaignTemplate['accent']
   icono: string
   /**
+   * Precio de referencia, con las palabras con las que se enseña.
+   *
+   * Es el precio que la ludoteca ha configurado, no una estimación nuestra.
+   * `valor` se sigue usando para ORDENAR, pero no se enseña: una cifra
+   * calculada por nosotros a partir de cobros que pueden no estar registrados
+   * se lee como una promesa, y es justo la que puede quedar en evidencia.
+   */
+  ancla: string
+  /**
    * Las tres familias de más valor, para poder empezar a trabajar desde el
    * resumen sin entrar en la campaña.
    */
@@ -516,6 +525,7 @@ export function suggestedActions(
       valor: pendientes.reduce((s, r) => s + r.valor, 0),
       accent: tpl.accent,
       icono: tpl.icono,
+      ancla: anclaPrecio(tpl.id, ctx),
       top: [...pendientes]
         .sort((a, b) => b.valor - a.valor)
         .slice(0, 3)
@@ -545,7 +555,9 @@ export type QueueItem = {
   name: string
   phone: string | null
   contexto: string
+  /** Solo para ordenar; en pantalla se enseña `ancla`, no esta cifra */
   valor: number
+  ancla: string
   /** Mensaje con las variables ya sustituidas */
   mensaje: string
   /** false si la ventana de reintento aún no ha pasado */
@@ -581,6 +593,7 @@ export function buildQueue(
         phone: r.phone,
         contexto: r.contexto,
         valor: r.valor,
+        ancla: anclaPrecio(tpl.id, ctx),
         mensaje: renderMessage(tpl.mensaje, r.vars),
         vigente: puedeReproponer(tpl, r.memberId, contactLog, now),
       })
@@ -590,6 +603,30 @@ export function buildQueue(
   // El orden se fija aquí y el cliente solo filtra: si se reordenase a cada
   // clic, la fila siguiente saltaría bajo el cursor al marcar una.
   return out.sort((a, b) => b.valor - a.valor).slice(0, max)
+}
+
+/**
+ * Precio de referencia de cada campaña, en palabras.
+ *
+ * Sale de lo que la ludoteca ha configurado en Servicios y en tipos de bono.
+ * Es lo que se enseña en lugar del «dinero en juego»: el cliente puede
+ * verificarlo de un vistazo y nadie puede discutirlo.
+ */
+export function anclaPrecio(
+  id: PlantillaId,
+  ctx: Parameters<typeof resolveRecipients>[1],
+): string {
+  const eur = (n: number) => `${Math.round(n)} €`
+  switch (id) {
+    case 'cumpleanos':          return `paquete desde ${eur(ctx.precioCumple)}`
+    case 'bono_bajo':
+    case 'renovacion_caducada':
+    case 'upsell_bono':         return ctx.precioBono > 0 ? `bono de ${eur(ctx.precioBono)}` : 'renovación de bono'
+    case 'reactivacion':
+    case 'valle':
+    case 'segunda_visita':      return ctx.ticketMedio > 0 ? `entrada desde ${eur(ctx.ticketMedio)}` : 'entrada suelta'
+    default:                    return ''
+  }
 }
 
 /** Lunes de la semana en curso: ancla de la revisión semanal. */

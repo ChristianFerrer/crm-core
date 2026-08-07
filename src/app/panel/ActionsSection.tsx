@@ -10,7 +10,6 @@ import type { ActionSuggestion, QueueItem } from '@/lib/campaigns'
 import type { SendState } from '@/lib/campaign-sends'
 import { CampaignQueue } from './CampaignQueue'
 import { SectionHeader } from './SectionHeader'
-import { formatEur } from '@/lib/metrics'
 
 const ACCENT: Record<string, { text: string; border: string; bg: string; barra: string }> = {
   lime:       { text: 'text-lime',      border: 'border-lime/40',      bg: 'bg-lime/10',      barra: 'bg-lime' },
@@ -84,8 +83,8 @@ export function ActionsSection({
           <div className="flex items-center gap-3">
           <p className="text-[11px] text-mist">
             {contactadosEstaSemana > 0
-              ? `${contactadosEstaSemana} contactada${contactadosEstaSemana === 1 ? '' : 's'} · por dinero en juego`
-              : 'Ordenado por dinero en juego'}
+              ? `${contactadosEstaSemana} contactada${contactadosEstaSemana === 1 ? '' : 's'} esta semana`
+              : 'Ordenadas por lo que mueven'}
           </p>
           {/* Solo en escritorio: en móvil hay una única forma que funciona */}
           <div className="hidden lg:flex items-center rounded-lg border border-line bg-surface p-0.5">
@@ -174,8 +173,8 @@ function BarraMovil({ a }: { a: ActionSuggestion }) {
           <p className="text-sm font-bold text-mist tabular-nums">0</p>
         ) : (
           <>
-            <p className={`text-sm font-bold ${c.text} tabular-nums`}>~{formatEur(a.valor)}</p>
-            <p className="text-[10px] text-mist">en juego</p>
+            <p className={`text-sm font-bold ${c.text} tabular-nums`}>{a.destinatarios}</p>
+            <p className="text-[10px] text-mist">{a.ancla}</p>
           </>
         )}
       </div>
@@ -243,9 +242,9 @@ function TarjetaDestacada({ a }: { a: ActionSuggestion }) {
           </div>
           <div className="text-right shrink-0">
             <p className={`font-display text-xl font-bold ${c.text} tabular-nums leading-none`}>
-              ~{formatEur(a.valor)}
+              {a.destinatarios}
             </p>
-            <p className="text-[10px] text-mist mt-0.5">en juego</p>
+            <p className="text-[10px] text-mist mt-0.5">{a.ancla}</p>
           </div>
         </div>
 
@@ -297,8 +296,8 @@ function TarjetaNormal({ a }: { a: ActionSuggestion }) {
         <p className={`text-[11px] font-semibold ${c.text}`}>{a.horizonte}</p>
       </div>
       <div className="text-right shrink-0">
-        <p className={`text-sm font-bold ${c.text} tabular-nums`}>~{formatEur(a.valor)}</p>
-        <p className="text-[10px] text-mist">en juego</p>
+        <p className={`text-sm font-bold ${c.text} tabular-nums`}>{a.destinatarios}</p>
+        <p className="text-[10px] text-mist">{a.ancla}</p>
       </div>
     </Link>
   )
@@ -322,7 +321,7 @@ function VistaTabla({ actions }: { actions: ActionSuggestion[] }) {
             <th className="text-left px-4 py-2">Campaña</th>
             <th className="text-left px-3 py-2">Plazo</th>
             <th className="text-right px-3 py-2">Familias</th>
-            <th className="text-right px-3 py-2">En juego</th>
+            <th className="text-left px-3 py-2">Precio</th>
             <th className="px-3 py-2 w-[28%]" />
             <th className="w-10" />
           </tr>
@@ -346,11 +345,12 @@ function VistaTabla({ actions }: { actions: ActionSuggestion[] }) {
                 </td>
                 <td className={`px-3 py-2 font-semibold ${vacia ? 'text-mist' : c.text}`}>{a.horizonte}</td>
                 <td className="px-3 py-2 text-right tabular-nums text-fog">{a.destinatarios}</td>
-                <td className={`px-3 py-2 text-right tabular-nums font-bold ${vacia ? 'text-mist' : 'text-snow'}`}>
-                  {vacia ? '—' : `~${formatEur(a.valor)}`}
+                <td className={`px-3 py-2 ${vacia ? 'text-mist' : 'text-fog'}`}>
+                  {vacia ? '—' : a.ancla}
                 </td>
                 <td className="px-3 py-2">
-                  {/* El largo es el dinero: el color pasa de adorno a dato */}
+                  {/* El largo es lo que mueve la campaña: el color pasa de
+                      adorno a dato, sin poner una cifra en euros encima */}
                   <div className="h-1.5 rounded-full bg-surface2 overflow-hidden">
                     <div className={`h-full ${c.barra} transition-all`}
                       style={{ width: `${(a.valor / maxValor) * 100}%` }} />

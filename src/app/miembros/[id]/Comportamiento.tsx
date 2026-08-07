@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarCheck, Timer, Clock, Euro, Info } from 'lucide-react'
-import { formatEur } from '@/lib/metrics'
+import { CalendarCheck, Timer, Clock, CalendarHeart, Info } from 'lucide-react'
 import type { MemberStat } from '@/lib/segments'
 
 /**
@@ -61,12 +60,20 @@ export function Comportamiento({
         : 'Días desde la última visita.',
     },
     {
-      icon: Euro,
-      label: 'Valor',
-      value: formatEur(stat.ltv),
+      // Aquí estaba el valor de vida en euros. Salía de sumar los cobros
+      // registrados en la aplicación, así que una familia que paga en efectivo
+      // sin marcar aparecía como si no gastara nada — un juicio equivocado
+      // sobre un cliente concreto es peor que no tener el dato.
+      icon: CalendarHeart,
+      label: 'Antigüedad',
+      value: stat.mesesAntiguedad >= 12
+        ? `${Math.floor(stat.mesesAntiguedad / 12)} a`
+        : `${stat.mesesAntiguedad} m`,
       accent: 'text-lime',
-      desc: `Lo que esta familia ha dejado en caja en total: entradas, consumos y bonos.${
-        stat.ticketMedio > 0 ? ` Su ticket medio es de ${stat.ticketMedio.toFixed(2)} €.` : ''
+      desc: `Tiempo desde el alta. ${
+        stat.visitas > 0 && stat.mesesAntiguedad > 0
+          ? `En ese tiempo han venido ${stat.visitas} ${stat.visitas === 1 ? 'vez' : 'veces'}, unas ${(stat.visitas / stat.mesesAntiguedad).toFixed(1)} al mes.`
+          : 'Aún no han venido.'
       }`,
     },
   ]

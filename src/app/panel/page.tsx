@@ -4,8 +4,8 @@ import { PulseSection } from './PulseSection'
 import { SegmentMap } from './SegmentMap'
 import { ActionsSection } from './ActionsSection'
 import { getT } from '@/lib/i18n-server'
-import { revenue, delta, repeatRate, bonoRenewalRate, pendingRevenue, monthPeriod, lastYearPeriod } from '@/lib/metrics'
-import { buildMemberStats, countBySegment, avgLtv, topVisitantes } from '@/lib/segments'
+import { actividad, delta, repeatRate, bonoRenewalRate, occupancyBySlot, franjaPunta, monthPeriod } from '@/lib/metrics'
+import { buildMemberStats, countBySegment, topVisitantes } from '@/lib/segments'
 import {
   suggestedActions, inicioSemana, proximaRevision, buildCaducados, buildSinBono,
   buildQueue, type BirthdayLead, type BonoLead, type ContactLog,
@@ -25,12 +25,12 @@ export default async function PanelPage() {
   const [
     { data: allMembers },
     { data: paidVisits },
-    { data: allBookings },
     { data: allMemberships },
     { data: membershipTypes },
-    { data: closedChecks },
     { data: membersForStats },
     { data: doneSends },
+    { data: tenant },
+    { data: servicios },
   ] = await Promise.all([
     supabase.from('members').select('id, name, created_at, children').is('deleted_at', null),
     // ── Fase 1 y 2: dinero y segmentación ──
@@ -40,47 +40,50 @@ export default async function PanelPage() {
       .select('id, member_id, checked_in_at, paid_at, paid_amount, adults_count, children_count')
       .gte('checked_in_at', new Date(now.getFullYear() - 1, now.getMonth() - 1, 1).toISOString())
       .limit(20000),
-    supabase.from('bookings')
-      .select('id, date, status, amount, deposit_amount, deposit_paid_at, payment_status')
-      .gte('date', new Date(now.getFullYear() - 1, now.getMonth() - 1, 1).toISOString().split('T')[0])
-      .limit(5000),
     supabase.from('memberships')
       .select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id')
       .limit(5000),
     supabase.from('membership_types').select('id, price'),
-    supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
     supabase.from('members').select('id, name, phone, created_at, families(name)').is('deleted_at', null).limit(5000),
     // Fase 3: lo ya contactado, para no volver a proponerlo
     supabase.from('campaign_sends')
       .select('member_id, estado, enviado_at, created_at, campaigns(plantilla)')
       .neq('estado', 'pendiente').limit(5000),
+    supabase.from('tenants').select('capacity').limit(1).maybeSingle(),
+    // Precios configurados por la ludoteca: son el ancla del valor de las
+    // campañas. Un precio que ha tecleado el cliente no se puede discutir; un
+    // ingreso que calculamos nosotros, sí.
+    supabase.from('services').select('name, price, category, tipo, flujo').eq('active', true),
   ])
 
-  // ── Fase 1: pulso económico del mes ───────────────────────────────────────
+  const capacity: number | null = (tenant as any)?.capacity ?? null
+
+  // ── Fase 1: pulso del mes ─────────────────────────────────────────────────
+  // Sin cifras económicas: los ingresos del panel salen de sumar lo que se haya
+  // registrado en la aplicación, y un cobro hecho fuera (Bizum, efectivo sin
+  // marcar) los deja bajos. Viven en Tendencias, con su aviso.
   const mesActual = monthPeriod(now)
   const mesAnterior = monthPeriod(now, -1)
-  const mesAnoPasado = lastYearPeriod(now)
 
-  const typePrices: Record<string, number> = Object.fromEntries(
-    ((membershipTypes ?? []) as any[]).map(t => [t.id, Number(t.price ?? 0)])
-  )
   const vRows = (paidVisits ?? []) as any[]
-  const bRows = (allBookings ?? []) as any[]
   const mRows = (allMemberships ?? []) as any[]
-  const cRows = (closedChecks ?? []) as any[]
 
-  const revActual = revenue(vRows, bRows, mRows, cRows, typePrices, mesActual)
-  const revAnterior = revenue(vRows, bRows, mRows, cRows, typePrices, mesAnterior)
-  const revAnoPasado = revenue(vRows, bRows, mRows, cRows, typePrices, mesAnoPasado)
+  const actActual = actividad(vRows, mesActual)
+  // Contra el mismo TRAMO del mes anterior, no contra el mes entero: el día 7
+  // compararse con un mes completo siempre sale mal.
+  const diaDelMes = now.getDate()
+  const finTramoAnterior = new Date(mesAnterior.from.getFullYear(), mesAnterior.from.getMonth(), diaDelMes)
+  const actAnterior = actividad(vRows, { from: mesAnterior.from, to: finTramoAnterior })
 
   const repeticion = repeatRate(vRows, now, 30)
   const renovacion = bonoRenewalRate(mRows, now, 30)
-  const pendiente = pendingRevenue(bRows, mesActual)
+
+  const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+  const punta = franjaPunta(occupancyBySlot(vRows, capacity, mesActual))
 
   // ── Fase 2: segmentación por ritmo propio ─────────────────────────────────
   const memberStats = buildMemberStats((membersForStats ?? []) as any[], vRows, now)
   const segCounts = countBySegment(memberStats)
-  const ltvMedio = avgLtv(memberStats)
   const top5 = topVisitantes(memberStats, vRows, now)
   const familiasActivas = memberStats.filter(
     s => s.diasDesdeUltima != null && s.diasDesdeUltima <= 60
@@ -129,13 +132,23 @@ export default async function PanelPage() {
     if (!contactLog[key] || fecha > contactLog[key]) contactLog[key] = fecha
   }
 
-  // Precio medio real de los bonos: valorar la renovación y el upsell con un
-  // múltiplo inventado del ticket daba cifras que no eran de nadie.
+  // ── Precios configurados, para priorizar las campañas ─────────────────────
+  // Todo lo económico de esta pantalla sale de precios que ha tecleado la
+  // ludoteca, no de ingresos que calculemos nosotros. El importe se usa para
+  // ORDENAR las campañas; lo que se enseña es el precio, no una estimación.
   const preciosBono = ((membershipTypes ?? []) as any[])
     .map(t => Number(t.price ?? 0)).filter(p => p > 0)
   const precioBono = preciosBono.length
-    ? preciosBono.reduce((s, p) => s + p, 0) / preciosBono.length
+    ? Math.round(preciosBono.reduce((s, p) => s + p, 0) / preciosBono.length)
     : 0
+
+  const srv = (servicios ?? []) as any[]
+  const precioDe = (pred: (s: any) => boolean, fallback: number) => {
+    const p = srv.filter(pred).map(x => Number(x.price ?? 0)).filter(x => x > 0)
+    return p.length ? Math.round(Math.min(...p)) : fallback
+  }
+  const precioEntrada = precioDe(s2 => s2.tipo === 'entrada', 8)
+  const precioCumple = precioDe(s2 => s2.category === 'cumpleanos' || s2.flujo === 'cumpleanos', 180)
 
   const miembrosBasicos = ((allMembers ?? []) as any[]).map(m => ({ id: m.id, name: m.name }))
 
@@ -145,8 +158,9 @@ export default async function PanelPage() {
     bonos: accionBonos,
     caducados: buildCaducados(mRows, miembrosBasicos, now),
     sinBono: buildSinBono(mRows, vRows, miembrosBasicos, now),
-    ticketMedio: revActual.ticketMedio || 12,
-    precioCumple: 130,
+    // Sin ingresos, el ticket de referencia sale del precio de entrada configurado
+    ticketMedio: precioEntrada,
+    precioCumple,
     precioBono,
   }
 
@@ -172,22 +186,18 @@ export default async function PanelPage() {
   }).length
 
   const pulse = {
-    ingresos: revActual.total,
-    ingresosDeltaMes: delta(revActual.total, revAnterior.total),
-    ingresosDeltaAno: delta(revActual.total, revAnoPasado.total),
-    desglose: {
-      visitas: revActual.visitas,
-      consumos: revActual.consumos,
-      adelantos: revActual.adelantos,
-      bonos: revActual.bonos,
-    },
-    ticketMedio: revActual.ticketMedio,
-    numVisitas: revActual.numVisitas,
-    repeticion: { rate: repeticion.rate, base: repeticion.base },
-    renovacion: { rate: renovacion.rate, base: renovacion.base },
-    pendiente,
+    visitas: actActual.visitas,
+    visitasDeltaMes: delta(actActual.visitas, actAnterior.visitas),
+    familias: actActual.familias,
+    ninos: actActual.ninos,
+    porVisita: actActual.porVisita,
     familiasActivas,
     enRiesgo: segCounts.en_riesgo,
+    repeticion: { rate: repeticion.rate, base: repeticion.base },
+    renovacion: { rate: renovacion.rate, base: renovacion.base },
+    punta: punta
+      ? { dia: DIAS[punta.dow] ?? '', hora: punta.hour, personas: punta.avgPeople, pct: punta.pct }
+      : null,
   }
 
   // ── Alertas urgentes ───────────────────────────────────────────────────────
@@ -267,7 +277,7 @@ export default async function PanelPage() {
       />
 
       {/* Fase 2: a quién tienes y qué hacer con cada grupo */}
-      <SegmentMap stats={memberStats} avgLtv={ltvMedio} top={top5} />
+      <SegmentMap stats={memberStats} top={top5} />
     </div>
   )
 }

@@ -6,7 +6,6 @@ import {
   ArrowLeft, MessageCircle, Check, Phone, ShieldAlert, Pencil, RotateCcw,
   CheckCheck, X, Clock, Calendar,
 } from 'lucide-react'
-import { formatEur } from '@/lib/metrics'
 import { marcarEnvio, type SendState } from '@/lib/campaign-sends'
 import {
   renderMessage, waLink, type CampaignTemplate, type Recipient,
@@ -90,8 +89,6 @@ export function CampaignClient({
 
   const total = recipients.length
   const hechas = porColumna.convertido.length + porColumna.descartado.length + porColumna.contactada.length
-  const valorTotal = recipients.reduce((s, r) => s + r.valor, 0)
-  const valorGanado = porColumna.convertido.reduce((s, r) => s + r.valor, 0)
   const pctTocadas = total ? (hechas / total) * 100 : 0
   const pctGanado = total ? (porColumna.convertido.length / total) * 100 : 0
 
@@ -145,8 +142,8 @@ export function CampaignClient({
             </p>
           </div>
           <div className="text-right">
-            <p className={`font-display text-xl font-bold tabular-nums ${c.text}`}>{formatEur(valorGanado)}</p>
-            <p className="text-[10px] text-mist">de {formatEur(valorTotal)} en juego</p>
+            <p className={`font-display text-xl font-bold tabular-nums ${c.text}`}>{porColumna.pendiente.length}</p>
+            <p className="text-[10px] text-mist">por contactar</p>
           </div>
         </div>
 
@@ -311,7 +308,6 @@ function TarjetaFamilia({
             {r.name}
           </p>
         </Link>
-        <span className="shrink-0 text-xs font-bold text-fog tabular-nums">~{formatEur(r.valor)}</span>
       </div>
 
       <p className="text-[11px] text-fog mt-0.5 leading-snug">{r.contexto}</p>

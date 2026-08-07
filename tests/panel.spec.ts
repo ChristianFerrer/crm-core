@@ -48,6 +48,22 @@ test.describe('Resumen', () => {
     expect(y).toBeLessThan(40)
   })
 
+  test('el resumen no enseña ninguna cifra en euros', async ({ page }) => {
+    await page.goto('/panel')
+    const texto = await page.locator('main').innerText()
+    // Los ingresos salen de sumar lo registrado en la app: un cobro por fuera
+    // los deja bajos, y una cifra de caja equivocada en la pantalla de cada
+    // mañana arrastra la credibilidad del resto. Viven en Tendencias.
+    const importes = texto.match(/\d[\d.,]*\s?€/g) ?? []
+    expect(importes, `euros en el resumen: ${importes.join(', ')}`).toEqual([])
+  })
+
+  test('Tendencias sí enseña los ingresos, con su aviso', async ({ page }) => {
+    await page.goto('/panel/tendencias')
+    await expect(page.getByText('Ingresos del mes')).toBeVisible()
+    await expect(page.getByText('no aparece', { exact: false })).toBeVisible()
+  })
+
   test('las siete campañas están siempre, con su cero si no hay nadie', async ({ page }) => {
     await page.goto('/panel')
     const enlaces = page.locator('a[href^="/panel/campanas/"]')

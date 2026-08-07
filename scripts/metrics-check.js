@@ -257,3 +257,28 @@ const b1 = cola2.find(i => i.plantilla === 'cumpleanos' && i.memberId === 'b1')
 console.assert(b1 && !b1.vigente, 'lo contactado debería seguir en la cola marcado como no vigente')
 console.assert(C.buildQueue(ctx, {}, now, 2).length === 2, 'el tope de la cola no se respeta')
 console.log('cola -> OK')
+
+// ── actividad: la cifra que no depende de que se registre el cobro ──
+const actMes = M.actividad(visits, M.monthPeriod(now))
+console.log('\nactividad ->', JSON.stringify(actMes))
+console.assert(actMes.visitas === 2, 'visitas del mes mal: ' + actMes.visitas)
+console.assert(actMes.familias === 2, 'familias distintas mal')
+console.assert(actMes.ninos === 3, 'niños mal: ' + actMes.ninos)
+console.assert(actMes.personas === 6, 'personas mal: ' + actMes.personas)
+console.assert(Math.abs(actMes.porVisita - 3) < 0.01, 'personas por visita mal')
+// Una visita sin cobrar cuenta igual: es lo que la distingue de revenue()
+const sinCobrar = M.actividad([
+  { id:'z', member_id:'z', checked_in_at:'2026-08-03T10:00:00Z', paid_at:null, paid_amount:null, adults_count:1, children_count:2 },
+], M.monthPeriod(now))
+console.assert(sinCobrar.visitas === 1 && sinCobrar.ninos === 2, 'una visita sin cobro debe contar igual')
+
+// ── anclaPrecio: lo que se enseña sale de precios configurados ──
+for (const p of ['cumpleanos','bono_bajo','renovacion_caducada','upsell_bono','reactivacion','valle','segunda_visita']) {
+  const a = C.anclaPrecio(p, ctx)
+  console.assert(!!a, 'sin ancla en ' + p)
+  console.assert(!/~/.test(a), 'el ancla no debe ser una estimación: ' + a)
+}
+console.assert(C.anclaPrecio('cumpleanos', ctx).includes('130'), 'el ancla debe usar el precio configurado')
+console.assert(C.anclaPrecio('bono_bajo', ctx).includes('90'), 'el ancla del bono debe usar su precio')
+console.log('anclas ->', ['cumpleanos','bono_bajo','valle'].map(p => C.anclaPrecio(p, ctx)).join(' · '))
+console.log('actividad y anclas -> OK')

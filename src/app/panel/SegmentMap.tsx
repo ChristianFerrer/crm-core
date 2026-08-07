@@ -7,7 +7,6 @@ import {
   Moon, UserPlus, Users, Trophy,
 } from 'lucide-react'
 import { SEGMENTS, type MemberStat, type SegmentId } from '@/lib/segments'
-import { formatEur } from '@/lib/metrics'
 import { waLink, firstName, renderMessage } from '@/lib/campaigns'
 import { SectionHeader } from './SectionHeader'
 
@@ -52,10 +51,9 @@ function dias(n: number | null): string {
  * acabes pulsando donde no querías.
  */
 export function SegmentMap({
-  stats, avgLtv, top,
+  stats, top,
 }: {
   stats: MemberStat[]
-  avgLtv: number
   /** Ranking de quién más ha venido este mes; ver `topVisitantes` */
   top: { memberId: string; name: string; visitas: number }[]
 }) {
@@ -65,9 +63,11 @@ export function SegmentMap({
   const seg = SEGMENTS.find(s => s.id === abierto) ?? SEGMENTS[0]
   const a = ACCENT[seg.accent]
   const Icono = ICONOS[seg.icono] ?? Users
+  // Ordenadas por visitas: sin cifras económicas, quien más viene es quien más
+  // pesa, y además es una cifra que el CRM sí conoce con certeza.
   const lista = stats
     .filter(s => s.segmento === seg.id)
-    .sort((x, y) => y.ltv - x.ltv)
+    .sort((x, y) => y.visitas - x.visitas)
 
   return (
     <section>
@@ -77,7 +77,7 @@ export function SegmentMap({
         title="Tus clientes"
         right={
           <p className="text-[11px] text-mist">
-            Valor medio por familia <span className="text-fog font-semibold">{formatEur(avgLtv)}</span>
+            {stats.length} familia{stats.length === 1 ? '' : 's'} con historial
           </p>
         }
       />
@@ -150,7 +150,6 @@ export function SegmentMap({
                     <p className="text-[11px] text-mist truncate">
                       {s.visitas} visita{s.visitas !== 1 ? 's' : ''} · última {dias(s.diasDesdeUltima)}
                       {s.ritmoDias != null && ` · ritmo ${Math.round(s.ritmoDias)} d`}
-                      {s.ltv > 0 && ` · ${formatEur(s.ltv)}`}
                     </p>
                   </Link>
                   {wa ? (

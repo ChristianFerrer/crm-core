@@ -2,6 +2,8 @@ import { createServerSupabase } from '@/lib/supabase-server'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { CustomizableDashboard } from '../CustomizableDashboard'
+import { IngresosDelMes } from './IngresosDelMes'
+import { revenue, delta, pendingRevenue, monthPeriod, lastYearPeriod } from '@/lib/metrics'
 import { getT } from '@/lib/i18n-server'
 
 export const revalidate = 0
@@ -33,6 +35,11 @@ export default async function TendenciasPage() {
     { data: tenant },
     { data: visitTimes },
     { data: yearVisits },
+    { data: cobros },
+    { data: reservas },
+    { data: bonos },
+    { data: tiposBono },
+    { data: cuentas },
   ] = await Promise.all([
     supabase.from('members').select('id', { count: 'exact', head: true }),
     supabase.from('visits').select('id', { count: 'exact', head: true }).gte('checked_in_at', startOfDay),
@@ -43,7 +50,53 @@ export default async function TendenciasPage() {
     supabase.from('tenants').select('id, capacity').limit(1).single(),
     supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()).limit(5000),
     supabase.from('visits').select('checked_in_at').gte('checked_in_at', new Date(now.getFullYear(), 0, 1).toISOString()).limit(20000),
+    // ── Ingresos ──
+    // Vivían en el Resumen y se han traído aquí: son la única cifra del panel
+    // que depende de que el cobro se haya registrado en la aplicación, y una
+    // cifra de caja equivocada en la pantalla de cada mañana arrastra la
+    // credibilidad de todo lo demás. Aquí se entra a propósito y con aviso.
+    supabase.from('visits')
+      .select('id, member_id, checked_in_at, paid_at, paid_amount, adults_count, children_count')
+      .gte('checked_in_at', new Date(now.getFullYear() - 1, now.getMonth() - 1, 1).toISOString())
+      .limit(20000),
+    supabase.from('bookings')
+      .select('id, date, status, amount, deposit_amount, deposit_paid_at, payment_status')
+      .gte('date', new Date(now.getFullYear() - 1, now.getMonth() - 1, 1).toISOString().split('T')[0])
+      .limit(5000),
+    supabase.from('memberships')
+      .select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id')
+      .limit(5000),
+    supabase.from('membership_types').select('id, price'),
+    supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
   ])
+
+  // ── Ingresos del mes ───────────────────────────────────────────────────────
+  const typePrices: Record<string, number> = Object.fromEntries(
+    ((tiposBono ?? []) as any[]).map(x => [x.id, Number(x.price ?? 0)])
+  )
+  const vRows = (cobros ?? []) as any[]
+  const bRows = (reservas ?? []) as any[]
+  const mRows = (bonos ?? []) as any[]
+  const cRows = (cuentas ?? []) as any[]
+
+  const revActual = revenue(vRows, bRows, mRows, cRows, typePrices, monthPeriod(now))
+  const revAnterior = revenue(vRows, bRows, mRows, cRows, typePrices, monthPeriod(now, -1))
+  const revAnoPasado = revenue(vRows, bRows, mRows, cRows, typePrices, lastYearPeriod(now))
+
+  const ingresos = {
+    total: revActual.total,
+    deltaMes: delta(revActual.total, revAnterior.total),
+    deltaAno: delta(revActual.total, revAnoPasado.total),
+    desglose: {
+      visitas: revActual.visitas,
+      consumos: revActual.consumos,
+      adelantos: revActual.adelantos,
+      bonos: revActual.bonos,
+    },
+    ticketMedio: revActual.ticketMedio,
+    numVisitas: revActual.numVisitas,
+    pendiente: pendingRevenue(bRows, monthPeriod(now)),
+  }
 
   // ── Visitas por mes (todo el año) ──────────────────────────────────────────
   const visitsByMonth = Array(12).fill(0)
@@ -138,6 +191,8 @@ export default async function TendenciasPage() {
           <p className="text-sm text-fog mt-0.5">{t('tendencias_subtitulo')}</p>
         </div>
       </div>
+
+      <IngresosDelMes data={ingresos} />
 
       <CustomizableDashboard
         data={{

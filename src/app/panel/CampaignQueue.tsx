@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 import { waLink, type QueueItem, type PlantillaId } from '@/lib/campaigns'
 import { marcarEnvio, type SendState } from '@/lib/campaign-sends'
-import { formatEur } from '@/lib/metrics'
 
 const ICONOS: Record<string, React.ElementType> = {
   Cake, AlertTriangle, RefreshCw, Ticket, HeartPulse, CalendarClock, Repeat,
@@ -91,8 +90,6 @@ export function CampaignQueue({
 
   const visibles = porPestana[pestana].filter(i => !filtro || i.plantilla === filtro)
 
-  const enJuego = porPestana.pendiente.reduce((s, i) => s + i.valor, 0)
-  const cerrado = porPestana.convertido.reduce((s, i) => s + i.valor, 0)
   const totalTocables = cola.length || 1
   const pctTocadas = ((cola.length - porPestana.pendiente.length) / totalTocables) * 100
   const pctCerradas = (porPestana.convertido.length / totalTocables) * 100
@@ -118,8 +115,7 @@ export function CampaignQueue({
           <p className="text-[11px] text-mist">
             {porPestana.contactada.length} contactada{porPestana.contactada.length === 1 ? '' : 's'} ·{' '}
             <span className="text-mint font-semibold">{porPestana.convertido.length} reservaron</span>
-            {cerrado > 0 && <span className="text-mint"> · {formatEur(cerrado)} cerrados</span>}
-            {' · '}de {formatEur(enJuego + cerrado)} en juego
+            {' · '}{cola.length} en total
           </p>
         </div>
         <div className="h-2 rounded-full bg-surface2 overflow-hidden relative">
@@ -246,10 +242,6 @@ function Fila({
           {i.contexto}
         </p>
       </Link>
-
-      <span className="shrink-0 text-xs font-bold text-fog tabular-nums w-16 text-right">
-        {formatEur(i.valor)}
-      </span>
 
       <div className="flex items-center gap-1.5 shrink-0 w-[9.5rem] justify-end">
         {col === 'pendiente' && (link ? (

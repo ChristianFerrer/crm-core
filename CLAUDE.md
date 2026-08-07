@@ -143,6 +143,27 @@ Borrado de miembros: **anonimiza, no elimina** — obligación fiscal de conserv
 el histórico 5 años. La marca es `members.deleted_at`, y todas las consultas de
 listado filtran por `is('deleted_at', null)`.
 
+## Dinero en el panel
+
+El Resumen **no muestra ninguna cifra en euros**. La razón no es de diseño: los
+ingresos salen de sumar lo que se haya registrado en la aplicación, y basta con
+un cumpleaños cobrado por Bizum sin anotar para que la cifra salga baja. Una
+cifra de caja equivocada, cada mañana y en la primera pantalla, arrastra la
+credibilidad del resto del panel — y además compite con el cierre de mes del
+gestor, que ya lo tiene y lo tiene bien.
+
+- **Resumen**: actividad y conducta (visitas, niños, repetición, renovación,
+  franja punta, familias en riesgo). Son cifras que el CRM sí conoce con
+  certeza porque no dependen de que se registre el cobro.
+- **Campañas**: se ordenan por el importe en juego, pero se ENSEÑA el precio
+  configurado por la ludoteca («paquete desde 180 €»), no una estimación
+  nuestra. Un precio que ha tecleado el cliente no se puede discutir.
+- **Tendencias**: aquí sí viven los ingresos, con el aviso de que solo suman lo
+  registrado en la app y son un mínimo, no el cierre de caja.
+
+Si algún día el cobro pasa por la aplicación (pasarela de pago), esta decisión
+se puede revisar.
+
 ## Pruebas
 
 ```
