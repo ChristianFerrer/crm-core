@@ -8,7 +8,6 @@ import { bonoStatus, activeBono } from '@/lib/bonoStatus'
 import { UserPlus, ChevronRight, User, Users } from 'lucide-react'
 import Link from 'next/link'
 import { TableFilterBar } from '@/components/TableFilterBar'
-import { LeyendaBonos } from './LeyendaBonos'
 import { MiembrosTabs } from '@/components/MiembrosTabs'
 import { useLanguage } from '@/lib/i18n'
 
@@ -59,9 +58,10 @@ function getAge(d: string) {
   return Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
 }
 
-function statusDot(m: MemberRow) {
-  const st = bonoStatus(activeBono(m.memberships))
-  return { cls: `bg-${st.color}`, label: st.label }
+/** Etiqueta corta del estado del bono. El color va en el texto de la celda:
+ *  un punto de color obliga a mantener una leyenda para descifrarlo. */
+function statusLabel(m: MemberRow): string {
+  return bonoStatus(activeBono(m.memberships)).label
 }
 
 export default function MiembrosPage() {
@@ -232,13 +232,6 @@ export default function MiembrosPage() {
         />
       </div>
 
-      {/* Leyenda del código de color de la columna «Estado» */}
-      {view === 'miembros' && (
-        <div className="shrink-0 mb-2.5">
-          <LeyendaBonos />
-        </div>
-      )}
-
       {loading ? (
         <div className="space-y-2 overflow-y-auto">
           {[1,2,3,4,5].map(i => <div key={i} className="h-16 rounded-2xl bg-surface border border-line animate-pulse" />)}
@@ -254,7 +247,7 @@ export default function MiembrosPage() {
               {/* ── MÓVIL/TABLET: tarjetas (< lg) ── */}
               <div className="lg:hidden space-y-2">
                 {filteredMembers.map((m) => {
-                  const { cls, label } = statusDot(m)
+                  const label = statusLabel(m)
                   const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
                   return (
                     <Link
@@ -282,7 +275,6 @@ export default function MiembrosPage() {
                             <p className="text-[10px] text-mist">{m.memberships[0].membership_types!.name}</p>
                           )}
                         </div>
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${cls}`} />
                       </div>
                     </Link>
                   )
@@ -304,7 +296,7 @@ export default function MiembrosPage() {
                     </thead>
                     <tbody className="divide-y divide-line">
                       {filteredMembers.map(m => {
-                        const { cls, label } = statusDot(m)
+                        const label = statusLabel(m)
                         const isUnlimited = m.memberships?.[0]?.membership_types?.name?.toLowerCase().includes('ilimitado')
                         return (
                           <tr key={m.id} onClick={() => window.location.assign(`/miembros/${m.id}`)}
@@ -316,7 +308,6 @@ export default function MiembrosPage() {
                             <td className="px-3 py-2.5 text-xs text-iris whitespace-nowrap">{m.memberships?.[0]?.membership_types?.name ?? '—'}</td>
                             <td className="px-3 pr-4 py-2.5 whitespace-nowrap">
                               <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${isUnlimited ? 'text-iris' : m.memberships?.[0]?.sessions_remaining === 0 ? 'text-rose' : (m.memberships?.[0]?.sessions_remaining ?? 99) <= 2 ? 'text-amber' : 'text-fog'}`}>
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${cls}`} />
                                 {isUnlimited ? t('miembros_ilimitado') : label}
                               </span>
                             </td>

@@ -7,6 +7,7 @@ import { AssignMembership } from '@/components/AssignMembership'
 import { DeleteMemberButton } from './DeleteMemberButton'
 import { getT } from '@/lib/i18n-server'
 import { buildMemberStats, SEGMENTS } from '@/lib/segments'
+import { Comportamiento } from './Comportamiento'
 import { formatEur } from '@/lib/metrics'
 
 export const revalidate = 0
@@ -133,39 +134,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </Link>
       </div>
 
-      {/* ── Comportamiento: segmento, ritmo y valor ── */}
-      <div className="rounded-2xl border border-line bg-surface p-4">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Comportamiento</p>
-          <span className={`text-xs font-semibold ${SEG_TEXT[segDef.accent]}`}>{segDef.label}</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div>
-            <p className="text-[10px] text-mist uppercase tracking-wide">Visitas</p>
-            <p className="text-lg font-bold text-snow tabular-nums">{stat.visitas}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-mist uppercase tracking-wide">Ritmo</p>
-            <p className="text-lg font-bold text-snow tabular-nums">
-              {stat.ritmoDias != null ? `${Math.round(stat.ritmoDias)} d` : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-mist uppercase tracking-wide">Última</p>
-            <p className="text-lg font-bold text-snow tabular-nums">
-              {stat.diasDesdeUltima != null ? `${Math.round(stat.diasDesdeUltima)} d` : '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-mist uppercase tracking-wide">Valor</p>
-            <p className="text-lg font-bold text-lime tabular-nums">{formatEur(stat.ltv)}</p>
-          </div>
-        </div>
-        <p className="text-[11px] text-mist mt-3">
-          {segDef.accion}
-          {stat.ticketMedio > 0 && ` · ticket medio ${stat.ticketMedio.toFixed(2)}€`}
-        </p>
-      </div>
+      {/* ── Comportamiento: cuatro cifras, cada una con su explicación ── */}
+      <Comportamiento
+        stat={stat}
+        segmento={segDef.label}
+        accion={segDef.accion}
+        segClass={SEG_TEXT[segDef.accent]}
+      />
 
       {/* Contact info — teléfono + alta + email + notas */}
       <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">

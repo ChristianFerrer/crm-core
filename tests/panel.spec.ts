@@ -171,3 +171,29 @@ test.describe('Cabeceras de pantalla', () => {
     expect(await sub.innerText()).toMatch(/20\d\d/)
   })
 })
+
+test.describe('Ficha de miembro', () => {
+  test('el comportamiento son cuatro tarjetas que se giran', async ({ page }) => {
+    await page.goto('/miembros')
+    const primera = page.locator('a[href^="/miembros/"]').first()
+    if (await primera.count() === 0) test.skip()
+    await primera.click()
+    await page.waitForURL(/\/miembros\/[^/]+$/)
+
+    await expect(page.getByText('Comportamiento')).toBeVisible()
+    const tarjetas = page.locator('.flip-card')
+    expect(await tarjetas.count()).toBe(4)
+
+    // Girar una enseña qué mide, que es lo que un número suelto no dice
+    const ritmo = tarjetas.nth(1)
+    await ritmo.locator('button').first().click()
+    await expect(ritmo).toHaveAttribute('data-flipped', 'true')
+  })
+
+  test('el listado ya no lleva leyenda ni puntos de color', async ({ page }) => {
+    await page.goto('/miembros')
+    await expect(page.getByText('Estados de bono')).toHaveCount(0)
+    // El color del texto distingue el estado; el punto obligaba a una leyenda
+    expect(await page.locator('td span.rounded-full.w-2').count()).toBe(0)
+  })
+})
