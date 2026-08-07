@@ -80,7 +80,10 @@ export function ConditionalShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <AppShell>
-        <main className={`pb-safe-nav px-4 md:px-6 lg:px-8 lg:pt-8 ${viewingAs ? 'pt-12 lg:pt-4' : 'pt-6 lg:pt-4'}`}>
+        {/* Ojo con el margen superior: había dos `lg:pt-*` en la misma clase
+            (lg:pt-8 y lg:pt-4) y cuál ganaba dependía del orden en el CSS
+            generado, no del que se lee aquí. Ahora hay uno solo por tamaño. */}
+        <main className={`pb-safe-nav px-4 md:px-6 lg:px-8 ${viewingAs ? 'pt-12 lg:pt-6' : 'pt-3 lg:pt-4'}`}>
           {children}
         </main>
       </AppShell>

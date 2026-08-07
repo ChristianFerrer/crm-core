@@ -29,6 +29,22 @@ test.describe('Resumen', () => {
     expect(errores).toEqual([])
   })
 
+  test('cada sección lleva su icono y su explicación', async ({ page }) => {
+    await page.goto('/panel')
+    // Un rótulo solo no dice qué mide la sección la primera vez que se entra
+    await expect(page.getByText('Lo cobrado este mes y cómo va respecto al anterior')).toBeVisible()
+    await expect(page.getByText('A quién escribir y por qué', { exact: false })).toBeVisible()
+    await expect(page.getByText('Seis grupos según cómo visitan', { exact: false })).toBeVisible()
+  })
+
+  test('el título arranca cerca del borde superior', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/panel')
+    const y = await page.locator('h1').first().evaluate(el => el.getBoundingClientRect().top)
+    // Había dos `lg:pt-*` en la misma clase y ganaba el mayor sin querer
+    expect(y).toBeLessThan(40)
+  })
+
   test('las siete campañas están siempre, con su cero si no hay nadie', async ({ page }) => {
     await page.goto('/panel')
     const enlaces = page.locator('a[href^="/panel/campanas/"]')

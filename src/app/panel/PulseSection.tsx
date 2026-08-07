@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { TrendingUp, TrendingDown, Euro, Receipt, Repeat, RefreshCw, Clock, Users, Info } from 'lucide-react'
+import { TrendingUp, TrendingDown, Euro, Receipt, Repeat, RefreshCw, Clock, Users, Info, Activity } from 'lucide-react'
+import { SectionHeader } from './SectionHeader'
 import { formatEur, isReliable, MIN_SAMPLE } from '@/lib/metrics'
 
 export type PulseData = {
@@ -100,10 +101,13 @@ export function PulseSection({ data }: { data: PulseData }) {
   const d = data
   return (
     <section>
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Pulso del mes</p>
-        <p className="text-[11px] text-mist">Toca una tarjeta para ver qué mide</p>
-      </div>
+      <SectionHeader
+        icon={Activity}
+        iconClass="text-lime"
+        title="Pulso del mes"
+        subtitle="Lo cobrado este mes y cómo va respecto al anterior"
+        right={<p className="text-[11px] text-mist">Toca una tarjeta para ver qué mide</p>}
+      />
 
       {/* `items-stretch` (por defecto) + `h-full` en la tarjeta: las seis miden
           lo mismo, y la altura la marca la que más contenido tenga. */}

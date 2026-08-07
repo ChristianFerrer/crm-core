@@ -9,6 +9,7 @@ import {
 import { SEGMENTS, type MemberStat, type SegmentId } from '@/lib/segments'
 import { formatEur } from '@/lib/metrics'
 import { waLink, firstName, renderMessage } from '@/lib/campaigns'
+import { SectionHeader } from './SectionHeader'
 
 /** El dominio guarda el nombre del icono; aquí se resuelve al componente. */
 const ICONOS: Record<string, React.ElementType> = {
@@ -70,12 +71,17 @@ export function SegmentMap({
 
   return (
     <section>
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Tus clientes</p>
-        <p className="text-[11px] text-mist">
-          Valor medio por familia <span className="text-fog font-semibold">{formatEur(avgLtv)}</span>
-        </p>
-      </div>
+      <SectionHeader
+        icon={Users}
+        iconClass="text-iris"
+        title="Tus clientes"
+        subtitle="Seis grupos según cómo visitan. Elige uno para ver sus familias."
+        right={
+          <p className="text-[11px] text-mist">
+            Valor medio por familia <span className="text-fog font-semibold">{formatEur(avgLtv)}</span>
+          </p>
+        }
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
         {SEGMENTS.map(s => {

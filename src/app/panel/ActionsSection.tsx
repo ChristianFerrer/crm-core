@@ -9,6 +9,7 @@ import {
 import type { ActionSuggestion, QueueItem } from '@/lib/campaigns'
 import type { SendState } from '@/lib/campaign-sends'
 import { CampaignQueue } from './CampaignQueue'
+import { SectionHeader } from './SectionHeader'
 import { formatEur } from '@/lib/metrics'
 
 const ACCENT: Record<string, { text: string; border: string; bg: string; barra: string }> = {
@@ -75,12 +76,13 @@ export function ActionsSection({
 
   return (
     <section>
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5">
-          <Zap size={12} className="text-amber" /> Campañas de esta semana
-        </p>
-
-        <div className="flex items-center gap-3">
+      <SectionHeader
+        icon={Zap}
+        iconClass="text-amber"
+        title="Campañas de esta semana"
+        subtitle="A quién escribir y por qué. Cada campaña lleva su propio plazo."
+        right={
+          <div className="flex items-center gap-3">
           <p className="text-[11px] text-mist">
             {contactadosEstaSemana > 0
               ? `${contactadosEstaSemana} contactada${contactadosEstaSemana === 1 ? '' : 's'} · por dinero en juego`
@@ -120,13 +122,8 @@ export function ActionsSection({
             </button>
           </div>
         </div>
-      </div>
-
-      {/* «Esta semana» es cuándo te toca revisarlo, no el plazo de cada campaña:
-          un cumpleaños se prepara con 45 días y un bono caduca el viernes. */}
-      <p className="text-[11px] text-mist -mt-1 mb-2">
-        Lo que toca mover esta semana. Cada campaña lleva su propio plazo.
-      </p>
+        }
+      />
 
       {/* ── Móvil: la barra a lo ancho, que aquí sí funciona ── */}
       <div className="lg:hidden space-y-2">
