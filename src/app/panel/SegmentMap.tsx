@@ -58,16 +58,26 @@ export function SegmentMap({ stats, avgLtv }: { stats: MemberStat[]; avgLtv: num
               key={seg.id}
               onClick={() => setOpen(isOpen ? null : seg.id)}
               aria-expanded={isOpen}
-              className={`rounded-2xl border p-4 text-left transition-colors ${
+              className={`rounded-2xl border p-3.5 text-left transition-colors ${
                 isOpen ? `${a.border} ${a.bg}` : 'border-line bg-surface hover:border-line2'
               }`}
             >
-              <div className={`w-11 h-11 mb-2 rounded-xl flex items-center justify-center ${a.bg}`}>
-                <SegIcon size={22} className={a.text} />
+              {/* Icono a la izquierda con el rótulo y la cifra al lado: en
+                  vertical, la tarjeta crecía a lo alto y sobraba la mitad. */}
+              <div className="flex items-center gap-2.5">
+                <div className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${a.bg}`}>
+                  <SegIcon size={22} className={a.text} />
+                </div>
+                <div className="min-w-0">
+                  <p className={`text-[10px] font-semibold uppercase tracking-wide truncate ${a.text}`}>
+                    {seg.label}
+                  </p>
+                  <p className="font-display text-2xl font-bold text-snow leading-none mt-0.5 tabular-nums">
+                    {list.length}
+                  </p>
+                </div>
               </div>
-              <p className={`text-[10px] font-semibold uppercase tracking-wide truncate ${a.text}`}>{seg.label}</p>
-              <p className="font-display text-2xl font-bold text-snow leading-none mt-1.5 tabular-nums">{list.length}</p>
-              <p className="text-[11px] text-mist mt-1">
+              <p className="text-[11px] text-mist mt-2 leading-snug">
                 {((list.length / total) * 100).toFixed(0)}% · {seg.sub}
               </p>
             </button>
