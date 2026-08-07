@@ -75,7 +75,6 @@ export function SegmentMap({
         icon={Users}
         iconClass="text-iris"
         title="Tus clientes"
-        subtitle="Seis grupos según cómo visitan. Elige uno para ver sus familias."
         right={
           <p className="text-[11px] text-mist">
             Valor medio por familia <span className="text-fog font-semibold">{formatEur(avgLtv)}</span>

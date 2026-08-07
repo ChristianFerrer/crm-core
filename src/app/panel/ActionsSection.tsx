@@ -80,7 +80,6 @@ export function ActionsSection({
         icon={Zap}
         iconClass="text-amber"
         title="Campañas de esta semana"
-        subtitle="A quién escribir y por qué. Cada campaña lleva su propio plazo."
         right={
           <div className="flex items-center gap-3">
           <p className="text-[11px] text-mist">

@@ -29,12 +29,15 @@ test.describe('Resumen', () => {
     expect(errores).toEqual([])
   })
 
-  test('cada sección lleva su icono y su explicación', async ({ page }) => {
+  test('cada sección lleva su icono, sin texto explicativo', async ({ page }) => {
     await page.goto('/panel')
-    // Un rótulo solo no dice qué mide la sección la primera vez que se entra
-    await expect(page.getByText('Lo cobrado este mes y cómo va respecto al anterior')).toBeVisible()
-    await expect(page.getByText('A quién escribir y por qué', { exact: false })).toBeVisible()
-    await expect(page.getByText('Seis grupos según cómo visitan', { exact: false })).toBeVisible()
+    // Con el icono y el color de cada sección, la explicación sobraba y solo
+    // añadía ruido a una pantalla ya densa.
+    await expect(page.getByText('Lo cobrado este mes', { exact: false })).toHaveCount(0)
+    await expect(page.getByText('Seis grupos según cómo visitan', { exact: false })).toHaveCount(0)
+    // Los iconos sí: son los que distinguen las tres secciones de un vistazo
+    const iconos = page.locator('section > div:first-child svg').first()
+    await expect(iconos).toBeVisible()
   })
 
   test('el título arranca cerca del borde superior', async ({ page }) => {

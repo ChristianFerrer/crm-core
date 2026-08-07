@@ -105,7 +105,6 @@ export function PulseSection({ data }: { data: PulseData }) {
         icon={Activity}
         iconClass="text-lime"
         title="Pulso del mes"
-        subtitle="Lo cobrado este mes y cómo va respecto al anterior"
         right={<p className="text-[11px] text-mist">Toca una tarjeta para ver qué mide</p>}
       />
 
