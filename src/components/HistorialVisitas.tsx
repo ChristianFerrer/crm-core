@@ -1,41 +1,7 @@
 import { Clock, Users } from 'lucide-react'
+import { acompanantes, type VisitaHistorial } from '@/lib/visitas'
 
-export type VisitaHistorial = {
-  id: string
-  checked_in_at: string
-  adults_count?: number | null
-  children_count?: number | null
-  children_present?: { id?: string; name: string; is_adult?: boolean }[] | null
-  /** Nombre del adulto que registró la entrada; solo se pinta en la vista de familia */
-  titular?: string | null
-}
-
-/**
- * Con quién vino. El check-in guarda los nombres en `children_present`, así que
- * se pueden nombrar: «con Martina y Pau» dice mucho más que «3 personas», y es
- * lo que permite reconocer a la familia en el mostrador.
- *
- * Cuando la visita es antigua y no se guardó el detalle, se cae a los contadores
- * —no se inventa ningún nombre.
- */
-export function acompanantes(v: VisitaHistorial): string | null {
-  const presentes = (v.children_present ?? []).filter(p => p.name?.trim())
-  const ninos = presentes.filter(p => !p.is_adult).map(p => p.name.trim())
-  const adultos = presentes.filter(p => p.is_adult).map(p => p.name.trim())
-
-  const partes: string[] = []
-  if (ninos.length) partes.push(ninos.join(', '))
-  if (adultos.length) partes.push(adultos.join(', '))
-  if (partes.length) return partes.join(' · ')
-
-  const nA = v.adults_count ?? 0
-  const nN = v.children_count ?? 0
-  if (nA + nN === 0) return null
-  const c: string[] = []
-  if (nN > 0) c.push(`${nN} niñ${nN === 1 ? 'o' : 'os'}`)
-  if (nA > 0) c.push(`${nA} adult${nA === 1 ? 'o' : 'os'}`)
-  return c.join(' · ')
-}
+export type { VisitaHistorial }
 
 export function HistorialVisitas({
   visitas, vacio, mostrarTitular = false,

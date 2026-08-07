@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "npm run test:dominio && npm run test:pantallas",
-    "test:dominio": "esbuild src/lib/metrics.ts src/lib/segments.ts src/lib/campaigns.ts --outdir=.tmp --format=cjs --platform=node --log-level=error && node scripts/metrics-check.js",
+    "test:dominio": "esbuild src/lib/metrics.ts src/lib/segments.ts src/lib/campaigns.ts src/lib/visitas.ts --outdir=.tmp --format=cjs --platform=node --log-level=error && node scripts/metrics-check.js",
     "test:pantallas": "playwright test",
     "test:pantallas:ui": "playwright test --ui"
   },

@@ -334,3 +334,35 @@ console.assert(C.anclaPrecio('cumpleanos', ctx).includes('130'), 'el ancla debe 
 console.assert(C.anclaPrecio('bono_bajo', ctx).includes('90'), 'el ancla del bono debe usar su precio')
 console.log('anclas ->', ['cumpleanos','bono_bajo','valle'].map(p => C.anclaPrecio(p, ctx)).join(' · '))
 console.log('actividad y anclas -> OK')
+
+// ── acompañantes de una visita ──
+// Regla: los nombres se dicen; lo que no tiene nombre se cuenta. El titular no
+// es acompañante de sí mismo, así que se descuenta uno de `adults_count`.
+const V = require('../.tmp/visitas.js')
+const acomp = (a, n, presentes) =>
+  V.acompanantes({ id: 'x', checked_in_at: '2026-08-01T10:00:00Z', adults_count: a, children_count: n, children_present: presentes })
+
+console.assert(acomp(1, 0, []) === null, 'viniendo solo, no hay acompañantes')
+console.assert(
+  acomp(1, 1, [{ name: 'Martina' }]) === 'Martina',
+  'un hijo con nombre se nombra: ' + acomp(1, 1, [{ name: 'Martina' }]),
+)
+console.assert(
+  acomp(2, 1, [{ name: 'Laia', is_adult: true }, { name: 'Martina' }]) === 'Martina · Laia',
+  'pareja e hijo, los dos por su nombre: ' + acomp(2, 1, [{ name: 'Laia', is_adult: true }, { name: 'Martina' }]),
+)
+console.assert(
+  acomp(1, 3, [{ name: 'Martina' }]) === 'Martina · 2 invitados (2 niños)',
+  'un hijo y dos invitados sin nombre: ' + acomp(1, 3, [{ name: 'Martina' }]),
+)
+console.assert(
+  acomp(3, 3, [{ name: 'Laia', is_adult: true }, { name: 'Martina' }]) === 'Martina · Laia · 3 invitados (1 adulto, 2 niños)',
+  'invitados separados por adultos y niños: ' + acomp(3, 3, [{ name: 'Laia', is_adult: true }, { name: 'Martina' }]),
+)
+// Visita antigua sin detalle guardado: no se inventa ningún nombre
+console.assert(
+  acomp(2, 2, []) === '3 invitados (1 adulto, 2 niños)',
+  'sin nombres guardados, solo cifras: ' + acomp(2, 2, []),
+)
+console.log('acompañantes ->', acomp(3, 3, [{ name: 'Laia', is_adult: true }, { name: 'Martina' }]))
+console.log('acompañantes -> OK')
