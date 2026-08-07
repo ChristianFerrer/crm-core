@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarCheck, Timer, Clock, CalendarHeart, Info } from 'lucide-react'
+import Link from 'next/link'
+import { CalendarCheck, Timer, Clock, CalendarHeart, Info, Home } from 'lucide-react'
 import type { MemberStat } from '@/lib/segments'
 
 /**
@@ -22,16 +23,28 @@ type Tarjeta = {
 }
 
 export function Comportamiento({
-  stat, segmento, accion, segClass,
+  stat, segmento, accion, segClass, ambito = 'miembro', casa = null,
 }: {
   stat: MemberStat
   segmento: string
   /** Qué hacer con este grupo; viene de la definición del segmento */
   accion: string
   segClass: string
+  /**
+   * Quién se está contando. En la ficha del adulto son SUS visitas; en la de la
+   * familia, las de todos sus titulares juntas. El texto de cada tarjeta cambia
+   * en consecuencia, porque «esta familia» sobre una cifra individual es lo que
+   * hacía que la lista de abajo pareciera contradecir el número de arriba.
+   */
+  ambito?: 'miembro' | 'familia'
+  /** Solo en la ficha del adulto: total del hogar, que es lo que ve el panel */
+  casa?: { nombre: string; href: string; visitas: number } | null
 }) {
   const ritmo = stat.ritmoDias != null ? Math.round(stat.ritmoDias) : null
   const ultima = stat.diasDesdeUltima != null ? Math.round(stat.diasDesdeUltima) : null
+  const sujeto = ambito === 'familia' ? 'esta familia' : 'este titular'
+  const verbo = ambito === 'familia' ? 'Suelen' : 'Suele'
+  const han = ambito === 'familia' ? 'han' : 'ha'
 
   const tarjetas: Tarjeta[] = [
     {
@@ -39,7 +52,9 @@ export function Comportamiento({
       label: 'Visitas',
       value: String(stat.visitas),
       accent: 'text-fog',
-      desc: 'Veces que esta familia ha entrado, desde su alta. Cuenta la visita, no cuántos niños vinieron en cada una.',
+      desc: `Veces que ${sujeto} ${han} entrado, desde su alta. Cuenta la visita, no cuántos niños vinieron en cada una.${
+        ambito === 'miembro' && casa ? ` Las visitas del resto de la casa se cuentan en la ficha de ${casa.nombre}.` : ''
+      }`,
     },
     {
       icon: Timer,
@@ -47,7 +62,7 @@ export function Comportamiento({
       value: ritmo != null ? `${ritmo} d` : '—',
       accent: 'text-cyan-300',
       desc: ritmo != null
-        ? `Suelen venir cada ${ritmo} días. Es la mediana entre visitas, no el promedio: una visita rara no la distorsiona. Hacen falta 3 visitas para calcularlo.`
+        ? `${verbo} venir cada ${ritmo} días. Es la mediana entre visitas, no el promedio: una visita rara no la distorsiona. Hacen falta 3 visitas para calcularlo.`
         : 'Aún no hay suficientes visitas para saber cada cuánto vienen. Hacen falta 3.',
     },
     {
@@ -72,8 +87,8 @@ export function Comportamiento({
       accent: 'text-lime',
       desc: `Tiempo desde el alta. ${
         stat.visitas > 0 && stat.mesesAntiguedad > 0
-          ? `En ese tiempo han venido ${stat.visitas} ${stat.visitas === 1 ? 'vez' : 'veces'}, unas ${(stat.visitas / stat.mesesAntiguedad).toFixed(1)} al mes.`
-          : 'Aún no han venido.'
+          ? `En ese tiempo ${han} venido ${stat.visitas} ${stat.visitas === 1 ? 'vez' : 'veces'}, unas ${(stat.visitas / stat.mesesAntiguedad).toFixed(1)} al mes.`
+          : `Aún no ${han} venido.`
       }`,
     },
   ]
@@ -81,13 +96,29 @@ export function Comportamiento({
   return (
     <div>
       <div className="flex items-center justify-between gap-3 mb-2">
-        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">Comportamiento</p>
+        <p className="text-[10px] font-semibold text-fog uppercase tracking-wide">
+          {ambito === 'familia' ? 'Comportamiento de la familia' : 'Comportamiento de este titular'}
+        </p>
         <span className={`text-xs font-semibold ${segClass}`}>{segmento}</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-stretch">
         {tarjetas.map(t => <TarjetaGiratoria key={t.label} {...t} />)}
       </div>
+
+      {/* El segmento es de la CASA —así lo calcula el panel—, y estas cifras son
+          de una persona. Decirlo evita que parezca un error de cuentas. */}
+      {casa && (
+        <Link
+          href={casa.href}
+          className="mt-2 flex items-center gap-1.5 text-[11px] text-mist hover:text-snow transition-colors"
+        >
+          <Home size={11} className="shrink-0" />
+          <span className="truncate">
+            {casa.nombre}: {casa.visitas} visita{casa.visitas === 1 ? '' : 's'} entre todos sus titulares — el grupo «{segmento}» se asigna a la casa
+          </span>
+        </Link>
+      )}
 
       <p className="text-[11px] text-mist mt-2">{accion}</p>
     </div>

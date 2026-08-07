@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, CreditCard, Clock, Users, Baby, AlertTriangle } from 'lucide-react'
 import FamiliaActions from './FamiliaActions'
 import { getT } from '@/lib/i18n-server'
+import { buildMemberStats, SEGMENTS } from '@/lib/segments'
+import { Comportamiento } from '@/app/miembros/[id]/Comportamiento'
+import { HistorialVisitas } from '@/components/HistorialVisitas'
 
 export const revalidate = 0
 
@@ -25,7 +28,7 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
     supabase.from('families').select('id, name, notes').eq('id', id).single(),
     supabase
       .from('members')
-      .select('id, name, phone, email, children, memberships(id, sessions_remaining, expires_at, membership_types(name, price))')
+      .select('id, name, phone, email, created_at, family_id, children, memberships(id, sessions_remaining, expires_at, membership_types(name, price))')
       .eq('family_id', id)
       .order('name'),
   ])
@@ -44,16 +47,36 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
     }
   }
 
-  // Last 15 visits across all family members
+  // Todas las visitas de la casa: las 15 últimas se listan, pero el
+  // comportamiento (ritmo, antigüedad) necesita el histórico completo.
   const memberIds = memberList.map((m: any) => m.id)
   const { data: visits } = memberIds.length
     ? await supabase
         .from('visits')
-        .select('id, checked_in_at, member_id, members(name)')
+        .select('id, checked_in_at, member_id, paid_amount, adults_count, children_count, children_present, members(name)')
         .in('member_id', memberIds)
         .order('checked_in_at', { ascending: false })
-        .limit(15)
+        .limit(2000)
     : { data: [] }
+
+  const visitList = (visits as any[]) ?? []
+
+  // Mismo módulo que el panel y que la ficha del miembro, pero aquí sí se cuenta
+  // la casa entera: es la unidad de cliente de una ludoteca.
+  const stat = memberList.length
+    ? buildMemberStats(
+        memberList.map((m: any) => ({
+          id: m.id, name: m.name, phone: m.phone ?? null,
+          created_at: m.created_at, family_id: id, families: { name: family.name },
+        })),
+        visitList,
+      )[0]
+    : null
+  const segDef = stat ? SEGMENTS.find(x => x.id === stat.segmento)! : null
+  const SEG_TEXT: Record<string, string> = {
+    lime: 'text-lime', mint: 'text-mint', 'cyan-300': 'text-cyan-300',
+    amber: 'text-amber', rose: 'text-rose', iris: 'text-iris',
+  }
 
   return (
     <div className="space-y-4 lg:max-w-2xl">
@@ -67,6 +90,18 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
         </h1>
         <FamiliaActions id={id} />
       </div>
+
+      {/* ── Comportamiento de la casa: los mismos indicadores que la ficha del
+          miembro, pero sumando a todos sus titulares ── */}
+      {stat && segDef && (
+        <Comportamiento
+          stat={stat}
+          ambito="familia"
+          segmento={segDef.label}
+          accion={segDef.accion}
+          segClass={SEG_TEXT[segDef.accent]}
+        />
+      )}
 
       {/* Titulares */}
       <div className="rounded-2xl border border-line bg-surface p-4 space-y-4">
@@ -176,27 +211,11 @@ export default async function FamiliaDetailPage({ params }: { params: Promise<{ 
         <p className="text-xs font-semibold text-fog uppercase tracking-wide flex items-center gap-1.5 mb-3">
           <Clock size={13} className="text-lime" /> {t('familia_historial_visitas')}
         </p>
-        {!(visits as any[])?.length ? (
-          <div className="rounded-2xl border border-line bg-surface p-4 text-center text-sm text-mist">
-            {t('familia_sin_visitas')}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {(visits as any[]).map((v: any) => (
-              <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex justify-between items-center text-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-snow text-xs font-medium truncate">{(v.members as any)?.name}</span>
-                  <span className="text-mist text-xs shrink-0">
-                    {new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
-                  </span>
-                </div>
-                <span className="text-mist text-xs shrink-0">
-                  {new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        <HistorialVisitas
+          visitas={visitList.slice(0, 15).map((v: any) => ({ ...v, titular: v.members?.name ?? null }))}
+          vacio={t('familia_sin_visitas')}
+          mostrarTitular
+        />
       </div>
     </div>
   )

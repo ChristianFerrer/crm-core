@@ -8,6 +8,7 @@ import { DeleteMemberButton } from './DeleteMemberButton'
 import { getT } from '@/lib/i18n-server'
 import { buildMemberStats, SEGMENTS } from '@/lib/segments'
 import { Comportamiento } from './Comportamiento'
+import { HistorialVisitas } from '@/components/HistorialVisitas'
 
 export const revalidate = 0
 
@@ -35,7 +36,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       .single(),
     supabase
       .from('visits')
-      .select('id, member_id, checked_in_at, paid_amount')
+      .select('id, member_id, checked_in_at, paid_amount, adults_count, children_count, children_present')
       .eq('member_id', id)
       .order('checked_in_at', { ascending: false })
       .limit(500),
@@ -76,11 +77,11 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     familyAdults = (data as any[]) ?? []
   }
 
-  // ── Ficha 360: comportamiento de LA CASA ──────────────────────────────────
-  // Se calcula con el mismo módulo que el panel, así que el segmento que se ve
-  // aquí y el del mapa no pueden discrepar. Y se cuenta el hogar entero: si los
-  // dos padres se turnan para traer al niño, mirar solo a uno da la mitad de
-  // las visitas y el doble de ritmo.
+  // ── Ficha 360 ─────────────────────────────────────────────────────────────
+  // Aquí se cuenta ESTE adulto, no la casa: si el panel dice 43 visitas y esta
+  // ficha lista 24, la lista de abajo desmiente la cifra de arriba y ya no se
+  // cree ninguna de las dos. Para no perder la lectura del hogar —que sí es la
+  // del panel— se calcula también la casa y se enseña como línea aparte.
   const idsCasa = [m.id, ...familyAdults.map(a => a.id)]
   const { data: visitasCasa } = idsCasa.length > 1
     ? await supabase
@@ -90,17 +91,27 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         .limit(2000)
     : { data: visits }
 
-  const stat = buildMemberStats(
-    [
-      { id: m.id, name: m.name, phone: m.phone, created_at: m.created_at, family_id: m.family_id, families: m.families },
-      ...familyAdults.map(a => ({
-        id: a.id, name: a.name, phone: a.phone ?? null,
-        created_at: a.created_at ?? m.created_at, family_id: m.family_id, families: m.families,
-      })),
-    ],
-    (visitasCasa as any[]) ?? [],
-  )[0]
-  const segDef = SEGMENTS.find(x => x.id === stat.segmento)!
+  const propio = {
+    id: m.id, name: m.name, phone: m.phone, created_at: m.created_at,
+    family_id: null, families: null,
+  }
+  const stat = buildMemberStats([propio], (visits as any[]) ?? [])[0]
+
+  // El hogar, con el mismo módulo que el panel: el segmento que se ve aquí y el
+  // del mapa no pueden discrepar, así que la etiqueta sale de la casa.
+  const statCasa = idsCasa.length > 1
+    ? buildMemberStats(
+        [
+          { id: m.id, name: m.name, phone: m.phone, created_at: m.created_at, family_id: m.family_id, families: m.families },
+          ...familyAdults.map(a => ({
+            id: a.id, name: a.name, phone: a.phone ?? null,
+            created_at: a.created_at ?? m.created_at, family_id: m.family_id, families: m.families,
+          })),
+        ],
+        (visitasCasa as any[]) ?? [],
+      )[0]
+    : stat
+  const segDef = SEGMENTS.find(x => x.id === statCasa.segmento)!
   const SEG_TEXT: Record<string, string> = {
     lime: 'text-lime', mint: 'text-mint', 'cyan-300': 'text-cyan-300',
     amber: 'text-amber', rose: 'text-rose', iris: 'text-iris',
@@ -153,9 +164,15 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       {/* ── Comportamiento: cuatro cifras, cada una con su explicación ── */}
       <Comportamiento
         stat={stat}
+        ambito="miembro"
         segmento={segDef.label}
         accion={segDef.accion}
         segClass={SEG_TEXT[segDef.accent]}
+        casa={idsCasa.length > 1 && m.families ? {
+          nombre: m.families.name,
+          href: `/familias/${m.families.id}`,
+          visitas: statCasa.visitas,
+        } : null}
       />
 
       {/* Contact info — teléfono + alta + email + notas */}
@@ -356,25 +373,11 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <div className="flex items-center gap-2 text-xs font-semibold text-fog uppercase tracking-wide mb-3">
           <Clock size={13} className="text-lime" /> {t('miembros_historial_visitas')}
         </div>
-        {!(visits as any[])?.length ? (
-          <div className="rounded-2xl border border-line bg-surface p-4 text-center text-sm text-mist">
-            {t('miembros_sin_visitas')}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {/* Se cargan todas para las estadísticas, pero solo se listan las 20 últimas */}
-            {(visits as any[]).slice(0, 20).map((v) => (
-              <div key={v.id} className="rounded-xl border border-line bg-surface px-4 py-2.5 flex justify-between gap-2 text-sm">
-                <span className="text-fog truncate min-w-0">
-                  {new Date(v.checked_in_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
-                </span>
-                <span className="text-mist shrink-0">
-                  {new Date(v.checked_in_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Se cargan todas para las estadísticas, pero solo se listan las 20 últimas */}
+        <HistorialVisitas
+          visitas={((visits as any[]) ?? []).slice(0, 20)}
+          vacio={t('miembros_sin_visitas')}
+        />
       </div>
     </div>
   )
