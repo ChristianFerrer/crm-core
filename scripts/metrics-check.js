@@ -239,3 +239,21 @@ for (const a of acciones) {
   }
 }
 console.log('top de acciones -> OK')
+
+// ── buildQueue: la cola mezcla campañas y ordena por dinero ──
+const cola = C.buildQueue(ctx, {}, now)
+console.log('\ncola ->', cola.map(i => `${i.name} (${i.plantilla}, ${i.valor}€)`))
+console.assert(cola.length > 0, 'la cola no debería estar vacía')
+for (let i = 1; i < cola.length; i++) {
+  console.assert(cola[i-1].valor >= cola[i].valor, 'la cola debería ir por dinero')
+}
+console.assert(new Set(cola.map(i => i.plantilla)).size > 1, 'la cola debería mezclar campañas')
+console.assert(cola.every(i => i.mensaje && !/[{}]/.test(i.mensaje)), 'mensaje sin renderizar en la cola')
+console.assert(cola.every(i => i.contexto && i.campana && i.icono), 'falta contexto, campaña o icono en la cola')
+console.assert(cola.every(i => i.vigente), 'sin contactos previos todo debería estar vigente')
+// Lo contactado dentro de la ventana sigue en la cola, pero marcado
+const cola2 = C.buildQueue(ctx, { 'cumpleanos:b1': d(1) }, now)
+const b1 = cola2.find(i => i.plantilla === 'cumpleanos' && i.memberId === 'b1')
+console.assert(b1 && !b1.vigente, 'lo contactado debería seguir en la cola marcado como no vigente')
+console.assert(C.buildQueue(ctx, {}, now, 2).length === 2, 'el tope de la cola no se respeta')
+console.log('cola -> OK')

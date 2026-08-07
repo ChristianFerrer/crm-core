@@ -10,8 +10,9 @@ import { revenue, delta, repeatRate, bonoRenewalRate, pendingRevenue, monthPerio
 import { buildMemberStats, countBySegment, avgLtv } from '@/lib/segments'
 import {
   suggestedActions, inicioSemana, proximaRevision, buildCaducados, buildSinBono,
-  type BirthdayLead, type BonoLead, type ContactLog,
+  buildQueue, type BirthdayLead, type BonoLead, type ContactLog,
 } from '@/lib/campaigns'
+import type { SendState } from '@/lib/campaign-sends'
 
 export const revalidate = 0
 
@@ -139,7 +140,7 @@ export default async function PanelPage() {
 
   const miembrosBasicos = ((allMembers ?? []) as any[]).map(m => ({ id: m.id, name: m.name }))
 
-  const acciones = suggestedActions({
+  const ctxCampanas = {
     stats: memberStats,
     birthdays: accionBirthdays,
     bonos: accionBonos,
@@ -148,7 +149,21 @@ export default async function PanelPage() {
     ticketMedio: revActual.ticketMedio || 12,
     precioCumple: 130,
     precioBono,
-  }, contactLog, now)
+  }
+
+  const acciones = suggestedActions(ctxCampanas, contactLog, now)
+
+  // La cola mezcla campañas y ordena por dinero: es la unidad de trabajo real
+  const cola = buildQueue(ctxCampanas, contactLog, now)
+
+  // Estado ya guardado de cada familia en cada plantilla, para que la cola
+  // arranque sabiendo a quién se escribió y quién reservó.
+  const estadoCola: Record<string, SendState> = {}
+  for (const s2 of ((doneSends ?? []) as any[])) {
+    const plantilla = s2.campaigns?.plantilla
+    if (!plantilla) continue
+    estadoCola[`${plantilla}:${s2.member_id}`] = s2.estado
+  }
 
   // Contexto de la revisión semanal
   const desdeLunes = inicioSemana(now)
@@ -259,6 +274,8 @@ export default async function PanelPage() {
         actions={acciones}
         contactadosEstaSemana={contactadosEstaSemana}
         proximaRevision={proximaRevision(now).toISOString()}
+        cola={cola}
+        estadoCola={estadoCola}
       />
 
       {/* Fase 2: a quién tienes y qué hacer con cada grupo */}

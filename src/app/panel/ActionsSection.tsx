@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Zap, ChevronRight, Cake, AlertTriangle, RefreshCw, Ticket, HeartPulse,
-  CalendarClock, Repeat, Megaphone, LayoutGrid, List,
+  CalendarClock, Repeat, Megaphone, LayoutGrid, List, ListChecks,
 } from 'lucide-react'
-import type { ActionSuggestion } from '@/lib/campaigns'
+import type { ActionSuggestion, QueueItem } from '@/lib/campaigns'
+import type { SendState } from '@/lib/campaign-sends'
+import { CampaignQueue } from './CampaignQueue'
 import { formatEur } from '@/lib/metrics'
 
 const ACCENT: Record<string, { text: string; border: string; bg: string; barra: string }> = {
@@ -24,7 +26,7 @@ export const ICONOS: Record<string, React.ElementType> = {
   Cake, AlertTriangle, RefreshCw, Ticket, HeartPulse, CalendarClock, Repeat,
 }
 
-type Vista = 'tarjetas' | 'tabla'
+type Vista = 'tarjetas' | 'tabla' | 'cola'
 const CLAVE_VISTA = 'wm_campanas_vista'
 
 function fechaCorta(iso: string): string {
@@ -48,17 +50,19 @@ function iconoDe(nombre: string): React.ElementType {
  * escritorio tiene su propia disposición, conmutable entre rejilla y tabla.
  */
 export function ActionsSection({
-  actions, contactadosEstaSemana, proximaRevision,
+  actions, contactadosEstaSemana, proximaRevision, cola, estadoCola,
 }: {
   actions: ActionSuggestion[]
   contactadosEstaSemana: number
   proximaRevision: string
+  cola: QueueItem[]
+  estadoCola: Record<string, SendState>
 }) {
   const [vista, setVista] = useState<Vista>('tarjetas')
 
   useEffect(() => {
     const guardada = localStorage.getItem(CLAVE_VISTA)
-    if (guardada === 'tabla' || guardada === 'tarjetas') setVista(guardada)
+    if (guardada === 'tabla' || guardada === 'tarjetas' || guardada === 'cola') setVista(guardada)
   }, [])
 
   function cambiar(v: Vista) {
@@ -104,6 +108,16 @@ export function ActionsSection({
             >
               <List size={13} />
             </button>
+            <button
+              onClick={() => cambiar('cola')}
+              aria-pressed={vista === 'cola'}
+              title="Ver como cola de trabajo"
+              className={`w-7 h-6 flex items-center justify-center rounded transition-colors ${
+                vista === 'cola' ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'
+              }`}
+            >
+              <ListChecks size={13} />
+            </button>
           </div>
         </div>
       </div>
@@ -121,12 +135,12 @@ export function ActionsSection({
 
       {/* ── Escritorio ── */}
       <div className="hidden lg:block">
-        {vista === 'tarjetas'
-          ? <VistaTarjetas conTrabajo={conTrabajo} vacias={vacias} />
-          : <VistaTabla actions={actions} />}
+        {vista === 'tarjetas' && <VistaTarjetas conTrabajo={conTrabajo} vacias={vacias} />}
+        {vista === 'tabla' && <VistaTabla actions={actions} />}
+        {vista === 'cola' && <CampaignQueue cola={cola} estadoInicial={estadoCola} />}
       </div>
 
-      {conTrabajo.length === 0 && (
+      {conTrabajo.length === 0 && vista !== 'cola' && (
         <p className="text-[11px] text-mist mt-2">
           Semana cerrada: no queda nadie a quien escribir.
           {contactadosEstaSemana > 0 && ` Has contactado a ${contactadosEstaSemana} ${contactadosEstaSemana === 1 ? 'familia' : 'familias'}.`}

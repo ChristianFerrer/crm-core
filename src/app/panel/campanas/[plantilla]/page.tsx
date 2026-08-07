@@ -33,7 +33,6 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
     { data: types },
     { data: bookings },
     { data: checks },
-    { data: campaign },
   ] = await Promise.all([
     supabase.from('members').select('id, name, phone, created_at, children, marketing_consent_at, marketing_consent_revoked_at, families(name)').is('deleted_at', null).limit(5000),
     supabase.from('visits').select('id, member_id, checked_in_at, paid_at, paid_amount, adults_count, children_count')
@@ -42,8 +41,6 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
     supabase.from('membership_types').select('id, price'),
     supabase.from('bookings').select('id, date, status, amount, deposit_amount, deposit_paid_at, payment_status').limit(5000),
     supabase.from('open_checks').select('id, closed_at, products_cost').not('closed_at', 'is', null).limit(5000),
-    supabase.from('campaigns').select('id').eq('plantilla', plantilla).eq('estado', 'activa')
-      .order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   const memberRows = (members ?? []) as any[]
@@ -122,7 +119,6 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
   // Envíos de esta plantilla, con su fecha. Se usan para dos cosas: marcar en
   // la lista a quien ya fue contactado y respetar la ventana de reintento, que
   // es lo que evita escribir dos veces por el mismo motivo.
-  const campaignId = (campaign as any)?.id ?? null
   const { data: sendRows } = await supabase
     .from('campaign_sends')
     .select('member_id, estado, enviado_at, created_at, campaigns!inner(plantilla)')
@@ -166,7 +162,6 @@ export default async function CampaignPage({ params }: { params: Promise<{ plant
       horizonte={template.horizonte}
       reintentoDias={template.reintentoDias}
       existingSends={existingSends}
-      campaignId={campaignId}
       sinConsentimiento={sinConsentimiento}
     />
   )

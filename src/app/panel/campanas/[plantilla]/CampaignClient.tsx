@@ -6,15 +6,12 @@ import {
   ArrowLeft, MessageCircle, Check, Phone, ShieldAlert, Pencil, RotateCcw,
   CheckCheck, X, Clock, Calendar,
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { getStoredTenant } from '@/lib/tenant'
 import { formatEur } from '@/lib/metrics'
+import { marcarEnvio, type SendState } from '@/lib/campaign-sends'
 import {
   renderMessage, waLink, type CampaignTemplate, type Recipient,
 } from '@/lib/campaigns'
 import { ICONOS } from '../../ActionsSection'
-
-type SendState = 'pendiente' | 'enviado' | 'respondido' | 'convertido' | 'descartado'
 
 export type ExistingSend = { member_id: string; estado: SendState; enviado_at: string | null }
 
@@ -55,13 +52,12 @@ const ACCENT: Record<string, { text: string; border: string; bg: string; barra: 
  * móvil detrás del mostrador y arrastrar entre pestañas es imposible.
  */
 export function CampaignClient({
-  template, recipients, existingSends, campaignId: initialCampaignId, sinConsentimiento,
+  template, recipients, existingSends, sinConsentimiento,
   horizonte, reintentoDias,
 }: {
   template: CampaignTemplate
   recipients: Recipient[]
   existingSends: ExistingSend[]
-  campaignId: string | null
   sinConsentimiento: number
   horizonte: string
   reintentoDias: number
@@ -70,7 +66,6 @@ export function CampaignClient({
   const TemplateIcon = ICONOS[template.icono] ?? MessageCircle
   const [mensaje, setMensaje] = useState(template.mensaje)
   const [editando, setEditando] = useState(false)
-  const [campaignId, setCampaignId] = useState<string | null>(initialCampaignId)
   const [sends, setSends] = useState<Record<string, SendState>>(
     () => Object.fromEntries(existingSends.map(s => [s.member_id, s.estado]))
   )
@@ -100,44 +95,12 @@ export function CampaignClient({
   const pctTocadas = total ? (hechas / total) * 100 : 0
   const pctGanado = total ? (porColumna.convertido.length / total) * 100 : 0
 
-  /** Crea la campaña la primera vez que se envía algo, no antes. */
-  async function ensureCampaign(): Promise<string | null> {
-    if (campaignId) return campaignId
-    const tenantId = getStoredTenant()?.id
-    if (!tenantId) return null
-    const { data, error } = await supabase.from('campaigns').insert({
-      tenant_id: tenantId,
-      nombre: template.nombre,
-      plantilla: template.id,
-      mensaje,
-      incentivo: template.incentivo,
-      canal: 'whatsapp',
-      estado: 'activa',
-      enviada_at: new Date().toISOString(),
-    }).select('id').single()
-    if (error || !data) return null
-    setCampaignId(data.id)
-    return data.id
-  }
-
   async function marcar(r: Recipient, estado: SendState) {
     setSaving(r.memberId)
     // Optimista: el tablero responde al instante y la escritura va detrás. Si
     // falla, la próxima carga del servidor devuelve la verdad.
     setSends(prev => ({ ...prev, [r.memberId]: estado }))
-    const cid = await ensureCampaign()
-    const tenantId = getStoredTenant()?.id
-    if (cid && tenantId) {
-      await supabase.from('campaign_sends').upsert({
-        tenant_id: tenantId,
-        campaign_id: cid,
-        member_id: r.memberId,
-        estado,
-        enviado_at: estado === 'enviado' ? new Date().toISOString() : null,
-        respondido_at: estado === 'respondido' ? new Date().toISOString() : null,
-        convertido_at: estado === 'convertido' ? new Date().toISOString() : null,
-      }, { onConflict: 'campaign_id,member_id' })
-    }
+    await marcarEnvio(template.id, r.memberId, estado, mensaje)
     setSaving(null)
   }
 

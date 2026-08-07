@@ -529,6 +529,69 @@ export function suggestedActions(
     .slice(0, max)
 }
 
+/**
+ * Una familia a contactar, con su motivo y su mensaje ya montado.
+ *
+ * Es la unidad de trabajo real: el dueño no «hace campañas», escribe a gente.
+ * Las plantillas son cómo el sistema agrupa el trabajo por dentro.
+ */
+export type QueueItem = {
+  plantilla: PlantillaId
+  campana: string
+  accent: CampaignTemplate['accent']
+  icono: string
+  horizonte: string
+  memberId: string
+  name: string
+  phone: string | null
+  contexto: string
+  valor: number
+  /** Mensaje con las variables ya sustituidas */
+  mensaje: string
+  /** false si la ventana de reintento aún no ha pasado */
+  vigente: boolean
+}
+
+/**
+ * La cola de la semana: todas las familias de todas las campañas, ordenadas
+ * por euros y no por campaña.
+ *
+ * Incluye también a quien está dentro de su ventana de reintento (`vigente:
+ * false`), porque la pantalla necesita poder enseñar lo ya contactado sin
+ * volver a pedirlo al servidor.
+ */
+export function buildQueue(
+  ctx: Parameters<typeof resolveRecipients>[1],
+  contactLog: ContactLog,
+  now = new Date(),
+  max = 60,
+): QueueItem[] {
+  const out: QueueItem[] = []
+
+  for (const tpl of TEMPLATES) {
+    for (const r of resolveRecipients(tpl.id, ctx)) {
+      out.push({
+        plantilla: tpl.id,
+        campana: tpl.nombre,
+        accent: tpl.accent,
+        icono: tpl.icono,
+        horizonte: tpl.horizonte,
+        memberId: r.memberId,
+        name: r.name,
+        phone: r.phone,
+        contexto: r.contexto,
+        valor: r.valor,
+        mensaje: renderMessage(tpl.mensaje, r.vars),
+        vigente: puedeReproponer(tpl, r.memberId, contactLog, now),
+      })
+    }
+  }
+
+  // El orden se fija aquí y el cliente solo filtra: si se reordenase a cada
+  // clic, la fila siguiente saltaría bajo el cursor al marcar una.
+  return out.sort((a, b) => b.valor - a.valor).slice(0, max)
+}
+
 /** Lunes de la semana en curso: ancla de la revisión semanal. */
 export function inicioSemana(now = new Date()): Date {
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate())
