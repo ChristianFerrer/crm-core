@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
-  TrendingUp, TrendingDown, Users, Baby, Repeat, RefreshCw, Clock, UsersRound,
+  TrendingUp, TrendingDown, Users, Repeat, RefreshCw, Clock, Ticket,
   Info, Activity,
 } from 'lucide-react'
 import { isReliable, MIN_SAMPLE } from '@/lib/metrics'
@@ -21,18 +22,24 @@ import { SectionHeader } from './SectionHeader'
  * bien. Lo que sí sabe el CRM con certeza —quién entró y cuándo, quién repite,
  * quién renueva— no lo tiene nadie más. Eso es lo que se muestra.
  */
+export type Franja = { dia: string; hora: number; personas: number; pct: number }
+
 export type PulseData = {
   visitas: number
   visitasDeltaMes: number | null
   familias: number
-  ninos: number
   porVisita: number
   familiasActivas: number
   enRiesgo: number
-  repeticion: { rate: number; base: number }
-  renovacion: { rate: number; base: number }
+  /** Hogares con un bono en pie: ocupación ya comprada */
+  hogaresConBono: number
+  /** `previa` es la misma tasa en los 3 meses anteriores; null si no hay base */
+  repeticion: { rate: number; base: number; previa: number | null }
+  renovacion: { rate: number; base: number; previa: number | null }
   /** Franja de más ocupación del mes; null si aún no hay muestra */
-  punta: { dia: string; hora: number; personas: number; pct: number } | null
+  punta: Franja | null
+  /** La de menos: es la que se puede llenar con una oferta */
+  valle: Franja | null
 }
 
 function Delta({ value }: { value: number | null }) {
@@ -47,14 +54,19 @@ function Delta({ value }: { value: number | null }) {
 }
 
 /**
- * Tarjeta con dos caras: delante la cifra, detrás qué significa y de dónde
- * sale. Se voltea al pulsar, así la explicación está a mano sin ocupar sitio.
+ * Tarjeta con dos caras: delante la cifra, detrás qué significa y de dónde sale.
+ *
+ * La cara delantera ES un enlace a donde se actúa sobre esa cifra, y la
+ * explicación se abre con la ⓘ. Antes toda la tarjeta volteaba y no llevaba a
+ * ningún sitio: el dueño leía «12 en riesgo», entendía que había un problema, y
+ * tenía que ir a buscar por su cuenta dónde se arreglaba. Esa distancia es la
+ * que separa un panel que se mira de uno que se usa.
  *
  * El alto sale de la cara más alta (ver `.flip-inner` en globals.css). Las
  * tarjetas de una misma fila se igualan solas porque la rejilla las estira.
  */
 function FlipCard({
-  icon: Icon, label, value, sub, foot, accent = 'text-fog', desc,
+  icon: Icon, label, value, sub, foot, accent = 'text-fog', desc, href, accion,
 }: {
   icon: React.ElementType
   label: string
@@ -63,30 +75,48 @@ function FlipCard({
   foot?: React.ReactNode
   accent?: string
   desc: string
+  /** Dónde se actúa sobre esta cifra */
+  href: string
+  /** Qué se va a encontrar allí; se dice en el dorso */
+  accion: string
 }) {
   const [flipped, setFlipped] = useState(false)
   return (
     <div className="flip-card h-full" data-flipped={flipped}>
       <div className="flip-inner">
         {/* Frente */}
-        <button
-          onClick={() => setFlipped(true)}
-          aria-hidden={flipped}
-          tabIndex={flipped ? -1 : 0}
-          aria-label={`${label}: ${value}. Ver explicación`}
-          className="flip-face w-full h-full flex flex-col rounded-2xl border border-line bg-surface p-4 text-left hover:border-line2 transition-colors"
-        >
-          <div className="flex items-center gap-1.5 mb-2">
-            <Icon size={13} className={accent} />
-            <p className="text-[10px] font-semibold text-fog uppercase tracking-wide truncate flex-1">{label}</p>
-            <Info size={11} className="text-mist shrink-0" />
-          </div>
-          <p className="font-display text-2xl font-bold text-snow leading-none tabular-nums">{value}</p>
-          {/* Alto mínimo reservado aunque no haya subtítulo: así la cifra y el
-              pie quedan a la misma altura en las seis tarjetas. */}
-          <div className="mt-1.5 min-h-[18px] flex items-center gap-2 flex-wrap">{sub}</div>
-          <p className="mt-auto pt-1.5 text-[11px] text-mist leading-tight">{foot}</p>
-        </button>
+        <div className="flip-face w-full h-full relative" aria-hidden={flipped}>
+          <Link
+            href={href}
+            tabIndex={flipped ? -1 : 0}
+            className="group w-full h-full flex flex-col rounded-2xl border border-line bg-surface p-4 text-left hover:border-line2 transition-colors"
+          >
+            <div className="flex items-center gap-1.5 mb-2">
+              <Icon size={13} className={accent} />
+              <p className="text-[10px] font-semibold text-fog uppercase tracking-wide truncate flex-1">{label}</p>
+              {/* Hueco de la ⓘ, que va por encima en su propio botón */}
+              <span className="w-[11px] shrink-0" />
+            </div>
+            <p className="font-display text-2xl font-bold text-snow leading-none tabular-nums">{value}</p>
+            {/* Alto mínimo reservado aunque no haya subtítulo: así la cifra y el
+                pie quedan a la misma altura en las seis tarjetas. */}
+            <div className="mt-1.5 min-h-[18px] flex items-center gap-2 flex-wrap">{sub}</div>
+            <p className="mt-auto pt-1.5 text-[11px] text-mist leading-tight group-hover:text-fog transition-colors">
+              {foot}
+            </p>
+          </Link>
+
+          {/* La ⓘ va aparte del enlace: un botón dentro de un enlace no es HTML
+              válido, y además pulsar «explicar» no debería navegar. */}
+          <button
+            onClick={() => setFlipped(true)}
+            tabIndex={flipped ? -1 : 0}
+            aria-label={`${label}: ${value}. Ver explicación`}
+            className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center rounded text-mist hover:text-snow transition-colors"
+          >
+            <Info size={11} />
+          </button>
+        </div>
 
         {/* Dorso */}
         <button
@@ -98,15 +128,40 @@ function FlipCard({
         >
           <p className={`text-[10px] font-semibold uppercase tracking-wide mb-1.5 ${accent}`}>{label}</p>
           <p className="text-[11px] text-fog leading-snug">{desc}</p>
+          <p className="text-[11px] text-mist leading-snug mt-1.5">{accion}</p>
         </button>
       </div>
     </div>
   )
 }
 
+/**
+ * Base de la tasa. Cuando no llega al mínimo dice CUÁNTO falta en vez de un
+ * guion mudo: una tarjeta que lleva tres meses con «—» enseña a ignorar esa
+ * esquina de la pantalla.
+ */
 function Rate({ base }: { base: number }) {
-  if (!isReliable(base)) return <span className="text-[11px] text-mist">pocos datos ({base})</span>
+  if (!isReliable(base)) {
+    return <span className="text-[11px] text-mist">faltan {MIN_SAMPLE - base} casos</span>
+  }
   return <span className="text-[11px] text-fog">sobre {base} casos</span>
+}
+
+/** Comparación con su propio historial: sin referencia, un % no decide nada. */
+function Referencia({ rate, previa }: { rate: number; previa: number | null }) {
+  if (previa == null) return <span className="text-[11px] text-mist">sin histórico</span>
+  const dif = (rate - previa) * 100
+  const igual = Math.abs(dif) < 1
+  return (
+    <span className={`text-[11px] font-semibold ${igual ? 'text-fog' : dif > 0 ? 'text-mint' : 'text-rose'}`}>
+      {igual ? '=' : dif > 0 ? '+' : '−'}{igual ? '' : Math.abs(dif).toFixed(0)}
+      {igual ? '' : ' pts'} vs. su media
+    </span>
+  )
+}
+
+function horas(f: Franja): string {
+  return `${f.dia} ${f.hora}h`
 }
 
 export function PulseSection({ data }: { data: PulseData }) {
@@ -117,7 +172,7 @@ export function PulseSection({ data }: { data: PulseData }) {
         icon={Activity}
         iconClass="text-lime"
         title="Pulso del mes"
-        right={<p className="text-[11px] text-mist">Toca una tarjeta para ver qué mide</p>}
+        right={<p className="text-[11px] text-mist">Cada tarjeta lleva a donde se actúa · ⓘ explica qué mide</p>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5 items-stretch">
@@ -126,19 +181,23 @@ export function PulseSection({ data }: { data: PulseData }) {
           label="Visitas"
           value={String(d.visitas)}
           accent="text-lime"
+          href="/panel/tendencias"
           sub={<><span className="text-[11px] text-mist">vs. mes ant.</span><Delta value={d.visitasDeltaMes} /></>}
-          foot={<>{d.familias} familias distintas</>}
-          desc="Entradas registradas este mes. Es la cifra más fiable del panel: una visita queda registrada siempre, porque es la que abre la puerta. Se compara con el mismo tramo del mes anterior."
+          foot={<>{d.familias} familias · {d.porVisita.toFixed(1)} personas por visita</>}
+          desc="Entradas registradas este mes. Es la cifra más fiable del panel: una visita queda registrada siempre, porque es la que abre la puerta. Se compara con el mismo tramo del mes anterior. Si «personas por visita» sube, los grupos vienen más grandes."
+          accion="Lleva a Tendencias, con la serie de los últimos meses."
         />
 
         <FlipCard
-          icon={Baby}
-          label="Niños atendidos"
-          value={String(d.ninos)}
+          icon={Ticket}
+          label="Con bono activo"
+          value={String(d.hogaresConBono)}
           accent="text-grape"
-          sub={<span className="text-[11px] text-fog">{d.porVisita.toFixed(1)} personas por visita</span>}
-          foot="Suma de niños de cada entrada"
-          desc="Cuántos niños han pasado por la sala este mes, sumando los de cada entrada. Un mismo niño que viene cuatro veces cuenta cuatro: mide carga de trabajo y de aforo, no clientes distintos."
+          href="/panel/campanas/upsell_bono"
+          sub={<span className="text-[11px] text-fog">de {d.familiasActivas} activas</span>}
+          foot="Ocupación ya comprada"
+          desc="Familias con un bono en pie: sesiones sin gastar y sin caducar. Es la parte del mes que no depende de que entre nadie nuevo, así que cuanto más alta, más predecible es la ocupación. Se cuenta por casa: dos padres con bono son un cliente, no dos."
+          accion="Lleva a la campaña de bonos, para proponerlo a quien viene sin él."
         />
 
         <FlipCard
@@ -146,9 +205,13 @@ export function PulseSection({ data }: { data: PulseData }) {
           label="Repetición 30d"
           value={isReliable(d.repeticion.base) ? `${(d.repeticion.rate * 100).toFixed(0)}%` : '—'}
           accent="text-cyan-300"
-          sub={<Rate base={d.repeticion.base} />}
-          foot="Familias nuevas que volvieron"
-          desc="De las familias que vinieron por primera vez, cuántas volvieron en los 30 días siguientes. Es el mejor indicador de si la experiencia gusta: si cae, el problema está dentro, no en la captación."
+          href="/panel/campanas/segunda_visita"
+          sub={isReliable(d.repeticion.base)
+            ? <Referencia rate={d.repeticion.rate} previa={d.repeticion.previa} />
+            : <Rate base={d.repeticion.base} />}
+          foot={isReliable(d.repeticion.base) ? `Sobre ${d.repeticion.base} familias nuevas` : 'Familias nuevas que volvieron'}
+          desc="De las familias que vinieron por primera vez, cuántas volvieron en los 30 días siguientes. Es el mejor indicador de si la experiencia gusta: si cae, el problema está dentro, no en la captación. Se compara con su propia media de los 3 meses anteriores."
+          accion="Lleva a la campaña de segunda visita, que es la que la sube."
         />
 
         <FlipCard
@@ -156,21 +219,29 @@ export function PulseSection({ data }: { data: PulseData }) {
           label="Renueva bono"
           value={isReliable(d.renovacion.base) ? `${(d.renovacion.rate * 100).toFixed(0)}%` : '—'}
           accent="text-iris"
-          sub={<Rate base={d.renovacion.base} />}
-          foot="Bonos agotados que se renovaron"
-          desc="De los bonos que se agotaron o caducaron, cuántos titulares contrataron otro en el mes siguiente. Mide la retención de quien ya se comprometió, que es la que sostiene la ocupación."
+          href="/panel/campanas/renovacion_caducada"
+          sub={isReliable(d.renovacion.base)
+            ? <Referencia rate={d.renovacion.rate} previa={d.renovacion.previa} />
+            : <Rate base={d.renovacion.base} />}
+          foot={isReliable(d.renovacion.base) ? `Sobre ${d.renovacion.base} bonos agotados` : 'Bonos agotados que se renovaron'}
+          desc="De los bonos que se agotaron o caducaron, cuántos titulares contrataron otro en el mes siguiente. Mide la retención de quien ya se comprometió, que es la que sostiene la ocupación de los días flojos."
+          accion="Lleva a la campaña de renovación, con los bonos caducados sin reponer."
         />
 
         <FlipCard
           icon={Clock}
-          label="Franja punta"
+          label="Punta y valle"
           value={d.punta ? `${d.punta.hora}h` : '—'}
           accent="text-amber"
+          href="/panel/campanas/valle"
           sub={d.punta
-            ? <span className="text-[11px] text-fog">{d.punta.dia} · {d.punta.personas.toFixed(0)} personas</span>
+            ? <span className="text-[11px] text-fog">{horas(d.punta)} · {d.punta.personas.toFixed(0)} personas</span>
             : <span className="text-[11px] text-mist">sin muestra</span>}
-          foot={d.punta && d.punta.pct > 0 ? `${(d.punta.pct * 100).toFixed(0)}% del aforo` : 'Momento de más ocupación'}
-          desc="El día y la hora con más gente en sala de media este mes. Sirve para dos cosas: saber cuándo hace falta más personal, y saber qué franjas están vacías para llenarlas con una oferta."
+          foot={d.valle
+            ? <>Más vacío: <span className="text-fog">{horas(d.valle)}</span></>
+            : 'Momento de más ocupación'}
+          desc="La franja con más gente en sala y la que menos, de media este mes. La punta dice cuándo hace falta más personal. El valle es el que mueve dinero: en la punta ya no cabe nadie, así que lo que se puede ganar está en llenar el hueco."
+          accion="Lleva a la campaña de valle, para ofrecer esa franja a quien puede venir."
         />
 
         <FlipCard
@@ -178,11 +249,15 @@ export function PulseSection({ data }: { data: PulseData }) {
           label="Familias activas"
           value={String(d.familiasActivas)}
           accent="text-mint"
+          href={d.enRiesgo > 0 ? '/panel/campanas/reactivacion' : '/miembros'}
           sub={d.enRiesgo > 0
             ? <span className="text-[11px] font-semibold text-amber">{d.enRiesgo} en riesgo</span>
             : <span className="text-[11px] text-mist">ninguna en riesgo</span>}
           foot="Han venido en los últimos 60 días"
           desc="Familias que han venido en los últimos 60 días. «En riesgo» son las que llevan sin aparecer más del doble de su ritmo habitual: para una que viene cada semana, dos semanas; para una mensual, dos meses."
+          accion={d.enRiesgo > 0
+            ? 'Lleva a la campaña de reactivación, con las que han roto su ritmo.'
+            : 'Lleva a la lista de miembros.'}
         />
       </div>
 

@@ -4,7 +4,7 @@ import { PulseSection } from './PulseSection'
 import { SegmentMap } from './SegmentMap'
 import { ActionsSection } from './ActionsSection'
 import { getT } from '@/lib/i18n-server'
-import { actividad, delta, repeatRate, bonoRenewalRate, occupancyBySlot, franjaPunta, monthPeriod } from '@/lib/metrics'
+import { actividad, delta, repeatRate, bonoRenewalRate, occupancyBySlot, franjaPunta, franjaValle, mediaPrevia, monthPeriod } from '@/lib/metrics'
 import { buildMemberStats, countBySegment, topVisitantes, hogaresPorMiembro } from '@/lib/segments'
 import {
   suggestedActions, inicioSemana, proximaRevision, buildCaducados, buildSinBono,
@@ -78,8 +78,15 @@ export default async function PanelPage() {
   const repeticion = repeatRate(vRows, now, 30)
   const renovacion = bonoRenewalRate(mRows, now, 30)
 
+  // Referencia propia de los 3 meses anteriores: un 43 % no dice si es bueno
+  const repeticionPrev = mediaPrevia(ref => repeatRate(vRows, ref, 30), now)
+  const renovacionPrev = mediaPrevia(ref => bonoRenewalRate(mRows, ref, 30), now)
+
   const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-  const punta = franjaPunta(occupancyBySlot(vRows, capacity, mesActual))
+  const franjas = occupancyBySlot(vRows, capacity, mesActual)
+  const punta = franjaPunta(franjas)
+  // El hueco vacío es lo que se puede llenar; la punta ya no admite a nadie más
+  const valle = franjaValle(franjas)
 
   // ── Fase 2: segmentación por ritmo propio ─────────────────────────────────
   const memberStats = buildMemberStats((membersForStats ?? []) as any[], vRows, now)
@@ -88,6 +95,20 @@ export default async function PanelPage() {
   const familiasActivas = memberStats.filter(
     s => s.diasDesdeUltima != null && s.diasDesdeUltima <= 60
   ).length
+
+  // Hogares con bono en pie: es la ocupación que ya está comprada, y por tanto
+  // la parte del mes que no depende de que entre nadie nuevo. Se cuenta por
+  // casa, no por bono: dos padres con bono son un cliente, no dos.
+  const hogarDe = hogaresPorMiembro((membersForStats ?? []) as any[])
+  const hogaresConBono = new Set(
+    mRows
+      .filter(b => {
+        const vivo = b.sessions_remaining == null || b.sessions_remaining > 0
+        const vigente = !b.expires_at || new Date(b.expires_at) >= now
+        return vivo && vigente
+      })
+      .map(b => hogarDe[b.member_id] ?? b.member_id)
+  ).size
 
   // ── Fase 3: qué hacer hoy ─────────────────────────────────────────────────
   const in45 = new Date(now.getTime() + 45 * 86_400_000)
@@ -203,14 +224,17 @@ export default async function PanelPage() {
     visitas: actActual.visitas,
     visitasDeltaMes: delta(actActual.visitas, actAnterior.visitas),
     familias: actActual.familias,
-    ninos: actActual.ninos,
     porVisita: actActual.porVisita,
     familiasActivas,
     enRiesgo: segCounts.en_riesgo,
-    repeticion: { rate: repeticion.rate, base: repeticion.base },
-    renovacion: { rate: renovacion.rate, base: renovacion.base },
+    hogaresConBono,
+    repeticion: { rate: repeticion.rate, base: repeticion.base, previa: repeticionPrev },
+    renovacion: { rate: renovacion.rate, base: renovacion.base, previa: renovacionPrev },
     punta: punta
       ? { dia: DIAS[punta.dow] ?? '', hora: punta.hour, personas: punta.avgPeople, pct: punta.pct }
+      : null,
+    valle: valle
+      ? { dia: DIAS[valle.dow] ?? '', hora: valle.hour, personas: valle.avgPeople, pct: valle.pct }
       : null,
   }
 

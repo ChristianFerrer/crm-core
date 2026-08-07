@@ -338,7 +338,7 @@ function VistaTabla({
             <th className="text-left px-4 py-2">Campaña</th>
             <th className="text-left px-3 py-2">Plazo</th>
             <th className="text-left px-3 py-2">Precio</th>
-            <th className="text-left px-3 py-2 w-[40%]">Cómo va</th>
+            <th className="text-left px-3 py-2 w-[34%]">Seguimiento</th>
             <th className="w-10" />
           </tr>
         </thead>
@@ -354,17 +354,19 @@ function VistaTabla({
                     <span className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center ${vacia ? 'bg-surface2' : c.bg}`}>
                       <Icon size={14} className={vacia ? 'text-mist' : c.text} />
                     </span>
-                    <span className="font-medium text-snow group-hover:text-lime transition-colors">
+                    <span className="font-medium text-fog group-hover:text-lime transition-colors">
                       {a.titulo}
                     </span>
                   </Link>
                 </td>
-                <td className={`px-3 py-2 font-semibold ${vacia ? 'text-mist' : c.text}`}>{a.horizonte}</td>
-                <td className={`px-3 py-2 ${vacia ? 'text-mist' : 'text-fog'}`}>
-                  {vacia ? '—' : a.ancla}
-                </td>
+                {/* Un solo color para todo el texto: con el plazo en el acento de
+                    la campaña, siete filas eran siete colores compitiendo y la
+                    columna dejaba de leerse en vertical. El color queda para el
+                    icono, que es lo que identifica la campaña de un vistazo. */}
+                <td className="px-3 py-2 text-fog">{a.horizonte}</td>
+                <td className="px-3 py-2 text-fog">{vacia ? '—' : a.ancla}</td>
                 <td className="px-3 py-2">
-                  <Flujo a={a} f={flujo[a.plantilla]} c={c} />
+                  <Flujo a={a} f={flujo[a.plantilla]} />
                 </td>
                 <td className="pr-3 align-middle">
                   <Link href={`/panel/campanas/${a.plantilla}`}
@@ -383,20 +385,19 @@ function VistaTabla({
 }
 
 /**
- * Las cuatro cajas del flujo de una campaña, con su cifra dentro.
+ * Las cuatro cajas del seguimiento, con su cifra dentro.
  *
  * «Por contactar» es el pendiente que calcula el propio panel; las otras tres
- * salen de lo ya marcado en el tablero. El cero se pinta apagado en vez de
- * esconderse: si «Reservaron» desapareciera al estar a cero, el flujo cambiaría
- * de forma en cada fila y dejaría de poder leerse en columna.
+ * salen de lo ya marcado en el tablero. Todas del mismo color: lo que distingue
+ * a los pasos es su posición y su rótulo, y pintarlos de cuatro colores
+ * convertía cada fila en un semáforo sin que ninguno de los colores significara
+ * nada.
+ *
+ * El cero se pinta apagado en vez de esconderse: si «Reservaron» desapareciera
+ * al estar a cero, el seguimiento cambiaría de forma en cada fila y dejaría de
+ * poder leerse en columna.
  */
-function Flujo({
-  a, f, c,
-}: {
-  a: ActionSuggestion
-  f?: FlujoCampana
-  c: (typeof ACCENT)[string]
-}) {
+function Flujo({ a, f }: { a: ActionSuggestion; f?: FlujoCampana }) {
   const valores = {
     pendiente: a.destinatarios,
     contactada: f?.contactada ?? 0,
@@ -405,23 +406,19 @@ function Flujo({
   }
 
   return (
-    <div className="flex items-stretch gap-1">
+    <div className="flex items-center gap-1">
       {PASOS.map(p => {
         const n = valores[p.clave]
-        const activa = n > 0
-        // El acento de la campaña solo en el primer paso (lo que queda por
-        // hacer) y el verde en el que cierra: los intermedios son neutros para
-        // que la fila no se vuelva un semáforo de cuatro colores.
-        const tono = !activa
-          ? 'border-line bg-surface2/40 text-mist'
-          : p.clave === 'pendiente' ? `${c.border} ${c.bg} ${c.text}`
-          : p.clave === 'convertido' ? 'border-lime/40 bg-lime/10 text-lime'
-          : p.clave === 'descartado' ? 'border-line2 bg-surface2 text-fog'
-          : 'border-line2 bg-surface2 text-snow'
         return (
-          <div key={p.clave} className={`flex-1 min-w-0 rounded-lg border px-2 py-1 ${tono}`} title={`${p.label}: ${n}`}>
-            <p className="text-sm font-bold tabular-nums leading-none">{n}</p>
-            <p className="text-[9px] uppercase tracking-wide opacity-70 truncate mt-0.5">{p.label}</p>
+          <div
+            key={p.clave}
+            title={`${p.label}: ${n}`}
+            className={`flex-1 min-w-0 flex items-baseline gap-1 rounded-md border border-line bg-surface2 px-1.5 py-0.5 ${
+              n > 0 ? '' : 'opacity-50'
+            }`}
+          >
+            <span className="text-xs font-bold text-fog tabular-nums leading-none">{n}</span>
+            <span className="text-[9px] text-fog uppercase tracking-wide truncate">{p.label}</span>
           </div>
         )
       })}

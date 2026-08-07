@@ -366,3 +366,23 @@ console.assert(
 )
 console.log('acompañantes ->', acomp(3, 3, [{ name: 'Laia', is_adult: true }, { name: 'Martina' }]))
 console.log('acompañantes -> OK')
+
+// ── franja valle ──
+// La mitad accionable del par: en la punta ya no cabe nadie.
+const slots = [
+  { dow: 0, hour: 17, avgPeople: 4,  pct: .1, samples: 4 },
+  { dow: 5, hour: 18, avgPeople: 30, pct: .8, samples: 4 },
+  { dow: 2, hour: 11, avgPeople: 1,  pct: .0, samples: 1 }, // muestra insuficiente
+]
+console.assert(M.franjaPunta(slots).hour === 18, 'la punta es la de más gente')
+console.assert(M.franjaValle(slots).hour === 17, 'el valle ignora las franjas sin muestra')
+
+// ── media previa ──
+// Acumula casos y aciertos: un mes de 3 casos no pesa como uno de 40.
+const previa = M.mediaPrevia(() => ({ rate: .5, base: 10, hits: 5 }), now, 3)
+console.assert(Math.abs(previa - 0.5) < 1e-9, 'media previa mal ponderada: ' + previa)
+console.assert(
+  M.mediaPrevia(() => ({ rate: 1, base: 1, hits: 1 }), now, 3) === null,
+  'sin casos suficientes no hay referencia',
+)
+console.log('franjas y referencia -> OK')

@@ -290,6 +290,46 @@ export function franjaPunta(slots: OccupancySlot[]): OccupancySlot | null {
   return conMuestra.reduce((a, b) => (b.avgPeople > a.avgPeople ? b : a))
 }
 
+/**
+ * Franja con MENOS ocupación media, entre las que tienen gente.
+ *
+ * Es la mitad accionable del par: en la punta ya no cabe nadie, así que ahí no
+ * hay nada que ganar. El hueco del martes por la tarde es el que se puede
+ * llenar con una oferta, y es el que alimenta la campaña de valle.
+ *
+ * Se exige un mínimo de muestra para no señalar como «valle» una hora en la que
+ * simplemente no se abre.
+ */
+export function franjaValle(slots: OccupancySlot[]): OccupancySlot | null {
+  const conMuestra = slots.filter(s => s.samples >= 2)
+  if (conMuestra.length === 0) return null
+  return conMuestra.reduce((a, b) => (b.avgPeople < a.avgPeople ? b : a))
+}
+
+/**
+ * Referencia propia: la misma tasa en los meses anteriores.
+ *
+ * Un 43 % de repetición no dice nada por sí solo —¿es bueno?— y sin punto de
+ * comparación no cambia ninguna decisión. En vez de inventar un dato de sector,
+ * se compara con su propio historial.
+ *
+ * Se acumulan casos y aciertos en vez de promediar porcentajes: un mes con tres
+ * casos no puede pesar lo mismo que uno con cuarenta.
+ */
+export function mediaPrevia(
+  calc: (ref: Date) => RateResult,
+  now: Date,
+  meses = 3,
+): number | null {
+  let base = 0, hits = 0
+  for (let i = 1; i <= meses; i++) {
+    const r = calc(new Date(now.getTime() - i * 30 * 86_400_000))
+    base += r.base
+    hits += r.hits
+  }
+  return base >= MIN_SAMPLE ? hits / base : null
+}
+
 export const MIN_SAMPLE = 8
 
 export function isReliable(base: number): boolean {
