@@ -179,6 +179,19 @@ export default async function PanelPage() {
     estadoCola[`${plantilla}:${s2.member_id}`] = s2.estado
   }
 
+  // Cómo va cada campaña por dentro: mismas columnas que su tablero, para que
+  // el resumen y la campaña no cuenten cosas distintas. «Por contactar» sale de
+  // los destinatarios pendientes, así que se calcula ya en la tabla.
+  const flujo: Record<string, { contactada: number; convertido: number; descartado: number }> = {}
+  for (const s2 of ((doneSends ?? []) as any[])) {
+    const plantilla = s2.campaigns?.plantilla
+    if (!plantilla) continue
+    const f = flujo[plantilla] ??= { contactada: 0, convertido: 0, descartado: 0 }
+    if (s2.estado === 'convertido') f.convertido++
+    else if (s2.estado === 'descartado') f.descartado++
+    else f.contactada++ // enviado | respondido
+  }
+
   // Contexto de la revisión semanal
   const desdeLunes = inicioSemana(now)
   const contactadosEstaSemana = ((doneSends ?? []) as any[]).filter(s2 => {
@@ -275,6 +288,7 @@ export default async function PanelPage() {
         proximaRevision={proximaRevision(now).toISOString()}
         cola={cola}
         estadoCola={estadoCola}
+        flujo={flujo}
       />
 
       {/* Fase 2: a quién tienes y qué hacer con cada grupo */}

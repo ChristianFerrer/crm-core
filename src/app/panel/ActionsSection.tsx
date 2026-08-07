@@ -37,6 +37,8 @@ function iconoDe(nombre: string): React.ElementType {
   return ICONOS[nombre] ?? Megaphone
 }
 
+export type FlujoCampana = { contactada: number; convertido: number; descartado: number }
+
 /**
  * Campañas de esta semana, ordenadas por euros en juego.
  *
@@ -50,13 +52,15 @@ function iconoDe(nombre: string): React.ElementType {
  * escritorio tiene su propia disposición, conmutable entre rejilla y tabla.
  */
 export function ActionsSection({
-  actions, contactadosEstaSemana, proximaRevision, cola, estadoCola,
+  actions, contactadosEstaSemana, proximaRevision, cola, estadoCola, flujo = {},
 }: {
   actions: ActionSuggestion[]
   contactadosEstaSemana: number
   proximaRevision: string
   cola: QueueItem[]
   estadoCola: Record<string, SendState>
+  /** Cómo va cada plantilla por dentro; las mismas columnas que su tablero */
+  flujo?: Record<string, FlujoCampana>
 }) {
   const [vista, setVista] = useState<Vista>('tarjetas')
 
@@ -131,7 +135,7 @@ export function ActionsSection({
       {/* ── Escritorio ── */}
       <div className="hidden lg:block">
         {vista === 'tarjetas' && <VistaTarjetas conTrabajo={conTrabajo} vacias={vacias} />}
-        {vista === 'tabla' && <VistaTabla actions={actions} />}
+        {vista === 'tabla' && <VistaTabla actions={actions} flujo={flujo} />}
         {vista === 'cola' && <CampaignQueue cola={cola} estadoInicial={estadoCola} />}
       </div>
 
@@ -146,7 +150,14 @@ export function ActionsSection({
   )
 }
 
-/** La barra original, que en pantalla estrecha es la forma correcta. */
+/**
+ * La barra original, que en pantalla estrecha es la forma correcta.
+ *
+ * Sin la columna derecha: repetía el número que ya va en el título («16
+ * cumpleaños en 45 días» y, al lado, «16») y colgaba el precio del bono, que a
+ * la altura del resumen todavía no decide nada. Al quitarla, el título deja de
+ * cortarse y el subtexto cabe entero — que es lo que sí se lee.
+ */
 function BarraMovil({ a }: { a: ActionSuggestion }) {
   const c = ACCENT[a.accent] ?? ACCENT.lime
   const Icon = iconoDe(a.icono)
@@ -163,20 +174,10 @@ function BarraMovil({ a }: { a: ActionSuggestion }) {
         <Icon size={22} className={vacia ? 'text-mist' : c.text} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className={`text-sm font-semibold truncate ${vacia ? 'text-fog' : 'text-snow'}`}>{a.titulo}</p>
-        <p className="text-[11px] text-fog truncate">
+        <p className={`text-sm font-semibold leading-snug ${vacia ? 'text-fog' : 'text-snow'}`}>{a.titulo}</p>
+        <p className="text-[11px] text-fog leading-snug mt-0.5">
           <span className={`font-semibold ${vacia ? 'text-mist' : c.text}`}>{a.horizonte}</span> · {a.detalle}
         </p>
-      </div>
-      <div className="text-right shrink-0">
-        {vacia ? (
-          <p className="text-sm font-bold text-mist tabular-nums">0</p>
-        ) : (
-          <>
-            <p className={`text-sm font-bold ${c.text} tabular-nums`}>{a.destinatarios}</p>
-            <p className="text-[10px] text-mist">{a.ancla}</p>
-          </>
-        )}
       </div>
       <ChevronRight size={16} className={vacia ? 'text-mist shrink-0' : 'text-fog shrink-0'} />
     </Link>
@@ -303,16 +304,32 @@ function TarjetaNormal({ a }: { a: ActionSuggestion }) {
   )
 }
 
+/** Las columnas del tablero de la campaña, en el mismo orden que allí. */
+const PASOS: { clave: 'pendiente' | 'contactada' | 'convertido' | 'descartado'; label: string }[] = [
+  { clave: 'pendiente',  label: 'Por contactar' },
+  { clave: 'contactada', label: 'Contactadas' },
+  { clave: 'convertido', label: 'Reservaron' },
+  { clave: 'descartado', label: 'Descartadas' },
+]
+
 /**
  * Opción B — tabla densa.
  *
- * Menos presencia, más velocidad: las siete caben sin scroll y las columnas
- * alinean los importes, que es lo que permite compararlos de un vistazo. La
- * barra proporcional convierte el color en información en vez de decoración.
+ * Menos presencia, más velocidad: las siete caben sin scroll. En lugar de la
+ * barra proporcional —que solo decía «esta mueve más que aquella», y de forma
+ * aproximada— van las cuatro cajas del flujo con su cifra: cuántas quedan por
+ * contactar, cuántas se contactaron, cuántas reservaron y cuántas se
+ * descartaron. Eso responde «¿cómo va?» sin entrar en la campaña, que es lo que
+ * la barra no contestaba.
+ *
+ * La columna «Familias» sobraba: era exactamente el primer paso del flujo.
  */
-function VistaTabla({ actions }: { actions: ActionSuggestion[] }) {
-  const maxValor = Math.max(...actions.map(a => a.valor), 1)
-
+function VistaTabla({
+  actions, flujo,
+}: {
+  actions: ActionSuggestion[]
+  flujo: Record<string, FlujoCampana>
+}) {
   return (
     <div className="rounded-2xl border border-line bg-surface overflow-hidden">
       <table className="data-table w-full">
@@ -320,9 +337,8 @@ function VistaTabla({ actions }: { actions: ActionSuggestion[] }) {
           <tr>
             <th className="text-left px-4 py-2">Campaña</th>
             <th className="text-left px-3 py-2">Plazo</th>
-            <th className="text-right px-3 py-2">Familias</th>
             <th className="text-left px-3 py-2">Precio</th>
-            <th className="px-3 py-2 w-[28%]" />
+            <th className="text-left px-3 py-2 w-[40%]">Cómo va</th>
             <th className="w-10" />
           </tr>
         </thead>
@@ -344,19 +360,13 @@ function VistaTabla({ actions }: { actions: ActionSuggestion[] }) {
                   </Link>
                 </td>
                 <td className={`px-3 py-2 font-semibold ${vacia ? 'text-mist' : c.text}`}>{a.horizonte}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-fog">{a.destinatarios}</td>
                 <td className={`px-3 py-2 ${vacia ? 'text-mist' : 'text-fog'}`}>
                   {vacia ? '—' : a.ancla}
                 </td>
                 <td className="px-3 py-2">
-                  {/* El largo es lo que mueve la campaña: el color pasa de
-                      adorno a dato, sin poner una cifra en euros encima */}
-                  <div className="h-1.5 rounded-full bg-surface2 overflow-hidden">
-                    <div className={`h-full ${c.barra} transition-all`}
-                      style={{ width: `${(a.valor / maxValor) * 100}%` }} />
-                  </div>
+                  <Flujo a={a} f={flujo[a.plantilla]} c={c} />
                 </td>
-                <td className="pr-3">
+                <td className="pr-3 align-middle">
                   <Link href={`/panel/campanas/${a.plantilla}`}
                     className="w-8 h-8 flex items-center justify-center text-mist hover:text-snow transition-colors"
                     aria-label={`Abrir ${a.titulo}`}>
@@ -368,6 +378,53 @@ function VistaTabla({ actions }: { actions: ActionSuggestion[] }) {
           })}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+/**
+ * Las cuatro cajas del flujo de una campaña, con su cifra dentro.
+ *
+ * «Por contactar» es el pendiente que calcula el propio panel; las otras tres
+ * salen de lo ya marcado en el tablero. El cero se pinta apagado en vez de
+ * esconderse: si «Reservaron» desapareciera al estar a cero, el flujo cambiaría
+ * de forma en cada fila y dejaría de poder leerse en columna.
+ */
+function Flujo({
+  a, f, c,
+}: {
+  a: ActionSuggestion
+  f?: FlujoCampana
+  c: (typeof ACCENT)[string]
+}) {
+  const valores = {
+    pendiente: a.destinatarios,
+    contactada: f?.contactada ?? 0,
+    convertido: f?.convertido ?? 0,
+    descartado: f?.descartado ?? 0,
+  }
+
+  return (
+    <div className="flex items-stretch gap-1">
+      {PASOS.map(p => {
+        const n = valores[p.clave]
+        const activa = n > 0
+        // El acento de la campaña solo en el primer paso (lo que queda por
+        // hacer) y el verde en el que cierra: los intermedios son neutros para
+        // que la fila no se vuelva un semáforo de cuatro colores.
+        const tono = !activa
+          ? 'border-line bg-surface2/40 text-mist'
+          : p.clave === 'pendiente' ? `${c.border} ${c.bg} ${c.text}`
+          : p.clave === 'convertido' ? 'border-lime/40 bg-lime/10 text-lime'
+          : p.clave === 'descartado' ? 'border-line2 bg-surface2 text-fog'
+          : 'border-line2 bg-surface2 text-snow'
+        return (
+          <div key={p.clave} className={`flex-1 min-w-0 rounded-lg border px-2 py-1 ${tono}`} title={`${p.label}: ${n}`}>
+            <p className="text-sm font-bold tabular-nums leading-none">{n}</p>
+            <p className="text-[9px] uppercase tracking-wide opacity-70 truncate mt-0.5">{p.label}</p>
+          </div>
+        )
+      })}
     </div>
   )
 }
