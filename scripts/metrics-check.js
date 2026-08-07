@@ -414,3 +414,22 @@ const perfil = M.perfilHorario([
 console.assert(perfil[0].hora === 11 && perfil[1].personas === 5, 'perfil horario mal promediado: ' + JSON.stringify(perfil))
 console.log('series ->', sv.join(','), '| perfil', JSON.stringify(perfil))
 console.log('series -> OK')
+
+// ── flujo de una campaña ──
+// Manda la lista de destinatarios: un envío guardado de una familia que ya no
+// entra en el criterio no puede contarse, o el resumen enseña más contactadas
+// de las que la campaña lista.
+const dest = [{ memberId: 'a' }, { memberId: 'b' }, { memberId: 'c' }, { memberId: 'd' }]
+const fl = C.flujoDeCampana(dest, {
+  a: 'enviado', b: 'respondido', c: 'convertido',
+  z: 'enviado', // ya no es destinataria: no cuenta
+})
+console.assert(fl.pendiente === 1, 'sin envío es pendiente: ' + JSON.stringify(fl))
+console.assert(fl.contactada === 2, '«respondido» vive dentro de contactada: ' + JSON.stringify(fl))
+console.assert(fl.convertido === 1 && fl.descartado === 0, 'flujo mal repartido: ' + JSON.stringify(fl))
+console.assert(
+  fl.pendiente + fl.contactada + fl.convertido + fl.descartado === dest.length,
+  'las cuatro columnas tienen que sumar los destinatarios',
+)
+console.log('flujo de campaña ->', JSON.stringify(fl))
+console.log('flujo de campaña -> OK')

@@ -8,29 +8,59 @@ import {
 } from 'lucide-react'
 import { marcarEnvio, type SendState } from '@/lib/campaign-sends'
 import {
-  renderMessage, waLink, type CampaignTemplate, type Recipient,
+  renderMessage, waLink, columnaDeEstado,
+  type CampaignTemplate, type Recipient, type ColumnaCampana,
 } from '@/lib/campaigns'
 import { ICONOS } from '../../ActionsSection'
 
 export type ExistingSend = { member_id: string; estado: SendState; enviado_at: string | null }
 
-/** Columnas del tablero. «Respondió» vive dentro de «Contactadas»: son cinco
- *  estados en los datos, pero cinco columnas no caben ni en escritorio. */
-type Columna = 'pendiente' | 'contactada' | 'convertido' | 'descartado'
+/**
+ * Columnas del tablero. La definición de cuáles son y a cuál va cada estado
+ * vive en el dominio (`columnaDeEstado`), porque el resumen cuenta lo mismo y
+ * las dos pantallas tienen que dar la misma cifra.
+ *
+ * Cada una con su color, y el color significa algo: azul lo que está por hacer,
+ * lila lo que está en marcha, verde lo que ha salido bien y rojo lo que se
+ * cierra sin venta. Antes las cuatro eran iguales y había que leer el rótulo
+ * para saber en cuál estabas.
+ *
+ * `estado` es a qué estado pasa una tarjeta al soltarla en esa columna.
+ */
+type Columna = ColumnaCampana
 
-const COLUMNAS: { id: Columna; label: string; corto: string; vacio: string }[] = [
-  { id: 'pendiente',  label: 'Por contactar', corto: 'Por contactar', vacio: 'Nadie pendiente' },
-  { id: 'contactada', label: 'Contactadas',   corto: 'Contactadas',   vacio: 'Aún no has escrito a nadie' },
-  { id: 'convertido', label: 'Reservaron',    corto: 'Reservaron',    vacio: 'Ninguna todavía' },
-  { id: 'descartado', label: 'Descartadas',   corto: 'Descartadas',   vacio: 'Ninguna' },
+const COLUMNAS: {
+  id: Columna; label: string; corto: string; vacio: string
+  estado: SendState
+  text: string; border: string; bg: string; head: string; ring: string
+}[] = [
+  {
+    id: 'pendiente', label: 'Por contactar', corto: 'Por contactar', vacio: 'Nadie pendiente',
+    estado: 'pendiente',
+    text: 'text-cyan-300', border: 'border-cyan-300/40', bg: 'bg-cyan-300/10',
+    head: 'bg-cyan-300/15', ring: 'ring-cyan-300/50',
+  },
+  {
+    id: 'contactada', label: 'Contactadas', corto: 'Contactadas', vacio: 'Aún no has escrito a nadie',
+    estado: 'enviado',
+    text: 'text-iris', border: 'border-iris/40', bg: 'bg-iris/10',
+    head: 'bg-iris/15', ring: 'ring-iris/50',
+  },
+  {
+    id: 'convertido', label: 'Reservaron', corto: 'Reservaron', vacio: 'Ninguna todavía',
+    estado: 'convertido',
+    text: 'text-mint', border: 'border-mint/40', bg: 'bg-mint/10',
+    head: 'bg-mint/15', ring: 'ring-mint/50',
+  },
+  {
+    id: 'descartado', label: 'Descartadas', corto: 'Descartadas', vacio: 'Ninguna',
+    estado: 'descartado',
+    text: 'text-rose', border: 'border-rose/40', bg: 'bg-rose/10',
+    head: 'bg-rose/15', ring: 'ring-rose/50',
+  },
 ]
 
-function columnaDe(estado: SendState): Columna {
-  if (estado === 'convertido') return 'convertido'
-  if (estado === 'descartado') return 'descartado'
-  if (estado === 'enviado' || estado === 'respondido') return 'contactada'
-  return 'pendiente'
-}
+const columnaDe = columnaDeEstado
 
 const ACCENT: Record<string, { text: string; border: string; bg: string; barra: string }> = {
   lime:       { text: 'text-lime',      border: 'border-lime/40',      bg: 'bg-lime/10',      barra: 'bg-lime' },
@@ -47,8 +77,10 @@ const ACCENT: Record<string, { text: string; border: string; bg: string; barra: 
  * «por contactar» a «reservó». Los estados ya existían en `campaign_sends`; la
  * lista plana anterior los escondía detrás de una opacidad al 60 %.
  *
- * Nada se arrastra. Cada tarjeta lleva su botón, porque esto se usa desde el
- * móvil detrás del mostrador y arrastrar entre pestañas es imposible.
+ * Cada tarjeta lleva sus botones, que es la única forma que funciona en móvil:
+ * detrás del mostrador se usa con una mano y arrastrar entre pestañas es
+ * imposible. En escritorio, donde las cuatro columnas se ven a la vez, además
+ * se puede arrastrar — los botones siguen ahí, el arrastre es un atajo.
  */
 export function CampaignClient({
   template, recipients, existingSends, sinConsentimiento,
@@ -70,6 +102,8 @@ export function CampaignClient({
   )
   const [saving, setSaving] = useState<string | null>(null)
   const [tab, setTab] = useState<Columna>('pendiente')
+  /** Sobre qué columna se está soltando; solo para resaltarla */
+  const [sobre, setSobre] = useState<Columna | null>(null)
 
   const porColumna = useMemo(() => {
     const out: Record<Columna, Recipient[]> = {
@@ -228,11 +262,11 @@ export function CampaignClient({
                     key={col.id}
                     onClick={() => setTab(col.id)}
                     className={`shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      activa ? 'bg-surface2 text-snow' : 'text-fog hover:text-snow'
+                      activa ? `${col.bg} ${col.text}` : 'text-fog hover:text-snow'
                     }`}
                   >
                     {col.corto}
-                    <span className={`tabular-nums ${activa ? c.text : 'text-mist'}`}>{n}</span>
+                    <span className={`tabular-nums ${activa ? col.text : 'text-mist'}`}>{n}</span>
                   </button>
                 )
               })}
@@ -252,30 +286,55 @@ export function CampaignClient({
             ))}
           </div>
 
-          {/* Escritorio: las cuatro a la vez */}
+          {/* Escritorio: las cuatro a la vez, y se puede arrastrar entre ellas */}
           <div className="hidden lg:grid grid-cols-4 gap-3 items-start">
-            {COLUMNAS.map(col => (
-              <div key={col.id} className="rounded-2xl border border-line bg-surface/60 overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-line">
-                  <p className="text-[10px] font-semibold text-fog uppercase tracking-wide truncate">{col.label}</p>
-                  <span className={`text-xs font-bold tabular-nums ${
-                    porColumna[col.id].length > 0 ? c.text : 'text-mist'
-                  }`}>
-                    {porColumna[col.id].length}
-                  </span>
+            {COLUMNAS.map(col => {
+              const lista = porColumna[col.id]
+              const activa = sobre === col.id
+              return (
+                <div
+                  key={col.id}
+                  onDragOver={e => { e.preventDefault(); setSobre(col.id) }}
+                  onDragLeave={() => setSobre(s2 => (s2 === col.id ? null : s2))}
+                  onDrop={e => {
+                    e.preventDefault()
+                    setSobre(null)
+                    const id = e.dataTransfer.getData('text/plain')
+                    const r = recipients.find(x => x.memberId === id)
+                    // Soltar donde ya estaba no es un cambio: evita una
+                    // escritura y un parpadeo por nada.
+                    if (r && columnaDe(sends[r.memberId] ?? 'pendiente') !== col.id) {
+                      marcar(r, col.estado)
+                    }
+                  }}
+                  className={`rounded-2xl border bg-surface/60 overflow-hidden transition-all ${
+                    activa ? `${col.border} ring-2 ${col.ring}` : 'border-line'
+                  }`}
+                >
+                  <div className={`flex items-center justify-between gap-2 px-3 py-2 border-b ${col.border} ${col.head}`}>
+                    <p className={`text-[10px] font-semibold uppercase tracking-wide truncate ${col.text}`}>
+                      {col.label}
+                    </p>
+                    <span className={`text-xs font-bold tabular-nums ${lista.length > 0 ? col.text : 'text-mist'}`}>
+                      {lista.length}
+                    </span>
+                  </div>
+                  <div className="p-2 space-y-2 min-h-[80px]">
+                    {lista.length === 0 ? (
+                      <p className="py-6 text-center text-[11px] text-mist">
+                        {activa ? 'Suelta aquí' : col.vacio}
+                      </p>
+                    ) : lista.map(r => (
+                      <TarjetaFamilia
+                        key={r.memberId} r={r} estado={sends[r.memberId] ?? 'pendiente'}
+                        mensaje={mensaje} guardando={saving === r.memberId} onMarcar={marcar} compacta
+                        arrastrable
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="p-2 space-y-2 min-h-[80px]">
-                  {porColumna[col.id].length === 0 ? (
-                    <p className="py-6 text-center text-[11px] text-mist">{col.vacio}</p>
-                  ) : porColumna[col.id].map(r => (
-                    <TarjetaFamilia
-                      key={r.memberId} r={r} estado={sends[r.memberId] ?? 'pendiente'}
-                      mensaje={mensaje} guardando={saving === r.memberId} onMarcar={marcar} compacta
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}
@@ -286,9 +345,13 @@ export function CampaignClient({
 /**
  * Tarjeta de familia. Lleva el porqué está en la lista y su historial, para no
  * tener que abrir la ficha antes de escribir.
+ *
+ * En escritorio es arrastrable: se coge y se suelta en otra columna. Es un
+ * atajo, no la única vía — los botones se quedan, porque en móvil el arrastre
+ * entre pestañas no existe y porque «WhatsApp» tiene que abrir WhatsApp.
  */
 function TarjetaFamilia({
-  r, estado, mensaje, guardando, onMarcar, compacta = false,
+  r, estado, mensaje, guardando, onMarcar, compacta = false, arrastrable = false,
 }: {
   r: Recipient
   estado: SendState
@@ -296,19 +359,27 @@ function TarjetaFamilia({
   guardando: boolean
   onMarcar: (r: Recipient, estado: SendState) => void
   compacta?: boolean
+  arrastrable?: boolean
 }) {
   const col = columnaDe(estado)
   const link = waLink(r.phone, renderMessage(mensaje, r.vars))
 
   return (
-    <div className={`rounded-xl border border-line bg-surface p-3 ${guardando ? 'opacity-60' : ''}`}>
-      <div className="flex items-start justify-between gap-2">
-        <Link href={`/miembros/${r.memberId}`} className="min-w-0 flex-1 group">
-          <p className="text-sm font-medium text-snow truncate group-hover:text-lime transition-colors">
-            {r.name}
-          </p>
-        </Link>
-      </div>
+    <div
+      draggable={arrastrable}
+      onDragStart={e => {
+        e.dataTransfer.setData('text/plain', r.memberId)
+        e.dataTransfer.effectAllowed = 'move'
+      }}
+      className={`rounded-xl border border-line bg-surface ${compacta ? 'p-2.5' : 'p-3'} ${
+        guardando ? 'opacity-60' : ''
+      } ${arrastrable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+    >
+      <Link href={`/miembros/${r.memberId}`} className="block min-w-0 group">
+        <p className="text-sm font-medium text-snow truncate group-hover:text-lime transition-colors">
+          {r.name}
+        </p>
+      </Link>
 
       <p className="text-[11px] text-fog mt-0.5 leading-snug">{r.contexto}</p>
 
@@ -321,7 +392,10 @@ function TarjetaFamilia({
         </p>
       )}
 
-      <div className={`flex items-center gap-1.5 mt-2.5 ${compacta ? 'flex-wrap' : ''}`}>
+      {/* Fila de acciones compacta: los botones eran de 32 px de alto en una
+          tarjeta de tres líneas, y en la columna de escritorio eso hacía que la
+          acción pesara más que el nombre de la familia. */}
+      <div className="flex items-center gap-1 mt-2">
         {col === 'pendiente' && (
           link ? (
             <>
@@ -330,22 +404,15 @@ function TarjetaFamilia({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => onMarcar(r, 'enviado')}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-lime bg-lime/10 px-2.5 py-1.5 text-xs font-semibold text-lime hover:bg-lime/20 transition-colors"
+                className="flex items-center justify-center gap-1 rounded-md border border-lime bg-lime/10 px-2 py-1 text-[11px] font-semibold text-lime hover:bg-lime/20 transition-colors"
               >
-                <MessageCircle size={13} /> WhatsApp
+                <MessageCircle size={11} /> WhatsApp
               </a>
-              <button
-                onClick={() => onMarcar(r, 'descartado')}
-                aria-label={`Descartar a ${r.name}`}
-                title="Descartar"
-                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-rose transition-colors"
-              >
-                <X size={14} />
-              </button>
+              <BotonDescartar r={r} onMarcar={onMarcar} />
             </>
           ) : (
-            <span className="flex items-center gap-1.5 text-[11px] text-mist" title="Sin teléfono válido">
-              <Phone size={13} /> Sin móvil
+            <span className="flex items-center gap-1 text-[11px] text-mist" title="Sin teléfono válido">
+              <Phone size={11} /> Sin móvil
             </span>
           )
         )}
@@ -354,45 +421,63 @@ function TarjetaFamilia({
           <>
             <button
               onClick={() => onMarcar(r, 'convertido')}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-mint/40 px-2.5 py-1.5 text-xs font-semibold text-mint hover:bg-mint/10 transition-colors"
+              className="flex items-center justify-center gap-1 rounded-md border border-mint/40 px-2 py-1 text-[11px] font-semibold text-mint hover:bg-mint/10 transition-colors"
             >
-              <Check size={13} /> Reservó
+              <Check size={11} /> Reservó
             </button>
-            <button
-              onClick={() => onMarcar(r, 'descartado')}
-              aria-label={`Descartar a ${r.name}`}
-              title="No le interesa"
-              className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-rose transition-colors"
-            >
-              <X size={14} />
-            </button>
+            <BotonDescartar r={r} onMarcar={onMarcar} />
             <button
               onClick={() => onMarcar(r, 'pendiente')}
               aria-label={`Deshacer contacto con ${r.name}`}
               title="Deshacer"
-              className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-snow transition-colors"
+              className="ml-auto w-6 h-6 shrink-0 flex items-center justify-center rounded-md text-mist hover:text-snow transition-colors"
             >
-              <RotateCcw size={14} />
+              <RotateCcw size={12} />
             </button>
           </>
         )}
 
         {(col === 'convertido' || col === 'descartado') && (
           <>
-            <span className={`flex-1 text-[11px] font-semibold ${col === 'convertido' ? 'text-mint' : 'text-mist'}`}>
+            <span className={`flex-1 text-[11px] font-semibold ${col === 'convertido' ? 'text-mint' : 'text-rose'}`}>
               {col === 'convertido' ? 'Reservó ✓' : 'Descartada'}
             </span>
             <button
               onClick={() => onMarcar(r, 'enviado')}
               aria-label={`Devolver a contactadas a ${r.name}`}
               title="Devolver a contactadas"
-              className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-mist hover:text-snow transition-colors"
+              className="w-6 h-6 shrink-0 flex items-center justify-center rounded-md text-mist hover:text-snow transition-colors"
             >
-              <RotateCcw size={14} />
+              <RotateCcw size={12} />
             </button>
           </>
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Descartar, con su palabra y en rojo.
+ *
+ * Era una «✕» gris del mismo tono que «deshacer», así que había que adivinar
+ * cuál cerraba la familia y cuál solo daba marcha atrás. Descartar la saca de
+ * la campaña: eso se dice, no se insinúa.
+ */
+function BotonDescartar({
+  r, onMarcar,
+}: {
+  r: Recipient
+  onMarcar: (r: Recipient, estado: SendState) => void
+}) {
+  return (
+    <button
+      onClick={() => onMarcar(r, 'descartado')}
+      aria-label={`Descartar a ${r.name}`}
+      title="Sacar de esta campaña"
+      className="flex items-center justify-center gap-1 rounded-md border border-rose/30 px-2 py-1 text-[11px] font-semibold text-rose hover:bg-rose/10 transition-colors"
+    >
+      <X size={11} /> Descartar
+    </button>
   )
 }

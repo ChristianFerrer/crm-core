@@ -9,7 +9,8 @@ import { actividad, delta, repeatRate, bonoRenewalRate, occupancyBySlot, franjaP
 import { buildMemberStats, countBySegment, topVisitantes, hogaresPorMiembro } from '@/lib/segments'
 import {
   suggestedActions, inicioSemana, proximaRevision, buildCaducados, buildSinBono,
-  buildQueue, type BirthdayLead, type BonoLead, type ContactLog,
+  buildQueue, resolveRecipients, requiereConsentimiento, flujoDeCampana, TEMPLATES,
+  type BirthdayLead, type BonoLead, type ContactLog, type PlantillaId,
 } from '@/lib/campaigns'
 import type { SendState } from '@/lib/campaign-sends'
 
@@ -45,7 +46,9 @@ export default async function PanelPage() {
       .select('id, member_id, created_at, expires_at, sessions_remaining, membership_type_id')
       .limit(5000),
     supabase.from('membership_types').select('id, price'),
-    supabase.from('members').select('id, name, phone, created_at, family_id, families(name)').is('deleted_at', null).limit(5000),
+    supabase.from('members')
+      .select('id, name, phone, created_at, family_id, marketing_consent_at, marketing_consent_revoked_at, families(name)')
+      .is('deleted_at', null).limit(5000),
     // Fase 3: lo ya contactado, para no volver a proponerlo
     supabase.from('campaign_sends')
       .select('member_id, estado, enviado_at, created_at, campaigns(plantilla)')
@@ -195,23 +198,33 @@ export default async function PanelPage() {
   // Estado ya guardado de cada familia en cada plantilla, para que la cola
   // arranque sabiendo a quién se escribió y quién reservó.
   const estadoCola: Record<string, SendState> = {}
+  // El mismo dato indexado por plantilla, que es como lo necesita el flujo
+  const estadoPorPlantilla: Record<string, Record<string, string>> = {}
   for (const s2 of ((doneSends ?? []) as any[])) {
-    const plantilla = s2.campaigns?.plantilla
+    const plantilla = s2.campaigns?.plantilla as PlantillaId | undefined
     if (!plantilla) continue
     estadoCola[`${plantilla}:${s2.member_id}`] = s2.estado
+    ;(estadoPorPlantilla[plantilla] ??= {})[s2.member_id] = s2.estado
   }
 
-  // Cómo va cada campaña por dentro: mismas columnas que su tablero, para que
-  // el resumen y la campaña no cuenten cosas distintas. «Por contactar» sale de
-  // los destinatarios pendientes, así que se calcula ya en la tabla.
-  const flujo: Record<string, { contactada: number; convertido: number; descartado: number }> = {}
-  for (const s2 of ((doneSends ?? []) as any[])) {
-    const plantilla = s2.campaigns?.plantilla
-    if (!plantilla) continue
-    const f = flujo[plantilla] ??= { contactada: 0, convertido: 0, descartado: 0 }
-    if (s2.estado === 'convertido') f.convertido++
-    else if (s2.estado === 'descartado') f.descartado++
-    else f.contactada++ // enviado | respondido
+  // Cómo va cada campaña por dentro. Se calcula igual que en su pantalla y con
+  // la MISMA lista de destinatarios: antes se contaban todos los envíos
+  // guardados de la plantilla, incluidos los de familias que ya no entran en el
+  // criterio, y el resumen enseñaba más contactadas de las que la campaña
+  // listaba.
+  const consentPorId = new Map(
+    ((membersForStats ?? []) as any[]).map(m => [
+      m.id, !!m.marketing_consent_at && !m.marketing_consent_revoked_at,
+    ])
+  )
+  const flujo: Record<string, ReturnType<typeof flujoDeCampana>> = {}
+  for (const tpl of TEMPLATES) {
+    const todos = resolveRecipients(tpl.id, ctxCampanas)
+    // La publicidad necesita permiso explícito; la gestión del servicio, no.
+    const dest = requiereConsentimiento(tpl.id)
+      ? todos.filter(r => consentPorId.get(r.memberId))
+      : todos
+    flujo[tpl.id] = flujoDeCampana(dest, estadoPorPlantilla[tpl.id] ?? {})
   }
 
   // Contexto de la revisión semanal

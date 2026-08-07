@@ -6,7 +6,7 @@ import {
   Zap, ChevronRight, Cake, AlertTriangle, RefreshCw, Ticket, HeartPulse,
   CalendarClock, Repeat, Megaphone, LayoutGrid, List, ListChecks,
 } from 'lucide-react'
-import type { ActionSuggestion, QueueItem } from '@/lib/campaigns'
+import type { ActionSuggestion, QueueItem, FlujoCampana } from '@/lib/campaigns'
 import type { SendState } from '@/lib/campaign-sends'
 import { CampaignQueue } from './CampaignQueue'
 import { SectionHeader } from './SectionHeader'
@@ -36,8 +36,6 @@ function fechaCorta(iso: string): string {
 function iconoDe(nombre: string): React.ElementType {
   return ICONOS[nombre] ?? Megaphone
 }
-
-export type FlujoCampana = { contactada: number; convertido: number; descartado: number }
 
 /**
  * Campañas de esta semana, ordenadas por euros en juego.
@@ -305,7 +303,7 @@ function TarjetaNormal({ a }: { a: ActionSuggestion }) {
 }
 
 /** Las columnas del tablero de la campaña, en el mismo orden que allí. */
-const PASOS: { clave: 'pendiente' | 'contactada' | 'convertido' | 'descartado'; label: string }[] = [
+const PASOS: { clave: keyof FlujoCampana; label: string }[] = [
   { clave: 'pendiente',  label: 'Por contactar' },
   { clave: 'contactada', label: 'Contactadas' },
   { clave: 'convertido', label: 'Reservaron' },
@@ -366,7 +364,7 @@ function VistaTabla({
                 <td className="px-3 py-2 text-fog">{a.horizonte}</td>
                 <td className="px-3 py-2 text-fog">{vacia ? '—' : a.ancla}</td>
                 <td className="px-3 py-2">
-                  <Flujo a={a} f={flujo[a.plantilla]} />
+                  <Flujo f={flujo[a.plantilla]} />
                 </td>
                 <td className="pr-3 align-middle">
                   <Link href={`/panel/campanas/${a.plantilla}`}
@@ -387,28 +385,24 @@ function VistaTabla({
 /**
  * Las cuatro cajas del seguimiento, con su cifra dentro.
  *
- * «Por contactar» es el pendiente que calcula el propio panel; las otras tres
- * salen de lo ya marcado en el tablero. Todas del mismo color: lo que distingue
- * a los pasos es su posición y su rótulo, y pintarlos de cuatro colores
- * convertía cada fila en un semáforo sin que ninguno de los colores significara
- * nada.
+ * Las cuatro salen de `flujoDeCampana`, el mismo cálculo que usa la pantalla de
+ * la campaña y sobre la misma lista de destinatarios. Antes «Por contactar»
+ * salía de aquí y las otras tres de contar envíos guardados, así que las dos
+ * pantallas daban cifras distintas para la misma campaña.
+ *
+ * Todas del mismo color: lo que distingue a los pasos es su posición y su
+ * rótulo, y pintarlos de cuatro colores convertía cada fila en un semáforo sin
+ * que ninguno significara nada.
  *
  * El cero se pinta apagado en vez de esconderse: si «Reservaron» desapareciera
  * al estar a cero, el seguimiento cambiaría de forma en cada fila y dejaría de
  * poder leerse en columna.
  */
-function Flujo({ a, f }: { a: ActionSuggestion; f?: FlujoCampana }) {
-  const valores = {
-    pendiente: a.destinatarios,
-    contactada: f?.contactada ?? 0,
-    convertido: f?.convertido ?? 0,
-    descartado: f?.descartado ?? 0,
-  }
-
+function Flujo({ f }: { f?: FlujoCampana }) {
   return (
     <div className="flex items-center gap-1">
       {PASOS.map(p => {
-        const n = valores[p.clave]
+        const n = f?.[p.clave] ?? 0
         return (
           <div
             key={p.clave}

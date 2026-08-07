@@ -710,3 +710,40 @@ function tituloVacio(id: PlantillaId): string {
     default:                    return 'Sin contactos'
   }
 }
+
+/**
+ * Columnas del tablero de una campaña. «Respondió» vive dentro de
+ * «contactada»: son cinco estados en los datos, pero cinco columnas no caben
+ * ni en escritorio.
+ */
+export type ColumnaCampana = 'pendiente' | 'contactada' | 'convertido' | 'descartado'
+
+export function columnaDeEstado(estado: string | undefined): ColumnaCampana {
+  if (estado === 'convertido') return 'convertido'
+  if (estado === 'descartado') return 'descartado'
+  if (estado === 'enviado' || estado === 'respondido') return 'contactada'
+  return 'pendiente'
+}
+
+export type FlujoCampana = Record<ColumnaCampana, number>
+
+/**
+ * Cómo va una campaña, contando SOLO a sus destinatarios actuales.
+ *
+ * Vive aquí, en el dominio, porque lo calculan dos pantallas: el resumen y la
+ * propia campaña. Cada una lo hacía a su manera y no cuadraban — el resumen
+ * contaba todos los envíos guardados de la plantilla, incluidos los de familias
+ * que ya no entran en el criterio (el bono se renovó, el cumpleaños pasó), así
+ * que enseñaba más contactadas de las que la campaña listaba.
+ *
+ * Manda la lista de destinatarios: quien no está en ella no se cuenta, aunque
+ * tenga envíos en el histórico.
+ */
+export function flujoDeCampana(
+  destinatarios: { memberId: string }[],
+  estadoPorMiembro: Record<string, string>,
+): FlujoCampana {
+  const out: FlujoCampana = { pendiente: 0, contactada: 0, convertido: 0, descartado: 0 }
+  for (const r of destinatarios) out[columnaDeEstado(estadoPorMiembro[r.memberId])]++
+  return out
+}
